@@ -60,7 +60,7 @@ jobs:
         with: 
           heroku_api_key: ${{secrets.HEROKU_API_KEY}}
           heroku_app_name: "bsdi-capstone-proof-of-concept"
-          heroku_email: "eric.sung@galvanize.com"
+          heroku_email: "jeff.haddock@galvanize.com"
           appdir: "ui/"
           usedocker: true
   
@@ -79,7 +79,7 @@ jobs:
         with: 
           heroku_api_key: ${{secrets.HEROKU_API_KEY}}
           heroku_app_name: "bsdi-poc-api"
-          heroku_email: "eric.sung@galvanize.com"
+          heroku_email: "jeff.haddock@galvanize.com"
           appdir: "api/"
           usedocker: true
 
