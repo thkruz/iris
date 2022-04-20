@@ -59,8 +59,8 @@ jobs:
       - uses: akhileshns/heroku-deploy@v3.12.12
         with: 
           heroku_api_key: ${{secrets.HEROKU_API_KEY}}
-          heroku_app_name: "bsdi-capstone-proof-of-concept"
-          heroku_email: "jeff.haddock@galvanize.com"
+          heroku_app_name: "gschool-sdi-ui"
+          heroku_email: "jeff.haddock.developer@gmail.com"
           appdir: "ui/"
           usedocker: true
   
@@ -78,8 +78,8 @@ jobs:
       - uses: akhileshns/heroku-deploy@v3.12.12
         with: 
           heroku_api_key: ${{secrets.HEROKU_API_KEY}}
-          heroku_app_name: "bsdi-poc-api"
-          heroku_email: "jeff.haddock@galvanize.com"
+          heroku_app_name: "gschool-sdi-api"
+          heroku_email: "jeff.haddock.developer@gmail.com"
           appdir: "api/"
           usedocker: true
 
