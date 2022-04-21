@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Test</title>
+  <script type="module" src="./test.js"></script>
+</head>
+
+<body style="background-color: gray;">
+  <div>
+    <label for="minFreq">Min Freq</label>
+    <input type="text" id="minFreq" value="400e6">
+    <label for="maxFreq">Max Freq</label>
+    <input type="text" id="maxFreq" value="500e6">
+    <label for="noiseFloor">Noise Floor</label>
+    <input type="text" id="noiseFloor" value="-100">
+    <label for="refreshRate">Refresh Rate</label>
+    <input type="text" id="refreshRate" value="20">
+    <input type="button" id="colors" value="Toggle Colors">
+  </div>
+  <canvas id="test" width="1600" height="1200"></canvas>
+</body>
+
+</html>
