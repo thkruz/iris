@@ -13,7 +13,7 @@ exports.up = function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = function(knex) {
-  knex.schema.table('signals', table => {
+  return knex.schema.table('signals', table => {
       table.dropForeign('user_id');
     });
 };

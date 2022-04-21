@@ -6,7 +6,7 @@
     return knex.schema.createTable('users', table => {
         table.increments('id');
         table.string('name', 250);
-        table.binary('isInstructor');
+        table.boolean('isInstructor');
     });
 };
 

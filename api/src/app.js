@@ -56,6 +56,19 @@ app.post('/signals', (request, response) => {
         })
 });
 
+app.get('/users', (request, response) => {
+    knex('users')
+        .select('*')
+        .then(userRecords => {
+            let responseData = userRecords.map(user => ({
+                id: user.id,
+                name: user.name,
+                isInstructor: user.isInstructor
+            }));
+            response.status(200).send(responseData)
+        });
+});
+
 app.post('/users', (request, response) => {
     const { name, isInstructor } = request.body;
     knex('users')
