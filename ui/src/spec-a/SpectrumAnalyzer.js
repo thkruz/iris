@@ -19,6 +19,10 @@ export class SpectrumAnalyzer {
     this.minFreq = options.minFreq || 420e6;
     this.maxFreq = options.maxFreq || 450e6;
   }
+
+  /**
+   * This kicks off the draw loop
+   */
   start() {
     var self = this;
     if (self.running) return;
@@ -27,15 +31,41 @@ export class SpectrumAnalyzer {
     if (!self.running) return;
     self.draw();
   }
+
+  /**
+   * This creates random noise using the noiseFloor value inside a Float32Array
+   * @param {Float32Array} data This is a reusable Float32Array
+   * @returns
+   */
   createNoise(data) {
     for (let i = 0; i < data.length; i++) {
       data[i] = Math.random() * (this.noiseFloor + this.decibelShift);
     }
     return data;
   }
+
+  /**
+   * This creates a signal inside a Float32Array
+   * @param {Float32Array} data This is a reusable Float32Array
+   * @param {number} center This is the center of the signal in pixels from the left of the canvas
+   * @param {number} amplitude This is the amplitude of the signal in decibels
+   * @param {number} width This is the width of the signal in pixels
+   * @returns
+   */
   createSignal(data, center, amplitude, width) {
     for (let x = 0; x < data.length; x++) {
       let y = Math.random() * (amplitude + this.decibelShift);
+
+      // Simulate edge of band
+      if (x < center - (width / 5) * 3) {
+        const distanceFromCenter = Math.abs(x - center - width);
+        y -= (distanceFromCenter / width) ** (6.2 + Math.random());
+      } else if (x > center + (width / 5) * 3) {
+        const distanceFromCenter = Math.abs(x - center + width);
+        y -= (distanceFromCenter / width) ** (6.2 + Math.random());
+      }
+
+      // Simulate out of band
       if (x < center - width) {
         const distanceFromCenter = Math.abs(x - center - width);
         y -= (distanceFromCenter / width) ** (5.2 + Math.random());
@@ -43,6 +73,7 @@ export class SpectrumAnalyzer {
         const distanceFromCenter = Math.abs(x - center + width);
         y -= (distanceFromCenter / width) ** (5.2 + Math.random());
       }
+
       if (y > 0) {
         data[x] = y;
       } else {
@@ -51,6 +82,10 @@ export class SpectrumAnalyzer {
     }
     return data;
   }
+
+  /**
+   * This draws the spectrum analyzer
+   */
   draw() {
     requestAnimationFrame(() => {
       const now = Date.now();
@@ -90,11 +125,19 @@ export class SpectrumAnalyzer {
     });
   }
 
+  /**
+   * Overwrites the canvas with a black background
+   * @param {CanvasRenderingContext2D} ctx SpecA Context
+   */
   clearCanvas(ctx) {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, this.width, this.height);
   }
 
+  /**
+   * This draws random noise using the noiseFloor value
+   * @param {CanvasRenderingContext2D} ctx SpecA Context
+   */
   drawNoise(ctx) {
     this.data = this.createNoise(this.data);
 
@@ -106,6 +149,12 @@ export class SpectrumAnalyzer {
     }
   }
 
+  /**
+   * This draws the signal
+   * @param {CanvasRenderingContext2D} ctx SpecA Context
+   * @param {string} color String value of color in Hex
+   * @param {*} signal Object containing signal properties
+   */
   drawSignal(ctx, color = '#f00', signal) {
     const center =
       ((signal.freq - this.minFreq) / (this.maxFreq - this.minFreq)) *
@@ -122,10 +171,5 @@ export class SpectrumAnalyzer {
         (this.data[x] - this.maxDecibels - this.decibelShift) / this.range;
       ctx.fillRect(x, this.height * y, 1, this.height * (1 - y));
     }
-  }
-
-  update(data) {
-    this.data = data;
-    this.draw();
   }
 }
