@@ -4,8 +4,8 @@
   "description": "",
   "main": "./src/index.js",
   "scripts": {
-    "start": "knex migrate:latest && knex seed:run && node ./src/index.js",
-    "start:dev": "export NODE_ENV=development && knex migrate:latest && knex seed:run && nodemon --watch ./ ./src/index.js",
+    "start": "npm ci && knex migrate:latest && knex seed:run && node ./src/index.js",
+    "start:dev": "export NODE_ENV=development && npm ci && knex migrate:latest && knex seed:run && nodemon --watch ./ ./src/index.js",
     "test": "jest",
     "lint": "eslint ./src/**/*.js ./db/**/*.js ./*.js"
   },
