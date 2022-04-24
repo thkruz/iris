@@ -7,7 +7,7 @@ document.onreadystatechange = function () {
       noiseFloor: -100,
       isShowSignals: false,
     });
-    const data = new Float32Array(specA.width);
+    //const data = new Float32Array(specA.width);
 
     specA.signals.push({ freq: 425e6, amp: -108, bw: 3e6 });
     specA.signals.push({ freq: 435e6, amp: -22, bw: 10e6 });
