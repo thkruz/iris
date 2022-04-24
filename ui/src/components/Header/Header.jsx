@@ -19,13 +19,12 @@ export const Header = () => {
           <AppBar position="static">
             <Toolbar>
               <img src='/patch.png' alt='patch.png' height='80px'></img>
-              <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              <Typography variant="h4" component="div" sx={{ flexGrow: 1 }}>
                 Iris Space Electronic Warfare Sandbox
               </Typography>
               {auth &&
                 <IconButton
                   size="large"
-                  aria-labels="logout"
                   onClick={handleLogout}
                   color="inherit"
                   >
