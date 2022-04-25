@@ -4,6 +4,8 @@ import { Box, Button, Typography } from '@mui/material';
 import './RxModem.css'
 
 export const RxModem = () => {
+    //TODO: modem buttons, update state, video, 
+    
     const RxData = [
         {unit: 1, number: 1, operational: true, id_antenna: 1, frequency: 1100, bandwidth: 25, modulation: '8PSK', fec: '3/5'},
         {unit: 1, number: 2, operational: true, id_antenna: 1, frequency: 1200, bandwidth: 35, modulation: 'BPSK', fec: '1/2'},
@@ -33,20 +35,8 @@ export const RxModem = () => {
         width: '1em',
         margin: '7px'
     };
-    const sxInputBox = {
-        backgroundColor: 'blue',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'end',
-        justifyContent: 'flex-end'
-    };
-    const sxInputRow = {
-        display: 'grid',
-        gridTemplateColumns: '95px 75px 50px', 
-        textAlign: 'right', 
-        margin: '5px'
-    };
     const sxValueTable = {
+        margin: '10px',
         display: 'flex', 
         flexDirection: 'column', 
         border: '1px solid black'
@@ -71,6 +61,20 @@ export const RxModem = () => {
     const sxValues = {
         fontWeight: 'bold',
         textDecoration: 'underline'
+    };
+    const sxInputBox = {
+        margin: '10px',
+        backgroundColor: 'blue',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'end',
+        justifyContent: 'flex-end'
+    };
+    const sxInputRow = {
+        display: 'grid',
+        gridTemplateColumns: '95px 75px 50px', 
+        textAlign: 'right', 
+        margin: '5px'
     };
     const sxVideo = {
         margin: '10px',
