@@ -1,14 +1,13 @@
-import React, { useEffect, useState} from 'react';
+import React from 'react';
+import { TeamInfo } from '../../'
 
 // MUI Stack: https://mui.com/material-ui/react-stack/
 
-function StudentStack() {
+export const StudentStack = () => {
 
     return (
       <>
-        
+        <TeamInfo />
       </>
     );
   }
-  
-export default StudentStack;

@@ -15,8 +15,8 @@ export const TeamInfo = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between'
             }}>
-            <Typography paddingLeft='30px' variant="h6" component="div">Server: Server Name</Typography>
-            <Typography paddingRight='30px' variant="h6" component="div">Team: Team Name</Typography>
+            <Typography paddingLeft='30px' variant="h6" component="div" color="white">Server: Server Name</Typography>
+            <Typography paddingRight='30px' variant="h6" component="div"color="white">Team: Team Name</Typography>
         </Box>
     )
 }
