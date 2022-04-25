@@ -1,14 +1,12 @@
-import React, { useEffect, useState} from 'react';
-
+import React from 'react';
+import { TeamInfo } from '../'
 // Contains the main part of the app
 
-function Body() {
+export const Body = () => {
 
     return (
       <>
-        
+        <TeamInfo />
       </>
     );
   }
-  
-  export default Body;
