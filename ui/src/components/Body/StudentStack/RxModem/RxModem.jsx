@@ -8,10 +8,10 @@ export const RxModem = ({ unit }) => {
     //TODO: modem buttons, update state, video, 
     const theme = AstroTheme
     const tmpRxData = [
-        {unit: 1, number: 1, operational: true, antenna: 1, frequency: 1100, bandwidth: 25, modulation: '8PSK', fec: '3/5'},
-        {unit: 1, number: 2, operational: true, antenna: 1, frequency: 1200, bandwidth: 35, modulation: 'BPSK', fec: '1/2'},
-        {unit: 1, number: 3, operational: true, antenna: 1, frequency: 1300, bandwidth: 45, modulation: 'QPSK', fec: '3/4'},
-        {unit: 1, number: 4, operational: true, antenna: 1, frequency: 1400, bandwidth: 55, modulation: '16PSK', fec: '1/2'}
+        {unit: 1, number: 1, operational: true, id_antenna: 1, frequency: 1100, bandwidth: 25, modulation: '8QAM', fec: '3/4'},
+        {unit: 1, number: 2, operational: true, id_antenna: 1, frequency: 1200, bandwidth: 35, modulation: 'BPSK', fec: '1/2'},
+        {unit: 1, number: 3, operational: true, id_antenna: 2, frequency: 1300, bandwidth: 45, modulation: 'QPSK', fec: '7/8'},
+        {unit: 1, number: 4, operational: true, id_antenna: 2, frequency: 1400, bandwidth: 55, modulation: '16QAM', fec: '5/6'}
     ];
     const [rxData] = useState(tmpRxData);
     const [activeModem, setActiveModem] = useState(0);
@@ -25,7 +25,8 @@ export const RxModem = ({ unit }) => {
         border: '1px solid black',
         display:'grid', 
         gridTemplateColumns: '1fr 1fr 4fr 3fr 5fr',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif"
     };
     const sxCaseId = {
         color: 'white',
@@ -60,15 +61,13 @@ export const RxModem = ({ unit }) => {
         backgroundColor: theme.palette.primary.main,
         margin: '8px',
         borderRadius: '4px',
-        display: 'flex',
+        display: 'grid',
         flexDirection: 'column',
-        alignItems: 'end',
-        justifyContent: 'flex-end'
     };
     const sxInputRow = {
         display: 'grid',
-        gridTemplateColumns: '80px 80px 80px', 
-        textAlign: 'right', 
+        gridTemplateColumns: '80px 80px 80px',
+        textAlign: 'left', 
         margin: '2px'
     };
     const sxInputApply = {
@@ -81,9 +80,12 @@ export const RxModem = ({ unit }) => {
     const sxVideo = {
         margin: '10px',
         border: '1px solid black',
-        backgroundColor: 'white',
+        backgroundColor: theme.palette.primary.light,
         width: '200px',
-        height: '200px'
+        height: '200px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
     }
 
      // Modem Case Id
@@ -97,8 +99,7 @@ export const RxModem = ({ unit }) => {
             <br></br>
             <Typography>{unit}</Typography>
         </Box>
-    )
-
+    );
     // Modem selector buttons
     const RxModemButtonBox = () => (
         <Box sx={sxModemButtonBox}>
@@ -114,30 +115,104 @@ export const RxModem = ({ unit }) => {
         </Button>
     );
     RxModemButton.propTypes = {modem: PropTypes.number};
-    
 
     // Modem User Inputs
-    const inputs = [];
-    ['Antenna', 'Frequency', 'Bandwidth', 'Modulation', 'FEC'].forEach((x, index) => {
-        inputs.push(
-            <Box key={index} sx={sxInputRow}>
-                <label htmlFor={x}>{x}</label>
-                <input name={x} type='text' placeholder={rxData[activeModem][x.toLowerCase()]}></input>
-                <Typography sx={sxValues}>{rxData[activeModem][x.toLowerCase()]}</Typography>
+    const RxModemInput = () => {
+        const [inputData, setInputData] = useState(tmpRxData[0])
+        const handleInputChange = ({ param, val }) => {
+            if((param === 'frequency' | param === 'bandwidth') && isNaN(val)) val = 1000
+            let tmpData = {...inputData};
+            tmpData[param] = val;
+            console.log(tmpData, param, val);
+            console.log(tmpData == inputData);
+            setInputData(tmpData);
+        }
+        return(
+            <Box sx={sxInputBox}>
+                <Box sx={sxInputRow}>
+                    <label htmlFor='Antenna'>Antenna</label>
+                    <select
+                        name='Antenna'
+                        value={inputData.id_antenna}
+                        onChange={e => handleInputChange('id_antenna', e.target.value)}
+                        >
+                        <option value={1}>1</option>
+                        <option value={2}>2</option>
+                    </select>
+                    <Typography sx={sxValues}>
+                        {rxData[activeModem].id_antenna}
+                    </Typography>
+                </Box>
+                <Box sx={sxInputRow}>
+                    <label htmlFor='frequency'>Frequency</label>
+                    <input 
+                        name='frequency'
+                        type='text'
+                        value={inputData.frequency}
+                        onChange={e => handleInputChange({param: 'frequency', val: parseInt(e.target.value)})}
+                        >
+                    </input>
+                    <Typography sx={sxValues}>
+                        {rxData[activeModem].frequency + ' MHz'}
+                    </Typography>
+                </Box>
+                <Box sx={sxInputRow}>
+                    <label htmlFor='bandwidth'>Bandwidth</label>
+                    <input 
+                        name='bandwidth'
+                        type='text'
+                        value={inputData.bandwidth}
+                        onChange={e => handleInputChange({param: 'bandwidth', val: parseInt(e.target.value)})}
+                        >
+                    </input>
+                    <Typography sx={sxValues}>
+                        {rxData[activeModem].bandwidth + ' MHz'}
+                    </Typography>
+                </Box>
+                <Box sx={sxInputRow}>
+                    <label htmlFor='modulation'>Modulation</label>
+                    <select 
+                        name='modulation'
+                        value={inputData.modulation}
+                        onChange={e => handleInputChange('modulation', e.target.value)}
+                        >
+                        <option value='BPSK'>BPSK</option>
+                        <option value='QPSK'>QPSK</option>
+                        <option value='8QAM'>8QAM</option>
+                        <option value='16QAM'>16QAM</option>
+                    </select>
+                    <Typography sx={sxValues}>
+                        {rxData[activeModem].modulation}
+                    </Typography>
+                </Box>
+                <Box sx={sxInputRow}>
+                    <label htmlFor='fec'>FEC</label>
+                    <select 
+                        name='fec'
+                        value={inputData.fec}
+                        onChange={e => handleInputChange('fec', e.target.value)}
+                        >
+                        <option value='1/2'>1/2</option>
+                        <option value='2/3'>2/3</option>
+                        <option value='3/4'>3/4</option>
+                        <option value='5/6'>3/5</option>
+                        <option value='7/8'>3/4</option>
+                    </select>
+                    <Typography sx={sxValues}>
+                        {rxData[activeModem].fec}
+                    </Typography>
+                </Box>
+                <Box sx={sxInputRow}>
+                    <div></div>
+                    <Button sx={sxInputApply} onClick={e => console.log(e.target.innerText)}>Apply</Button>
+                </Box>
             </Box>
         )
-    });
-
-    const RxModemInput = () => (
-        <Box sx={sxInputBox}>
-            {inputs}    
-            <Button sx={sxInputApply} onClick={e => console.log(e.target.innerText)}>Apply</Button>
-        </Box>
-    );
+    };
     
     const RxVideo = () => (
         <Box sx={sxVideo}>
-            Video Goes Here
+            Video Feed
         </Box>
     );
 
