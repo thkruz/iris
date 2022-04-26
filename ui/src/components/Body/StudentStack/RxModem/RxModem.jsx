@@ -13,7 +13,7 @@ export const RxModem = ({ unit }) => {
         {unit: 1, number: 3, operational: true, id_antenna: 2, frequency: 1300, bandwidth: 45, modulation: 'QPSK', fec: '7/8'},
         {unit: 1, number: 4, operational: true, id_antenna: 2, frequency: 1400, bandwidth: 55, modulation: '16QAM', fec: '5/6'}
     ];
-    const [rxData] = useState(tmpRxData);
+    const [rxData, setRxData] = useState(tmpRxData);
     const [activeModem, setActiveModem] = useState(0);
     
     // Styles
@@ -120,12 +120,19 @@ export const RxModem = ({ unit }) => {
     const RxModemInput = () => {
         const [inputData, setInputData] = useState(tmpRxData[0])
         const handleInputChange = ({ param, val }) => {
-            if((param === 'frequency' | param === 'bandwidth') && isNaN(val)) val = 1000
+            console.log(param, val);
+
+            if((param === 'frequency' | param === 'bandwidth') && (isNaN(val) | val <= 0)) val = 1000
             let tmpData = {...inputData};
             tmpData[param] = val;
-            console.log(tmpData, param, val);
             console.log(tmpData == inputData);
             setInputData(tmpData);
+        }
+        const handleApply = () => {
+            let tmpData = [...rxData];
+            tmpData[activeModem] = inputData;
+            console.log(inputData)
+            setRxData(tmpData);
         }
         return(
             <Box sx={sxInputBox}>
@@ -134,7 +141,7 @@ export const RxModem = ({ unit }) => {
                     <select
                         name='Antenna'
                         value={inputData.id_antenna}
-                        onChange={e => handleInputChange('id_antenna', e.target.value)}
+                        onChange={e => handleInputChange({param:'id_antenna', val:e.target.value})}
                         >
                         <option value={1}>1</option>
                         <option value={2}>2</option>
@@ -174,7 +181,7 @@ export const RxModem = ({ unit }) => {
                     <select 
                         name='modulation'
                         value={inputData.modulation}
-                        onChange={e => handleInputChange('modulation', e.target.value)}
+                        onChange={e => handleInputChange({param:'modulation', val:e.target.value})}
                         >
                         <option value='BPSK'>BPSK</option>
                         <option value='QPSK'>QPSK</option>
@@ -190,13 +197,13 @@ export const RxModem = ({ unit }) => {
                     <select 
                         name='fec'
                         value={inputData.fec}
-                        onChange={e => handleInputChange('fec', e.target.value)}
+                        onChange={e => handleInputChange({param:'fec', val:e.target.value})}
                         >
                         <option value='1/2'>1/2</option>
                         <option value='2/3'>2/3</option>
                         <option value='3/4'>3/4</option>
-                        <option value='5/6'>3/5</option>
-                        <option value='7/8'>3/4</option>
+                        <option value='5/6'>5/6</option>
+                        <option value='7/8'>7/8</option>
                     </select>
                     <Typography sx={sxValues}>
                         {rxData[activeModem].fec}
@@ -204,7 +211,7 @@ export const RxModem = ({ unit }) => {
                 </Box>
                 <Box sx={sxInputRow}>
                     <div></div>
-                    <Button sx={sxInputApply} onClick={e => console.log(e.target.innerText)}>Apply</Button>
+                    <Button sx={sxInputApply} onClick={e => handleApply(e)}>Apply</Button>
                 </Box>
             </Box>
         )
