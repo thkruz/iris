@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import ReactPlayer from 'react-player';
 import PropTypes from 'prop-types';
 import { Box, Button, Typography } from '@mui/material';
 import './RxModem.css'
@@ -217,11 +218,21 @@ export const RxModem = ({ unit }) => {
         )
     };
     
-    const RxVideo = () => (
-        <Box sx={sxVideo}>
-            Video Feed
-        </Box>
-    );
+    const RxVideo = () => {
+        //const [videoFilePath] = useState('/videos/testVid2.mov')
+        const vidPath = ['/videos/testVid.mov', 'videos/testVid.mp4', 'videos/testVid2.mov', 'videos/testVid.mp4']
+        return(
+            <Box sx={sxVideo}>
+                <ReactPlayer 
+                    url={vidPath[unit-1]} 
+                    width='100%' 
+                    height='100%' 
+                    contorls={false}
+                    playing={true}
+                    loop={true} />
+            </Box>
+        )
+    };
 
     return(
         <>
