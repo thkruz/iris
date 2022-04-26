@@ -80,7 +80,7 @@ export const RxModem = ({ unit }) => {
     }
     const sxVideo = {
         margin: '10px',
-        border: '1px solid black',
+        border: '2px solid grey',
         backgroundColor: theme.palette.primary.light,
         width: '200px',
         height: '200px',
@@ -223,13 +223,18 @@ export const RxModem = ({ unit }) => {
         const vidPath = ['/videos/testVid.mov', 'videos/testVid.mp4', 'videos/testVid2.mov', 'videos/testVid.mp4']
         return(
             <Box sx={sxVideo}>
-                <ReactPlayer 
-                    url={vidPath[unit-1]} 
-                    width='100%' 
-                    height='100%' 
-                    contorls={false}
-                    playing={true}
-                    loop={true} />
+                {unit < 4 ? (
+                    <ReactPlayer 
+                        url={vidPath[unit-1]} 
+                        width='100%' 
+                        height='100%' 
+                        contorls={false}
+                        playing={true}
+                        loop={true} 
+                    />
+                ):(
+                    "No Signal"
+                )}
             </Box>
         )
     };
