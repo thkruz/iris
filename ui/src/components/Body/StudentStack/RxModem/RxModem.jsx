@@ -7,9 +7,13 @@ import { AstroTheme } from '../../../../themes/AstroTheme';
 
 export const RxModem = ({ unit, tmpRxData }) => {
     //TODO: modem buttons, update state, video, 
-    const theme = AstroTheme
+    const theme = AstroTheme;
+    const degraded = false;
+    const denied = false;
     const signals = [
-        {id: 1, id_server: 123456, id_target: 1, frequency: 1250, power: -45, bandwidth: 10, modulation: '8QAM', fec: '1/2', feed:'testVid2.mov'}
+        {id: 1, id_server: 123456, id_target: 1, frequency: 1250, power: -45, bandwidth: 10, modulation: '8QAM', fec: '1/2', feed:'testVid2.mov'},
+        {id: 1, id_server: 123456, id_target: 1, frequency: 1300, power: -45, bandwidth: 10, modulation: '8QAM', fec: '3/4', feed:'testVid.mov'},
+        {id: 1, id_server: 123456, id_target: 1, frequency: 1350, power: -45, bandwidth: 10, modulation: '8QAM', fec: '3/4', feed:'testVid.mp4'}
     ];
     const [rxData, setRxData] = useState(tmpRxData);
     const [activeModem, setActiveModem] = useState(0);
@@ -211,23 +215,37 @@ export const RxModem = ({ unit, tmpRxData }) => {
     };
     
     const RxVideo = () => {
-        
-        const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = rxData[activeModem];
-        const { frequency: s_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, feed} = signals[0];
-        const s_lb = s_freq - 0.5 * s_bw;
-        const s_rb = s_freq + 0.5 * s_bw;
-        const s_flb = s_lb - 0.5 * s_bw;
-        const s_frb = s_rb + 0.5 * s_bw;
-        const r_lb = r_freq - 0.5 * r_bw;
-        const r_rb = r_freq + 0.5 * r_bw;
-        const sigMatch = r_lb <= s_lb && r_lb >= s_flb && r_rb >= s_rb && r_rb <= s_frb;
-        const propMatch = r_mod === s_mod && r_fec === s_fec;
+        let matchFound = false;
+        let vidFeed = '';
 
+        const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = rxData[activeModem];
+        signals.forEach(signal => {
+            const { frequency: s_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, feed} = signal; // TODO: loop through all signals to find one that matches 
+            const s_lb = s_freq - 0.5 * s_bw;
+            const s_rb = s_freq + 0.5 * s_bw;
+            const s_flb = s_lb - 0.5 * s_bw;
+            const s_frb = s_rb + 0.5 * s_bw;
+            const r_lb = r_freq - 0.5 * r_bw;
+            const r_rb = r_freq + 0.5 * r_bw;
+            const rxMatch = 
+                r_lb <= s_lb &&     // receiver left bound is withing tolerance
+                r_lb >= s_flb && 
+                r_rb >= s_rb &&     // receiver right bound is within tolerance
+                r_rb <= s_frb && 
+                r_mod === s_mod &&  // receiver modulation schema matches
+                r_fec === s_fec;    // reciever fec rate matches
+    
+            if( rxMatch ) {
+                vidFeed = degraded ? `degraded_${feed}` : feed;
+                matchFound = true;
+            }
+
+        })
         return(
             <Box sx={sxVideo}>
-                {sigMatch && propMatch ? (
+                {matchFound && !denied ? (
                     <ReactPlayer 
-                    url={`/videos/${feed}`} 
+                    url={`/videos/${vidFeed}`} 
                     width='100%' 
                     height='100%' 
                     controls={false}
