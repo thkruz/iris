@@ -1,14 +1,17 @@
-import React, { useEffect, useState} from 'react';
-
+import { Paper } from '@mui/material';
+import React from 'react';
+import { StudentStack } from '../'
+import { AstroTheme } from '../../themes/AstroTheme';
 // Contains the main part of the app
 
-function Body() {
-
-    return (
-      <>
-        
-      </>
-    );
-  }
-  
-  export default Body;
+export const Body = () => {
+  const theme = AstroTheme;
+  const sxBody = {
+    backgroundColor: theme.palette.background.paper
+  };
+  return (
+    <Paper sx={sxBody}>
+      <StudentStack />
+    </Paper>
+  );
+}
