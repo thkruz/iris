@@ -5,14 +5,11 @@ import { Box, Button, Typography } from '@mui/material';
 import './RxModem.css'
 import { AstroTheme } from '../../../../themes/AstroTheme';
 
-export const RxModem = ({ unit }) => {
+export const RxModem = ({ unit, tmpRxData }) => {
     //TODO: modem buttons, update state, video, 
     const theme = AstroTheme
-    const tmpRxData = [
-        {unit: 1, number: 1, operational: true, id_antenna: 1, frequency: 1100, bandwidth: 25, modulation: '8QAM', fec: '3/4'},
-        {unit: 1, number: 2, operational: true, id_antenna: 1, frequency: 1200, bandwidth: 35, modulation: 'BPSK', fec: '1/2'},
-        {unit: 1, number: 3, operational: true, id_antenna: 2, frequency: 1300, bandwidth: 45, modulation: 'QPSK', fec: '7/8'},
-        {unit: 1, number: 4, operational: true, id_antenna: 2, frequency: 1400, bandwidth: 55, modulation: '16QAM', fec: '5/6'}
+    const signals = [
+        {id: 1, id_server: 123456, id_target: 1, frequency: 1250, power: -45, bandwidth: 10, modulation: '8QAM', fec: '1/2', feed:'testVid2.mov'}
     ];
     const [rxData, setRxData] = useState(tmpRxData);
     const [activeModem, setActiveModem] = useState(0);
@@ -105,13 +102,13 @@ export const RxModem = ({ unit }) => {
     const RxModemButtonBox = () => (
         <Box sx={sxModemButtonBox}>
             {rxData.map((x, index) => (
-                <RxModemButton key={index} modem={x.number} />
+                <RxModemButton key={index} modem={x.modem} />
             ))}
         </Box>
     );
     const RxModemButton = ({ modem }) => (
         <Button sx={modem === activeModem + 1 ? sxModemButtonActive : sxModemButton}
-        onClick={e => {setActiveModem(parseInt(e.target.innerText) - 1); console.log(activeModem)}}>
+        onClick={e => {setActiveModem(parseInt(e.target.innerText) - 1)}}>
                 {modem}
         </Button>
     );
@@ -119,20 +116,15 @@ export const RxModem = ({ unit }) => {
 
     // Modem User Inputs
     const RxModemInput = () => {
-        const [inputData, setInputData] = useState(tmpRxData[0])
+        const [inputData, setInputData] = useState(rxData[activeModem])
         const handleInputChange = ({ param, val }) => {
-            console.log(param, val);
-
-            if((param === 'frequency' | param === 'bandwidth') && (isNaN(val) | val <= 0)) val = 1000
             let tmpData = {...inputData};
             tmpData[param] = val;
-            console.log(tmpData == inputData);
             setInputData(tmpData);
         }
         const handleApply = () => {
             let tmpData = [...rxData];
             tmpData[activeModem] = inputData;
-            console.log(inputData)
             setRxData(tmpData);
         }
         return(
@@ -142,7 +134,7 @@ export const RxModem = ({ unit }) => {
                     <select
                         name='Antenna'
                         value={inputData.id_antenna}
-                        onChange={e => handleInputChange({param:'id_antenna', val:e.target.value})}
+                        onChange={e => handleInputChange({param:'id_antenna', val: parseInt(e.target.value)})}
                         >
                         <option value={1}>1</option>
                         <option value={2}>2</option>
@@ -219,22 +211,34 @@ export const RxModem = ({ unit }) => {
     };
     
     const RxVideo = () => {
-        //const [videoFilePath] = useState('/videos/testVid2.mov')
-        const vidPath = ['/videos/testVid.mov', 'videos/testVid.mp4', 'videos/testVid2.mov', 'videos/testVid.mp4']
+        
+        const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = rxData[activeModem];
+        const { frequency: s_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, feed} = signals[0];
+        const s_lb = s_freq - 0.5 * s_bw;
+        const s_rb = s_freq + 0.5 * s_bw;
+        const s_flb = s_lb - 0.5 * s_bw;
+        const s_frb = s_rb + 0.5 * s_bw;
+        const r_lb = r_freq - 0.5 * r_bw;
+        const r_rb = r_freq + 0.5 * r_bw;
+        const sigMatch = r_lb <= s_lb && r_lb >= s_flb && r_rb >= s_rb && r_rb <= s_frb;
+        const propMatch = r_mod === s_mod && r_fec === s_fec;
+
         return(
             <Box sx={sxVideo}>
-                {unit < 4 ? (
+                {sigMatch && propMatch ? (
                     <ReactPlayer 
-                        url={vidPath[unit-1]} 
-                        width='100%' 
-                        height='100%' 
-                        contorls={false}
-                        playing={true}
-                        loop={true} 
+                    url={`/videos/${feed}`} 
+                    width='100%' 
+                    height='100%' 
+                    controls={false}
+                    playing={true}
+                    loop={true}
+                    pip={false}
+                    muted={true}
                     />
-                ):(
-                    "No Signal"
-                )}
+                    ):(
+                        "No Signal"
+                        )}
             </Box>
         )
     };
@@ -252,5 +256,6 @@ export const RxModem = ({ unit }) => {
 }
 
 RxModem.propTypes = {
-    unit: PropTypes.number
+    unit: PropTypes.number,
+    tmpRxData: PropTypes.array
 }
