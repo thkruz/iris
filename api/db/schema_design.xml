@@ -44,11 +44,11 @@
 <row name="name" null="1" autoincrement="0">
 <datatype>CHAR</datatype>
 <default>NULL</default></row>
-<row name="id_server" null="1" autoincrement="0">
+<row name="server_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="server" row="id" />
 </row>
-<row name="id_team" null="1" autoincrement="0">
+<row name="team_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="team" row="id" />
 </row>
@@ -61,11 +61,11 @@
 <row name="id" null="1" autoincrement="1">
 <datatype>INTEGER</datatype>
 <default>NULL</default></row>
-<row name="id_server" null="1" autoincrement="0">
+<row name="server_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="server" row="id" />
 </row>
-<row name="id_team" null="1" autoincrement="0">
+<row name="team_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="team" row="id" />
 </row>
@@ -94,17 +94,21 @@
 <part>id</part>
 </key>
 </table>
-<table x="461" y="850" name="transmitter">
+<table x="471" y="1220" name="transmitter">
 <row name="id" null="1" autoincrement="1">
 <datatype>INTEGER</datatype>
 <default>NULL</default></row>
-<row name="id_server" null="1" autoincrement="0">
+<row name="server_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="server" row="id" />
 </row>
-<row name="id_team" null="1" autoincrement="0">
+<row name="team_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="team" row="id" />
+</row>
+<row name="antenna_id" null="1" autoincrement="0">
+<datatype>INTEGER</datatype>
+<default>NULL</default><relation table="antenna" row="id" />
 </row>
 <row name="unit" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
@@ -114,9 +118,6 @@
 <default>NULL</default></row>
 <row name="operational" null="1" autoincrement="0">
 <datatype>bit</datatype>
-<default>NULL</default></row>
-<row name="id_antenna" null="1" autoincrement="0">
-<datatype>INTEGER</datatype>
 <default>NULL</default></row>
 <row name="frequency" null="1" autoincrement="0">
 <datatype>DECIMAL</datatype>
@@ -131,17 +132,21 @@
 <part>id</part>
 </key>
 </table>
-<table x="453" y="7" name="action">
+<table x="455" y="19" name="action">
 <row name="id" null="1" autoincrement="1">
 <datatype>INTEGER</datatype>
 <default>NULL</default></row>
-<row name="id_server" null="1" autoincrement="0">
+<row name="server_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="server" row="id" />
 </row>
-<row name="id_team" null="1" autoincrement="0">
+<row name="team_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="team" row="id" />
+</row>
+<row name="antenna_id" null="1" autoincrement="0">
+<datatype>INTEGER</datatype>
+<default>NULL</default><relation table="antenna" row="id" />
 </row>
 <row name="unit" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
@@ -151,9 +156,6 @@
 <default>NULL</default></row>
 <row name="operational" null="1" autoincrement="0">
 <datatype>bit</datatype>
-<default>NULL</default></row>
-<row name="id_antenna" null="1" autoincrement="0">
-<datatype>INTEGER</datatype>
 <default>NULL</default></row>
 <row name="frequency" null="1" autoincrement="0">
 <datatype>DECIMAL</datatype>
@@ -172,15 +174,15 @@
 </key>
 <comment>This is used to show the broadcasts as a snapshot in history</comment>
 </table>
-<table x="460" y="1165" name="spec_a">
+<table x="453" y="825" name="spec_a">
 <row name="id" null="1" autoincrement="1">
 <datatype>INTEGER</datatype>
 <default>NULL</default></row>
-<row name="id_server" null="1" autoincrement="0">
+<row name="server_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="server" row="id" />
 </row>
-<row name="id_team" null="1" autoincrement="0">
+<row name="team_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="team" row="id" />
 </row>
@@ -218,17 +220,21 @@
 <part>id</part>
 </key>
 </table>
-<table x="461" y="1517" name="antenna">
+<table x="450" y="1540" name="antenna">
 <row name="id" null="1" autoincrement="1">
 <datatype>INTEGER</datatype>
 <default>NULL</default></row>
-<row name="id_server" null="1" autoincrement="0">
+<row name="server_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="server" row="id" />
 </row>
-<row name="id_team" null="1" autoincrement="0">
+<row name="team_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="team" row="id" />
+</row>
+<row name="target_id" null="1" autoincrement="0">
+<datatype>INTEGER</datatype>
+<default>NULL</default><relation table="target" row="id" />
 </row>
 <row name="unit" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
@@ -239,10 +245,6 @@
 <row name="operational" null="1" autoincrement="0">
 <datatype>bit</datatype>
 <default>NULL</default></row>
-<row name="id_target" null="1" autoincrement="0">
-<datatype>INTEGER</datatype>
-<default>NULL</default><relation table="target" row="id" />
-</row>
 <row name="track" null="1" autoincrement="0">
 <datatype>bit</datatype>
 <default>NULL</default></row>
@@ -274,9 +276,6 @@
 <datatype>VARCHAR</datatype>
 <default>NULL</default><comment>random hex to identify the server</comment>
 </row>
-<row name="date" null="1" autoincrement="0">
-<datatype>DATE</datatype>
-<default>NULL</default></row>
 <row name="name" null="1" autoincrement="0">
 <datatype>VARCHAR</datatype>
 <default>NULL</default></row>
@@ -294,6 +293,10 @@
 <row name="name" null="1" autoincrement="0">
 <datatype>VARCHAR</datatype>
 <default>NULL</default></row>
+<row name="server_id" null="1" autoincrement="0">
+<datatype>INTEGER</datatype>
+<default>NULL</default><relation table="server" row="id" />
+</row>
 <key type="PRIMARY" name="">
 <part>id</part>
 </key>
@@ -313,7 +316,7 @@
 <row name="id" null="1" autoincrement="1">
 <datatype>INTEGER</datatype>
 <default>NULL</default></row>
-<row name="id_server" null="1" autoincrement="0">
+<row name="server_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="server" row="id" />
 </row>
@@ -338,14 +341,14 @@
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="server" row="id" />
 </row>
-<row name="id_server" null="1" autoincrement="0">
+<row name="server_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default></row>
-<row name="id_team" null="1" autoincrement="0">
+<row name="team_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="team" row="id" />
 </row>
-<row name="id_target" null="1" autoincrement="0">
+<row name="target_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="target" row="id" />
 </row>
@@ -378,11 +381,11 @@
 <row name="id" null="1" autoincrement="1">
 <datatype>INTEGER</datatype>
 <default>NULL</default></row>
-<row name="id_save" null="1" autoincrement="0">
+<row name="save_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="save" row="id" />
 </row>
-<row name="id_inject" null="1" autoincrement="0">
+<row name="inject_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="inject" row="id" />
 </row>
@@ -394,11 +397,11 @@
 <row name="id" null="1" autoincrement="1">
 <datatype>INTEGER</datatype>
 <default>NULL</default></row>
-<row name="id_save" null="1" autoincrement="0">
+<row name="save_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="save" row="id" />
 </row>
-<row name="id_signal" null="1" autoincrement="0">
+<row name="signal_id" null="1" autoincrement="0">
 <datatype>INTEGER</datatype>
 <default>NULL</default><relation table="signal" row="id" />
 </row>
