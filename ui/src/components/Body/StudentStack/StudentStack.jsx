@@ -4,7 +4,7 @@ import { Box } from '@mui/material';
 // MUI Stack: https://mui.com/material-ui/react-stack/
 
 export const StudentStack = () => {
-  const tmpRxData = [
+  const tmpRxData = [ // TODO: This needs to come from an api call
     {unit: 1, modem: 1, operational: true, id_antenna: 1, frequency: 1100, bandwidth: 25, modulation: '8QAM', fec: '3/4'},
     {unit: 1, modem: 2, operational: true, id_antenna: 1, frequency: 1200, bandwidth: 35, modulation: 'BPSK', fec: '1/2'},
     {unit: 1, modem: 3, operational: true, id_antenna: 2, frequency: 1300, bandwidth: 45, modulation: 'QPSK', fec: '7/8'},

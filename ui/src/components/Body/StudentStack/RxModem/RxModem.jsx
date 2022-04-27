@@ -8,9 +8,9 @@ import { AstroTheme } from '../../../../themes/AstroTheme';
 export const RxModem = ({ unit, tmpRxData }) => {
     //TODO: modem buttons, update state, video, 
     const theme = AstroTheme;
-    const degraded = false;
-    const denied = false;
-    const signals = [
+    const degraded = false; // TODO: These may come from context
+    const denied = false; // TODO: These may come from context
+    const signals = [ // TODO: This needs to come from an api call
         {id: 1, id_server: 123456, id_target: 1, frequency: 1250, power: -45, bandwidth: 10, modulation: '8QAM', fec: '1/2', feed:'testVid2.mov'},
         {id: 1, id_server: 123456, id_target: 1, frequency: 1300, power: -45, bandwidth: 10, modulation: '8QAM', fec: '3/4', feed:'testVid.mov'},
         {id: 1, id_server: 123456, id_target: 1, frequency: 1350, power: -45, bandwidth: 10, modulation: '8QAM', fec: '3/4', feed:'testVid.mp4'}
