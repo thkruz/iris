@@ -1,5 +1,6 @@
 import React, { useEffect, useState} from 'react';
-import config from './config'
+import config from './config';
+import { Header } from './components';
 
 const ApiUrl = config[process.env.REACT_APP_NODE_ENV || "development"].apiUrl;
 
@@ -17,6 +18,7 @@ function App() {
 
   return (
     <div>
+      <Header />
       App is running - good work: 
       { names.map(author => author.firstName + " ")}
     </div>
