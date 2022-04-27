@@ -6,7 +6,6 @@ exports.up = function(knex) {
     return knex.schema.createTable('server', table => {
         table.increments('id').primary();
         table.string('name').notNullable();
-        table.string('seed').notNullable();
         table.timestamp('start_time').defaultTo(knex.fn.now());
     });
 };

@@ -6,7 +6,7 @@ exports.up = function(knex) {
   return knex.schema.createTable('target', table => {
     table.increments('id').primary();
     table.string('name').notNullable();
-    table.integer('offest').notNullable();
+    table.integer('offset').notNullable();
   });
 };
 
