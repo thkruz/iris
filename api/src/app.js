@@ -13,91 +13,80 @@ app.get('/', (request, response) => {
     response.status(200).send('App root route running');
 })
 
-app.get('/authors', (request, response) => {
-    knex('app_authors')
+app.get('/data/:table_name', (request, response) => {
+    if(request.query.id !== undefined) {
+        knex(request.params.table_name)
+        .select('*')
+        .where('id', request.query.id)
+        .then(responseData => {
+            response.status(200).send(responseData);
+        })
+        .catch(error => {
+            response.status(500).send(error);
+        });
+    } else if (request.query.server_id !== undefined) {
+        knex(request.params.table_name)
+        .select('*')
+        .where('server_id', request.query.server_id)
+        .then(responseData => {
+            response.status(200).send(responseData);
+        })
+        .catch(error => {
+            response.status(500).send(error);
+        });
+    } else {
+        knex(request.params.table_name)
         .select('*')
         .then(responseData => {
             response.status(200).send(responseData);
-        });
-});
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ /server ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-app.get('/server', (request, response) => {
-    knex('server')
-        .select('*')
-        .then(serverRecords => {
-            response.status(200).send(serverRecords)
-        });
-});
-
-app.get('/server/:id', (request, response) => {
-    knex('server')
-        .select('*')
-        .where('id', request.params.id)
-        .then(serverRecords => {
-            response.status(200).send(serverRecords);
-        });
-});
-
-app.post('/server', (request, response) => {
-    knex('server')
-        .insert({
-            seed: request.body.seed,
-            name: request.body.name
-        })
-        .then(() => {
-            response.status(201).send('Server created')
         })
         .catch(error => {
-            response.status(500).send(error)
-        }
-    );
-});
-
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ /signal ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-app.get('/signal', (request, response) => {
-    knex('signal')
-        .select('*')
-        .then(signalRecords => {
-            response.status(200).send(signalRecords);
+            response.status(500).send(error);
         });
+    }
 });
 
-app.post('/signal', (request, response) => {
-    const { server_id, team_id, target_id, frequency, power, bandwidth, modulation, fec, feed, operational } = request.body;
-    knex('signal')
-        .insert({
-            server_id,
-            team_id,
-            target_id,
-            frequency,
-            power,
-            bandwidth,
-            modulation,
-            fec,
-            feed,
-            operational
-        })
-        .then(() => {
-            response.status(200).send('Signal updated')
+app.post('/data/:table_name', (request, response) => {
+    knex(request.params.table_name)
+    .insert(request.body)
+    .then(responseData => {
+        response.status(200).send(`${request.params.table_name} created`);
+    })
+    .catch(error => {
+        response.status(500).send(error);
+    });
+});
+
+app.patch('/data/:table_name', (request, response) => {
+    if(request.query.id !== undefined) {
+        knex(request.params.table_name)
+        .where('id', request.query.id)
+        .update(request.body)
+        .then(responseData => {
+            response.status(200).send(`${request.params.table_name} updated`);
         })
         .catch(error => {
-            response.status(500).send(error)
-        })
-});
-
-app.get('/signal/:id', (request, response) => {
-    const { id } = request.params;
-    knex('signal')
-        .where('id', id)
-        .select('*')
-        .then(signalRecords => {
-            response.status(200).send(responseData);
+            response.status(500).send(error);
         });
+    } else {
+        response.status(500).send('No id specified');
+    }
 });
 
-
-
+app.delete('/data/:table_name', (request, response) => {
+    if(['signal', 'save'].includes(request.params.table_name) && request.query.id !== undefined) {
+        knex(request.params.table_name)
+        .where('id', request.query.id)
+        .del()
+        .then(responseData => {
+            response.status(200).send(`${request.params.table_name} deleted`);
+        })
+        .catch(error => {
+            response.status(500).send(error);
+        });
+    } else {
+        response.status(500).send('No id specified, or table name is not valid');
+    }
+});
 
 module.exports = app;
