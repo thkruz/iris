@@ -16,37 +16,68 @@ app.get('/', (request, response) => {
 app.get('/authors', (request, response) => {
     knex('app_authors')
         .select('*')
-        .then(authorRecords => {
-            let responseData = authorRecords.map(author => ({ firstName: author.first_name, lastName: author.last_name}));
-            response.status(200).send(responseData)
+        .then(responseData => {
+            response.status(200).send(responseData);
         });
 });
 
-app.get('/signals', (request, response) => {
-    knex('signals')
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ /server ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+app.get('/server', (request, response) => {
+    knex('server')
+        .select('*')
+        .then(serverRecords => {
+            response.status(200).send(serverRecords)
+        });
+});
+
+app.get('/server/:id', (request, response) => {
+    knex('server')
+        .select('*')
+        .where('id', request.params.id)
+        .then(serverRecords => {
+            response.status(200).send(serverRecords);
+        });
+});
+
+app.post('/server', (request, response) => {
+    knex('server')
+        .insert({
+            seed: request.body.seed,
+            name: request.body.name
+        })
+        .then(() => {
+            response.status(201).send('Server created')
+        })
+        .catch(error => {
+            response.status(500).send(error)
+        }
+    );
+});
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ /signal ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+app.get('/signal', (request, response) => {
+    knex('signal')
         .select('*')
         .then(signalRecords => {
-            let responseData = signalRecords.map(signal => ({
-                id: signal.id,
-                user_id: signal.user_id,
-                amplitude: signal.amplitude,
-                frequency: signal.frequency,
-                power: signal.power,
-                bandwidth: signal.bandwidth
-            }));
-            response.status(200).send(responseData)
+            response.status(200).send(signalRecords);
         });
 });
 
-app.post('/signals', (request, response) => {
-    const { user_id, amplitude, frequency, power, bandwidth } = request.body;
-    knex('signals')
+app.post('/signal', (request, response) => {
+    const { server_id, team_id, target_id, frequency, power, bandwidth, modulation, fec, feed, operational } = request.body;
+    knex('signal')
         .insert({
-            user_id: user_id,
-            amplitude: amplitude,
-            frequency: frequency,
-            power: power,
-            bandwidth: bandwidth
+            server_id,
+            team_id,
+            target_id,
+            frequency,
+            power,
+            bandwidth,
+            modulation,
+            fec,
+            feed,
+            operational
         })
         .then(() => {
             response.status(200).send('Signal updated')
@@ -56,33 +87,16 @@ app.post('/signals', (request, response) => {
         })
 });
 
-app.get('/users', (request, response) => {
-    knex('users')
+app.get('/signal/:id', (request, response) => {
+    const { id } = request.params;
+    knex('signal')
+        .where('id', id)
         .select('*')
-        .then(userRecords => {
-            let responseData = userRecords.map(user => ({
-                id: user.id,
-                name: user.name,
-                isInstructor: user.isInstructor
-            }));
-            response.status(200).send(responseData)
+        .then(signalRecords => {
+            response.status(200).send(responseData);
         });
 });
 
-app.post('/users', (request, response) => {
-    const { name, isInstructor } = request.body;
-    knex('users')
-        .insert({
-            name: name,
-            isInstructor: isInstructor
-        })
-        .then(() => {
-            response.status(200).send('User created')
-        })
-        .catch(error => {
-            response.status(500).send(error)
-        })
-});
 
 
 
