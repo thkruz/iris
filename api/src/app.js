@@ -12,6 +12,9 @@ app.get('/', (request, response) => {
     response.set("Access-Control-Allow-Origin", "*");
     response.status(200).send('App root route running');
 })
+ 
+app.get('/authors', (request, response) => {
+    knex('app_authors')
 
 app.get('/data/:table_name', (request, response) => {
     if(request.query.id !== undefined) {

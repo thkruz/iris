@@ -7,8 +7,6 @@ exports.up = function(knex) {
         table.increments('id').primary();
         table.integer('server_id').notNullable();
         table.foreign('server_id').references('server.id');
-        table.integer('team_id').notNullable();
-        table.foreign('team_id').references('team.id');
         table.integer('target_id').notNullable();
         table.foreign('target_id').references('target.id');
         table.double('frequency').notNullable();
