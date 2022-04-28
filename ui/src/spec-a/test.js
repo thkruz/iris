@@ -3,7 +3,7 @@ import { SpectrumAnalyzer } from './SpectrumAnalyzer.js';
 document.onreadystatechange = function () {
   if (document.readyState === 'complete') {
     const specA = new SpectrumAnalyzer(document.getElementById('test'), {
-      refreshRate: 20, // per second
+      refreshRate: 5, // per second
       noiseFloor: -100,
       isShowSignals: false,
     });
@@ -12,6 +12,9 @@ document.onreadystatechange = function () {
     specA.signals.push({ freq: 425e6, amp: -108, bw: 3e6 });
     specA.signals.push({ freq: 435e6, amp: -22, bw: 10e6 });
     specA.signals.push({ freq: 445e6, amp: -60, bw: 5e6 });
+    specA.signals.push({ freq: 448e6, amp: -60, bw: 1e6 });
+    specA.signals.push({ freq: 422e6, amp: -60, bw: 0.5e6 });
+    specA.signals.push({ freq: 423e6, amp: -60, bw: 1e6 });
     specA.start();
 
     document.getElementById('minFreq').addEventListener('change', function () {
@@ -86,5 +89,19 @@ document.onreadystatechange = function () {
         ).toFixed(2)} MHz`;
       }
     });
+    document
+      .getElementById('freqBand')
+      .addEventListener('change', function (e) {
+        const newFreqBand = this.value.toLowerCase();
+        if (newFreqBand === 'mm/g') newFreqBand = 'mm';
+        specA.setBand(newFreqBand);
+
+        document.getElementById('minFreq').value = `${(
+          specA.minFreq / 1e6
+        ).toFixed(2)} MHz`;
+        document.getElementById('maxFreq').value = `${(
+          specA.maxFreq / 1e6
+        ).toFixed(2)} MHz`;
+      });
   }
 };

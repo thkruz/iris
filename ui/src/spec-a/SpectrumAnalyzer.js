@@ -1,5 +1,4 @@
 export class SpectrumAnalyzer {
-  // NOTE: y axis needs to be drawn with  postiive numbers
   constructor(canvas, options) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
@@ -9,9 +8,10 @@ export class SpectrumAnalyzer {
     this.minDecibels = options.minDecibels || -120;
     this.maxDecibels = options.maxDecibels || -20;
     this.isShowSignals = options.isShowSignals || false;
-    this.decibelShift = 120; // Shift to 0 as min
+    this.decibelShift = 0 - this.minDecibels; // Shift to 0 as min
     this.range = this.minDecibels - this.maxDecibels;
     this.data = new Float32Array(this.width);
+    this.noiseData = new Float32Array(this.width);
     this.refreshRate = options.refreshRate || 10;
     this.lastDrawTime = 0;
     this.noiseFloor = options.noiseFloor || 5;
@@ -24,12 +24,9 @@ export class SpectrumAnalyzer {
    * This kicks off the draw loop
    */
   start() {
-    var self = this;
-    if (self.running) return;
-    self.running = true;
-
-    if (!self.running) return;
-    self.draw();
+    if (this.running) return;
+    this.running = true;
+    this.draw();
   }
 
   /**
@@ -39,7 +36,8 @@ export class SpectrumAnalyzer {
    */
   createNoise(data) {
     for (let i = 0; i < data.length; i++) {
-      data[i] = Math.random() * (this.noiseFloor + this.decibelShift);
+      data[i] =
+        (0.9 + Math.random() / 10) * (this.noiseFloor + this.decibelShift);
     }
     return data;
   }
@@ -54,7 +52,7 @@ export class SpectrumAnalyzer {
    */
   createSignal(data, center, amplitude, width) {
     for (let x = 0; x < data.length; x++) {
-      let y = Math.random() * (amplitude + this.decibelShift);
+      let y = (0.9 + Math.random() / 10) * (amplitude + this.decibelShift);
 
       // Simulate edge of band
       if (x < center - (width / 5) * 3) {
@@ -91,31 +89,14 @@ export class SpectrumAnalyzer {
       const now = Date.now();
       if (now - this.lastDrawTime > 1000 / this.refreshRate) {
         this.clearCanvas(this.ctx);
+        this.noiseData = this.createNoise(this.noiseData);
         this.signals.forEach((signal, i) => {
           let color = '#fff';
           if (this.isShowSignals) {
-            switch (i) {
-              case 0:
-                color = '#f00';
-                break;
-              case 1:
-                color = '#0f0';
-                break;
-              case 2:
-                color = '#00f';
-                break;
-              case 3:
-                color = '#ff0';
-                break;
-              case 4:
-                color = '#0ff';
-                break;
-              case 5:
-                color = '#f0f';
-                break;
-            }
+            color = SpectrumAnalyzer.getRandomRgb(i);
           }
           this.drawSignal(this.ctx, color, signal);
+          this.drawMaxHold(this.ctx, color, signal);
         });
         this.drawNoise(this.ctx);
 
@@ -139,14 +120,18 @@ export class SpectrumAnalyzer {
    * @param {CanvasRenderingContext2D} ctx SpecA Context
    */
   drawNoise(ctx) {
-    this.data = this.createNoise(this.data);
-
-    ctx.fillStyle = '#fff';
-    for (var x = 0, len = this.data.length; x < len; x++) {
+    ctx.strokeStyle = '#fff';
+    ctx.beginPath();
+    for (var x = 0, len = this.noiseData.length; x < len; x++) {
       var y =
-        (this.data[x] - this.maxDecibels - this.decibelShift) / this.range;
-      ctx.fillRect(x, this.height * y, 1, this.height * (1 - y));
+        (this.noiseData[x] - this.maxDecibels - this.decibelShift) / this.range;
+      if (x === 0) {
+        ctx.moveTo(x, this.height * y);
+      } else {
+        ctx.lineTo(x, this.height * y);
+      }
     }
+    ctx.stroke();
   }
 
   /**
@@ -164,12 +149,156 @@ export class SpectrumAnalyzer {
 
     this.data = this.createSignal(this.data, center, signal.amp, width);
 
-    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
     const len = this.data.length;
-    for (var x = 0; x < len; x++) {
-      var y =
-        (this.data[x] - this.maxDecibels - this.decibelShift) / this.range;
-      ctx.fillRect(x, this.height * y, 1, this.height * (1 - y));
+    for (let x = 0; x < len; x++) {
+      const lowestSignal = Math.max(this.data[x], this.noiseData[x]);
+      const y =
+        (lowestSignal - this.maxDecibels - this.decibelShift) / this.range;
+      if (x === 0) {
+        ctx.moveTo(x, this.height * y);
+      } else {
+        ctx.lineTo(x, this.height * y);
+      }
     }
+    ctx.stroke();
+  }
+
+  /**
+   * This draws the maximum value of the signal
+   * @param {CanvasRenderingContext2D} ctx SpecA Context
+   * @param {string} color String value of color in Hex
+   * @param {*} signal Object containing signal properties
+   */
+  drawMaxHold(ctx, color = '#f00', signal) {
+    if (!signal.maxHold) {
+      signal.maxHold = new Float32Array(this.width);
+    }
+
+    const center =
+      ((signal.freq - this.minFreq) / (this.maxFreq - this.minFreq)) *
+      this.width;
+    const width =
+      ((signal.bw / (this.maxFreq - this.minFreq)) * this.width) / 2;
+
+    this.data = this.createSignal(this.data, center, signal.amp, width);
+
+    ctx.strokeStyle = '#ff0';
+    ctx.beginPath();
+    const len = this.data.length;
+    for (let x = 0; x < len; x++) {
+      signal.maxHold[x] = Math.max(this.data[x], signal.maxHold[x]);
+      const lowestSignal = Math.max(signal.maxHold[x], this.noiseData[x]);
+      const y =
+        (lowestSignal - this.maxDecibels - this.decibelShift) / this.range;
+      if (x === 0) {
+        ctx.moveTo(x, this.height * y);
+      } else {
+        ctx.lineTo(x, this.height * y);
+      }
+    }
+    ctx.stroke();
+  }
+
+  setBand(band) {
+    const freqBandInfo = SpectrumAnalyzer.getFreqBandInfo(band);
+    this.minFreq = freqBandInfo.minFreq;
+    this.maxFreq = freqBandInfo.maxFreq;
+  }
+
+  static getFreqBandInfo(band) {
+    const freqBands = {
+      hf: {
+        minFreq: 3e6,
+        maxFreq: 30e6,
+      },
+      vhf: {
+        minFreq: 30e6,
+        maxFreq: 300e6,
+      },
+      uhf: {
+        minFreq: 300e6,
+        maxFreq: 1e9,
+      },
+      l: {
+        minFreq: 1e9,
+        maxFreq: 2e9,
+      },
+      s: {
+        minFreq: 2e9,
+        maxFreq: 4e9,
+      },
+      c: {
+        minFreq: 4e9,
+        maxFreq: 8e9,
+      },
+      x: {
+        minFreq: 8e9,
+        maxFreq: 12e9,
+      },
+      ku: {
+        minFreq: 12e9,
+        maxFreq: 18e9,
+      },
+      k: {
+        minFreq: 18e9,
+        maxFreq: 27e9,
+      },
+      ka: {
+        minFreq: 27e9,
+        maxFreq: 40e9,
+      },
+      v: {
+        minFreq: 40e9,
+        maxFreq: 75e9,
+      },
+      w: {
+        minFreq: 75e9,
+        maxFreq: 110e9,
+      },
+      mm: {
+        minFreq: 110e9,
+        maxFreq: 300e9,
+      },
+      g: {
+        minFreq: 110e9,
+        maxFreq: 300e9,
+      },
+    };
+    if (typeof freqBands[band] === 'undefined') throw new Error('Invalid Freq');
+    return freqBands[band];
+  }
+
+  static rgb2hex(rgb) {
+    return `#${rgb
+      .map((x) => {
+        const hex = x.toString(16);
+        return hex.length === 1 ? `0${hex}` : hex;
+      })
+      .join('')}`;
+  }
+
+  static getRandomRgb(i) {
+    let rgb = [255, 0, 0];
+    if (i % 3 === 0) {
+      rgb[0] = 255;
+      rgb[1] = (i * 32) % 255;
+      rgb[2] = (i * 64) % 255;
+    } else if (i % 3 === 1) {
+      rgb[0] = (i * 64) % 255;
+      rgb[1] = (i * 32) % 255;
+      rgb[2] = 255;
+    } else if (i % 3 === 2) {
+      rgb[0] = (i * 32) % 255;
+      rgb[1] = 255;
+      rgb[2] = (i * 64) % 255;
+    } else {
+      rgb[0] = 255;
+      rgb[1] = 255;
+      rgb[2] = 255;
+    }
+    const hex = SpectrumAnalyzer.rgb2hex(rgb);
+    return hex;
   }
 }
