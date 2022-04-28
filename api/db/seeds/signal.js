@@ -4,6 +4,7 @@
  */
 exports.seed = async function(knex) {
   // Deletes ALL existing entries
+  await knex.schema.raw('TRUNCATE signal CASCADE');
   await knex('signal').del()
   await knex('signal').insert([
     {id: 1, server_id: 1, target_id: 1, frequency: 4710, power: -45, bandwidth: 5, modulation: '8QAM', fec: '1/2', feed:'testVid2.mov', operational: 'false'},

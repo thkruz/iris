@@ -1,9 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
-const env = process.env.NODE_ENV || 'development'
-const config = require('../knexfile')[env]
-const knex = require('knex')(config)
+const env = process.env.NODE_ENV || 'development';
+const config = require('../knexfile')[env];
+const knex = require('knex')(config);
 
 app.use(cors());
 app.use(express.json());
@@ -11,10 +11,14 @@ app.use(express.json());
 app.get('/', (request, response) => {
     response.set("Access-Control-Allow-Origin", "*");
     response.status(200).send('App root route running');
-})
- 
+});
+
 app.get('/authors', (request, response) => {
     knex('app_authors')
+        .then(data => {
+            response.status(200).send(data.JSON())
+        });
+});
 
 app.get('/data/:table_name', (request, response) => {
     if(request.query.id !== undefined) {
@@ -52,7 +56,7 @@ app.get('/data/:table_name', (request, response) => {
 app.post('/data/:table_name', (request, response) => {
     knex(request.params.table_name)
     .insert(request.body)
-    .then(responseData => {
+    .then(() => {
         response.status(200).send(`${request.params.table_name} created`);
     })
     .catch(error => {
@@ -65,7 +69,7 @@ app.patch('/data/:table_name', (request, response) => {
         knex(request.params.table_name)
         .where('id', request.query.id)
         .update(request.body)
-        .then(responseData => {
+        .then(() => {
             response.status(200).send(`${request.params.table_name} updated`);
         })
         .catch(error => {
@@ -81,7 +85,7 @@ app.delete('/data/:table_name', (request, response) => {
         knex(request.params.table_name)
         .where('id', request.query.id)
         .del()
-        .then(responseData => {
+        .then(() => {
             response.status(200).send(`${request.params.table_name} deleted`);
         })
         .catch(error => {

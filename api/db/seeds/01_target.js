@@ -4,6 +4,7 @@
  */
 exports.seed = async function(knex) {
   // Deletes ALL existing entries
+  await knex.schema.raw('TRUNCATE target CASCADE');
   await knex('target').del()
   await knex('target').insert([
     {id: 1, name: 'ARKE 3G', offset: 400},
