@@ -4,17 +4,17 @@ document.onreadystatechange = function () {
   if (document.readyState === 'complete') {
     const specA = new SpectrumAnalyzer(document.getElementById('test'), {
       refreshRate: 5, // per second
-      noiseFloor: -100,
+      noiseFloor: -110,
       isShowSignals: false,
     });
     //const data = new Float32Array(specA.width);
 
-    specA.signals.push({ freq: 425e6, amp: -108, bw: 3e6 });
-    specA.signals.push({ freq: 435e6, amp: -22, bw: 10e6 });
-    specA.signals.push({ freq: 445e6, amp: -60, bw: 5e6 });
-    specA.signals.push({ freq: 448e6, amp: -60, bw: 1e6 });
-    specA.signals.push({ freq: 422e6, amp: -60, bw: 0.5e6 });
-    specA.signals.push({ freq: 423e6, amp: -60, bw: 1e6 });
+    specA.signals.push({ freq: 426e6, amp: -108, bw: 3e6 });
+    specA.signals.push({ freq: 435e6, amp: -82, bw: 10e6 });
+    specA.signals.push({ freq: 445e6, amp: -90, bw: 5e6 });
+    specA.signals.push({ freq: 448e6, amp: -90, bw: 1e6 });
+    specA.signals.push({ freq: 422e6, amp: -90, bw: 0.5e6 });
+    specA.signals.push({ freq: 423e6, amp: -100, bw: 1e6 });
     specA.start();
 
     document.getElementById('minFreq').addEventListener('change', function () {
@@ -66,7 +66,12 @@ document.onreadystatechange = function () {
     document.getElementById('colors').addEventListener('click', function () {
       specA.isShowSignals = !specA.isShowSignals;
     });
+    document.getElementById('hold').addEventListener('click', function () {
+      specA.resetHoldData();
+      specA.isDrawHold = !specA.isDrawHold;
+    });
     document.getElementById('test').addEventListener('wheel', function (e) {
+      e.preventDefault();
       specA.minFreq -= (((e.deltaY * specA.minFreq) / 1e3) * e.x) / specA.width;
       document.getElementById('minFreq').value = `${(specA.minFreq / 1e6).toFixed(2)} MHz`;
 
