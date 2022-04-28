@@ -1,4 +1,4 @@
-import { SpectrumAnalyzer } from './SpectrumAnalyzer.js';
+import { SpectrumAnalyzer } from './../components/Body/StudentStack/SpectrumAnalyzerGrid/SpectrumAnalyzer/SpectrumAnalyzer.js';
 
 document.onreadystatechange = function () {
   if (document.readyState === 'complete') {
@@ -57,51 +57,34 @@ document.onreadystatechange = function () {
         specA.maxFreq = parseFloat(this.value);
       }
     });
-    document
-      .getElementById('noiseFloor')
-      .addEventListener('change', function () {
-        specA.noiseFloor = parseFloat(this.value);
-      });
-    document
-      .getElementById('refreshRate')
-      .addEventListener('change', function () {
-        specA.refreshRate = parseFloat(this.value);
-      });
+    document.getElementById('noiseFloor').addEventListener('change', function () {
+      specA.noiseFloor = parseFloat(this.value);
+    });
+    document.getElementById('refreshRate').addEventListener('change', function () {
+      specA.refreshRate = parseFloat(this.value);
+    });
     document.getElementById('colors').addEventListener('click', function () {
       specA.isShowSignals = !specA.isShowSignals;
     });
     document.getElementById('test').addEventListener('wheel', function (e) {
       specA.minFreq -= (((e.deltaY * specA.minFreq) / 1e3) * e.x) / specA.width;
-      document.getElementById('minFreq').value = `${(
-        specA.minFreq / 1e6
-      ).toFixed(2)} MHz`;
+      document.getElementById('minFreq').value = `${(specA.minFreq / 1e6).toFixed(2)} MHz`;
 
-      specA.maxFreq +=
-        ((e.deltaY * specA.minFreq) / 1e3) * (1 - e.x / specA.width);
-      document.getElementById('maxFreq').value = `${(
-        specA.maxFreq / 1e6
-      ).toFixed(2)} MHz`;
+      specA.maxFreq += ((e.deltaY * specA.minFreq) / 1e3) * (1 - e.x / specA.width);
+      document.getElementById('maxFreq').value = `${(specA.maxFreq / 1e6).toFixed(2)} MHz`;
 
       if (specA.maxFreq < specA.minFreq) {
         specA.maxFreq = specA.minFreq + specA.minFreq / 10;
-        document.getElementById('maxFreq').value = `${(
-          specA.maxFreq / 1e6
-        ).toFixed(2)} MHz`;
+        document.getElementById('maxFreq').value = `${(specA.maxFreq / 1e6).toFixed(2)} MHz`;
       }
     });
-    document
-      .getElementById('freqBand')
-      .addEventListener('change', function (e) {
-        const newFreqBand = this.value.toLowerCase();
-        if (newFreqBand === 'mm/g') newFreqBand = 'mm';
-        specA.setBand(newFreqBand);
+    document.getElementById('freqBand').addEventListener('change', function (e) {
+      const newFreqBand = this.value.toLowerCase();
+      if (newFreqBand === 'mm/g') newFreqBand = 'mm';
+      specA.setBand(newFreqBand);
 
-        document.getElementById('minFreq').value = `${(
-          specA.minFreq / 1e6
-        ).toFixed(2)} MHz`;
-        document.getElementById('maxFreq').value = `${(
-          specA.maxFreq / 1e6
-        ).toFixed(2)} MHz`;
-      });
+      document.getElementById('minFreq').value = `${(specA.minFreq / 1e6).toFixed(2)} MHz`;
+      document.getElementById('maxFreq').value = `${(specA.maxFreq / 1e6).toFixed(2)} MHz`;
+    });
   }
 };
