@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import config from './config';
 import { Header, Body } from './components';
+import { AstroTheme } from './themes/AstroTheme';
 
 const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
@@ -15,7 +16,7 @@ function App() {
   }, []);
 
   return (
-    <div>
+    <div sx={{ backgroundColor: AstroTheme.palette.background.paper }}>
       <Header />
       <Body />
       App is running - good work:
