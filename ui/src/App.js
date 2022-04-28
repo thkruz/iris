@@ -3,7 +3,7 @@ import config from "./config";
 import { Header, Body } from "./components";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 
-const ApiUrl = config[process.env.REACT_APP_NODE_ENV || "development"].apiUrl;
+const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
 function App() {
   let [names, setNames] = useState([]);
@@ -29,7 +29,7 @@ function App() {
           </Routes>
         </div>
         App is running - good work:
-        {names.map((author) => author.firstName + " ")}
+        {names.map((author) => author.first_name + ' ')}
       </Router>
     </div>
   );

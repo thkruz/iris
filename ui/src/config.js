@@ -1,13 +1,13 @@
 const config = {
   development: {
-    apiUrl: "http://localhost:8080",
+    apiUrl: 'http://localhost:8082',
   },
 
   production: {
-    apiUrl: "https://sew-api.herokuapp.com",
+    apiUrl: 'https://sew-api.herokuapp.com',
   },
   test: {
-    apiUrl: "",
+    apiUrl: '',
   },
 };
 
