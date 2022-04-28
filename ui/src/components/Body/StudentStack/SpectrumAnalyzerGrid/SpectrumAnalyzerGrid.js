@@ -1,14 +1,24 @@
-import React, { useEffect, useState} from 'react';
+import { Grid } from '@mui/material';
+import React from 'react';
+import SpectrumAnalyzer from './SpectrumAnalyzer/SpectrumAnalyzer';
 
 // MUI Grid: https://mui.com/material-ui/react-grid/
 
-function SpectrumAnalyzerGrid() {
+const SpectrumAnalyzerGrid = () => (
+  <Grid container item spacing={1} xs={12}>
+    <Grid item xs={3}>
+      <SpectrumAnalyzer />
+    </Grid>
+    <Grid item xs={3}>
+      <SpectrumAnalyzer />
+    </Grid>
+    <Grid item xs={3}>
+      <SpectrumAnalyzer />
+    </Grid>
+    <Grid item xs={3}>
+      <SpectrumAnalyzer />
+    </Grid>
+  </Grid>
+);
 
-    return (
-      <>
-        
-      </>
-    );
-  }
-  
 export default SpectrumAnalyzerGrid;
