@@ -1,9 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
-const env = process.env.NODE_ENV || 'development'
-const config = require('../knexfile')[env]
-const knex = require('knex')(config)
+const env = process.env.NODE_ENV || 'development';
+const config = require('../knexfile')[env];
+const knex = require('knex')(config);
 
 app.use(cors());
 app.use(express.json());
@@ -11,79 +11,89 @@ app.use(express.json());
 app.get('/', (request, response) => {
     response.set("Access-Control-Allow-Origin", "*");
     response.status(200).send('App root route running');
-})
+});
 
 app.get('/authors', (request, response) => {
     knex('app_authors')
-        .select('*')
-        .then(authorRecords => {
-            let responseData = authorRecords.map(author => ({ firstName: author.first_name, lastName: author.last_name}));
-            response.status(200).send(responseData)
+        .then(data => {
+            response.status(200).send(data.JSON())
         });
 });
 
-app.get('/signals', (request, response) => {
-    knex('signals')
+app.get('/data/:table_name', (request, response) => {
+    if(request.query.id !== undefined) {
+        knex(request.params.table_name)
         .select('*')
-        .then(signalRecords => {
-            let responseData = signalRecords.map(signal => ({
-                id: signal.id,
-                user_id: signal.user_id,
-                amplitude: signal.amplitude,
-                frequency: signal.frequency,
-                power: signal.power,
-                bandwidth: signal.bandwidth
-            }));
-            response.status(200).send(responseData)
-        });
-});
-
-app.post('/signals', (request, response) => {
-    const { user_id, amplitude, frequency, power, bandwidth } = request.body;
-    knex('signals')
-        .insert({
-            user_id: user_id,
-            amplitude: amplitude,
-            frequency: frequency,
-            power: power,
-            bandwidth: bandwidth
-        })
-        .then(() => {
-            response.status(200).send('Signal updated')
+        .where('id', request.query.id)
+        .then(responseData => {
+            response.status(200).send(responseData);
         })
         .catch(error => {
-            response.status(500).send(error)
-        })
-});
-
-app.get('/users', (request, response) => {
-    knex('users')
-        .select('*')
-        .then(userRecords => {
-            let responseData = userRecords.map(user => ({
-                id: user.id,
-                name: user.name,
-                isInstructor: user.isInstructor
-            }));
-            response.status(200).send(responseData)
+            response.status(500).send(error);
         });
-});
-
-app.post('/users', (request, response) => {
-    const { name, isInstructor } = request.body;
-    knex('users')
-        .insert({
-            name: name,
-            isInstructor: isInstructor
-        })
-        .then(() => {
-            response.status(200).send('User created')
+    } else if (request.query.server_id !== undefined) {
+        knex(request.params.table_name)
+        .select('*')
+        .where('server_id', request.query.server_id)
+        .then(responseData => {
+            response.status(200).send(responseData);
         })
         .catch(error => {
-            response.status(500).send(error)
+            response.status(500).send(error);
+        });
+    } else {
+        knex(request.params.table_name)
+        .select('*')
+        .then(responseData => {
+            response.status(200).send(responseData);
         })
+        .catch(error => {
+            response.status(500).send(error);
+        });
+    }
 });
 
+app.post('/data/:table_name', (request, response) => {
+    knex(request.params.table_name)
+    .insert(request.body)
+    .then(() => {
+        response.status(200).send(`${request.params.table_name} created`);
+    })
+    .catch(error => {
+        response.status(500).send(error);
+    });
+});
 
+app.patch('/data/:table_name', (request, response) => {
+    if(request.query.id !== undefined) {
+        knex(request.params.table_name)
+        .where('id', request.query.id)
+        .update(request.body)
+        .then(() => {
+            response.status(200).send(`${request.params.table_name} updated`);
+        })
+        .catch(error => {
+            response.status(500).send(error);
+        });
+    } else {
+        response.status(500).send('No id specified');
+    }
+});
+
+app.delete('/data/:table_name', (request, response) => {
+    if(['signal', 'save'].includes(request.params.table_name) && request.query.id !== undefined) {
+        knex(request.params.table_name)
+        .where('id', request.query.id)
+        .del()
+        .then(() => {
+            response.status(200).send(`${request.params.table_name} deleted`);
+        })
+        .catch(error => {
+            response.status(500).send(error);
+        });
+    } else {
+        response.status(500).send('No id specified, or table name is not valid');
+    }
+});
 
 module.exports = app;
