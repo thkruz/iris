@@ -21,11 +21,11 @@ export class SpectrumAnalyzer {
     this.maxFreq = options.maxFreq || 450e6;
     this.noiseColor = options.noiseColor || '#0bf';
 
-    this.resize(this.canvas.parentElement.offsetWidth, this.canvas.parentElement.offsetWidth);
+    this.resize(this.canvas.parentElement.offsetWidth - 6, this.canvas.parentElement.offsetWidth - 6);
 
     window.addEventListener('resize', () => {
-      if (this.canvas.parentElement.offsetWidth !== this.canvas.width) {
-        this.resize(this.canvas.parentElement.offsetWidth, this.canvas.parentElement.offsetWidth);
+      if (this.canvas.parentElement.offsetWidth - 6 !== this.canvas.width - 6) {
+        this.resize(this.canvas.parentElement.offsetWidth - 6, this.canvas.parentElement.offsetWidth - 6);
       }
     });
   }
@@ -59,7 +59,10 @@ export class SpectrumAnalyzer {
    */
   createNoise(data) {
     for (let x = 0; x < data.length; x++) {
-      data[x] = (0.9 + Math.random() / 10) * (this.noiseFloor + this.decibelShift);
+      data[x] = (0.5 + (5 * Math.random()) / 10) * (this.noiseFloor + this.decibelShift);
+      if (Math.random() > 0.999) {
+        data[x] *= 1 + Math.random();
+      }
 
       if (this.maxHoldData[x] < data[x]) {
         this.maxHoldData[x] = data[x];
@@ -200,10 +203,24 @@ export class SpectrumAnalyzer {
 
         this.hideBelowNoiseFloor(this.ctx);
 
+        this.drawGridOverlay(this.ctx);
+
         this.lastDrawTime = now;
       }
       this.draw();
     });
+  }
+
+  drawGridOverlay(ctx) {
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = 'white';
+    for (let x = 0; x < this.width; x += this.width / 10) {
+      ctx.fillRect(x, 0, 1, this.height);
+    }
+    for (let y = 0; y < this.height; y += this.height / 10) {
+      ctx.fillRect(0, y, this.width, 1);
+    }
+    ctx.globalAlpha = 1.0;
   }
 
   /**

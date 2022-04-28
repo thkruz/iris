@@ -27,6 +27,14 @@ export const AstroTheme = {
     },
     warning: {
       main: '#fce83a',
+      Lighten1: 'rgb(253, 237, 97)',
+      Lighten2: 'rgb(253, 241, 137)',
+      Lighten3: 'rgb(254, 246, 176)',
+      Lighten4: 'rgb(254, 250, 216)',
+      Darken1: 'rgb(202, 186, 46)',
+      Darken2: 'rgb(151, 139, 35)',
+      Darken3: 'rgb(101, 93, 23)',
+      Darken4: 'rgb(50, 46, 12)',
     },
     info: {
       main: '#2dccff',
