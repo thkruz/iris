@@ -1,14 +1,9 @@
-import React, { useEffect, useState} from 'react';
+import React from 'react';
 
 // MUI Stack: https://mui.com/material-ui/react-stack/
 
 function InstructorStack() {
+  return <></>;
+}
 
-    return (
-      <>
-        
-      </>
-    );
-  }
-  
 export default InstructorStack;
