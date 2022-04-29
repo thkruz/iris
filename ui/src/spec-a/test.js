@@ -83,8 +83,8 @@ document.onreadystatechange = function () {
         document.getElementById('maxFreq').value = `${(specA.maxFreq / 1e6).toFixed(2)} MHz`;
       }
     });
-    document.getElementById('freqBand').addEventListener('change', function (e) {
-      const newFreqBand = this.value.toLowerCase();
+    document.getElementById('freqBand').addEventListener('change', function () {
+      let newFreqBand = this.value.toLowerCase();
       if (newFreqBand === 'mm/g') newFreqBand = 'mm';
       specA.setBand(newFreqBand);
 

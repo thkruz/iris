@@ -1,14 +1,9 @@
-import React, { useEffect, useState} from 'react';
+import React from 'react';
 
-// 
+//
 
 function Injects() {
+  return <></>;
+}
 
-    return (
-      <>
-        
-      </>
-    );
-  }
-  
 export default Injects;

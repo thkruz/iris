@@ -1,14 +1,9 @@
-import React, { useEffect, useState} from 'react';
+import React from 'react';
 
-// 
+//
 
 function MarkerSystem() {
+  return <></>;
+}
 
-    return (
-      <>
-        
-      </>
-    );
-  }
-  
 export default MarkerSystem;
