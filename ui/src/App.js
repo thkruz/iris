@@ -1,27 +1,38 @@
-import React, { useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import config from './config';
 import { Header, Body } from './components';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { StudentStack } from './components/Body/StudentStack/StudentStack';
+import InstructorStack from './components/Body/InstructorStack/InstructorStack';
+import Login from './components/Login/Login';
 
-const ApiUrl = config[process.env.REACT_APP_NODE_ENV || "development"].apiUrl;
+const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
 function App() {
-
-  let [names, setNames] = useState([ ]);
+  let [names, setNames] = useState([]);
 
   useEffect(() => {
-    fetch(ApiUrl + "/authors")
+    fetch(ApiUrl + '/authors')
       .then(response => response.json())
       .then(data => setNames(data))
-      .catch(err => console.log(err))
+      .catch(err => console.log(err));
   }, []);
-
 
   return (
     <div>
-      <Header />
-      <Body />
-      App is running - good work: 
-      { names.map(author => author.firstName + " ")}
+      <Router>
+        <Header />
+        <Body>
+          <Routes>
+            <Route path='/' element={<StudentStack />} />
+            <Route path='login' element={<Login />} />
+            <Route path='/student' element={<StudentStack />} />
+            <Route path='/instructor' element={<InstructorStack />} />
+          </Routes>
+        </Body>
+        App is running - good work:
+        {names.map(author => author.first_name + ' ')}
+      </Router>
     </div>
   );
 }

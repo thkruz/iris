@@ -1,22 +1,20 @@
 import React from 'react';
-import { TeamInfo, RxModem } from '../..'
-import { Box } from '@mui/material';
+import { TeamInfo } from '../..';
+
+import SpectrumAnalyzerGrid from './SpectrumAnalyzerGrid/SpectrumAnalyzerGrid';
+import ARTGrid from './ARTGrid/ARTGrid';
+import { Grid } from '@mui/material';
+
 // MUI Stack: https://mui.com/material-ui/react-stack/
 
 export const StudentStack = () => {
-  const RxCase = () => (
-    <Box>
-      <RxModem unit={1}/>
-      <RxModem unit={2}/>
-      <RxModem unit={3}/>
-      <RxModem unit={4}/>
-    </Box>
-  )
-
   return (
     <>
       <TeamInfo />
-      <RxCase />
+      <Grid container spacing={1} padding={1}>
+        <SpectrumAnalyzerGrid />
+        <ARTGrid />
+      </Grid>
     </>
   );
-}
+};
