@@ -42,6 +42,24 @@ export const AstroTheme = {
     success: {
       main: '#56f000',
     },
+    critical: {
+      main: '#ff3838',
+    },
+    serious: {
+      main: '#ffb302',
+    },
+    caution: {
+      main: '#fce83a',
+    },
+    normal: {
+      main: '#56f000',
+    },
+    standby: {
+      main: '#2dccff',
+    },
+    disabled: {
+      main: '#9ea7ad',
+    },
   },
   typography: {
     h1: {

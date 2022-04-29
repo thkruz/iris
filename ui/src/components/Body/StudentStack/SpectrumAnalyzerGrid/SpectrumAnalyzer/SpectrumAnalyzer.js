@@ -84,6 +84,13 @@ export class SpectrumAnalyzer {
    * @returns
    */
   createSignal(data, center, amplitude, inBandWidth, outOfBandWidth) {
+    // NOTE: This could be used to create amplitude modulation
+    // const isSkipTimeslot = Math.random() > 0.95;
+    // if (isSkipTimeslot) {
+    //   data = new Float32Array(data.length);
+    //   return data;
+    // }
+
     for (let x = 0; x < data.length; x++) {
       let y = 0;
 

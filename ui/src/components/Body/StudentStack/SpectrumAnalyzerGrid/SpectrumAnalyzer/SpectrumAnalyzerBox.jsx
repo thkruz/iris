@@ -91,13 +91,6 @@ const SpectrumAnalyzerBox = props => {
     specA.start();
   }, []);
 
-  const handleHoldClick = () => {
-    if (typeof specA.resetHoldData !== 'undefined') {
-      specA.resetHoldData();
-      specA.isDrawHold = !specA.isDrawHold;
-    }
-  };
-
   // setSpectrumAnalyzer(specA);
   return (
     <Box sx={SpectrumAnalyzerBoxStyle}>
@@ -125,13 +118,11 @@ const SpectrumAnalyzerBox = props => {
         </Grid>
         <Grid item xs={4}></Grid>
         <Grid item xs={4}>
-          <Button sx={configButtonStyle}>Config</Button>
-        </Grid>
-        <Grid item xs={4}>
-          <Button sx={configButtonStyle} onClick={handleHoldClick}>
-            Hold
+          <Button sx={configButtonStyle} onClick={() => props.handleConfigClick(specA)}>
+            Config
           </Button>
         </Grid>
+        <Grid item xs={4}></Grid>
       </Grid>
     </Box>
   );
