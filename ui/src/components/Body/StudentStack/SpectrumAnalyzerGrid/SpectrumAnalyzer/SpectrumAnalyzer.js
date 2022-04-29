@@ -40,10 +40,10 @@ export class SpectrumAnalyzer {
   }
 
   resize(width, height) {
-    this.width = width;
-    this.height = height;
-    this.canvas.width = width;
-    this.canvas.height = height;
+    this.width = width > 0 ? width : 10; // Jest
+    this.height = height > 0 ? height : 10; // Jest
+    this.canvas.width = width > 0 ? width : 10; // Jest
+    this.canvas.height = height > 0 ? height : 10; // Jest
     this.data = new Float32Array(this.width);
     this.noiseData = new Float32Array(this.width);
     this.maxHoldData = new Float32Array(this.width);
