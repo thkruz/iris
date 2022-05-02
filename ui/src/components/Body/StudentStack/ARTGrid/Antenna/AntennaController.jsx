@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { Box, Typography, Button } from '@mui/material';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore'
@@ -113,30 +113,44 @@ export const AntennaController = ({ unit }) => {
     // Antenna User Inputs
     // Target Band Offset
     const AntennaInput = () => {
+        const [inputData, setInputData] = useState(antennaData[unit-1])
+        const handleInputChange = ({ param, val }) => {
+            const tmpInputData = {...inputData};
+            tmpInputData[param] = parseInt(val);
+            setInputData(tmpInputData);
+        }
+        const handleApply = () => {
+            const tmpData = [...antennaData]
+            tmpData[unit-1] = inputData
+            setAntennaData(tmpData)
+        }
         return (
             <Box sx={sxInputBox}>
                 <Box sx={sxInputRow}>
-                    <label htmlFor="Target">Targer</label>
+                    <label htmlFor="Target">Target</label>
                     <select
                     name="Target"
-                    value={targets[antennaData[unit-1].id_target].name}
+                    value={'help'}
+                    onChange={e => handleInputChange({param: 'id_target', val:e.target.value})}
                     >
-                    {targets.map((x, index) => {return(<option value={index} key={index}>{x.name}</option>)})}
+                    {targets.map((x, index) => {return(<option value={x.id} key={index}>{x.name}</option>)})}
                     </select>
                     <Typography sx={sxValues}>
-                    {targets[antennaData[unit-1].id_target].name}
+                    {targets[antennaData[unit-1].id_target-1].name}
                     </Typography>
                 </Box>
                 <Box sx={sxInputRow}>
                     <label htmlFor="Band">Band</label>
-                    <input
+                    <select
                     name="band"
                     type="text"
-                    value={bands[antennaData[unit-1].band].name}
-                    
-                    ></input>
+                    value={inputData.band}
+                    onChange={e => handleInputChange({param: 'band', val: e.target.value})}
+                    >
+                    {bands.map((x, index) => {return(<option value={x.id} key={index}>{x.name}</option>)})}
+                    </select>
                     <Typography sx={sxValues}>
-                    {bands[antennaData[unit-1].band].name}
+                    {bands[antennaData[unit-1].band-1].name}
                     </Typography>
                 </Box>
                 <Box sx={sxInputRow}>
@@ -144,15 +158,16 @@ export const AntennaController = ({ unit }) => {
                     <input
                     name="offset"
                     type="text"
-                    value={antennaData[unit-1].offset}
+                    value={inputData.offset}
+                    onChange={e => {handleInputChange({param: 'offset', val: parseInt(e.target.value)})}}
                     ></input>
                     <Typography sx={sxValues}>
-                    {400 + ' MHz'}
+                    {antennaData[unit-1].offset + ' MHz'}
                     </Typography>
                 </Box>
                 <Box sx={sxInputRow}>
                     <div></div>
-                    <Button sx={sxInputApply}>
+                    <Button sx={sxInputApply} onClick={e => handleApply(e)}>
                     Apply
                     </Button>
                 </Box>
