@@ -89,7 +89,7 @@ export const AntennaController = ({ unit }) => {
     const sxHPA = {
         marginTop: '5px',
         backgroundColor: antennaData[unit-1].hpa ? 'red' : theme.palette.primary.dark,
-        color: 'white',
+        color: antennaData[unit-1].hpa ? 'black' : 'white',
         boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
     };
 
@@ -130,7 +130,7 @@ export const AntennaController = ({ unit }) => {
                     <label htmlFor="Target">Target</label>
                     <select
                     name="Target"
-                    value={'help'}
+                    value={inputData.id_target}
                     onChange={e => handleInputChange({param: 'id_target', val:e.target.value})}
                     >
                     {targets.map((x, index) => {return(<option value={x.id} key={index}>{x.name}</option>)})}
@@ -143,7 +143,6 @@ export const AntennaController = ({ unit }) => {
                     <label htmlFor="Band">Band</label>
                     <select
                     name="band"
-                    type="text"
                     value={inputData.band}
                     onChange={e => handleInputChange({param: 'band', val: e.target.value})}
                     >
