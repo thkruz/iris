@@ -1,12 +1,19 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './App';
+import { AntennaProvider, RxProvider, TxProvider } from './context';
 import reportWebVitals from './reportWebVitals';
 import './index.css';
 
 ReactDOM.render(
   <React.StrictMode>
-    <App />
+    <AntennaProvider>
+      <RxProvider>
+        <TxProvider>
+          <App />
+        </TxProvider>
+      </RxProvider>
+    </AntennaProvider>
   </React.StrictMode>,
   document.getElementById('root'),
 );

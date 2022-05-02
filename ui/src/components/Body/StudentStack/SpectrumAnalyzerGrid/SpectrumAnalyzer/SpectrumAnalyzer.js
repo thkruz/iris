@@ -95,7 +95,8 @@ export class SpectrumAnalyzer {
       let y = 0;
 
       if (x > center - outOfBandWidth || x < center + outOfBandWidth) {
-        y = (0.9 + Math.random() / 10) * (amplitude + this.decibelShift);
+        y = (0.75 + Math.random() / 4) * (amplitude + this.decibelShift);
+        //y = (0.9 + Math.random() / 10) * (amplitude + this.decibelShift);
       }
 
       // Simulate Drop Near Edge of Band
