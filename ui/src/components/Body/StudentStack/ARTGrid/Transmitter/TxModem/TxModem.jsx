@@ -1,64 +1,27 @@
 import React, { useState } from 'react';
-import ReactPlayer from 'react-player';
 import PropTypes from 'prop-types';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Typography, Grid } from '@mui/material';
 import './TxModem.css';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
+import { useTx, useUpdateTx } from '../../../../../../context';
 
-export const TxModem = ({ unit, tmpTxData }) => {
+export const TxModem = ({ unit }) => {
+
+  const txData = useTx();
+  const updateTxData = useUpdateTx();
+
   //TODO: modem buttons, update state, video,
   const theme = AstroTheme;
-  const degraded = false; // TODO: These may come from context
-  const denied = false; // TODO: These may come from context
-  const signals = [
-    // TODO: This needs to come from an api call
-    {
-      id: 1,
-      id_server: 123456,
-      id_target: 1,
-      frequency: 1250,
-      power: -45,
-      bandwidth: 10,
-      modulation: '8QAM',
-      fec: '1/2',
-      feed: 'testVid2.mov',
-    },
-    {
-      id: 1,
-      id_server: 123456,
-      id_target: 1,
-      frequency: 1300,
-      power: -45,
-      bandwidth: 10,
-      modulation: '8QAM',
-      fec: '3/4',
-      feed: 'testVid.mov',
-    },
-    {
-      id: 1,
-      id_server: 123456,
-      id_target: 1,
-      frequency: 1350,
-      power: -45,
-      bandwidth: 10,
-      modulation: '8QAM',
-      fec: '3/4',
-      feed: 'testVid.mp4',
-    },
-  ];
-  const [txData, setTxData] = useState(tmpTxData);
   const [activeModem, setActiveModem] = useState(0);
 
   // Styles
   const sxCase = {
     flexGrow: 1,
-    margin: 'auto',
-    width: '600px',
     backgroundColor: theme.palette.primary.main,
     borderRadius: '10px',
     border: '1px solid black',
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr 4fr 3fr 5fr',
+    gridTemplateColumns: '30px 1fr 4fr 3fr 5fr',
     justifyContent: 'space-between',
     fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
   };
@@ -111,20 +74,18 @@ export const TxModem = ({ unit, tmpTxData }) => {
     margin: '8px',
     cursor: 'pointer',
   };
-  const sxVideo = {
-    margin: '10px',
-    border: '2px solid grey',
-    backgroundColor: theme.palette.primary.light,
-    width: '200px',
-    height: '200px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+  const sxTransmit = {
+    cursor: 'pointer',
+    margin: '8px',
+    backgroundColor: txData[(unit - 1) * 4 + activeModem].transmitting ? 'red' : theme.palette.primary.dark,
+    color: txData[(unit - 1) * 4 + activeModem].transmitting ? 'black' : 'white',
+    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+    border: '1px solid red'
   };
 
   // Modem Case Id
   const sidebar = [];
-  ['R', 'C', 'V', 'R'].forEach((x, index) => {
+  ['T', 'X'].forEach((x, index) => {
     sidebar.push(
       <Typography key={index} sx={{ color: 'black' }}>
         {x}
@@ -141,9 +102,9 @@ export const TxModem = ({ unit, tmpTxData }) => {
   // Modem selector buttons
   const TxModemButtonBox = () => (
     <Box sx={sxModemButtonBox}>
-      {txData.map((x, index) => (
-        <TxModemButton key={index} modem={x.modem} />
-      ))}
+      {txData.map((x, index) => {
+        if(x.unit == unit) return(<TxModemButton key={index} modem={x.modem} />)
+      })}
     </Box>
   );
   const TxModemButton = ({ modem }) => (
@@ -159,7 +120,8 @@ export const TxModem = ({ unit, tmpTxData }) => {
 
   // Modem User Inputs
   const TxModemInput = () => {
-    const [inputData, setInputData] = useState(txData[activeModem]);
+    const currentRow = (unit - 1) * 4 + activeModem;
+    const [inputData, setInputData] = useState(txData[currentRow]);
     const handleInputChange = ({ param, val }) => {
       let tmpData = { ...inputData };
       tmpData[param] = val;
@@ -167,9 +129,14 @@ export const TxModem = ({ unit, tmpTxData }) => {
     };
     const handleApply = () => {
       let tmpData = [...txData];
-      tmpData[activeModem] = inputData;
-      setTxData(tmpData);
+      tmpData[currentRow] = inputData;
+      updateTxData(tmpData);
     };
+    const handleTransmit = () => {
+      let tmpData = [...txData];
+      tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
+      updateTxData(tmpData);
+    }
     return (
       <Box sx={sxInputBox}>
         <Box sx={sxInputRow}>
@@ -186,7 +153,7 @@ export const TxModem = ({ unit, tmpTxData }) => {
             <option value={1}>1</option>
             <option value={2}>2</option>
           </select>
-          <Typography sx={sxValues}>{txData[activeModem].id_antenna}</Typography>
+          <Typography sx={sxValues}>{txData[currentRow].id_antenna}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='frequency'>Frequency</label>
@@ -200,7 +167,7 @@ export const TxModem = ({ unit, tmpTxData }) => {
                 val: parseInt(e.target.value),
               })
             }></input>
-          <Typography sx={sxValues}>{txData[activeModem].frequency + ' MHz'}</Typography>
+          <Typography sx={sxValues}>{txData[currentRow].frequency + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='bandwidth'>Bandwidth</label>
@@ -214,87 +181,27 @@ export const TxModem = ({ unit, tmpTxData }) => {
                 val: parseInt(e.target.value),
               })
             }></input>
-          <Typography sx={sxValues}>{txData[activeModem].bandwidth + ' MHz'}</Typography>
+          <Typography sx={sxValues}>{txData[currentRow].bandwidth + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
-          <label htmlFor='modulation'>Modulation</label>
-          <select
-            name='modulation'
-            value={inputData.modulation}
-            onChange={e => handleInputChange({ param: 'modulation', val: e.target.value })}>
-            <option value='BPSK'>BPSK</option>
-            <option value='QPSK'>QPSK</option>
-            <option value='8QAM'>8QAM</option>
-            <option value='16QAM'>16QAM</option>
-          </select>
-          <Typography sx={sxValues}>{txData[activeModem].modulation}</Typography>
-        </Box>
-        <Box sx={sxInputRow}>
-          <label htmlFor='fec'>FEC</label>
-          <select
-            name='fec'
-            value={inputData.fec}
-            onChange={e => handleInputChange({ param: 'fec', val: e.target.value })}>
-            <option value='1/2'>1/2</option>
-            <option value='2/3'>2/3</option>
-            <option value='3/4'>3/4</option>
-            <option value='5/6'>5/6</option>
-            <option value='7/8'>7/8</option>
-          </select>
-          <Typography sx={sxValues}>{txData[activeModem].fec}</Typography>
+          <label htmlFor='power'>Power</label>
+          <input
+            name='power'
+            type='string'
+            value={inputData.power}
+            onChange={e => handleInputChange({ param: 'power', val: parseInt(e.target.value) })}>
+          </input>
+          <Typography sx={sxValues}>{`${txData[currentRow].power} dBm`}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <div></div>
           <Button sx={sxInputApply} onClick={e => handleApply(e)}>
             Apply
           </Button>
+          <Button sx={sxTransmit} onClick={e => handleTransmit(e)}>
+            TX
+          </Button>
         </Box>
-      </Box>
-    );
-  };
-
-  const TxVideo = () => {
-    let matchFound = false;
-    let vidFeed = '';
-
-    const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = txData[activeModem];
-    signals.forEach(signal => {
-      const { frequency: s_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, feed } = signal; // TODO: loop through all signals to find one that matches
-      const s_lb = s_freq - 0.5 * s_bw;
-      const s_rb = s_freq + 0.5 * s_bw;
-      const s_flb = s_lb - 0.5 * s_bw;
-      const s_frb = s_rb + 0.5 * s_bw;
-      const r_lb = r_freq - 0.5 * r_bw;
-      const r_rb = r_freq + 0.5 * r_bw;
-      const txMatch =
-        r_lb <= s_lb && // receiver left bound is withing tolerance
-        r_lb >= s_flb &&
-        r_rb >= s_rb && // receiver right bound is within tolerance
-        r_rb <= s_frb &&
-        r_mod === s_mod && // receiver modulation schema matches
-        r_fec === s_fec; // reciever fec rate matches
-
-      if (txMatch) {
-        vidFeed = degraded ? `degraded_${feed}` : feed;
-        matchFound = true;
-      }
-    });
-    return (
-      <Box sx={sxVideo}>
-        {matchFound && !denied ? (
-          <ReactPlayer
-            url={`/videos/${vidFeed}`}
-            width='100%'
-            height='100%'
-            controls={false}
-            playing={true}
-            loop={true}
-            pip={false}
-            muted={true}
-          />
-        ) : (
-          'No Signal'
-        )}
       </Box>
     );
   };
@@ -305,13 +212,11 @@ export const TxModem = ({ unit, tmpTxData }) => {
         <TxCaseId />
         <TxModemButtonBox />
         <TxModemInput />
-        <TxVideo />
       </Box>
     </>
   );
 };
 
 TxModem.propTypes = {
-  unit: PropTypes.number,
-  tmpTxData: PropTypes.array,
+  unit: PropTypes.number
 };

@@ -7,6 +7,7 @@ import AlignHorizontalCenterIcon from '@mui/icons-material/AlignHorizontalCenter
 import { AstroTheme } from '../../../../../themes/AstroTheme';
 import { useAntenna, useUpdateAntenna } from '../../../../../context'; 
 import './Antenna.css'
+import { borderRadius } from '@mui/system';
 
 export const AntennaController = ({ unit }) => {
     const theme = AstroTheme;
@@ -31,13 +32,12 @@ export const AntennaController = ({ unit }) => {
     // Styles
     const sxAntennaCase = {
         flexGrow: 1,
-        width: '450px',
         margin: 'auto',
         backgroundColor: theme.palette.primary.main,
         borderRadius: '10px',
         border: '1px solid black',
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr 4fr 3fr 5fr',
+        gridTemplateColumns: '30px 6fr 12fr',
         justifyContent: 'space-between',
         fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
     };
@@ -59,7 +59,7 @@ export const AntennaController = ({ unit }) => {
     };
     const sxInputRow = {
         display: 'grid',
-        gridTemplateColumns: '80px 80px 120px',
+        gridTemplateColumns: '100px 100px 100px',
         textAlign: 'left',
         margin: '2px',
     };
@@ -91,8 +91,12 @@ export const AntennaController = ({ unit }) => {
         backgroundColor: antennaData[unit-1].hpa ? 'red' : theme.palette.primary.dark,
         color: antennaData[unit-1].hpa ? 'black' : 'white',
         boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+        border: '1px solid red',
     };
-
+    const sxTx = {
+        backgroundColor: !antennaData[unit-1].loopback ? theme.palette.primary.light : antennaData[unit-1].hpa ? 'red' : 'green',
+        borderRadius: '10px'
+    }
     // Modem Case Id
     const sidebar = [];
     ['A', 'N', 'T',].forEach((x, index) => {
@@ -199,7 +203,7 @@ export const AntennaController = ({ unit }) => {
                         alt='baseball_switch' 
                         onClick={e => toggleSwitch(e)}/>
                     </center>
-                <CellTowerIcon />
+                <CellTowerIcon sx={sxTx}/>
             </Box>
             <AlignHorizontalCenterIcon/>
             <Button sx={sxHPA} onClick={e => handleHPA(e)}>
