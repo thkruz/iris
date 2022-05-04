@@ -30,8 +30,6 @@ function App() {
             <Route path='/instructor' element={<InstructorStack />} />
           </Routes>
         </Body>
-        App is running - good work:
-        {names.map(author => author.first_name + ' ')}
       </Router>
     </div>
   );
