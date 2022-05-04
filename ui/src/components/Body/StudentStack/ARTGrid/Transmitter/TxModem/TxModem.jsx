@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Typography, Grid } from '@mui/material';
 import './TxModem.css';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
 import { useTx, useUpdateTx } from '../../../../../../context';
@@ -17,13 +17,11 @@ export const TxModem = ({ unit }) => {
   // Styles
   const sxCase = {
     flexGrow: 1,
-    margin: 'auto',
-    width: '400px',
     backgroundColor: theme.palette.primary.main,
     borderRadius: '10px',
     border: '1px solid black',
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr 4fr 3fr 5fr',
+    gridTemplateColumns: '30px 1fr 4fr 3fr 5fr',
     justifyContent: 'space-between',
     fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
   };

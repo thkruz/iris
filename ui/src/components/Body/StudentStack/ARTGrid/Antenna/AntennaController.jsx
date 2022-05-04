@@ -36,7 +36,7 @@ export const AntennaController = ({ unit }) => {
         borderRadius: '10px',
         border: '1px solid black',
         display: 'grid',
-        gridTemplateColumns: '1fr 6fr 12fr',
+        gridTemplateColumns: '30px 6fr 12fr',
         justifyContent: 'space-between',
         fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
     };
