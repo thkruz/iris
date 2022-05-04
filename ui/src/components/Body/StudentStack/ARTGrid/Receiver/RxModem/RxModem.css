@@ -1,13 +1,7 @@
-input {
-    text-align: center;
-    margin-left: 8px;
-    margin-right: 8px;
-    width: 57px;
-    justify-self: end;
-}
 
-select {
-    width: 65px;
+select, input {
+    width: 85%;
+    box-sizing: border-box;
     margin-left: 8px;
     margin-right: 8px;
     justify-self: end;
@@ -16,4 +10,5 @@ select {
 
 label {
     justify-self: end;
+    align-self: center;
 }

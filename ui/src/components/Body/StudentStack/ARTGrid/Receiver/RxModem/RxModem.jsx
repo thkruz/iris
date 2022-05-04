@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import ReactPlayer from 'react-player';
 import PropTypes from 'prop-types';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Typography, Grid } from '@mui/material';
 import './RxModem.css';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
+import { useRx, useUpdateRx } from '../../../../../../context'
+import { useEffect } from 'react';
 
-export const RxModem = ({ unit, tmpRxData }) => {
+export const RxModem = ({ unit }) => {
   //TODO: modem buttons, update state, video,
   const theme = AstroTheme;
   const degraded = false; // TODO: These may come from context
@@ -46,19 +48,18 @@ export const RxModem = ({ unit, tmpRxData }) => {
       feed: 'testVid.mp4',
     },
   ];
-  const [rxData, setRxData] = useState(tmpRxData);
+  const rxData = useRx()
+  const updateRxData = useUpdateRx();
   const [activeModem, setActiveModem] = useState(0);
 
   // Styles
   const sxCase = {
     flexGrow: 1,
-    margin: 'auto',
-    width: '600px',
     backgroundColor: theme.palette.primary.main,
     borderRadius: '10px',
     border: '1px solid black',
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr 4fr 3fr 5fr',
+    gridTemplateColumns: '30px 1fr 4fr 3fr 5fr',
     justifyContent: 'space-between',
     fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
   };
@@ -124,7 +125,7 @@ export const RxModem = ({ unit, tmpRxData }) => {
 
   // Modem Case Id
   const sidebar = [];
-  ['R', 'C', 'V', 'R'].forEach((x, index) => {
+  ['R', 'X'].forEach((x, index) => {
     sidebar.push(
       <Typography key={index} sx={{ color: 'black' }}>
         {x}
@@ -141,9 +142,9 @@ export const RxModem = ({ unit, tmpRxData }) => {
   // Modem selector buttons
   const RxModemButtonBox = () => (
     <Box sx={sxModemButtonBox}>
-      {rxData.map((x, index) => (
-        <RxModemButton key={index} modem={x.modem} />
-      ))}
+      {rxData.map((x, index) => {
+        if(x.unit == unit) return(<RxModemButton key={index} modem={x.modem} />)
+      })}
     </Box>
   );
   const RxModemButton = ({ modem }) => (
@@ -160,7 +161,8 @@ export const RxModem = ({ unit, tmpRxData }) => {
 
   // Modem User Inputs
   const RxModemInput = () => {
-    const [inputData, setInputData] = useState(rxData[activeModem]);
+    const currentRow = (unit - 1) * 4 + activeModem;
+    const [inputData, setInputData] = useState(rxData[currentRow]);
     const handleInputChange = ({ param, val }) => {
       let tmpData = { ...inputData };
       tmpData[param] = val;
@@ -168,8 +170,8 @@ export const RxModem = ({ unit, tmpRxData }) => {
     };
     const handleApply = () => {
       let tmpData = [...rxData];
-      tmpData[activeModem] = inputData;
-      setRxData(tmpData);
+      tmpData[currentRow] = inputData;
+      updateRxData(tmpData);
     };
     return (
       <Box sx={sxInputBox}>
@@ -280,7 +282,7 @@ export const RxModem = ({ unit, tmpRxData }) => {
       bandwidth: r_bw,
       modulation: r_mod,
       fec: r_fec,
-    } = rxData[activeModem];
+    } = rxData[(unit - 1) * 4 + activeModem];
     signals.forEach((signal) => {
       const {
         frequency: s_freq,

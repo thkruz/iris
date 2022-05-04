@@ -8,7 +8,7 @@ import { Grid } from '@mui/material';
 function Receiver() {
   const units = [1, 2, 3, 4];
   return units.map((x, index) => (
-    <Grid key={index} item sx={{ margin: 'auto', padding: '5px' }} xs={12}>
+    <Grid key={index} item xs={6}>
       <RxModem unit={x} tmpRxData={tmpRxData.filter(y => y.unit === x)} />
     </Grid>
   ));

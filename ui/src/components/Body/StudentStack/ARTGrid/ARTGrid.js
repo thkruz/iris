@@ -12,10 +12,8 @@ const ARTGrid = () => {
       <Grid container item spacing={1} xs={12}>
         <Antenna />
       </Grid>
-      <Grid container item spacing={1} xs={6}>
+      <Grid container item spacing={1} xs={12}>
         <Transmitter />
-      </Grid>
-      <Grid container item sx={{ margin: 'auto' }} xs={6}>
         <Receiver />
       </Grid>
     </>

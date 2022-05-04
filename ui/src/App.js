@@ -9,14 +9,6 @@ import Login from './components/Login/Login';
 const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
 function App() {
-  let [names, setNames] = useState([]);
-
-  useEffect(() => {
-    fetch(ApiUrl + '/authors')
-      .then(response => response.json())
-      .then(data => setNames(data))
-      .catch(err => console.log(err));
-  }, []);
 
   return (
     <div>
@@ -30,8 +22,6 @@ function App() {
             <Route path='/instructor' element={<InstructorStack />} />
           </Routes>
         </Body>
-        App is running - good work:
-        {names.map(author => author.first_name + ' ')}
       </Router>
     </div>
   );
