@@ -9,7 +9,6 @@ import Login from './components/Login/Login';
 const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
 function App() {
-  let [names, setNames] = useState([]);
 
   return (
     <div>
