@@ -156,18 +156,20 @@ export const useTx = () => {
     return useContext(txContext);
 };
 
+const socket = io('http://localhost:8080', {transports: ['websocket']});
+
 export const useUpdateTx = () => {
+    console.log("updateTx");
+    socket.emit('updateTx');
     return useContext(updateTxContext);
 };
 
 
-const socket = io('http://localhost:3001');
+
 
 export const TxProvider = ({ children }) => {
     const [tx, setTx] = useState(defaultTxContext);
     const updateTx = (update) => {
-        console.log("updateTx", update);
-        socket.emit('updateTx', update);
         setTx(update);
     };
 
