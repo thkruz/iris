@@ -31,13 +31,12 @@ export const AntennaController = ({ unit }) => {
     // Styles
     const sxAntennaCase = {
         flexGrow: 1,
-        width: '450px',
         margin: 'auto',
         backgroundColor: theme.palette.primary.main,
         borderRadius: '10px',
         border: '1px solid black',
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr 4fr 3fr 5fr',
+        gridTemplateColumns: '1fr 6fr 12fr',
         justifyContent: 'space-between',
         fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
     };
@@ -59,7 +58,7 @@ export const AntennaController = ({ unit }) => {
     };
     const sxInputRow = {
         display: 'grid',
-        gridTemplateColumns: '80px 80px 120px',
+        gridTemplateColumns: '100px 100px 100px',
         textAlign: 'left',
         margin: '2px',
     };

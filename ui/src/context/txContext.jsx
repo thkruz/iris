@@ -11,7 +11,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70,
+        power: -70, transmitting: false
     },
     {
         unit: 1,
@@ -20,7 +20,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 1,
@@ -29,7 +29,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 1,
@@ -38,7 +38,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 2,
@@ -47,7 +47,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 2,
@@ -56,7 +56,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 2,
@@ -65,7 +65,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 2,
@@ -74,7 +74,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 3,
@@ -83,7 +83,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 3,
@@ -92,7 +92,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 3,
@@ -101,7 +101,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 3,
@@ -110,7 +110,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 4,
@@ -119,7 +119,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 4,
@@ -128,7 +128,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 4,
@@ -137,7 +137,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
     {
         unit: 4,
@@ -146,7 +146,7 @@ const defaultTxContext = [
         id_antenna: 1,
         frequency: 1000,
         bandwidth: 10,
-        power: -70
+        power: -70, transmitting: false
     },
 ];
 

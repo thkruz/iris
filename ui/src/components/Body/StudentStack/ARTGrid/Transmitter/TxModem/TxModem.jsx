@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import ReactPlayer from 'react-player';
 import PropTypes from 'prop-types';
 import { Box, Button, Typography } from '@mui/material';
 import './TxModem.css';
@@ -77,6 +76,14 @@ export const TxModem = ({ unit }) => {
     margin: '8px',
     cursor: 'pointer',
   };
+  const sxTransmit = {
+    cursor: 'pointer',
+    margin: '8px',
+    backgroundColor: txData[(unit - 1) * 4 + activeModem].transmitting ? 'red' : theme.palette.primary.dark,
+    color: txData[(unit - 1) * 4 + activeModem].transmitting ? 'black' : 'white',
+    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+    border: '1px solid red'
+  };
 
   // Modem Case Id
   const sidebar = [];
@@ -126,8 +133,12 @@ export const TxModem = ({ unit }) => {
       let tmpData = [...txData];
       tmpData[currentRow] = inputData;
       updateTxData(tmpData);
-      console.log(txData)
     };
+    const handleTransmit = () => {
+      let tmpData = [...txData];
+      tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
+      updateTxData(tmpData);
+    }
     return (
       <Box sx={sxInputBox}>
         <Box sx={sxInputRow}>
@@ -188,6 +199,9 @@ export const TxModem = ({ unit }) => {
           <div></div>
           <Button sx={sxInputApply} onClick={e => handleApply(e)}>
             Apply
+          </Button>
+          <Button sx={sxTransmit} onClick={e => handleTransmit(e)}>
+            TX
           </Button>
         </Box>
       </Box>
