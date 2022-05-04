@@ -1,5 +1,7 @@
 import React, { useContext, useState } from 'react';
 import PropTypes from 'prop-types';
+import { io } from 'socket.io-client';
+
 const txContext = React.createContext();
 const updateTxContext = React.createContext();
 
@@ -158,9 +160,14 @@ export const useUpdateTx = () => {
     return useContext(updateTxContext);
 };
 
+
+const socket = io('http://localhost:3001');
+
 export const TxProvider = ({ children }) => {
     const [tx, setTx] = useState(defaultTxContext);
     const updateTx = (update) => {
+        console.log("updateTx", update);
+        socket.emit('updateTx', update);
         setTx(update);
     };
 
