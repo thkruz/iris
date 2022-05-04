@@ -17,6 +17,7 @@ exports.up = function(knex) {
     table.double('frequency').notNullable();
     table.double('bandwidth').notNullable();
     table.double('power').notNullable();
+    table.boolean('transmitting').defaultTo(false);
     });
 };
 
