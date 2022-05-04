@@ -156,20 +156,28 @@ export const useTx = () => {
     return useContext(txContext);
 };
 
-const socket = io('http://localhost:8080', {transports: ['websocket']});
+const socket = io('http://localhost:8080', {transports: ['websocket']}); // this doesn't belong here, I'm just not sure where to put it lol
+socket.on('update', (updated_context) => {
+    console.log(tx);
+    setTx(updated_context);
+});
 
 export const useUpdateTx = () => {
-    console.log("updateTx");
-    socket.emit('updateTx');
     return useContext(updateTxContext);
 };
 
-
-
-
 export const TxProvider = ({ children }) => {
+
     const [tx, setTx] = useState(defaultTxContext);
     const updateTx = (update) => {
+        console.log("updateTx");
+        // if same
+        //    don't broadcast
+
+        //  patch request to update database
+        // if patch request is good
+        //      socket.emit('update', update);
+        socket.emit('update', update);
         setTx(update);
     };
 
