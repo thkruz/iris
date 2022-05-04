@@ -168,9 +168,6 @@ export const RxModem = ({ unit }) => {
       tmpData[param] = val;
       setInputData(tmpData);
     };
-    useEffect(() => {
-      console.log(inputData)
-    }, [inputData])
     const handleApply = () => {
       let tmpData = [...rxData];
       tmpData[currentRow] = inputData;
