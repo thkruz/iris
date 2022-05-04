@@ -50,6 +50,13 @@ export const TxModem = ({ unit }) => {
     margin: '8px',
     outline: 'none',
   };
+  const sxModemButtonLive = {
+    backgroundColor: theme.palette.primary.light,
+    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+    color: 'black',
+    margin: '8px',
+    cursor: 'pointer',
+  };
   const sxValues = {
     fontWeight: 'bold',
     textDecoration: 'underline',
@@ -103,13 +110,21 @@ export const TxModem = ({ unit }) => {
   const TxModemButtonBox = () => (
     <Box sx={sxModemButtonBox}>
       {txData.map((x, index) => {
-        if(x.unit == unit) return(<TxModemButton key={index} modem={x.modem} />)
+        if(x.unit == unit) return(<TxModemButton key={index} modem={x.modem} transmitting={x.transmitting} />)
       })}
     </Box>
   );
-  const TxModemButton = ({ modem }) => (
+  const TxModemButton = ({ modem, transmitting }) => (
     <Button
-      sx={modem === activeModem + 1 ? sxModemButtonActive : sxModemButton}
+      sx={{
+        backgroundColor: modem - 1 == activeModem ? theme.palette.primary.dark : theme.palette.primary.light,
+        boxShadow: '0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19)',
+        color: 'white',
+        width: '1em',
+        margin: '8px',
+        outline: 'none',
+        border: `1px solid ${transmitting ? 'red' : 'rgba(0,0,0,0)'}`
+      }}
       onClick={e => {
         setActiveModem(parseInt(e.target.innerText) - 1);
       }}>
