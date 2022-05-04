@@ -1,12 +1,21 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
+const server = require('http').createServer(app);
+const io = require('socket.io')(server);
 const env = process.env.NODE_ENV || 'development';
 const config = require('../knexfile')[env];
 const knex = require('knex')(config);
 
 app.use(cors());
 app.use(express.json());
+
+io.on('connection', (socket) => {
+    console.log('a user connected');
+    socket.on('disconnect', () => {
+        console.log('user disconnected');
+    });
+  });
 
 app.get('/', (request, response) => {
   response.set('Access-Control-Allow-Origin', '*');
@@ -102,4 +111,4 @@ app.delete('/data/:table_name', (request, response) => {
   }
 });
 
-module.exports = app;
+module.exports = server;
