@@ -22,7 +22,7 @@ function Transmitter() {
   const units = [1, 2, 3, 4];
   return units.map((x, index) => (
     <Grid key={index} item sx={{ margin: 'auto', padding: '5px' }} xs={12}>
-      <TxModem unit={x} tmpTxData={tmpTxData.filter(y => y.unit === x)} />
+      <TxModem unit={x} />
     </Grid>
   ));
 }
