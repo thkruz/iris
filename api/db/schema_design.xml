@@ -128,6 +128,9 @@
 <row name="power" null="1" autoincrement="0">
 <datatype>DECIMAL</datatype>
 <default>NULL</default></row>
+<row name="transmitting" null="1" autoincrement="0">
+<datatype>bit</datatype>
+<default>NULL</default></row>
 <key type="PRIMARY" name="">
 <part>id</part>
 </key>
