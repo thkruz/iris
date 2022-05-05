@@ -37,7 +37,7 @@ const sxInputRow = {
 
 const configButtonStyle = {
   backgroundColor: AstroTheme.palette.warning.main,
-  boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+  boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
   color: 'black',
   margin: '8px',
   cursor: 'pointer',
@@ -138,7 +138,7 @@ const SpectrumAnalyzerBox = props => {
         <Grid
           container
           item
-          sx={{ border: '3px solid #000', borderRadius: '5px', boxShadow: '0px 0px 10px rgba(0,0,0,0.2)' }}
+          sx={{ border: '3px solid #000', borderRadius: '5px', boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)' }}
           xs={9}>
           <canvas id={props.canvasId} />
         </Grid>

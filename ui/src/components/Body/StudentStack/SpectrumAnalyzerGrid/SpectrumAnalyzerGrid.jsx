@@ -52,17 +52,17 @@ const SpectrumAnalyzerGrid = () => {
 
   return (
     <>
-      <Grid container item spacing={1} xs={12}>
-        <Grid item xs={3}>
+      <Grid container item spacing={3} xs={12}>
+        <Grid item xs={6} s={6} md={6} lg={6} xl={3}>
           {<SpectrumAnalyzerBox handleConfigClick={handleConfigClick} canvasId={'specA1'} />}
         </Grid>
-        <Grid item xs={3}>
+        <Grid item xs={6} s={6} md={6} lg={6} xl={3}>
           {<SpectrumAnalyzerBox handleConfigClick={handleConfigClick} canvasId={'specA2'} />}
         </Grid>
-        <Grid item xs={3}>
+        <Grid item xs={6} s={6} md={6} lg={6} xl={3}>
           {<SpectrumAnalyzerBox handleConfigClick={handleConfigClick} canvasId={'specA3'} />}
         </Grid>
-        <Grid item xs={3}>
+        <Grid item xs={6} s={6} md={6} lg={6} xl={3}>
           {<SpectrumAnalyzerBox handleConfigClick={handleConfigClick} canvasId={'specA4'} />}
         </Grid>
       </Grid>

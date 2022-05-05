@@ -64,7 +64,7 @@ export const AntennaController = ({ unit }) => {
   };
   const sxInputApply = {
     backgroundColor: theme.palette.primary.light,
-    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
     color: 'black',
     margin: '8px',
     cursor: 'pointer',
@@ -77,7 +77,7 @@ export const AntennaController = ({ unit }) => {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
   };
   const sxLoopbackSwitch = {
     display: 'flex',
@@ -89,7 +89,7 @@ export const AntennaController = ({ unit }) => {
     marginTop: '5px',
     backgroundColor: antennaData[unit - 1].hpa ? 'red' : theme.palette.primary.dark,
     color: antennaData[unit - 1].hpa ? 'black' : 'white',
-    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
     border: '1px solid red',
   };
   const sxTx = {
