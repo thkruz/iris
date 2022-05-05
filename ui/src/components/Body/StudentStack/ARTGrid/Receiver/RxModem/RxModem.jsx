@@ -34,18 +34,18 @@ export const RxModem = ({ unit }) => {
   const sxModemButtonBox = {
     backgroundColor: theme.palette.primary.light,
     borderRadius: '5px',
-    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
   };
   const sxModemButton = {
     backgroundColor: theme.palette.primary.light,
-    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
     color: 'black',
     margin: '8px',
     cursor: 'pointer',
   };
   const sxModemButtonActive = {
     backgroundColor: theme.palette.primary.dark,
-    boxShadow: '0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
     color: 'white',
     width: '1em',
     margin: '8px',
@@ -70,7 +70,7 @@ export const RxModem = ({ unit }) => {
   };
   const sxInputApply = {
     backgroundColor: theme.palette.primary.light,
-    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
     color: 'black',
     margin: '8px',
     cursor: 'pointer',
