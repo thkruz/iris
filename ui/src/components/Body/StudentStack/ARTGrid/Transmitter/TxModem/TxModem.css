@@ -1,19 +1,2 @@
-input {
-    text-align: center;
-    margin-left: 8px;
-    margin-right: 8px;
-    width: 57px;
-    justify-self: end;
-}
 
-select {
-    width: 65px;
-    margin-left: 8px;
-    margin-right: 8px;
-    justify-self: end;
-    text-align: center;
-}
 
-label {
-    justify-self: end;
-}
