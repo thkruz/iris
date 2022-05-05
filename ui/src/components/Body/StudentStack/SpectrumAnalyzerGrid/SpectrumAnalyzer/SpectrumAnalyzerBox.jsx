@@ -4,6 +4,7 @@ import { Box, Button, Grid, Typography } from '@mui/material';
 import { SpectrumAnalyzer } from './SpectrumAnalyzer.js';
 import React, { useLayoutEffect, useState } from 'react';
 import { AstroTheme } from '../../../../../themes/AstroTheme.js';
+import { useEffect } from 'react';
 
 // MUI Stack: https://mui.com/material-ui/react-stack/
 
@@ -39,12 +40,16 @@ const SpectrumAnalyzerBox = props => {
   const [specAConfig, setSpecAConfig] = useState({});
   const [specA, setSpecA] = useState({});
 
-  useLayoutEffect(() => {
-    console.log('resizeStart');
-  }, []);
+  useEffect(() => {
+    setSpecAConfig({
+      bandwidth: (specA.maxFreq - specA.minFreq) / 1e6,
+      centerFreq: (specA.maxFreq - (specA.maxFreq - specA.minFreq) / 2) / 1e6,
+      minDecibels: specA.minDecibels,
+      maxDecibels: specA.maxDecibels,
+    });
+  }, [specA.bandwidth, specA.centerFreq]);
 
   useLayoutEffect(() => {
-    if (!props.signals) return;
     const canvasDom = document.getElementById(props.canvasId);
     canvasDom.width = canvasDom.parentElement.offsetWidth - 6;
     canvasDom.height = canvasDom.parentElement.offsetWidth - 6;
@@ -69,37 +74,22 @@ const SpectrumAnalyzerBox = props => {
       maxDecibels: specA.maxDecibels,
     });
 
-    props.signals.forEach(signal => {
-      specA.signals.push({ freq: signal.frequency * 1e6, amp: signal.power, bw: signal.bandwidth * 1e6 });
-    });
     switch (props.canvasId) {
       case 'specA1':
-        specA.signals.push({ freq: 425e6, amp: -108, bw: 3e6 });
-        specA.signals.push({ freq: 435e6, amp: -80, bw: 10e6 });
-        specA.signals.push({ freq: 445e6, amp: -60, bw: 5e6 });
         window.sewApp.specA1 = specA;
         break;
       case 'specA2':
-        specA.signals.push({ freq: 448e6, amp: -60, bw: 1e6 });
-        specA.signals.push({ freq: 422e6, amp: -60, bw: 0.5e6 });
-        specA.signals.push({ freq: 423e6, amp: -60, bw: 1e6 });
         window.sewApp.specA2 = specA;
         break;
       case 'specA3':
-        specA.signals.push({ freq: 439e6, amp: -60, bw: 1e6 });
-        specA.signals.push({ freq: 449e6, amp: -70, bw: 1e6 });
-        specA.signals.push({ freq: 429e6, amp: -60, bw: 1e6 });
         window.sewApp.specA3 = specA;
         break;
       case 'specA4':
-        specA.signals.push({ freq: 435e6, amp: -70, bw: 1e6 });
-        specA.signals.push({ freq: 437e6, amp: -70, bw: 1e6 });
-        specA.signals.push({ freq: 438e6, amp: -70, bw: 1e6 });
         window.sewApp.specA4 = specA;
         break;
     }
     specA.start();
-  }, [props.signals]);
+  }, []);
 
   // setSpectrumAnalyzer(specA);
   return (
@@ -128,7 +118,7 @@ const SpectrumAnalyzerBox = props => {
         </Grid>
         <Grid item xs={4}></Grid>
         <Grid item xs={4}>
-          <Button sx={configButtonStyle} onClick={() => props.handleConfigClick(specA)}>
+          <Button sx={configButtonStyle} onClick={() => props.handleConfigClick(specA, setSpecAConfig)}>
             Config
           </Button>
         </Grid>

@@ -19,6 +19,8 @@ export class SpectrumAnalyzer {
     this.signals = options.signals || [];
     this.minFreq = options.minFreq || 420e6;
     this.maxFreq = options.maxFreq || 450e6;
+    this.bw = this.maxFreq - this.minFreq;
+    this.centerFreq = this.minFreq + this.bw / 2;
     this.noiseColor = options.noiseColor || '#0bf';
 
     this.resize(this.canvas.parentElement.offsetWidth - 6, this.canvas.parentElement.offsetWidth - 6);
@@ -37,6 +39,18 @@ export class SpectrumAnalyzer {
     if (this.running) return;
     this.running = true;
     this.draw();
+  }
+
+  changeCenterFreq(freq) {
+    this.centerFreq = freq;
+    this.minFreq = freq - this.bw / 2;
+    this.maxFreq = freq + this.bw / 2;
+  }
+
+  changeBandwidth(freqSpan) {
+    this.bw = freqSpan;
+    this.minFreq = this.centerFreq - this.bw / 2;
+    this.maxFreq = this.centerFreq + this.bw / 2;
   }
 
   resize(width, height) {

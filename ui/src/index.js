@@ -4,9 +4,18 @@ import App from './App';
 import { AntennaProvider, RxProvider, TxProvider } from './context';
 import reportWebVitals from './reportWebVitals';
 import './index.css';
+import { RfEnvironment } from './RfEnvironment';
 
 // Create a sync global context for the RF Environments
-window.sewApp = {};
+window.sewApp = {
+  environment: new RfEnvironment(),
+  getSpectrumAnalyzer: i => {
+    if (i === 1) return window.sewApp.specA1;
+    if (i === 2) return window.sewApp.specA2;
+    if (i === 3) return window.sewApp.specA3;
+    if (i === 4) return window.sewApp.specA4;
+  },
+};
 
 ReactDOM.render(
   <React.StrictMode>
