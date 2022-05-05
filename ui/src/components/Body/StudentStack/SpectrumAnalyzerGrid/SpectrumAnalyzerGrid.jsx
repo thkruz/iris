@@ -16,7 +16,8 @@ const SpectrumAnalyzerGrid = () => {
   };
 
   const handleBackgroundClick = e => {
-    console.log(e.target);
+    // Don't hide the screen unless the background was clicked
+    // NOTE: Any click action triggers this event
     if (e.target.id === 'analyzerControlModalOverlay') {
       setIsConfigOpen(false);
     }

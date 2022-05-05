@@ -58,6 +58,7 @@ const AnalyzerControl = props => {
   const [khz, setKhz] = React.useState(null);
   const [isTraceOn, setIsTraceOn] = React.useState(false);
   const [controlSelection, setControlSelection] = React.useState(null);
+  const [numberSelection, setNumberSelection] = React.useState(null);
 
   // Initialize the frequency values
   useEffect(() => {
@@ -117,6 +118,21 @@ const AnalyzerControl = props => {
     setControlSelection('span');
   };
 
+  const handleGhzSelectClick = () => {
+    setNumberSelection('ghz');
+  };
+  const handleMhzSelectClick = () => {
+    setNumberSelection('mhz');
+  };
+  const handleKhzSelectClick = () => {
+    setNumberSelection('khz');
+  };
+
+  const handleNumberClicked = value => {
+    console.log(numberSelection);
+    console.log(value);
+  };
+
   return (
     <Box id={'analyzerControlModalOverlay'} style={fullscreenFadeStyle} onClick={e => props.handleBackgroundClick(e)}>
       <h1 style={{ color: 'white', textAlign: 'center' }}>{props.currentSpecAnalyzer.canvas.id}</h1>
@@ -161,17 +177,41 @@ const AnalyzerControl = props => {
               </Grid>
               <Grid container item xs={4} sx={{ padding: '8px', justifyContent: 'space-around', alignItems: 'center' }}>
                 <Grid item xs={12}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button
+                    sx={{
+                      ...yellowButtonStyle,
+                      ...{
+                        background:
+                          numberSelection === 'ghz' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
+                      },
+                    }}
+                    onClick={handleGhzSelectClick}>
                     <h2>&#8249;</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={12}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button
+                    sx={{
+                      ...yellowButtonStyle,
+                      ...{
+                        background:
+                          numberSelection === 'mhz' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
+                      },
+                    }}
+                    onClick={handleMhzSelectClick}>
                     <h2>&#8249;</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={12}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button
+                    sx={{
+                      ...yellowButtonStyle,
+                      ...{
+                        background:
+                          numberSelection === 'khz' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
+                      },
+                    }}
+                    onClick={handleKhzSelectClick}>
                     <h2>&#8249;</h2>
                   </Button>
                 </Grid>
@@ -225,80 +265,80 @@ const AnalyzerControl = props => {
             <Grid container sx={{ justifyContent: 'space-around' }}>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(7)}>
                     <h2>7</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(8)}>
                     <h2>8</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(9)}>
                     <h2>9</h2>
                   </Button>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(4)}>
                     <h2>4</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(5)}>
                     <h2>5</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(6)}>
                     <h2>6</h2>
                   </Button>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(1)}>
                     <h2>1</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(2)}>
                     <h2>2</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(3)}>
                     <h2>3</h2>
                   </Button>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked('-')}>
                     <h2>-</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(0)}>
                     <h2>0</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked('.')}>
                     <h2>.</h2>
                   </Button>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked('bksp')}>
                     <h2>bskp</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked('C')}>
                     <h2>C</h2>
                   </Button>
                 </Grid>
