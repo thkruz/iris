@@ -32,7 +32,12 @@ const SpectrumAnalyzerGrid = () => {
         for (let i = 1; i <= 4; i++) {
           const specA = window.sewApp.getSpectrumAnalyzer(i);
           data.forEach(signal => {
-            specA.signals.push({ freq: signal.frequency * 1e6, amp: signal.power, bw: signal.bandwidth * 1e6 });
+            specA.signals.push({
+              freq: signal.frequency * 1e6,
+              amp: signal.power,
+              bw: signal.bandwidth * 1e6,
+              targetId: signal.target_id,
+            });
           });
           specA.signals.push({ freq: 425e6, amp: -108, bw: 3e6 });
           specA.signals.push({ freq: 435e6, amp: -80, bw: 10e6 });
