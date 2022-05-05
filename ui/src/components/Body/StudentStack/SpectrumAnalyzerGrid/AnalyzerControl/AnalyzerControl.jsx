@@ -3,7 +3,7 @@ import React from 'react';
 import { Box, Button } from '@mui/material';
 import { Grid } from '@mui/material';
 import { AstroTheme } from '../../../../../themes/AstroTheme';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const popupStyle = {
   backgroundColor: AstroTheme.palette.tertiary.main,
@@ -53,12 +53,12 @@ const yellowButtonStyle = {
 };
 const AnalyzerControl = props => {
   // console.log(props.currentSpecAnalyzer);
-  const [ghz, setGhz] = React.useState(null);
-  const [mhz, setMhz] = React.useState(null);
-  const [khz, setKhz] = React.useState(null);
-  const [isTraceOn, setIsTraceOn] = React.useState(false);
-  const [controlSelection, setControlSelection] = React.useState(null);
-  const [numberSelection, setNumberSelection] = React.useState(null);
+  const [ghz, setGhz] = useState(null);
+  const [mhz, setMhz] = useState(null);
+  const [khz, setKhz] = useState(null);
+  const [isTraceOn, setIsTraceOn] = useState(false);
+  const [controlSelection, setControlSelection] = useState(null);
+  const [numberSelection, setNumberSelection] = useState(null);
 
   // Initialize the frequency values
   useEffect(() => {

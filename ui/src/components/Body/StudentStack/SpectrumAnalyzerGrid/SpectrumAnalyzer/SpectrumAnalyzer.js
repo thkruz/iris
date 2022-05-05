@@ -22,7 +22,8 @@ export class SpectrumAnalyzer {
     this.bw = this.maxFreq - this.minFreq;
     this.centerFreq = this.minFreq + this.bw / 2;
     this.noiseColor = options.noiseColor || '#0bf';
-
+    this.antennaId = 1;
+    this.targetId = null;
     this.resize(this.canvas.parentElement.offsetWidth - 6, this.canvas.parentElement.offsetWidth - 6);
 
     window.addEventListener('resize', () => {
@@ -211,13 +212,17 @@ export class SpectrumAnalyzer {
         this.noiseData = this.createNoise(this.noiseData);
         this.drawNoise(this.ctx);
 
-        this.signals.forEach((signal, i) => {
-          let color = this.noiseColor;
-          if (this.isShowSignals) {
-            color = SpectrumAnalyzer.getRandomRgb(i);
-          }
-          this.drawSignal(this.ctx, color, signal);
-        });
+        this.signals
+          .filter(signal => {
+            return signal.targetId === this.targetId;
+          })
+          .forEach((signal, i) => {
+            let color = this.noiseColor;
+            if (this.isShowSignals) {
+              color = SpectrumAnalyzer.getRandomRgb(i);
+            }
+            this.drawSignal(this.ctx, color, signal);
+          });
 
         if (this.isDrawHold) {
           this.drawMaxHold(this.ctx);
