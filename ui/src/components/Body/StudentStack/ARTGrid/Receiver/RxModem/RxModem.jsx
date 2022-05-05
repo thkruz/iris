@@ -11,42 +11,6 @@ export const RxModem = ({ unit }) => {
   const theme = AstroTheme;
   const degraded = false; // TODO: These may come from context
   const denied = false; // TODO: These may come from context
-  const signals = [
-    // TODO: This needs to come from an api call
-    {
-      id: 1,
-      id_server: 123456,
-      id_target: 1,
-      frequency: 1250,
-      power: -45,
-      bandwidth: 10,
-      modulation: '8QAM',
-      fec: '1/2',
-      feed: 'testVid2.mov',
-    },
-    {
-      id: 1,
-      id_server: 123456,
-      id_target: 1,
-      frequency: 1300,
-      power: -45,
-      bandwidth: 10,
-      modulation: '8QAM',
-      fec: '3/4',
-      feed: 'testVid.mov',
-    },
-    {
-      id: 1,
-      id_server: 123456,
-      id_target: 1,
-      frequency: 1350,
-      power: -45,
-      bandwidth: 10,
-      modulation: '8QAM',
-      fec: '3/4',
-      feed: 'testVid.mp4',
-    },
-  ];
   const rxData = useRx();
   const updateRxData = useUpdateRx();
   const [activeModem, setActiveModem] = useState(0);
@@ -259,7 +223,8 @@ export const RxModem = ({ unit }) => {
     let vidFeed = '';
 
     const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = rxData[(unit - 1) * 4 + activeModem];
-    signals.forEach(signal => {
+
+    window.sewApp.environment?.signals?.forEach(signal => {
       const { frequency: s_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, feed } = signal; // TODO: loop through all signals to find one that matches
       const s_lb = s_freq - 0.5 * s_bw;
       const s_rb = s_freq + 0.5 * s_bw;
