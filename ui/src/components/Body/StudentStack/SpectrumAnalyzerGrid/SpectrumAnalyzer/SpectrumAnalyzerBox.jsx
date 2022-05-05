@@ -4,6 +4,8 @@ import { Box, Button, Grid, Typography } from '@mui/material';
 import { SpectrumAnalyzer } from './SpectrumAnalyzer.js';
 import React, { useLayoutEffect, useState } from 'react';
 import { AstroTheme } from '../../../../../themes/AstroTheme.js';
+import { useEffect } from 'react';
+import { useAntenna } from './../../../../../context/antennaContext';
 
 // MUI Stack: https://mui.com/material-ui/react-stack/
 
@@ -24,6 +26,15 @@ const SpectrumAnalyzerBoxStyle = {
   zIndex: '1',
 };
 
+const sxInputRow = {
+  fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
+  display: 'grid',
+  gridTemplateColumns: '80px 80px 80px',
+  textAlign: 'left',
+  margin: '8px',
+  height: '30px',
+};
+
 const configButtonStyle = {
   backgroundColor: AstroTheme.palette.warning.main,
   boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
@@ -38,10 +49,16 @@ const configButtonStyle = {
 const SpectrumAnalyzerBox = props => {
   const [specAConfig, setSpecAConfig] = useState({});
   const [specA, setSpecA] = useState({});
+  const antenna = useAntenna();
 
-  useLayoutEffect(() => {
-    console.log('resizeStart');
-  }, []);
+  useEffect(() => {
+    setSpecAConfig({
+      bandwidth: (specA.maxFreq - specA.minFreq) / 1e6,
+      centerFreq: (specA.maxFreq - (specA.maxFreq - specA.minFreq) / 2) / 1e6,
+      minDecibels: specA.minDecibels,
+      maxDecibels: specA.maxDecibels,
+    });
+  }, [specA.bandwidth, specA.centerFreq]);
 
   useLayoutEffect(() => {
     const canvasDom = document.getElementById(props.canvasId);
@@ -51,12 +68,18 @@ const SpectrumAnalyzerBox = props => {
     const defaultSpecAConfig = {
       minDecibels: -120,
       maxDecibels: -20,
+      minFreq: 4650000000,
+      maxFreq: 4750000000,
       refreshRate: 5, // per second
       noiseFloor: -115,
       isShowSignals: false,
     };
 
     const specA = new SpectrumAnalyzer(canvasDom, defaultSpecAConfig);
+
+    const { id_target } = antenna[1];
+    specA.targetId = id_target;
+
     setSpecA(specA);
 
     setSpecAConfig({
@@ -68,28 +91,34 @@ const SpectrumAnalyzerBox = props => {
 
     switch (props.canvasId) {
       case 'specA1':
-        specA.signals.push({ freq: 425e6, amp: -108, bw: 3e6 });
-        specA.signals.push({ freq: 435e6, amp: -80, bw: 10e6 });
-        specA.signals.push({ freq: 445e6, amp: -60, bw: 5e6 });
+        window.sewApp.specA1 = specA;
         break;
       case 'specA2':
-        specA.signals.push({ freq: 448e6, amp: -60, bw: 1e6 });
-        specA.signals.push({ freq: 422e6, amp: -60, bw: 0.5e6 });
-        specA.signals.push({ freq: 423e6, amp: -60, bw: 1e6 });
+        window.sewApp.specA2 = specA;
         break;
       case 'specA3':
-        specA.signals.push({ freq: 439e6, amp: -60, bw: 1e6 });
-        specA.signals.push({ freq: 449e6, amp: -70, bw: 1e6 });
-        specA.signals.push({ freq: 429e6, amp: -60, bw: 1e6 });
+        window.sewApp.specA3 = specA;
         break;
       case 'specA4':
-        specA.signals.push({ freq: 435e6, amp: -70, bw: 1e6 });
-        specA.signals.push({ freq: 437e6, amp: -70, bw: 1e6 });
-        specA.signals.push({ freq: 438e6, amp: -70, bw: 1e6 });
+        window.sewApp.specA4 = specA;
         break;
     }
     specA.start();
   }, []);
+
+  const handleAntennaChange = e => {
+    const antenna_id = parseInt(e.target.value);
+    specA.antennaId = antenna_id;
+    const { id_target } = antenna[specA.antennaId - 1];
+    specA.targetId = id_target;
+    console.log(antenna[antenna_id - 1]);
+  };
+
+  useEffect(() => {
+    if (!specA.antennaId) return;
+    const { id_target } = antenna[specA.antennaId - 1];
+    specA.targetId = id_target;
+  }, [antenna]);
 
   // setSpectrumAnalyzer(specA);
   return (
@@ -116,9 +145,17 @@ const SpectrumAnalyzerBox = props => {
         <Grid item xs={12}>
           <Typography>CF: {specAConfig.centerFreq} MHz</Typography>
         </Grid>
-        <Grid item xs={4}></Grid>
         <Grid item xs={4}>
-          <Button sx={configButtonStyle} onClick={() => props.handleConfigClick(specA)}>
+          <Box sx={sxInputRow}>
+            <label htmlFor='Antenna'>Antenna</label>
+            <select name='Antenna' value={specA.id_antenna} onChange={handleAntennaChange}>
+              <option value={1}>1</option>
+              <option value={2}>2</option>
+            </select>
+          </Box>
+        </Grid>
+        <Grid item xs={4}>
+          <Button sx={configButtonStyle} onClick={() => props.handleConfigClick(specA, setSpecAConfig)}>
             Config
           </Button>
         </Grid>
