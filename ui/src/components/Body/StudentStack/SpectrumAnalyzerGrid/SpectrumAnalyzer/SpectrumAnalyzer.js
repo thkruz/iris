@@ -19,8 +19,11 @@ export class SpectrumAnalyzer {
     this.signals = options.signals || [];
     this.minFreq = options.minFreq || 420e6;
     this.maxFreq = options.maxFreq || 450e6;
+    this.bw = this.maxFreq - this.minFreq;
+    this.centerFreq = this.minFreq + this.bw / 2;
     this.noiseColor = options.noiseColor || '#0bf';
-
+    this.antennaId = 1;
+    this.targetId = null;
     this.resize(this.canvas.parentElement.offsetWidth - 6, this.canvas.parentElement.offsetWidth - 6);
 
     window.addEventListener('resize', () => {
@@ -37,6 +40,18 @@ export class SpectrumAnalyzer {
     if (this.running) return;
     this.running = true;
     this.draw();
+  }
+
+  changeCenterFreq(freq) {
+    this.centerFreq = freq;
+    this.minFreq = freq - this.bw / 2;
+    this.maxFreq = freq + this.bw / 2;
+  }
+
+  changeBandwidth(freqSpan) {
+    this.bw = freqSpan;
+    this.minFreq = this.centerFreq - this.bw / 2;
+    this.maxFreq = this.centerFreq + this.bw / 2;
   }
 
   resize(width, height) {
@@ -197,13 +212,17 @@ export class SpectrumAnalyzer {
         this.noiseData = this.createNoise(this.noiseData);
         this.drawNoise(this.ctx);
 
-        this.signals.forEach((signal, i) => {
-          let color = this.noiseColor;
-          if (this.isShowSignals) {
-            color = SpectrumAnalyzer.getRandomRgb(i);
-          }
-          this.drawSignal(this.ctx, color, signal);
-        });
+        this.signals
+          .filter(signal => {
+            return signal.targetId === this.targetId;
+          })
+          .forEach((signal, i) => {
+            let color = this.noiseColor;
+            if (this.isShowSignals) {
+              color = SpectrumAnalyzer.getRandomRgb(i);
+            }
+            this.drawSignal(this.ctx, color, signal);
+          });
 
         if (this.isDrawHold) {
           this.drawMaxHold(this.ctx);

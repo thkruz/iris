@@ -9,10 +9,10 @@ import Transmitter from './Transmitter/Transmitter';
 const ARTGrid = () => {
   return (
     <>
-      <Grid container item spacing={1} xs={12}>
+      <Grid container item spacing={3} xs={12}>
         <Antenna />
       </Grid>
-      <Grid container item spacing={1} xs={12}>
+      <Grid container item spacing={3} xs={12}>
         <Transmitter />
         <Receiver />
       </Grid>

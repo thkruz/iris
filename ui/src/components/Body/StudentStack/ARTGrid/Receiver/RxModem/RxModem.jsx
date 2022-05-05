@@ -4,49 +4,13 @@ import PropTypes from 'prop-types';
 import { Box, Button, Typography } from '@mui/material';
 import './RxModem.css';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
-import { useRx, useUpdateRx } from '../../../../../../context';
+import { useAntenna, useRx, useUpdateRx } from '../../../../../../context';
 
 export const RxModem = ({ unit }) => {
   //TODO: modem buttons, update state, video,
   const theme = AstroTheme;
   const degraded = false; // TODO: These may come from context
   const denied = false; // TODO: These may come from context
-  const signals = [
-    // TODO: This needs to come from an api call
-    {
-      id: 1,
-      id_server: 123456,
-      id_target: 1,
-      frequency: 1250,
-      power: -45,
-      bandwidth: 10,
-      modulation: '8QAM',
-      fec: '1/2',
-      feed: 'testVid2.mov',
-    },
-    {
-      id: 1,
-      id_server: 123456,
-      id_target: 1,
-      frequency: 1300,
-      power: -45,
-      bandwidth: 10,
-      modulation: '8QAM',
-      fec: '3/4',
-      feed: 'testVid.mov',
-    },
-    {
-      id: 1,
-      id_server: 123456,
-      id_target: 1,
-      frequency: 1350,
-      power: -45,
-      bandwidth: 10,
-      modulation: '8QAM',
-      fec: '3/4',
-      feed: 'testVid.mp4',
-    },
-  ];
   const rxData = useRx();
   const updateRxData = useUpdateRx();
   const [activeModem, setActiveModem] = useState(0);
@@ -70,18 +34,18 @@ export const RxModem = ({ unit }) => {
   const sxModemButtonBox = {
     backgroundColor: theme.palette.primary.light,
     borderRadius: '5px',
-    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
   };
   const sxModemButton = {
     backgroundColor: theme.palette.primary.light,
-    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
     color: 'black',
     margin: '8px',
     cursor: 'pointer',
   };
   const sxModemButtonActive = {
     backgroundColor: theme.palette.primary.dark,
-    boxShadow: '0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
     color: 'white',
     width: '1em',
     margin: '8px',
@@ -106,7 +70,7 @@ export const RxModem = ({ unit }) => {
   };
   const sxInputApply = {
     backgroundColor: theme.palette.primary.light,
-    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
     color: 'black',
     margin: '8px',
     cursor: 'pointer',
@@ -259,8 +223,11 @@ export const RxModem = ({ unit }) => {
     let vidFeed = '';
 
     const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = rxData[(unit - 1) * 4 + activeModem];
-    signals.forEach(signal => {
-      const { frequency: s_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, feed } = signal; // TODO: loop through all signals to find one that matches
+    const antenna = useAntenna();
+    const { id_target: r_tgt } = antenna[rxData[(unit - 1) * 4 + activeModem].id_antenna - 1];
+
+    window.sewApp.environment?.signals?.forEach(signal => {
+      const { frequency: s_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, target_id: s_tgt, feed } = signal; // TODO: loop through all signals to find one that matches
       const s_lb = s_freq - 0.5 * s_bw;
       const s_rb = s_freq + 0.5 * s_bw;
       const s_flb = s_lb - 0.5 * s_bw;
@@ -273,7 +240,8 @@ export const RxModem = ({ unit }) => {
         r_rb >= s_rb && // receiver right bound is within tolerance
         r_rb <= s_frb &&
         r_mod === s_mod && // receiver modulation schema matches
-        r_fec === s_fec; // reciever fec rate matches
+        r_fec === s_fec &&
+        r_tgt === s_tgt; // reciever fec rate matches
 
       if (rxMatch) {
         vidFeed = degraded ? `degraded_${feed}` : feed;

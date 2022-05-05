@@ -3,7 +3,7 @@ import React from 'react';
 import { Box, Button } from '@mui/material';
 import { Grid } from '@mui/material';
 import { AstroTheme } from '../../../../../themes/AstroTheme';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const popupStyle = {
   backgroundColor: AstroTheme.palette.tertiary.main,
@@ -53,28 +53,21 @@ const yellowButtonStyle = {
 };
 const AnalyzerControl = props => {
   // console.log(props.currentSpecAnalyzer);
-  const [ghz, setGhz] = React.useState(null);
-  const [mhz, setMhz] = React.useState(null);
-  const [khz, setKhz] = React.useState(null);
-  const [isTraceOn, setIsTraceOn] = React.useState(false);
-  const [controlSelection, setControlSelection] = React.useState(null);
+  const [ghz, setGhz] = useState(null);
+  const [mhz, setMhz] = useState(null);
+  const [khz, setKhz] = useState(null);
+  const [isTraceOn, setIsTraceOn] = useState(false);
+  const [controlSelection, setControlSelection] = useState(null);
+  const [numberSelection, setNumberSelection] = useState(null);
 
   // Initialize the frequency values
   useEffect(() => {
-    const centerFreq =
-      props.currentSpecAnalyzer.maxFreq - (props.currentSpecAnalyzer.maxFreq - props.currentSpecAnalyzer.minFreq) / 2;
-    let _ghz, _mhz, _khz;
-    if (!ghz) {
-      _ghz = centerFreq / 1e9 >= 1 ? centerFreq / 1e9 : 0;
-      setGhz(_ghz);
-    }
+    setNumberSelection('mhz');
+    setGhz(0);
+    setKhz(0);
+
     if (!mhz) {
-      _mhz = (centerFreq - _ghz * 1e9) / 1e6 >= 1 ? (centerFreq - _ghz * 1e9) / 1e6 : 0;
-      setMhz(_mhz);
-    }
-    if (!khz) {
-      _khz = (centerFreq - _ghz * 1e9 - _mhz * 1e6) / 1e3 >= 1 ? (centerFreq - _ghz * 1e9 - _mhz * 1e6) / 1e3 : 0;
-      setKhz(_khz);
+      setMhz(props.currentSpecAnalyzer.centerFreq / 1e6);
     }
 
     setIsTraceOn(props.currentSpecAnalyzer.isDrawHold);
@@ -95,26 +88,124 @@ const AnalyzerControl = props => {
     const centerFreq =
       props.currentSpecAnalyzer.maxFreq - (props.currentSpecAnalyzer.maxFreq - props.currentSpecAnalyzer.minFreq) / 2;
     let _ghz, _mhz, _khz;
-    _ghz = centerFreq / 1e9 >= 1 ? centerFreq / 1e9 : 0;
-    setGhz(_ghz);
-    _mhz = (centerFreq - _ghz * 1e9) / 1e6 >= 1 ? (centerFreq - _ghz * 1e9) / 1e6 : 0;
-    setMhz(_mhz);
-    _khz = (centerFreq - _ghz * 1e9 - _mhz * 1e6) / 1e3 >= 1 ? (centerFreq - _ghz * 1e9 - _mhz * 1e6) / 1e3 : 0;
-    setKhz(_khz);
+    if (numberSelection === 'ghz') {
+      _ghz = centerFreq / 1e9;
+      setGhz(_ghz);
+    } else if (numberSelection === 'mhz') {
+      _mhz = centerFreq / 1e6;
+      setMhz(_mhz);
+    } else if (numberSelection === 'khz') {
+      _khz = centerFreq / 1e3;
+      setKhz(_khz);
+    } else {
+      // TODO: Provide user feedback
+      return;
+    }
     setControlSelection('freq');
   };
-
   // Used for modifying the span value
   const handleSpanClick = () => {
-    const spanFreq = props.currentSpecAnalyzer.maxFreq - props.currentSpecAnalyzer.minFreq;
+    const bw = props.currentSpecAnalyzer.bw;
     let _ghz, _mhz, _khz;
-    _ghz = spanFreq / 1e9 >= 1 ? spanFreq / 1e9 : 0;
-    setGhz(_ghz);
-    _mhz = (spanFreq - _ghz * 1e9) / 1e6 >= 1 ? (spanFreq - _ghz * 1e9) / 1e6 : 0;
-    setMhz(_mhz);
-    _khz = (spanFreq - _ghz * 1e9 - _mhz * 1e6) / 1e3 >= 1 ? (spanFreq - _ghz * 1e9 - _mhz * 1e6) / 1e3 : 0;
-    setKhz(_khz);
+    if (numberSelection === 'ghz') {
+      _ghz = bw / 1e9;
+      setGhz(_ghz);
+    } else if (numberSelection === 'mhz') {
+      _mhz = bw / 1e6;
+      setMhz(_mhz);
+    } else if (numberSelection === 'khz') {
+      _khz = bw / 1e3;
+      setKhz(_khz);
+    } else {
+      // TODO: Provide user feedback
+      return;
+    }
     setControlSelection('span');
+  };
+  const handleGhzSelectClick = () => {
+    setNumberSelection('ghz');
+    setMhz(0);
+    setKhz(0);
+
+    if (controlSelection === 'freq') {
+      setGhz(props.currentSpecAnalyzer.centerFreq / 1e9);
+    } else if (controlSelection === 'span') {
+      setGhz(props.currentSpecAnalyzer.bw / 1e9);
+    }
+  };
+  const handleMhzSelectClick = () => {
+    setNumberSelection('mhz');
+    setGhz(0);
+    setKhz(0);
+
+    if (controlSelection === 'freq') {
+      setMhz(props.currentSpecAnalyzer.centerFreq / 1e6);
+    } else if (controlSelection === 'span') {
+      setMhz(props.currentSpecAnalyzer.bw / 1e6);
+    }
+  };
+  const handleKhzSelectClick = () => {
+    setNumberSelection('khz');
+    setGhz(0);
+    setMhz(0);
+
+    if (controlSelection === 'freq') {
+      setKhz(props.currentSpecAnalyzer.centerFreq / 1e3);
+    } else if (controlSelection === 'span') {
+      setKhz(props.currentSpecAnalyzer.bw / 1e3);
+    }
+  };
+  const handleNumberClicked = value => {
+    let _ghz, _mhz, _khz;
+    if (numberSelection === 'ghz') {
+      _ghz = ghz;
+      if (value === 'bksp') {
+        _ghz = _ghz.toString().slice(0, -1);
+      } else if (value === '.') {
+        _ghz = _ghz + '.';
+      } else if (value === 'C') {
+        _ghz = '';
+      } else {
+        _ghz = `${_ghz}${value}`;
+      }
+
+      if (controlSelection === 'freq') props.currentSpecAnalyzer.changeCenterFreq(parseFloat(_ghz * 1e9));
+      if (controlSelection === 'span') props.currentSpecAnalyzer.changeBandwidth(parseFloat(_ghz * 1e9));
+      setGhz(_ghz);
+    } else if (numberSelection === 'mhz') {
+      _mhz = mhz;
+      if (value === 'bksp') {
+        _mhz = _mhz.toString().slice(0, -1);
+      } else if (value === '.') {
+        _mhz = _mhz + '.';
+      } else if (value === 'C') {
+        _mhz = '';
+      } else {
+        _mhz = `${_mhz}${value}`;
+      }
+
+      if (controlSelection === 'freq') props.currentSpecAnalyzer.changeCenterFreq(parseFloat(_mhz * 1e6));
+      if (controlSelection === 'span') props.currentSpecAnalyzer.changeBandwidth(parseFloat(_mhz * 1e6));
+      setMhz(_mhz);
+    } else if (numberSelection === 'khz') {
+      _khz = khz;
+      if (value === 'bksp') {
+        _khz = _khz.toString().slice(0, -1);
+      } else if (value === '.') {
+        _khz = _khz + '.';
+      } else if (value === 'C') {
+        _khz = '';
+      } else {
+        _khz = `${_khz}${value}`;
+      }
+
+      if (controlSelection === 'freq') props.currentSpecAnalyzer.changeCenterFreq(parseFloat(_khz * 1e3));
+      if (controlSelection === 'span') props.currentSpecAnalyzer.changeBandwidth(parseFloat(_khz * 1e3));
+      setKhz(_khz);
+    } else {
+      // TODO: Provide user feedback
+      return;
+    }
   };
 
   return (
@@ -161,17 +252,41 @@ const AnalyzerControl = props => {
               </Grid>
               <Grid container item xs={4} sx={{ padding: '8px', justifyContent: 'space-around', alignItems: 'center' }}>
                 <Grid item xs={12}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button
+                    sx={{
+                      ...yellowButtonStyle,
+                      ...{
+                        background:
+                          numberSelection === 'ghz' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
+                      },
+                    }}
+                    onClick={handleGhzSelectClick}>
                     <h2>&#8249;</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={12}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button
+                    sx={{
+                      ...yellowButtonStyle,
+                      ...{
+                        background:
+                          numberSelection === 'mhz' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
+                      },
+                    }}
+                    onClick={handleMhzSelectClick}>
                     <h2>&#8249;</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={12}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button
+                    sx={{
+                      ...yellowButtonStyle,
+                      ...{
+                        background:
+                          numberSelection === 'khz' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
+                      },
+                    }}
+                    onClick={handleKhzSelectClick}>
                     <h2>&#8249;</h2>
                   </Button>
                 </Grid>
@@ -225,80 +340,80 @@ const AnalyzerControl = props => {
             <Grid container sx={{ justifyContent: 'space-around' }}>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(7)}>
                     <h2>7</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(8)}>
                     <h2>8</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(9)}>
                     <h2>9</h2>
                   </Button>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(4)}>
                     <h2>4</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(5)}>
                     <h2>5</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(6)}>
                     <h2>6</h2>
                   </Button>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(1)}>
                     <h2>1</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(2)}>
                     <h2>2</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(3)}>
                     <h2>3</h2>
                   </Button>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked('-')}>
                     <h2>-</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(0)}>
                     <h2>0</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked('.')}>
                     <h2>.</h2>
                   </Button>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked('bksp')}>
                     <h2>bskp</h2>
                   </Button>
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle}>
+                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked('C')}>
                     <h2>C</h2>
                   </Button>
                 </Grid>
