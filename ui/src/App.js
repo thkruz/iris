@@ -1,15 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import config from './config';
+import React from 'react';
+// import config from './config';
 import { Header, Body } from './components';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { StudentStack } from './components/Body/StudentStack/StudentStack';
 import InstructorStack from './components/Body/InstructorStack/InstructorStack';
 import Login from './components/Login/Login';
 
-const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
+// const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
 function App() {
-
   return (
     <div>
       <Router>

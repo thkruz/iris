@@ -5,6 +5,9 @@ import { AntennaProvider, RxProvider, TxProvider } from './context';
 import reportWebVitals from './reportWebVitals';
 import './index.css';
 
+// Create a sync global context for the RF Environments
+window.sewApp = {};
+
 ReactDOM.render(
   <React.StrictMode>
     <AntennaProvider>
@@ -15,7 +18,7 @@ ReactDOM.render(
       </RxProvider>
     </AntennaProvider>
   </React.StrictMode>,
-  document.getElementById('root'),
+  document.getElementById('root')
 );
 
 // If you want to start measuring performance in your app, pass a function

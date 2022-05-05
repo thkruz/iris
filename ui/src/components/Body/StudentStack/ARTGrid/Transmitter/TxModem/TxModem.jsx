@@ -1,12 +1,12 @@
+/* eslint-disable react/prop-types */
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { Box, Button, Typography, Grid } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import './TxModem.css';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
 import { useTx, useUpdateTx } from '../../../../../../context';
 
 export const TxModem = ({ unit }) => {
-
   const txData = useTx();
   const updateTxData = useUpdateTx();
 
@@ -35,28 +35,28 @@ export const TxModem = ({ unit }) => {
     borderRadius: '5px',
     boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
   };
-  const sxModemButton = {
-    backgroundColor: theme.palette.primary.light,
-    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
-    color: 'black',
-    margin: '8px',
-    cursor: 'pointer',
-  };
-  const sxModemButtonActive = {
-    backgroundColor: theme.palette.primary.dark,
-    boxShadow: '0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19)',
-    color: 'white',
-    width: '1em',
-    margin: '8px',
-    outline: 'none',
-  };
-  const sxModemButtonLive = {
-    backgroundColor: theme.palette.primary.light,
-    boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
-    color: 'black',
-    margin: '8px',
-    cursor: 'pointer',
-  };
+  // const sxModemButton = {
+  //   backgroundColor: theme.palette.primary.light,
+  //   boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+  //   color: 'black',
+  //   margin: '8px',
+  //   cursor: 'pointer',
+  // };
+  // const sxModemButtonActive = {
+  //   backgroundColor: theme.palette.primary.dark,
+  //   boxShadow: '0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19)',
+  //   color: 'white',
+  //   width: '1em',
+  //   margin: '8px',
+  //   outline: 'none',
+  // };
+  // const sxModemButtonLive = {
+  //   backgroundColor: theme.palette.primary.light,
+  //   boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
+  //   color: 'black',
+  //   margin: '8px',
+  //   cursor: 'pointer',
+  // };
   const sxValues = {
     fontWeight: 'bold',
     textDecoration: 'underline',
@@ -87,7 +87,7 @@ export const TxModem = ({ unit }) => {
     backgroundColor: txData[(unit - 1) * 4 + activeModem].transmitting ? 'red' : theme.palette.primary.dark,
     color: txData[(unit - 1) * 4 + activeModem].transmitting ? 'black' : 'white',
     boxShadow: '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)',
-    border: '1px solid red'
+    border: '1px solid red',
   };
 
   // Modem Case Id
@@ -110,7 +110,7 @@ export const TxModem = ({ unit }) => {
   const TxModemButtonBox = () => (
     <Box sx={sxModemButtonBox}>
       {txData.map((x, index) => {
-        if(x.unit == unit) return(<TxModemButton key={index} modem={x.modem} transmitting={x.transmitting} />)
+        if (x.unit == unit) return <TxModemButton key={index} modem={x.modem} transmitting={x.transmitting} />;
       })}
     </Box>
   );
@@ -123,7 +123,7 @@ export const TxModem = ({ unit }) => {
         width: '1em',
         margin: '8px',
         outline: 'none',
-        border: `1px solid ${transmitting ? 'red' : 'rgba(0,0,0,0)'}`
+        border: `1px solid ${transmitting ? 'red' : 'rgba(0,0,0,0)'}`,
       }}
       onClick={e => {
         setActiveModem(parseInt(e.target.innerText) - 1);
@@ -151,7 +151,7 @@ export const TxModem = ({ unit }) => {
       let tmpData = [...txData];
       tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
       updateTxData(tmpData);
-    }
+    };
     return (
       <Box sx={sxInputBox}>
         <Box sx={sxInputRow}>
@@ -204,8 +204,7 @@ export const TxModem = ({ unit }) => {
             name='power'
             type='string'
             value={inputData.power}
-            onChange={e => handleInputChange({ param: 'power', val: parseInt(e.target.value) })}>
-          </input>
+            onChange={e => handleInputChange({ param: 'power', val: parseInt(e.target.value) })}></input>
           <Typography sx={sxValues}>{`${txData[currentRow].power} dBm`}</Typography>
         </Box>
         <Box sx={sxInputRow}>
@@ -233,5 +232,5 @@ export const TxModem = ({ unit }) => {
 };
 
 TxModem.propTypes = {
-  unit: PropTypes.number
+  unit: PropTypes.number,
 };

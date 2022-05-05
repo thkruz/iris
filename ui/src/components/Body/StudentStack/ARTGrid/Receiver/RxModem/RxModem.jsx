@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import ReactPlayer from 'react-player';
 import PropTypes from 'prop-types';
-import { Box, Button, Typography, Grid } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import './RxModem.css';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
-import { useRx, useUpdateRx } from '../../../../../../context'
-import { useEffect } from 'react';
+import { useRx, useUpdateRx } from '../../../../../../context';
 
 export const RxModem = ({ unit }) => {
   //TODO: modem buttons, update state, video,
@@ -48,7 +47,7 @@ export const RxModem = ({ unit }) => {
       feed: 'testVid.mp4',
     },
   ];
-  const rxData = useRx()
+  const rxData = useRx();
   const updateRxData = useUpdateRx();
   const [activeModem, setActiveModem] = useState(0);
 
@@ -129,7 +128,7 @@ export const RxModem = ({ unit }) => {
     sidebar.push(
       <Typography key={index} sx={{ color: 'black' }}>
         {x}
-      </Typography>,
+      </Typography>
     );
   });
   const RxCaseId = () => (
@@ -143,17 +142,16 @@ export const RxModem = ({ unit }) => {
   const RxModemButtonBox = () => (
     <Box sx={sxModemButtonBox}>
       {rxData.map((x, index) => {
-        if(x.unit == unit) return(<RxModemButton key={index} modem={x.modem} />)
+        if (x.unit == unit) return <RxModemButton key={index} modem={x.modem} />;
       })}
     </Box>
   );
   const RxModemButton = ({ modem }) => (
     <Button
       sx={modem === activeModem + 1 ? sxModemButtonActive : sxModemButton}
-      onClick={(e) => {
+      onClick={e => {
         setActiveModem(parseInt(e.target.innerText) - 1);
-      }}
-    >
+      }}>
       {modem}
     </Button>
   );
@@ -176,96 +174,79 @@ export const RxModem = ({ unit }) => {
     return (
       <Box sx={sxInputBox}>
         <Box sx={sxInputRow}>
-          <label htmlFor="Antenna">Antenna</label>
+          <label htmlFor='Antenna'>Antenna</label>
           <select
-            name="Antenna"
+            name='Antenna'
             value={inputData.id_antenna}
-            onChange={(e) =>
+            onChange={e =>
               handleInputChange({
                 param: 'id_antenna',
                 val: parseInt(e.target.value),
               })
-            }
-          >
+            }>
             <option value={1}>1</option>
             <option value={2}>2</option>
           </select>
-          <Typography sx={sxValues}>
-            {rxData[activeModem].id_antenna}
-          </Typography>
+          <Typography sx={sxValues}>{rxData[activeModem].id_antenna}</Typography>
         </Box>
         <Box sx={sxInputRow}>
-          <label htmlFor="frequency">Frequency</label>
+          <label htmlFor='frequency'>Frequency</label>
           <input
-            name="frequency"
-            type="text"
+            name='frequency'
+            type='text'
             value={inputData.frequency}
-            onChange={(e) =>
+            onChange={e =>
               handleInputChange({
                 param: 'frequency',
                 val: parseInt(e.target.value),
               })
-            }
-          ></input>
-          <Typography sx={sxValues}>
-            {rxData[activeModem].frequency + ' MHz'}
-          </Typography>
+            }></input>
+          <Typography sx={sxValues}>{rxData[activeModem].frequency + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
-          <label htmlFor="bandwidth">Bandwidth</label>
+          <label htmlFor='bandwidth'>Bandwidth</label>
           <input
-            name="bandwidth"
-            type="text"
+            name='bandwidth'
+            type='text'
             value={inputData.bandwidth}
-            onChange={(e) =>
+            onChange={e =>
               handleInputChange({
                 param: 'bandwidth',
                 val: parseInt(e.target.value),
               })
-            }
-          ></input>
-          <Typography sx={sxValues}>
-            {rxData[activeModem].bandwidth + ' MHz'}
-          </Typography>
+            }></input>
+          <Typography sx={sxValues}>{rxData[activeModem].bandwidth + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
-          <label htmlFor="modulation">Modulation</label>
+          <label htmlFor='modulation'>Modulation</label>
           <select
-            name="modulation"
+            name='modulation'
             value={inputData.modulation}
-            onChange={(e) =>
-              handleInputChange({ param: 'modulation', val: e.target.value })
-            }
-          >
-            <option value="BPSK">BPSK</option>
-            <option value="QPSK">QPSK</option>
-            <option value="8QAM">8QAM</option>
-            <option value="16QAM">16QAM</option>
+            onChange={e => handleInputChange({ param: 'modulation', val: e.target.value })}>
+            <option value='BPSK'>BPSK</option>
+            <option value='QPSK'>QPSK</option>
+            <option value='8QAM'>8QAM</option>
+            <option value='16QAM'>16QAM</option>
           </select>
-          <Typography sx={sxValues}>
-            {rxData[activeModem].modulation}
-          </Typography>
+          <Typography sx={sxValues}>{rxData[activeModem].modulation}</Typography>
         </Box>
         <Box sx={sxInputRow}>
-          <label htmlFor="fec">FEC</label>
+          <label htmlFor='fec'>FEC</label>
           <select
-            name="fec"
+            name='fec'
             value={inputData.fec}
-            onChange={(e) =>
-              handleInputChange({ param: 'fec', val: e.target.value })
-            }
-          >
-            <option value="1/2">1/2</option>
-            <option value="2/3">2/3</option>
-            <option value="3/4">3/4</option>
-            <option value="5/6">5/6</option>
-            <option value="7/8">7/8</option>
+            onChange={e => handleInputChange({ param: 'fec', val: e.target.value })}>
+            <option value='1/2'>1/2</option>
+            <option value='2/3'>2/3</option>
+            <option value='3/4'>3/4</option>
+            <option value='5/6'>5/6</option>
+            <option value='7/8'>7/8</option>
           </select>
           <Typography sx={sxValues}>{rxData[activeModem].fec}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <div></div>
-          <Button sx={sxInputApply} onClick={(e) => handleApply(e)}>
+          <Button sx={sxInputApply} onClick={e => handleApply(e)}>
             Apply
           </Button>
         </Box>
@@ -277,20 +258,9 @@ export const RxModem = ({ unit }) => {
     let matchFound = false;
     let vidFeed = '';
 
-    const {
-      frequency: r_freq,
-      bandwidth: r_bw,
-      modulation: r_mod,
-      fec: r_fec,
-    } = rxData[(unit - 1) * 4 + activeModem];
-    signals.forEach((signal) => {
-      const {
-        frequency: s_freq,
-        bandwidth: s_bw,
-        modulation: s_mod,
-        fec: s_fec,
-        feed,
-      } = signal; // TODO: loop through all signals to find one that matches
+    const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = rxData[(unit - 1) * 4 + activeModem];
+    signals.forEach(signal => {
+      const { frequency: s_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, feed } = signal; // TODO: loop through all signals to find one that matches
       const s_lb = s_freq - 0.5 * s_bw;
       const s_rb = s_freq + 0.5 * s_bw;
       const s_flb = s_lb - 0.5 * s_bw;
@@ -315,8 +285,8 @@ export const RxModem = ({ unit }) => {
         {matchFound && !denied ? (
           <ReactPlayer
             url={`/videos/${vidFeed}`}
-            width="100%"
-            height="100%"
+            width='100%'
+            height='100%'
             controls={false}
             playing={true}
             loop={true}
