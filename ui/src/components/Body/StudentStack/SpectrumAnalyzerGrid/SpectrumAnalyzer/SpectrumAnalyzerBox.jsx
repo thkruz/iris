@@ -1,7 +1,5 @@
-/* eslint-disable react/prop-types */
-
 import { Box, Button, Grid, Typography } from '@mui/material';
-import { SpectrumAnalyzer } from './SpectrumAnalyzer.js';
+import { SpectrumAnalyzer } from '../../../../';
 import React, { useLayoutEffect, useState } from 'react';
 import { AstroTheme } from '../../../../../themes/AstroTheme.js';
 import { useEffect } from 'react';
@@ -46,7 +44,7 @@ const configButtonStyle = {
   },
 };
 
-const SpectrumAnalyzerBox = props => {
+export const SpectrumAnalyzerBox = props => {
   const [specAConfig, setSpecAConfig] = useState({});
   const [specA, setSpecA] = useState({});
   const antenna = useAntenna();
@@ -164,5 +162,3 @@ const SpectrumAnalyzerBox = props => {
     </Box>
   );
 };
-
-export default SpectrumAnalyzerBox;

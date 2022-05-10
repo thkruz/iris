@@ -5,8 +5,8 @@ import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore
 import CellTowerIcon from '@mui/icons-material/CellTower';
 import AlignHorizontalCenterIcon from '@mui/icons-material/AlignHorizontalCenter';
 import { AstroTheme } from '../../../../../themes/AstroTheme';
-import { useAntenna, useUpdateAntenna } from '../../../../../context';
-import './Antenna.css';
+import { useAntenna, useUpdateAntenna } from '../../../../../context'; 
+import './Antenna.css'
 
 export const AntennaController = ({ unit }) => {
   const theme = AstroTheme;
