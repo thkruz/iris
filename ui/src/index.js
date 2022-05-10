@@ -4,6 +4,9 @@ import App from './App';
 import { AntennaProvider, RxProvider, TxProvider } from './context';
 import reportWebVitals from './reportWebVitals';
 import './index.css';
+import './sewApp';
+
+window.sewApp.init();
 
 ReactDOM.render(
   <React.StrictMode>
@@ -15,7 +18,7 @@ ReactDOM.render(
       </RxProvider>
     </AntennaProvider>
   </React.StrictMode>,
-  document.getElementById('root'),
+  document.getElementById('root')
 );
 
 // If you want to start measuring performance in your app, pass a function

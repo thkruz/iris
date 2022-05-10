@@ -8,6 +8,10 @@ import { AstroTheme } from '../../themes/AstroTheme';
 export const Body = props => {
   const theme = AstroTheme;
   const sxBody = {
+    margin: '0 auto',
+    display: 'flex',
+    flexDirection: 'column',
+    borderRadius: 0,
     backgroundColor: theme.palette.background.paper,
   };
   return <Paper sx={sxBody}>{props.children}</Paper>;
