@@ -1,8 +1,5 @@
 import React from 'react';
-import { TeamInfo } from '../..';
-
-import SpectrumAnalyzerGrid from './SpectrumAnalyzerGrid/SpectrumAnalyzerGrid';
-import ARTGrid from './ARTGrid/ARTGrid';
+import { ARTGrid, SpectrumAnalyzerGrid, TeamInfo } from '../../';
 import { Grid } from '@mui/material';
 
 // MUI Stack: https://mui.com/material-ui/react-stack/

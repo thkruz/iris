@@ -5,7 +5,6 @@ import { Box, Button, Typography, Grid } from '@mui/material';
 import './RxModem.css';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
 import { useRx, useUpdateRx } from '../../../../../../context'
-import { useEffect } from 'react';
 
 export const RxModem = ({ unit }) => {
   //TODO: modem buttons, update state, video,
