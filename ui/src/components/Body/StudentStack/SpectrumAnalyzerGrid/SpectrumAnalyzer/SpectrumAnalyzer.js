@@ -23,7 +23,15 @@ export class SpectrumAnalyzer {
     this.centerFreq = this.minFreq + this.bw / 2;
     this.noiseColor = options.noiseColor || '#0bf';
     this.antennaId = 1;
+    this.antennaOffset = 0;
+    this.targetOffset = 400e6;
+    this.downconvertOffset = 3500e6; // Default to C Band
+    this.upconvertOffset = 3350e6; // Default to C Band
     this.targetId = null;
+    this.hpa = false;
+    this.loopback = false;
+    this.lock = true;
+    this.operational = true;
     this.resize(this.canvas.parentElement.offsetWidth - 6, this.canvas.parentElement.offsetWidth - 6);
 
     window.addEventListener('resize', () => {
@@ -221,7 +229,34 @@ export class SpectrumAnalyzer {
             if (this.isShowSignals) {
               color = SpectrumAnalyzer.getRandomRgb(i);
             }
-            this.drawSignal(this.ctx, color, signal);
+
+            // Signal Should be in RF Down for Instructor or IF Up for Student
+            if (signal.rf) {
+              // Instructor
+              // Signal is in RF Down
+              this.drawSignal(this.ctx, color, signal);
+              // Signal is in IF Down
+              const offsetSignal = { ...signal, freq: signal.freq - this.downconvertOffset };
+              this.drawSignal(this.ctx, color, offsetSignal);
+            } else {
+              // Student
+              const ifUpSignal = signal;
+              this.drawSignal(this.ctx, color, ifUpSignal);
+
+              const rfUpSignal = { ...signal, freq: signal.freq + this.upconvertOffset };
+              this.drawSignal(this.ctx, color, rfUpSignal);
+
+              const rfDownSignal = { ...signal, freq: signal.freq + this.upconvertOffset };
+              rfDownSignal.freq += this.loopback ? +this.antennaOffset : this.targetOffset;
+              this.drawSignal(this.ctx, color, rfDownSignal);
+
+              const ifDownSignal = {
+                ...signal,
+                freq: signal.freq + this.upconvertOffset - this.downconvertOffset,
+              };
+              ifDownSignal.freq += this.loopback ? +this.antennaOffset : this.targetOffset;
+              this.drawSignal(this.ctx, color, ifDownSignal);
+            }
           });
 
         if (this.isDrawHold) {
