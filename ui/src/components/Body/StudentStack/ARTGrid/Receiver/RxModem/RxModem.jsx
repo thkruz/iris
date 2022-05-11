@@ -126,16 +126,19 @@ export const RxModem = ({ unit }) => {
   const RxModemInput = () => {
     const currentRow = (unit - 1) * 4 + activeModem;
     const [inputData, setInputData] = useState(rxData[currentRow]);
+
     const handleInputChange = ({ param, val }) => {
       let tmpData = { ...inputData };
       tmpData[param] = val;
       setInputData(tmpData);
     };
+
     const handleApply = () => {
       let tmpData = [...rxData];
       tmpData[currentRow] = inputData;
       updateRxData(tmpData);
     };
+    
     return (
       <Box sx={sxInputBox}>
         <Box sx={sxInputRow}>
