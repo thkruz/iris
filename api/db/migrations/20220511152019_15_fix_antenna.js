@@ -7,11 +7,13 @@ exports.up = function(knex) {
        table.dropColumn('name');
        table.dropColumn('modem_number');
        table.dropColumn('track');
-       table.dropColumn('band')
-        .then(table.string('band').notNullable());
-       
-
+       table.dropColumn('band');
+   }).then(() => {
+       return knex.schema.alterTable('antenna', table => {
+        table.string('band').notNullable()
+       })
    })
+   
 };
 
 /**
