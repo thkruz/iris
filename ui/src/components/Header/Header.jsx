@@ -5,10 +5,12 @@ import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Logout from '@mui/icons-material/Logout';
+import { AstroTheme } from '../../themes/AstroTheme'
 import './Header.css'
 
 export const Header = () => {
   const auth = true; //TODO: get auth context
+  const theme = AstroTheme;
 
   const handleLogout = () => {
     console.log("logging out")
@@ -17,7 +19,7 @@ export const Header = () => {
       <>
         <Box sx={{ flexGrow: 1 }}>
           <AppBar position="static">
-            <Toolbar>
+            <Toolbar sx={{ backgroundColor: theme.palette.primary.dark }}>
               <img src='/patch.png' alt='patch.png' height='80px'></img>
               <Typography variant="h4" component="div" sx={{ flexGrow: 1 }}>
                 Iris Space Electronic Warfare Sandbox

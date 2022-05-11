@@ -1,6 +1,6 @@
 import React from 'react';
-import { Typography } from '@mui/material';
-import { useTx } from '../../../../../context';
+//import { Typography } from '@mui/material';
+//import { useTx } from '../../../../../context';
 //import { AstroTheme } from '../../../../../themes/AstroTheme';
 
 export const Equipment = () => {
@@ -171,7 +171,7 @@ export const Equipment = () => {
         {id: 31, id_server: 1, id_team: 4, unit: 4, number: 1, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260},
         {id: 32, id_server: 1, id_team: 4, unit: 4, number: 2, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260},
     ]
-    */
+    
     const tmpAntenna = [
         {id: 1, id_server: 1, id_team: 1, unit: 1, operational: true, id_target: 1, lock: true, band: 'C', offset: 400, hpa: false, loopback: true},
         {id: 2, id_server: 1, id_team: 1, unit: 2, operational: true, id_target: 1, lock: true, band: 'C', offset: 400, hpa: false, loopback: true},
@@ -223,7 +223,7 @@ export const Equipment = () => {
     const tmpTeams
     const txData = useTx();
     //const theme = AstroTheme;
-
+*/
     return (
         <>
             {}
