@@ -47,7 +47,6 @@ const sewApp = {
             });
           });
         }
-        //updateTxData(update);
       });
     });
 

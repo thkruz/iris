@@ -48,6 +48,13 @@ io.on('connection', socket => {
       client.emit('updateRxClient', update);
     });
   });
+
+  socket.on('updateAntenna', update => {
+    console.log(`sending updateAntenna to clients`);
+    clientManager.clients.forEach(client => {
+      client.emit('updateAntennaClient', update);
+    });
+  });
 });
 
 app.get('/', (request, response) => {
