@@ -230,31 +230,35 @@ export class SpectrumAnalyzer {
               color = SpectrumAnalyzer.getRandomRgb(i);
             }
 
-            // Signal Should be in RF Down for Instructor or IF Up for Student
+            // Original Signal Should be in RF Down for Instructor or IF Up for Student
             if (signal.rf) {
               // Instructor
-              // Signal is in RF Down
-              this.drawSignal(this.ctx, color, signal);
-              // Signal is in IF Down
-              const offsetSignal = { ...signal, freq: signal.freq - this.downconvertOffset };
-              this.drawSignal(this.ctx, color, offsetSignal);
+              // Calculate 2 Signals
+              const rfDownSignal = { ...signal };
+              const ifDownSignal = { ...signal, freq: signal.freq - this.downconvertOffset };
+
+              // Draw 2 Signals
+              this.drawSignal(this.ctx, color, rfDownSignal);
+              this.drawSignal(this.ctx, color, ifDownSignal);
             } else {
               // Student
+              // Calculate 4 signals
               const ifUpSignal = signal;
-              this.drawSignal(this.ctx, color, ifUpSignal);
-
               const rfUpSignal = { ...signal, freq: signal.freq + this.upconvertOffset };
-              this.drawSignal(this.ctx, color, rfUpSignal);
-
               const rfDownSignal = { ...signal, freq: signal.freq + this.upconvertOffset };
               rfDownSignal.freq += this.loopback ? +this.antennaOffset : this.targetOffset;
-              this.drawSignal(this.ctx, color, rfDownSignal);
-
+              rfDownSignal.amp = !this.loopback && this.hpa ? -1000 : rfDownSignal.amp;
               const ifDownSignal = {
                 ...signal,
                 freq: signal.freq + this.upconvertOffset - this.downconvertOffset,
               };
               ifDownSignal.freq += this.loopback ? +this.antennaOffset : this.targetOffset;
+              ifDownSignal.amp = !this.loopback && this.hpa ? -1000 : ifDownSignal.amp;
+
+              // Draw Signals
+              this.drawSignal(this.ctx, color, ifUpSignal);
+              this.drawSignal(this.ctx, color, rfUpSignal);
+              this.drawSignal(this.ctx, color, rfDownSignal);
               this.drawSignal(this.ctx, color, ifDownSignal);
             }
           });

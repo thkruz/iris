@@ -93,7 +93,7 @@ export const AntennaController = ({ unit }) => {
     border: '1px solid red',
   };
   const sxTx = {
-    backgroundColor: !antennaData[unit - 1].loopback
+    backgroundColor: antennaData[unit - 1].loopback
       ? theme.palette.primary.light
       : antennaData[unit - 1].hpa
       ? 'red'

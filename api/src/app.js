@@ -32,6 +32,16 @@ io.on('connection', socket => {
     console.log(`user ${socket.id} disconnected`);
   });
 
+  socket.on('updateTeam', update => {
+    const user = clientManager.clients.filter(client => client.id === socket.id);
+    if (user.length > 0) {
+      user[0].team = update.team;
+      console.log(`user ${socket.id} updated team to ${update.team}`);
+    } else {
+      console.log(`user ${socket.id} not found`);
+    }
+  });
+
   socket.on('updateTx', update => {
     console.log(`sending updateSignals to clients`);
     clientManager.clients.forEach(client => {

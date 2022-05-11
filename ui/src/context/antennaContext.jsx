@@ -5,8 +5,8 @@ const antennaContext = React.createContext();
 const updateAntennaContext = React.createContext();
 
 const defaultAntennaContext = [
-  { unit: 1, operational: true, id_target: 1, lock: true, band: 1, offset: 0, hpa: false, loopback: false },
-  { unit: 2, operational: true, id_target: 1, lock: true, band: 1, offset: 0, hpa: true, loopback: false },
+  { unit: 1, operational: true, id_target: 1, lock: true, band: 1, offset: 0, hpa: false, loopback: true },
+  { unit: 2, operational: true, id_target: 1, lock: true, band: 1, offset: 0, hpa: false, loopback: true },
 ];
 
 export const useAntenna = () => {

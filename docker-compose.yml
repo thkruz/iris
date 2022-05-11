@@ -32,7 +32,7 @@ services:
       capstone-db:
         condition: service_healthy
     ports:
-      - '8080:8082'
+      - '8080:8080'
     networks:
       - app-network
     environment: 
@@ -56,7 +56,7 @@ services:
     depends_on:
       - 'capstone-api'
     ports:
-      - '3001:3000'
+      - '3000:3000'
     networks:
       - app-network
     volumes:
