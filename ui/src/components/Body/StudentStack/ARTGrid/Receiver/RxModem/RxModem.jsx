@@ -113,7 +113,7 @@ export const RxModem = ({ unit }) => {
   );
   const RxModemButton = ({ modem }) => (
     <Button
-      sx={modem === activeModem + 1 ? sxModemButtonActive : sxModemButton}
+      sx={modem - 1 == activeModem ? sxModemButtonActive : sxModemButton}
       onClick={e => {
         setActiveModem(parseInt(e.target.innerText) - 1);
       }}>
@@ -137,6 +137,7 @@ export const RxModem = ({ unit }) => {
       let tmpData = [...rxData];
       tmpData[currentRow] = inputData;
       updateRxData(tmpData);
+      console.log('rx data is here!!', rxData);
     };
     
     return (
@@ -155,7 +156,7 @@ export const RxModem = ({ unit }) => {
             <option value={1}>1</option>
             <option value={2}>2</option>
           </select>
-          <Typography sx={sxValues}>{rxData[activeModem].id_antenna}</Typography>
+          <Typography sx={sxValues}>{rxData[currentRow].id_antenna}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='frequency'>Frequency</label>
@@ -169,7 +170,7 @@ export const RxModem = ({ unit }) => {
                 val: parseInt(e.target.value),
               })
             }></input>
-          <Typography sx={sxValues}>{rxData[activeModem].frequency + ' MHz'}</Typography>
+          <Typography sx={sxValues}>{rxData[currentRow].frequency + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='bandwidth'>Bandwidth</label>
@@ -183,7 +184,7 @@ export const RxModem = ({ unit }) => {
                 val: parseInt(e.target.value),
               })
             }></input>
-          <Typography sx={sxValues}>{rxData[activeModem].bandwidth + ' MHz'}</Typography>
+          <Typography sx={sxValues}>{rxData[currentRow].bandwidth + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='modulation'>Modulation</label>
@@ -196,7 +197,7 @@ export const RxModem = ({ unit }) => {
             <option value='8QAM'>8QAM</option>
             <option value='16QAM'>16QAM</option>
           </select>
-          <Typography sx={sxValues}>{rxData[activeModem].modulation}</Typography>
+          <Typography sx={sxValues}>{rxData[currentRow].modulation}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='fec'>FEC</label>
@@ -210,7 +211,7 @@ export const RxModem = ({ unit }) => {
             <option value='5/6'>5/6</option>
             <option value='7/8'>7/8</option>
           </select>
-          <Typography sx={sxValues}>{rxData[activeModem].fec}</Typography>
+          <Typography sx={sxValues}>{rxData[currentRow].fec}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <div></div>
