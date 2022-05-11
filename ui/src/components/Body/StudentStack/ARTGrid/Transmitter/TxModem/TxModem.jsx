@@ -146,11 +146,13 @@ export const TxModem = ({ unit }) => {
       tmpData[param] = val;
       setInputData(tmpData);
     };
+
     const handleApply = () => {
       let tmpData = [...txData];
       tmpData[currentRow] = inputData;
       updateTxData(tmpData);
     };
+
     const handleTransmit = () => {
       let tmpData = [...txData];
       tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
@@ -158,6 +160,7 @@ export const TxModem = ({ unit }) => {
       tmpData[currentRow].targetId = antenna[tmpData[currentRow].id_antenna - 1].id_target;
       updateTxData(tmpData);
     };
+    
     return (
       <Box sx={sxInputBox}>
         <Box sx={sxInputRow}>

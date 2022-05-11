@@ -176,7 +176,18 @@ export const useUpdateRx = () => {
 
 export const RxProvider = ({ children }) => {
     const [rx, setRx] = useState(defaultRxContext);
+    
+    window.sewApp.socket.on('updateRxClient', (data) => {
+        console.log('updateRxClient', data);
+        if (data.user != window.sewApp.socket.id) {
+            console.log('actually updating the Rx');
+            setRx(data.signals);
+        }
+    });
+
     const updateRx = (update) => {
+        console.log('updateRx');
+        window.sewApp.socket.emit('updateRx', { user: window.sewApp.socket.id, signals: update });
         setRx(update);
     };
 

@@ -51,7 +51,6 @@ const sewApp = {
             });
           });
         }
-        //updateTxData(update);
       });
     });
 

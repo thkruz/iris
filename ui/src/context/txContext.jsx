@@ -180,19 +180,14 @@ export const TxProvider = ({ children }) => {
 
   window.sewApp.socket.on('updateTxClient', (data) => {
     console.log('updateTxClient', data);
-    console.log('sewapp user', window.sewApp.socket.id);
     if (data.user != window.sewApp.socket.id) {
         console.log('actually updating the ui');
         setTx(data.signals);
     }
-    //setTx(data);
   });
 
   const updateTx = update => {
     console.log('updateTx');
-    // if same
-    //    don't broadcast
-
     //  patch request to update database
     // if patch request is good
     window.sewApp.socket.emit('updateTx', { user: window.sewApp.socket.id, signals: update });
