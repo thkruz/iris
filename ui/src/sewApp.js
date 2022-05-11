@@ -1,9 +1,12 @@
 import { RfEnvironment } from './RfEnvironment';
 // eslint-disable-next-line no-unused-vars
 import { io, Socket } from 'socket.io-client';
+import { StepContext } from '@mui/material';
+//import { useUpdateTx } from './context';
 
 // Create a sync global context for the RF Environments
 const sewApp = {
+  //updateTxData: useUpdateTx(),
   init: () => {
     window.sewApp.socketInit(window.sewApp.socket);
   },
@@ -14,13 +17,16 @@ const sewApp = {
    *
    * @param {Socket} socket
    */
+
+  // watch window.sewApp.environment variable with useUpdateSignals
+
   socketInit: socket => {
     socket.on('connect', () => {
       console.log('Connected to the server');
 
       socket.on('updateSignals', update => {
         window.sewApp.environment.updateSignals(update);
-
+        console.log('updateSignals received', update);
         for (let i = 1; i <= 4; i++) {
           const specA = window.sewApp.getSpectrumAnalyzer(i);
           specA.signals = specA.signals.filter(signal => {
@@ -36,8 +42,10 @@ const sewApp = {
             });
           });
         }
+        //updateTxData(update);
       });
     });
+
     socket.on('disconnect', () => {
       console.log('Disconnected from the server');
     });
