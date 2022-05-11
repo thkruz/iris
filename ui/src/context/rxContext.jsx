@@ -186,19 +186,19 @@ export const RxProvider = ({ children }) => {
     });
 
     const updateRx = (update) => {
-        console.log('updateRx');
+        console.log('updateRx', update);
+        // patch request to update database
+        // if patch request is good
         window.sewApp.socket.emit('updateRx', { user: window.sewApp.socket.id, signals: update });
         setRx(update);
     };
 
     return (
         <rxContext.Provider value={rx}>
-            <updateRxContext.Provider value={updateRx}>
-                {children}
-            </updateRxContext.Provider>
+            <updateRxContext.Provider value={updateRx}>{children}</updateRxContext.Provider>
         </rxContext.Provider>
-    )
-}
+    );
+};
 
 RxProvider.propTypes = {
     children: PropTypes.any

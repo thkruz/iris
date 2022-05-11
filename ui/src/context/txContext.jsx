@@ -1,6 +1,5 @@
 import React, { useContext, useState } from 'react';
 import PropTypes from 'prop-types';
-
 const txContext = React.createContext();
 const updateTxContext = React.createContext();
 
@@ -181,7 +180,7 @@ export const TxProvider = ({ children }) => {
   window.sewApp.socket.on('updateTxClient', (data) => {
     console.log('updateTxClient', data);
     if (data.user != window.sewApp.socket.id) {
-        console.log('actually updating the ui');
+        console.log('actually updating the Tx');
         setTx(data.signals);
     }
   });
