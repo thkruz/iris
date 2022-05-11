@@ -8,7 +8,7 @@ const sewApp = {
     window.sewApp.socketInit(window.sewApp.socket);
   },
   environment: new RfEnvironment(),
-  socket: io('http://localhost:8082', { transports: ['websocket'] }),
+  socket: io('http://localhost:8080', {transports: ['websocket']}),
 
   /**
    *

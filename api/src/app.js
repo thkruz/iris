@@ -33,6 +33,7 @@ io.on('connection', socket => {
   });
 
   socket.on('updateTx', update => {
+    console.log(`sending updateSignals to clients`);
     clientManager.clients.forEach(client => {
       client.emit('updateSignals', update);
     });
