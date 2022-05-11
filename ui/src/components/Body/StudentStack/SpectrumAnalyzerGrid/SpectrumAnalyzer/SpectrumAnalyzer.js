@@ -262,7 +262,7 @@ export class SpectrumAnalyzer {
                 const rfUpSignal = { ...signal, freq: signal.freq + this.upconvertOffset };
                 const rfDownSignal = { ...signal, freq: signal.freq + this.upconvertOffset };
                 rfDownSignal.freq += this.loopback ? +this.antennaOffset : this.targetOffset;
-                rfDownSignal.amp = !this.loopback && this.hpa ? -1000 : rfDownSignal.amp;
+                rfDownSignal.amp = !this.loopback && !this.hpa ? -1000 : rfDownSignal.amp;
                 this.drawSignal(this.ctx, color, rfUpSignal);
                 this.drawSignal(this.ctx, color, rfDownSignal);
               }
