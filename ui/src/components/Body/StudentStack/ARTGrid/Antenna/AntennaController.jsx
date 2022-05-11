@@ -5,8 +5,8 @@ import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore
 import CellTowerIcon from '@mui/icons-material/CellTower';
 import AlignHorizontalCenterIcon from '@mui/icons-material/AlignHorizontalCenter';
 import { AstroTheme } from '../../../../../themes/AstroTheme';
-import { useAntenna, useUpdateAntenna } from '../../../../../context'; 
-import './Antenna.css'
+import { useAntenna, useUpdateAntenna } from '../../../../../context';
+import './Antenna.css';
 
 export const AntennaController = ({ unit }) => {
   const theme = AstroTheme;
@@ -208,7 +208,7 @@ export const AntennaController = ({ unit }) => {
           <center>
             <img
               className='lb_img'
-              src={`baseball_switch${antennaData[unit - 1].loopback ? '2' : ''}.png`}
+              src={`baseball_switch${antennaData[unit - 1].loopback ? '' : '2'}.png`}
               alt='baseball_switch'
               onClick={e => toggleSwitch(e)}
             />
