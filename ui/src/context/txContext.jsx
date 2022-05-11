@@ -178,6 +178,16 @@ export const useUpdateTx = () => {
 export const TxProvider = ({ children }) => {
   const [tx, setTx] = useState(defaultTxContext);
 
+  window.sewApp.socket.on('updateTxClient', (data) => {
+    console.log('updateTxClient', data);
+    console.log('sewapp user', window.sewApp.socket.id);
+    if (data.user != window.sewApp.socket.id) {
+        console.log('actually updating the ui');
+        setTx(data.signals);
+    }
+    //setTx(data);
+  });
+
   const updateTx = update => {
     console.log('updateTx');
     // if same

@@ -21,4 +21,5 @@ exports.seed = async function(knex) {
     {id: 12, server_id: 1, target_id: 3, frequency: 15720, power: -52, bandwidth: 10, modulation: '8QAM', fec: '3/4', feed:'testVid.mov', operational: 'false'},
     {id: 13, server_id: 1, target_id: 3, frequency: 15730, power: -48, bandwidth: 1, modulation: '8QAM', fec: '3/4', feed:'testVid.mp4', operational: 'false'},
   ]);
+  await knex.raw('SELECT SETVAL(pg_get_serial_sequence(\'signal\',\'id\'), (SELECT MAX(id) FROM signal) )');
 };

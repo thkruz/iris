@@ -33,8 +33,12 @@ io.on('connection', socket => {
   });
 
   socket.on('updateTx', update => {
+    console.log(`sending updateSignals to clients`);
     clientManager.clients.forEach(client => {
       client.emit('updateSignals', update);
+      client.emit('updateTxClient', update);
+      //anytime in transmitter apply is pressed update the signals
+      //anytime in antenna baseball or hpa is turned on update the signals
     });
   });
 });

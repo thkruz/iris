@@ -1,11 +1,11 @@
-/* eslint-disable react/prop-types */
 import { Box, Button, Grid, Typography } from '@mui/material';
 import { SpectrumAnalyzer } from '../../../../';
 import React, { useLayoutEffect, useState } from 'react';
 import { AstroTheme } from '../../../../../themes/AstroTheme.js';
 import { useEffect } from 'react';
-import { useAntenna } from './../../../../../context/antennaContext';
 import { targets } from '../../../../../targets';
+import { useAntenna } from './../../../../../context';
+import PropTypes from 'prop-types';
 
 // MUI Stack: https://mui.com/material-ui/react-stack/
 
@@ -200,4 +200,9 @@ export const SpectrumAnalyzerBox = props => {
       </Grid>
     </Box>
   );
+};
+
+SpectrumAnalyzerBox.propTypes = {
+  canvasId: PropTypes.any,
+  handleConfigClick: PropTypes.any,
 };
