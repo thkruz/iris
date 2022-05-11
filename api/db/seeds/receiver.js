@@ -71,5 +71,5 @@
     {id: 63, server_id: 1, team_id: 4, unit: 4, number: 3, operational: true, antenna_id: 1, freqency: 1250, bandwidth: 10, modulation: 'BPSK', fec: '1/2'},
     {id: 64, server_id: 1, team_id: 4, unit: 4, number: 4, operational: true, antenna_id: 1, freqency: 1250, bandwidth: 10, modulation: 'BPSK', fec: '1/2'}
   ]);
-  await knex.raw('SELECT SETVAL(pg_get_serial_sequency(\'receiver\',\'id\'), (SELECT MAX(id) FROM receiver) )');
+  await knex.raw('SELECT SETVAL(pg_get_serial_sequence(\'receiver\',\'id\'), (SELECT MAX(id) FROM receiver) )');
 };

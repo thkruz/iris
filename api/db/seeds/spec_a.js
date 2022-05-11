@@ -39,5 +39,5 @@ exports.seed = async function(knex) {
     {id: 31, id_server: 1, id_team: 4, unit: 4, number: 1, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260},
     {id: 32, id_server: 1, id_team: 4, unit: 4, number: 2, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260}
   ]);
-  await knex.raw('SELECT SETVAL(pg_get_serial_sequency(\'spec_a\',\'id\'), (SELECT MAX(id) FROM spec_a) )');
+  await knex.raw('SELECT SETVAL(pg_get_serial_sequence(\'spec_a\',\'id\'), (SELECT MAX(id) FROM spec_a) )');
 };

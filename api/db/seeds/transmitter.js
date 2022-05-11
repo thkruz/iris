@@ -71,5 +71,5 @@ exports.seed = async function(knex) {
     {id: 63, server_id: 1, team_id: 4, unit: 4, modem_number: 3, operational: true, antenna_id: 1, freqency: 1250, bandwidth: 10, power: -40, transmitting: false},
     {id: 64, server_id: 1, team_id: 4, unit: 4, modem_number: 4, operational: true, antenna_id: 1, freqency: 1250, bandwidth: 10, power: -40, transmitting: false}
   ]);
-  await knex.raw('SELECT SETVAL(pg_get_serial_sequency(\'transmitter\',\'id\'), (SELECT MAX(id) FROM transmitter) )');
+  await knex.raw('SELECT SETVAL(pg_get_serial_sequence(\'transmitter\',\'id\'), (SELECT MAX(id) FROM transmitter) )');
 }; 
