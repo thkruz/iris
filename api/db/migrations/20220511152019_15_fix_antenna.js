@@ -9,7 +9,7 @@ exports.up = function(knex) {
        table.dropColumn('track');
        table.dropColumn('band');
        table.string('band').notNullable();
-       
+
    })
 };
 
@@ -18,5 +18,10 @@ exports.up = function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = function(knex) {
-  
+  return knex.schema.alterTable('antenna', table => {
+       table.string('name');
+       table.integer('modem_number');
+       table.boolean('track').defaultTo(false);
+       table.integer('band');
+   })
 };
