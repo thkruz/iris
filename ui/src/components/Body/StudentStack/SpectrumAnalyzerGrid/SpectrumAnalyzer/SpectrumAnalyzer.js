@@ -254,7 +254,7 @@ export class SpectrumAnalyzer {
                   freq: signal.freq + this.upconvertOffset - this.downconvertOffset,
                 };
                 ifDownSignal.freq += this.loopback ? +this.antennaOffset : this.targetOffset;
-                ifDownSignal.amp = !this.loopback && this.hpa ? -1000 : ifDownSignal.amp;
+                ifDownSignal.amp = !this.loopback && !this.hpa ? -1000 : ifDownSignal.amp;
                 this.drawSignal(this.ctx, color, ifUpSignal);
                 this.drawSignal(this.ctx, color, ifDownSignal);
               } else {
