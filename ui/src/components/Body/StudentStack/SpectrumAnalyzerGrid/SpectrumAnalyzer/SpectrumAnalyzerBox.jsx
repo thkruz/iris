@@ -28,11 +28,14 @@ const SpectrumAnalyzerBoxStyle = {
 
 const sxInputRow = {
   fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
-  display: 'grid',
-  gridTemplateColumns: '80px 80px 80px',
   textAlign: 'left',
   margin: '8px',
   height: '30px',
+  display: 'flex',
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  fontSize: '1em',
 };
 
 const configButtonStyle = {
@@ -50,28 +53,29 @@ export const updateSpecAwAntennaInfo = (antenna_id, specA, antenna) => {
   specA.antennaId = antenna_id;
   let { band, hpa, id_target, lock, loopback, offset, operational } = antenna[specA.antennaId - 1];
   specA.targetId = id_target;
+  console.log('updateSpecAwAntennaInfo', specA.antennaId, specA.targetId);
 
   specA.hpa = hpa;
   specA.loopback = loopback;
   specA.lock = lock;
   specA.operational = operational;
 
+  band = band === 1 ? 'c' : 'ku';
+  const bandOffset = window.sewApp.constants.antennas.filter(antenna => antenna.band.toLowerCase() === band)[0];
+  specA.downconvertOffset = bandOffset.downconvert;
+  specA.upconvertOffset = bandOffset.upconvert;
   if (!loopback) {
     // RF Settings
-    band = band === 1 ? 'c' : 'ku';
-    const bandOffset = window.sewApp.constants.antennas.filter(antenna => antenna.band.toLowerCase() === band)[0];
-    specA.downconvertOffset = bandOffset.downconvert;
-    specA.upconvertOffset = bandOffset.upconvert;
     specA.targetOffset = targets.filter(target => target.id === id_target)[0].offset;
   } else {
     // IF Settings
     specA.antennaOffset = offset * 1e6;
   }
-  console.log(antenna[antenna_id - 1]);
 };
 export const SpectrumAnalyzerBox = props => {
   const [specAConfig, setSpecAConfig] = useState({});
   const [specA, setSpecA] = useState({});
+  const [isRfMode, setIsRfMode] = useState(false);
   const antenna = useAntenna();
 
   useEffect(() => {
@@ -154,6 +158,16 @@ export const SpectrumAnalyzerBox = props => {
     specA.targetId = id_target;
   }, [antenna]);
 
+  const handleRfClicked = () => {
+    specA.isRfMode = !specA.isRfMode;
+    setSpecA(specA);
+    setIsRfMode(!isRfMode);
+    const _specA = window.sewApp[`specA${specA.canvas.id.split('A')[1]}`];
+    console.log(_specA.changeCenterFreq);
+    _specA.isRfMode = !isRfMode;
+    props.handleRfClick(_specA);
+  };
+
   // setSpectrumAnalyzer(specA);
   return (
     <Box sx={SpectrumAnalyzerBoxStyle}>
@@ -181,7 +195,7 @@ export const SpectrumAnalyzerBox = props => {
         </Grid>
         <Grid item xs={4}>
           <Box sx={sxInputRow}>
-            <label htmlFor='Antenna'>Antenna</label>
+            <label htmlFor='Antenna'>Ant</label>
             <select
               name='Antenna'
               value={specA.id_antenna}
@@ -196,7 +210,13 @@ export const SpectrumAnalyzerBox = props => {
             Config
           </Button>
         </Grid>
-        <Grid item xs={4}></Grid>
+        <Grid item xs={4}>
+          <Button
+            sx={{ ...configButtonStyle, ...{ backgroundColor: isRfMode ? 'red' : 'yellow' } }}
+            onClick={handleRfClicked}>
+            {isRfMode ? 'RF' : 'IF'}
+          </Button>
+        </Grid>
       </Grid>
     </Box>
   );
@@ -205,4 +225,5 @@ export const SpectrumAnalyzerBox = props => {
 SpectrumAnalyzerBox.propTypes = {
   canvasId: PropTypes.any,
   handleConfigClick: PropTypes.any,
+  handleRfClick: PropTypes.any,
 };

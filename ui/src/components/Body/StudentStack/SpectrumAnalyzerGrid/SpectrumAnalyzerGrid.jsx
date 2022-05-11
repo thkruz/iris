@@ -12,6 +12,10 @@ export const SpectrumAnalyzerGrid = () => {
     setIsConfigOpen(true);
   };
 
+  const handleRfClick = specAnalyzer => {
+    setCurrentSpecAnalyzer(specAnalyzer);
+  };
+
   const handleBackgroundClick = e => {
     // Don't hide the screen unless the background was clicked
     // NOTE: Any click action triggers this event
@@ -52,16 +56,40 @@ export const SpectrumAnalyzerGrid = () => {
     <>
       <Grid container item spacing={3} xs={12}>
         <Grid item xs={6} s={6} md={6} lg={6} xl={3}>
-          {<SpectrumAnalyzerBox handleConfigClick={handleConfigClick} canvasId={'specA1'} />}
+          {
+            <SpectrumAnalyzerBox
+              handleConfigClick={handleConfigClick}
+              handleRfClick={handleRfClick}
+              canvasId={'specA1'}
+            />
+          }
         </Grid>
         <Grid item xs={6} s={6} md={6} lg={6} xl={3}>
-          {<SpectrumAnalyzerBox handleConfigClick={handleConfigClick} canvasId={'specA2'} />}
+          {
+            <SpectrumAnalyzerBox
+              handleConfigClick={handleConfigClick}
+              handleRfClick={handleRfClick}
+              canvasId={'specA2'}
+            />
+          }
         </Grid>
         <Grid item xs={6} s={6} md={6} lg={6} xl={3}>
-          {<SpectrumAnalyzerBox handleConfigClick={handleConfigClick} canvasId={'specA3'} />}
+          {
+            <SpectrumAnalyzerBox
+              handleConfigClick={handleConfigClick}
+              handleRfClick={handleRfClick}
+              canvasId={'specA3'}
+            />
+          }
         </Grid>
         <Grid item xs={6} s={6} md={6} lg={6} xl={3}>
-          {<SpectrumAnalyzerBox handleConfigClick={handleConfigClick} canvasId={'specA4'} />}
+          {
+            <SpectrumAnalyzerBox
+              handleConfigClick={handleConfigClick}
+              handleRfClick={handleRfClick}
+              canvasId={'specA4'}
+            />
+          }
         </Grid>
       </Grid>
       {isConfigOpen ? (

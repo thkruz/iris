@@ -50,7 +50,7 @@ const yellowButtonStyle = {
   margin: 'auto',
 };
 export const AnalyzerControl = props => {
-  // console.log(props.currentSpecAnalyzer);
+  console.log(props.currentSpecAnalyzer.changeCenterFreq);
   const [ghz, setGhz] = useState(null);
   const [mhz, setMhz] = useState(null);
   const [khz, setKhz] = useState(null);
