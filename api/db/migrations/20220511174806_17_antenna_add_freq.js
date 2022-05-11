@@ -6,7 +6,6 @@
     return knex.schema.alterTable('antenna', table => {
         table.double('frequency');
     })
-    
  };
  
  /**
