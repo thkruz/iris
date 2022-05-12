@@ -32,9 +32,37 @@ io.on('connection', socket => {
     console.log(`user ${socket.id} disconnected`);
   });
 
+  socket.on('updateTeam', update => {
+    const user = clientManager.clients.filter(client => client.id === socket.id);
+    if (user.length > 0) {
+      user[0].team = update.team;
+      console.log(`user ${socket.id} updated team to ${update.team}`);
+    } else {
+      console.log(`user ${socket.id} not found`);
+    }
+  });
+
   socket.on('updateTx', update => {
+    console.log(`sending updateTX and update Signals to clients`);
     clientManager.clients.forEach(client => {
       client.emit('updateSignals', update);
+      client.emit('updateTxClient', update);
+      //anytime in transmitter apply is pressed update the signals
+      //anytime in antenna baseball or hpa is turned on update the signals
+    });
+  });
+
+  socket.on('updateRx', update => {
+    console.log(`sending updateRX to clients`);
+    clientManager.clients.forEach(client => {
+      client.emit('updateRxClient', update);
+    });
+  });
+
+  socket.on('updateAntenna', update => {
+    console.log(`sending updateAntenna to clients`);
+    clientManager.clients.forEach(client => {
+      client.emit('updateAntennaClient', update);
     });
   });
 });

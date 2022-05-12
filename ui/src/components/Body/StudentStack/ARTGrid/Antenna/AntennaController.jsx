@@ -93,7 +93,7 @@ export const AntennaController = ({ unit }) => {
     border: '1px solid red',
   };
   const sxTx = {
-    backgroundColor: !antennaData[unit - 1].loopback
+    backgroundColor: antennaData[unit - 1].loopback
       ? theme.palette.primary.light
       : antennaData[unit - 1].hpa
       ? 'red'
@@ -208,7 +208,7 @@ export const AntennaController = ({ unit }) => {
           <center>
             <img
               className='lb_img'
-              src={`baseball_switch${antennaData[unit - 1].loopback ? '2' : ''}.png`}
+              src={`baseball_switch${antennaData[unit - 1].loopback ? '' : '2'}.png`}
               alt='baseball_switch'
               onClick={e => toggleSwitch(e)}
             />

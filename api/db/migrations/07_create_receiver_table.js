@@ -10,11 +10,14 @@ exports.up = function(knex) {
         table.integer('team_id').notNullable();
         table.foreign('team_id').references('team.id');
         table.integer('unit').notNullable();
-        table.integer('modem_number').notNullable();
         table.boolean('operational').defaultTo(false);
         table.double('frequency').notNullable();
         table.double('bandwidth').notNullable();
-        table.double('power').notNullable();
+        table.integer('number').notNullable();
+        table.integer('antenna_id').notNullable();
+        table.foreign('antenna_id').references('antenna.id');
+        table.string('modulation').notNullable();
+        table.string('fec').notNullable();
     });
 };
 

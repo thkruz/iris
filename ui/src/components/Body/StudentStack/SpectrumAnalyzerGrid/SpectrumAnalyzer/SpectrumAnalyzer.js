@@ -23,7 +23,16 @@ export class SpectrumAnalyzer {
     this.centerFreq = this.minFreq + this.bw / 2;
     this.noiseColor = options.noiseColor || '#0bf';
     this.antennaId = 1;
+    this.antennaOffset = 0;
+    this.targetOffset = 400e6;
+    this.downconvertOffset = 3500e6; // Default to C Band
+    this.upconvertOffset = 3350e6; // Default to C Band
     this.targetId = null;
+    this.hpa = false;
+    this.loopback = false;
+    this.lock = true;
+    this.operational = true;
+    this.isRfMode = false;
     this.resize(this.canvas.parentElement.offsetWidth - 6, this.canvas.parentElement.offsetWidth - 6);
 
     window.addEventListener('resize', () => {
@@ -221,7 +230,43 @@ export class SpectrumAnalyzer {
             if (this.isShowSignals) {
               color = SpectrumAnalyzer.getRandomRgb(i);
             }
-            this.drawSignal(this.ctx, color, signal);
+
+            // Original Signal Should be in RF Down for Instructor or IF Up for Student
+            if (signal.rf) {
+              // Instructor
+              // Calculate 2 Signals
+              const rfDownSignal = { ...signal };
+              const ifDownSignal = { ...signal, freq: signal.freq - this.downconvertOffset };
+
+              // Draw 2 Signals
+              if (!this.isRfMode) {
+                this.drawSignal(this.ctx, color, ifDownSignal);
+              } else {
+                this.drawSignal(this.ctx, color, rfDownSignal);
+              }
+            } else {
+              // Student
+              if (!this.isRfMode) {
+                // Draw only IF Signal
+                const ifUpSignal = signal;
+                const ifDownSignal = {
+                  ...signal,
+                  freq: signal.freq + this.upconvertOffset - this.downconvertOffset,
+                };
+                ifDownSignal.freq += this.loopback ? +this.antennaOffset : this.targetOffset;
+                ifDownSignal.amp = !this.loopback && !this.hpa ? -1000 : ifDownSignal.amp;
+                this.drawSignal(this.ctx, color, ifUpSignal);
+                this.drawSignal(this.ctx, color, ifDownSignal);
+              } else {
+                // Draw only RF Signal
+                const rfUpSignal = { ...signal, freq: signal.freq + this.upconvertOffset };
+                const rfDownSignal = { ...signal, freq: signal.freq + this.upconvertOffset };
+                rfDownSignal.freq += this.loopback ? +this.antennaOffset : this.targetOffset;
+                rfDownSignal.amp = !this.loopback && !this.hpa ? -1000 : rfDownSignal.amp;
+                this.drawSignal(this.ctx, color, rfUpSignal);
+                this.drawSignal(this.ctx, color, rfDownSignal);
+              }
+            }
           });
 
         if (this.isDrawHold) {

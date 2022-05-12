@@ -1,9 +1,7 @@
 /* eslint-disable react/prop-types */
-import React from 'react';
-import { Box, Button } from '@mui/material';
-import { Grid } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { Box, Button, Grid } from '@mui/material';
 import { AstroTheme } from '../../../../../themes/AstroTheme';
-import { useEffect, useState } from 'react';
 
 const popupStyle = {
   backgroundColor: AstroTheme.palette.tertiary.main,
@@ -51,8 +49,8 @@ const yellowButtonStyle = {
   height: '50px',
   margin: 'auto',
 };
-const AnalyzerControl = props => {
-  // console.log(props.currentSpecAnalyzer);
+export const AnalyzerControl = props => {
+  console.log(props.currentSpecAnalyzer.changeCenterFreq);
   const [ghz, setGhz] = useState(null);
   const [mhz, setMhz] = useState(null);
   const [khz, setKhz] = useState(null);
@@ -426,5 +424,3 @@ const AnalyzerControl = props => {
     </Box>
   );
 };
-
-export default AnalyzerControl;
