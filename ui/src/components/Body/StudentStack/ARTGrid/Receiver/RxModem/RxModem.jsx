@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import { Box, Button, Typography } from '@mui/material';
 import './RxModem.css';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
-import { useAntenna, useRx, useUpdateRx } from '../../../../../../context';
+import { useAntenna, useRx, useUpdateRx, useSignal } from '../../../../../../context';
 
 
 export const RxModem = ({ unit }) => {
@@ -14,6 +14,7 @@ export const RxModem = ({ unit }) => {
   const denied = false; // TODO: These may come from context
   const rxData = useRx();
   const updateRxData = useUpdateRx();
+  const signalData = useSignal();
   const [activeModem, setActiveModem] = useState(0);
 
   // Styles
@@ -228,7 +229,8 @@ export const RxModem = ({ unit }) => {
     const antenna = useAntenna();
     const { id_target: r_tgt } = antenna[rxData[(unit - 1) * 4 + activeModem].id_antenna - 1];
 
-    window.sewApp.environment?.signals?.forEach(signal => {
+    //window.sewApp.environment?.signals?.forEach(signal => {
+      signalData.forEach(signal => {
       const { frequency: s_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, target_id: s_tgt, feed } = signal; // TODO: loop through all signals to find one that matches
       const s_lb = s_freq - 0.5 * s_bw;
       const s_rb = s_freq + 0.5 * s_bw;
