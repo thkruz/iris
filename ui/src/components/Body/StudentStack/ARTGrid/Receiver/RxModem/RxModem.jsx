@@ -134,6 +134,7 @@ export const RxModem = ({ unit }) => {
     const handleApply = () => {
       let tmpData = [...rxData];
       tmpData[currentRow] = inputData;
+      console.log(tmpData[currentRow])
       updateRxData(tmpData);
     };
     return (
