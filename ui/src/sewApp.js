@@ -1,26 +1,41 @@
 import { RfEnvironment } from './RfEnvironment';
 // eslint-disable-next-line no-unused-vars
 import { io, Socket } from 'socket.io-client';
+import { targets } from './targets';
+import { antennas } from './antennas';
+//import { useUpdateTx } from './context';
 
 // Create a sync global context for the RF Environments
 const sewApp = {
+  teamInfo: {
+    team: 'blue',
+  },
+  //updateTxData: useUpdateTx(),
   init: () => {
     window.sewApp.socketInit(window.sewApp.socket);
   },
+  constants: {
+    targets,
+    antennas,
+  },
   environment: new RfEnvironment(),
-  socket: io('http://localhost:8082', { transports: ['websocket'] }),
+  socket: io('http://localhost:8080', { transports: ['websocket'] }),
 
   /**
    *
    * @param {Socket} socket
    */
+
+  // watch window.sewApp.environment variable with useUpdateSignals
+
   socketInit: socket => {
     socket.on('connect', () => {
       console.log('Connected to the server');
+      socket.emit('updateTeam', { team: sewApp.team });
 
       socket.on('updateSignals', update => {
         window.sewApp.environment.updateSignals(update);
-
+        console.log('updateSignals received', update);
         for (let i = 1; i <= 4; i++) {
           const specA = window.sewApp.getSpectrumAnalyzer(i);
           specA.signals = specA.signals.filter(signal => {
@@ -38,6 +53,7 @@ const sewApp = {
         }
       });
     });
+
     socket.on('disconnect', () => {
       console.log('Disconnected from the server');
     });

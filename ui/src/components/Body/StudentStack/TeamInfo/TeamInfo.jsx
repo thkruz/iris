@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './TeamInfo.css';
 import Box from '@mui/material/Box';
 import { Typography } from '@mui/material';
 import { AstroTheme } from '../../../../themes/AstroTheme';
 
 export const TeamInfo = () => {
-  //TODO: get server name, team name, team members
+  const [teamInfo, setTeamInfo] = useState({ team: '', members: [] });
+
+  useEffect(() => {
+    setTeamInfo(window.sewApp.teamInfo);
+  }, [window.sewApp.teamInfo]);
 
   return (
     <Box
@@ -21,7 +25,7 @@ export const TeamInfo = () => {
         Server: Server Name
       </Typography>
       <Typography paddingRight='30px' variant='h6' component='div'>
-        Team: Team Name
+        Team: {teamInfo.team}
       </Typography>
     </Box>
   );

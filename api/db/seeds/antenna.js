@@ -13,7 +13,7 @@ exports.seed = async function(knex) {
     {id: 5, server_id: 1, team_id: 3, unit: 1, operational: true, target_id: 1, locked: true, band: 'C', offset: 400, hpa: false, loopback: true},
     {id: 6, server_id: 1, team_id: 3, unit: 2, operational: true, target_id: 1, locked: true, band: 'C', offset: 400, hpa: false, loopback: true},
     {id: 7, server_id: 1, team_id: 4, unit: 1, operational: true, target_id: 1, locked: true, band: 'C', offset: 400, hpa: false, loopback: true},
-    {id: 8, server_id: 1, team_id: 5, unit: 2, operational: true, target_id: 1, locked: true, band: 'C', offset: 400, hpa: false, loopback: true}
+    {id: 8, server_id: 1, team_id: 4, unit: 2, operational: true, target_id: 1, locked: true, band: 'C', offset: 400, hpa: false, loopback: true}
   ]);
-  await knex.raw('SELECT SETVAL(pg_get_serial_sequency(\'antenna\',\'id\'), (SELECT MAX(id) FROM antenna) )');
+  await knex.raw('SELECT SETVAL(pg_get_serial_sequence(\'antenna\',\'id\'), (SELECT MAX(id) FROM antenna) )');
 };

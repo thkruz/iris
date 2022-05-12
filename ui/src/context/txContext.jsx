@@ -1,6 +1,5 @@
 import React, { useContext, useState } from 'react';
 import PropTypes from 'prop-types';
-
 const txContext = React.createContext();
 const updateTxContext = React.createContext();
 
@@ -178,11 +177,16 @@ export const useUpdateTx = () => {
 export const TxProvider = ({ children }) => {
   const [tx, setTx] = useState(defaultTxContext);
 
+  window.sewApp.socket.on('updateTxClient', (data) => {
+    console.log('updateTxClient', data);
+    if (data.user != window.sewApp.socket.id) {
+        console.log('actually updating the Tx');
+        setTx(data.signals);
+    }
+  });
+
   const updateTx = update => {
     console.log('updateTx');
-    // if same
-    //    don't broadcast
-
     //  patch request to update database
     // if patch request is good
     window.sewApp.socket.emit('updateTx', { user: window.sewApp.socket.id, signals: update });
