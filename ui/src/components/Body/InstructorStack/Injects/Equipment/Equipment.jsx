@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Table, TableCell, TableContainer, TableHead, TableRow, TableBody } from '@mui/material';
 //import { useTx } from '../../../../../context';
 //import { AstroTheme } from '../../../../../themes/AstroTheme';
 
@@ -19,7 +19,9 @@ export const Equipment = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-
+                        <TableRow>
+                            <TableCell sx={{color: 'white'}}>Team 1</TableCell>
+                        </TableRow>
                     </TableBody>
                 </Table>
             </TableContainer>
