@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './App';
-import { AntennaProvider, RxProvider, TxProvider } from './context';
+import { AntennaProvider, RxProvider, TxProvider, SignalProvider } from './context';
 import reportWebVitals from './reportWebVitals';
 import './index.css';
 import './sewApp';
@@ -10,13 +10,15 @@ window.sewApp.init();
 
 ReactDOM.render(
   <React.StrictMode>
-    <AntennaProvider>
-      <RxProvider>
-        <TxProvider>
-          <App />
-        </TxProvider>
-      </RxProvider>
-    </AntennaProvider>
+    <SignalProvider>
+      <AntennaProvider>
+        <RxProvider>
+          <TxProvider>
+            <App />
+          </TxProvider>
+        </RxProvider>
+      </AntennaProvider>
+    </SignalProvider>
   </React.StrictMode>,
   document.getElementById('root')
 );
