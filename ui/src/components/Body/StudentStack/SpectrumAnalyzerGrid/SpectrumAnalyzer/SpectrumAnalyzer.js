@@ -1,5 +1,5 @@
 export class SpectrumAnalyzer {
-  constructor(canvas, options) {
+  constructor(canvas, options = {}) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.options = options;
@@ -215,74 +215,76 @@ export class SpectrumAnalyzer {
    * This draws the spectrum analyzer
    */
   draw() {
-    requestAnimationFrame(() => {
-      const now = Date.now();
-      if (now - this.lastDrawTime > 1000 / this.refreshRate) {
-        this.clearCanvas(this.ctx);
-        this.ctx.globalAlpha = 1.0;
-        this.noiseData = this.createNoise(this.noiseData);
-        this.drawNoise(this.ctx);
+    requestAnimationFrame(() => this.animate());
+  }
 
-        this.signals
-          .filter(signal => {
-            return signal.targetId === this.targetId;
-          })
-          .forEach((signal, i) => {
-            let color = this.noiseColor;
-            if (this.isShowSignals) {
-              color = SpectrumAnalyzer.getRandomRgb(i);
-            }
+  animate() {
+    const now = Date.now();
+    if (now - this.lastDrawTime > 1000 / this.refreshRate) {
+      this.clearCanvas(this.ctx);
+      this.ctx.globalAlpha = 1.0;
+      this.noiseData = this.createNoise(this.noiseData);
+      this.drawNoise(this.ctx);
 
-            // Original Signal Should be in RF Down for Instructor or IF Up for Student
-            if (signal.rf) {
-              // Instructor
-              // Calculate 2 Signals
-              const rfDownSignal = { ...signal };
-              const ifDownSignal = { ...signal, freq: signal.freq - this.downconvertOffset };
+      this.signals
+        .filter(signal => {
+          return signal.targetId === this.targetId;
+        })
+        .forEach((signal, i) => {
+          let color = this.noiseColor;
+          if (this.isShowSignals) {
+            color = SpectrumAnalyzer.getRandomRgb(i);
+          }
 
-              // Draw 2 Signals
-              if (!this.isRfMode) {
-                this.drawSignal(this.ctx, color, ifDownSignal);
-              } else {
-                this.drawSignal(this.ctx, color, rfDownSignal);
-              }
+          // Original Signal Should be in RF Down for Instructor or IF Up for Student
+          if (signal.rf) {
+            // Instructor
+            // Calculate 2 Signals
+            const rfDownSignal = { ...signal };
+            const ifDownSignal = { ...signal, freq: signal.freq - this.downconvertOffset };
+
+            // Draw 2 Signals
+            if (!this.isRfMode) {
+              this.drawSignal(this.ctx, color, ifDownSignal);
             } else {
-              // Student
-              if (!this.isRfMode) {
-                // Draw only IF Signal
-                const ifUpSignal = signal;
-                const ifDownSignal = {
-                  ...signal,
-                  freq: signal.freq + this.upconvertOffset - this.downconvertOffset,
-                };
-                ifDownSignal.freq += this.loopback ? +this.antennaOffset : this.targetOffset;
-                ifDownSignal.amp = !this.loopback && !this.hpa ? -1000 : ifDownSignal.amp;
-                this.drawSignal(this.ctx, color, ifUpSignal);
-                this.drawSignal(this.ctx, color, ifDownSignal);
-              } else {
-                // Draw only RF Signal
-                const rfUpSignal = { ...signal, freq: signal.freq + this.upconvertOffset };
-                const rfDownSignal = { ...signal, freq: signal.freq + this.upconvertOffset };
-                rfDownSignal.freq += this.loopback ? +this.antennaOffset : this.targetOffset;
-                rfDownSignal.amp = !this.loopback && !this.hpa ? -1000 : rfDownSignal.amp;
-                this.drawSignal(this.ctx, color, rfUpSignal);
-                this.drawSignal(this.ctx, color, rfDownSignal);
-              }
+              this.drawSignal(this.ctx, color, rfDownSignal);
             }
-          });
+          } else {
+            // Student
+            if (!this.isRfMode) {
+              // Draw only IF Signal
+              const ifUpSignal = signal;
+              const ifDownSignal = {
+                ...signal,
+                freq: signal.freq + this.upconvertOffset - this.downconvertOffset,
+              };
+              ifDownSignal.freq += this.loopback ? +this.antennaOffset : this.targetOffset;
+              ifDownSignal.amp = !this.loopback && !this.hpa ? -1000 : ifDownSignal.amp;
+              this.drawSignal(this.ctx, color, ifUpSignal);
+              this.drawSignal(this.ctx, color, ifDownSignal);
+            } else {
+              // Draw only RF Signal
+              const rfUpSignal = { ...signal, freq: signal.freq + this.upconvertOffset };
+              const rfDownSignal = { ...signal, freq: signal.freq + this.upconvertOffset };
+              rfDownSignal.freq += this.loopback ? +this.antennaOffset : this.targetOffset;
+              rfDownSignal.amp = !this.loopback && !this.hpa ? -1000 : rfDownSignal.amp;
+              this.drawSignal(this.ctx, color, rfUpSignal);
+              this.drawSignal(this.ctx, color, rfDownSignal);
+            }
+          }
+        });
 
-        if (this.isDrawHold) {
-          this.drawMaxHold(this.ctx);
-        }
-
-        this.hideBelowNoiseFloor(this.ctx);
-
-        this.drawGridOverlay(this.ctx);
-
-        this.lastDrawTime = now;
+      if (this.isDrawHold) {
+        this.drawMaxHold(this.ctx);
       }
-      this.draw();
-    });
+
+      this.hideBelowNoiseFloor(this.ctx);
+
+      this.drawGridOverlay(this.ctx);
+
+      this.lastDrawTime = now;
+    }
+    this.draw();
   }
 
   drawGridOverlay(ctx) {
@@ -374,7 +376,13 @@ export class SpectrumAnalyzer {
     ctx.stroke();
 
     // Draw Diamond Marker
-    if (maxX > 0 && this.isDrawMarker) {
+    if (this.isDrawMarker) {
+      this.drawMarker(maxX, maxY, ctx, maxSignalFreq);
+    }
+  }
+
+  drawMarker(maxX, maxY, ctx, maxSignalFreq) {
+    if (maxX > 0) {
       maxY -= 0.025;
       ctx.beginPath();
       ctx.fillStyle = '#f00';
@@ -404,13 +412,6 @@ export class SpectrumAnalyzer {
    * @param {*} signal Object containing signal properties
    */
   drawMaxHold(ctx, color = '#ff0') {
-    if (!color) {
-      console.log(color);
-    }
-
-    // const center = ((signal.freq - this.minFreq) / (this.maxFreq - this.minFreq)) * this.width;
-    // const width = ((signal.bw / (this.maxFreq - this.minFreq)) * this.width) / 2;
-
     ctx.strokeStyle = color;
     ctx.beginPath();
     const len = this.data.length;

@@ -37,6 +37,11 @@
       "react-app/jest"
     ]
   },
+  "jest": {
+    "transform": {
+      "^.+\\.[t|j]sx?$": "babel-jest"
+    }
+  },
   "browserslist": {
     "production": [
       ">0.2%",
@@ -50,6 +55,7 @@
     ]
   },
   "devDependencies": {
+    "babel-jest": "^28.1.0",
     "eslint": "^8.13.0",
     "eslint-plugin-jest": "^26.1.4",
     "eslint-plugin-react": "^7.29.4"
