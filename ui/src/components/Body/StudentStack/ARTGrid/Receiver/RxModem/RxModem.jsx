@@ -138,7 +138,7 @@ export const RxModem = ({ unit }) => {
       tmpData[currentRow] = inputData;
       updateRxData(tmpData);
     };
-    
+
     return (
       <Box sx={sxInputBox}>
         <Box sx={sxInputRow}>
@@ -149,7 +149,7 @@ export const RxModem = ({ unit }) => {
             onChange={e =>
               handleInputChange({
                 param: 'id_antenna',
-                val: parseInt(e.target.value),
+                val: parseInt(e.target.value) || 0,
               })
             }>
             <option value={1}>1</option>
@@ -166,7 +166,7 @@ export const RxModem = ({ unit }) => {
             onChange={e =>
               handleInputChange({
                 param: 'frequency',
-                val: parseInt(e.target.value),
+                val: parseInt(e.target.value) || 0,
               })
             }></input>
           <Typography sx={sxValues}>{rxData[activeModem].frequency + ' MHz'}</Typography>
@@ -180,7 +180,7 @@ export const RxModem = ({ unit }) => {
             onChange={e =>
               handleInputChange({
                 param: 'bandwidth',
-                val: parseInt(e.target.value),
+                val: parseInt(e.target.value) || 0,
               })
             }></input>
           <Typography sx={sxValues}>{rxData[activeModem].bandwidth + ' MHz'}</Typography>
@@ -190,7 +190,7 @@ export const RxModem = ({ unit }) => {
           <select
             name='modulation'
             value={inputData.modulation}
-            onChange={e => handleInputChange({ param: 'modulation', val: e.target.value })}>
+            onChange={e => handleInputChange({ param: 'modulation', val: e.target.value || 0 })}>
             <option value='BPSK'>BPSK</option>
             <option value='QPSK'>QPSK</option>
             <option value='8QAM'>8QAM</option>
@@ -203,7 +203,7 @@ export const RxModem = ({ unit }) => {
           <select
             name='fec'
             value={inputData.fec}
-            onChange={e => handleInputChange({ param: 'fec', val: e.target.value })}>
+            onChange={e => handleInputChange({ param: 'fec', val: e.target.value || 0 })}>
             <option value='1/2'>1/2</option>
             <option value='2/3'>2/3</option>
             <option value='3/4'>3/4</option>

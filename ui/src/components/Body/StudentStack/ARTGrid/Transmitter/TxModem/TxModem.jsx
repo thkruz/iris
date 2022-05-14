@@ -160,7 +160,7 @@ export const TxModem = ({ unit }) => {
       tmpData[currentRow].targetId = antenna[tmpData[currentRow].id_antenna - 1].id_target;
       updateTxData(tmpData);
     };
-    
+
     return (
       <Box sx={sxInputBox}>
         <Box sx={sxInputRow}>
@@ -171,7 +171,7 @@ export const TxModem = ({ unit }) => {
             onChange={e =>
               handleInputChange({
                 param: 'id_antenna',
-                val: parseInt(e.target.value),
+                val: parseInt(e.target.value) || 0,
               })
             }>
             <option value={1}>1</option>
@@ -188,7 +188,7 @@ export const TxModem = ({ unit }) => {
             onChange={e =>
               handleInputChange({
                 param: 'frequency',
-                val: parseInt(e.target.value),
+                val: parseInt(e.target.value) || 0,
               })
             }></input>
           <Typography sx={sxValues}>{txData[currentRow].frequency + ' MHz'}</Typography>
@@ -202,7 +202,7 @@ export const TxModem = ({ unit }) => {
             onChange={e =>
               handleInputChange({
                 param: 'bandwidth',
-                val: parseInt(e.target.value),
+                val: parseInt(e.target.value) || 0,
               })
             }></input>
           <Typography sx={sxValues}>{txData[currentRow].bandwidth + ' MHz'}</Typography>
@@ -213,7 +213,9 @@ export const TxModem = ({ unit }) => {
             name='power'
             type='string'
             value={inputData.power}
-            onChange={e => handleInputChange({ param: 'power', val: parseInt(e.target.value) })}></input>
+            onChange={e =>
+              handleInputChange({ param: 'power', val: parseInt(e.target.value) || e.target.value === '-' ? '-' : '' })
+            }></input>
           <Typography sx={sxValues}>{`${txData[currentRow].power} dBm`}</Typography>
         </Box>
         <Box sx={sxInputRow}>
