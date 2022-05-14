@@ -50,7 +50,9 @@ export class SpectrumAnalyzer {
   start() {
     if (this.running) return;
     this.running = true;
-    this.draw();
+    setTimeout(() => {
+      this.draw();
+    }, Math.random() * 1000);
   }
 
   changeCenterFreq(freq) {

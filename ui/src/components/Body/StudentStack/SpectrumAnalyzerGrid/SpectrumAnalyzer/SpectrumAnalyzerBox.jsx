@@ -72,6 +72,17 @@ export const updateSpecAwAntennaInfo = (antenna_id, specA, antenna) => {
     specA.antennaOffset = offset * 1e6;
   }
 };
+const canvasContainer = {
+  position: 'relative',
+  border: '8px solid transparent',
+  borderImageSource: 'url(./bezel.png)',
+  borderImageSlice: '30 fill',
+  borderImageOutset: 0,
+  overflow: 'hidden',
+  boxShadow: '0px 0px 10px rgba(0,0,0,0.5)',
+  backgroundColor: '#282a2b',
+  borderRadius: '10px',
+};
 export const SpectrumAnalyzerBox = props => {
   const [specAConfig, setSpecAConfig] = useState({});
   const [specA, setSpecA] = useState({});
@@ -188,11 +199,7 @@ export const SpectrumAnalyzerBox = props => {
             <Typography>{specAConfig.minDecibels} (dB)</Typography>
           </Grid>
         </Grid>
-        <Grid
-          container
-          item
-          sx={{ border: '3px solid #000', borderRadius: '5px', boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)' }}
-          xs={9}>
+        <Grid container item sx={canvasContainer} xs={9}>
           <canvas id={props.canvasId} />
         </Grid>
         <Grid item xs={12}>
