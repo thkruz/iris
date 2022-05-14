@@ -20,12 +20,12 @@ export const Header = () => {
     <>
       <Box sx={{ flexGrow: 0 }}>
         <AppBar className={'appBar'} position='static'>
-          <Toolbar sx={{ backgroundColor: theme.palette.primary.dark }}>
+          <Toolbar sx={{ backgroundColor: theme.palette.tertiary.dark }}>
             <Link to='/'>
               <img src='/patch.png' alt='patch.png' height='80px'></img>
             </Link>
-            <Typography variant='h4' component='div' sx={{ flexGrow: 1 }}>
-              Iris Space Electronic Warfare Sandbox
+            <Typography variant='h1' component='div' sx={{ flexGrow: 1, fontFamily: 'Nasa' }}>
+              IRIS
             </Typography>
             {auth && (
               <IconButton size='large' onClick={handleLogout} color='inherit'>

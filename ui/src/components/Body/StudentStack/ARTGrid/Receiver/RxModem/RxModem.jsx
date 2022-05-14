@@ -20,9 +20,10 @@ export const RxModem = ({ unit }) => {
   // Styles
   const sxCase = {
     flexGrow: 1,
-    backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.tertiary.light2,
     borderRadius: '10px',
-    border: '1px solid black',
+    boxShadow: '0px 0px 5px rgba(0,0,0,0.5)',
+    border: '1px solid' + AstroTheme.palette.tertiary.light,
     display: 'grid',
     gridTemplateColumns: '30px 1fr 4fr 3fr 5fr',
     justifyContent: 'space-between',
@@ -34,31 +35,37 @@ export const RxModem = ({ unit }) => {
     textAlign: 'center',
   };
   const sxModemButtonBox = {
-    backgroundColor: theme.palette.primary.light,
+    backgroundColor: theme.palette.tertiary.light3,
     borderRadius: '5px',
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.2)',
   };
   const sxModemButton = {
-    backgroundColor: theme.palette.primary.light,
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
+    backgroundColor: theme.palette.primary.light2,
+    border: '2px solid ' + theme.palette.primary.main,
     color: 'black',
     margin: '8px',
     cursor: 'pointer',
+    '&:hover': {
+      backgroundColor: theme.palette.primary.light3,
+    },
   };
   const sxModemButtonActive = {
     backgroundColor: theme.palette.primary.dark,
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
+    border: '2px solid ' + theme.palette.primary.main,
     color: 'white',
     width: '1em',
     margin: '8px',
     outline: 'none',
+    '&:hover': {
+      backgroundColor: theme.palette.primary.main,
+    },
   };
   const sxValues = {
     fontWeight: 'bold',
     textDecoration: 'underline',
   };
   const sxInputBox = {
-    backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.tertiary.light2,
     margin: '8px',
     borderRadius: '4px',
     display: 'grid',
@@ -71,7 +78,7 @@ export const RxModem = ({ unit }) => {
     margin: '2px',
   };
   const sxInputApply = {
-    backgroundColor: theme.palette.primary.light,
+    backgroundColor: theme.palette.tertiary.light3,
     boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
     color: 'black',
     margin: '8px',
@@ -80,7 +87,7 @@ export const RxModem = ({ unit }) => {
   const sxVideo = {
     margin: '10px',
     border: '2px solid grey',
-    backgroundColor: theme.palette.primary.light,
+    backgroundColor: theme.palette.tertiary.light3,
     width: '200px',
     height: '200px',
     display: 'flex',
@@ -137,7 +144,7 @@ export const RxModem = ({ unit }) => {
     const handleApply = () => {
       let tmpData = [...rxData];
       tmpData[currentRow] = inputData;
-      console.log(tmpData[currentRow])
+      console.log(tmpData[currentRow]);
       updateRxData(tmpData);
       console.log('rx data is here!!', rxData);
     };
@@ -233,11 +240,10 @@ export const RxModem = ({ unit }) => {
     const antenna = useAntenna();
     const { id_target: r_tgt, band: r_band } = antenna[rxData[(unit - 1) * 4 + activeModem].id_antenna - 1];
 
-//window.sewApp.environment?.signals?.forEach(signal => {
+    //window.sewApp.environment?.signals?.forEach(signal => {
     //const { frequency: rf_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, target_id: s_tgt, feed } = signal;
-  signalData.forEach(signal => {
+    signalData.forEach(signal => {
       const { frequency: s_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, target_id: s_tgt, feed } = signal; // TODO: loop through all signals to find one that matches
-      
 
       const dc_offset = antennas[r_band - 1]?.downconvert / 1e6;
       const if_freq = s_freq - dc_offset; //rf_freq

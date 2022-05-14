@@ -54,7 +54,7 @@ export const SpectrumAnalyzerGrid = () => {
 
   return (
     <>
-      <Grid container item spacing={3} xs={12}>
+      <Grid container item spacing={1.5} xs={12}>
         <Grid item xs={6} s={6} md={6} lg={6} xl={3}>
           {
             <SpectrumAnalyzerBox

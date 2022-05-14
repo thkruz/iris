@@ -5,8 +5,8 @@ import { AstroTheme } from '../../themes/AstroTheme';
 import { Box } from '@mui/material';
 
 export const Footer = () => (
-  <Box sx={{ flexGrow: 0, backgroundColor: AstroTheme.palette.background.paper, color: 'white' }}>
-    <Toolbar sx={{ backgroundColor: AstroTheme.palette.primary.dark }}>
+  <Box sx={{ flexGrow: 0, color: 'white', boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.8)' }}>
+    <Toolbar sx={{ backgroundColor: AstroTheme.palette.tertiary.dark }}>
       <Typography>
         Authors: Askins, Gilmore, Hufstetler, Kruczek, Peters
         <br></br>

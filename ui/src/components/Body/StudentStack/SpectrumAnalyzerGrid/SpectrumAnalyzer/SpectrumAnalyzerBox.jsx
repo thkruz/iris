@@ -10,7 +10,6 @@ import PropTypes from 'prop-types';
 // MUI Stack: https://mui.com/material-ui/react-stack/
 
 const SpectrumAnalyzerBoxStyle = {
-  backgroundColor: '#005a8f',
   textAlign: 'center',
   width: '100%',
   height: '100%',
@@ -19,8 +18,9 @@ const SpectrumAnalyzerBoxStyle = {
   alignItems: 'center',
   flexDirection: 'column',
   borderRadius: '10px',
-  boxShadow: '0px 0px 10px rgba(0,0,0,0.5)',
-  border: '1px solid #005a8f',
+  boxShadow: '0px 0px 5px rgba(0,0,0,0.5)',
+  backgroundColor: AstroTheme.palette.tertiary.light2,
+  border: '1px solid' + AstroTheme.palette.tertiary.light,
   overflow: 'hidden',
   position: 'relative',
   zIndex: '1',

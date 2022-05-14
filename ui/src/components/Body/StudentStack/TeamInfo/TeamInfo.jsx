@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './TeamInfo.css';
-import Box from '@mui/material/Box';
-import { Typography } from '@mui/material';
+import { Grid, Typography } from '@mui/material';
 import { AstroTheme } from '../../../../themes/AstroTheme';
 
 export const TeamInfo = () => {
@@ -12,21 +11,31 @@ export const TeamInfo = () => {
   }, [window.sewApp.teamInfo]);
 
   return (
-    <Box
+    <Grid
+      container
+      spacing={1}
       sx={{
-        flexGrow: 1,
-        backgroundColor: AstroTheme.palette.secondary.dark,
-        display: 'flex',
+        backgroundColor: AstroTheme.palette.tertiary.main,
+        color: 'white',
+        boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.8)',
+        height: '60px',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        maxHeight: '50px',
       }}>
-      <Typography paddingLeft='30px' variant='h6' component='div'>
-        Server: Server Name
-      </Typography>
-      <Typography paddingRight='30px' variant='h6' component='div'>
-        Team: {teamInfo.team}
-      </Typography>
-    </Box>
+      <Grid item xs={4} sx={{ textAlign: 'left' }}>
+        <Typography variant='h5' paddingLeft='30px' component='div' sx={{ fontFamily: 'Nasa', paddingLeft: '10px' }}>
+          Space Electronic Warfare Sandbox
+        </Typography>
+      </Grid>
+      <Grid item xs={4} sx={{ textAlign: 'center' }}>
+        <Typography variant='h6' component='div'>
+          Team: {teamInfo.team}
+        </Typography>
+      </Grid>
+      <Grid item xs={4} sx={{ textAlign: 'right' }}>
+        <Typography paddingRight='30px' variant='h6' component='div'>
+          Server: Server Name
+        </Typography>
+      </Grid>
+    </Grid>
   );
 };

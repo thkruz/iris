@@ -15,7 +15,7 @@ export const Body = props => {
     height: '100%',
     width: '100%',
     flexGrow: 1,
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor: theme.palette.tertiary.light3,
   };
   return <Paper sx={sxBody}>{props.children}</Paper>;
 };

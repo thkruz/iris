@@ -32,9 +32,10 @@ export const AntennaController = ({ unit }) => {
   const sxAntennaCase = {
     flexGrow: 1,
     margin: 'auto',
-    backgroundColor: theme.palette.primary.main,
     borderRadius: '10px',
-    border: '1px solid black',
+    boxShadow: '0px 0px 5px rgba(0,0,0,0.5)',
+    backgroundColor: AstroTheme.palette.tertiary.light2,
+    border: '1px solid' + AstroTheme.palette.tertiary.light,
     display: 'grid',
     gridTemplateColumns: '30px 6fr 12fr',
     justifyContent: 'space-between',
@@ -50,7 +51,7 @@ export const AntennaController = ({ unit }) => {
     textDecoration: 'underline',
   };
   const sxInputBox = {
-    backgroundColor: theme.palette.primary.main,
+    backgroundColor: AstroTheme.palette.tertiary.light2,
     margin: '8px',
     borderRadius: '4px',
     display: 'grid',
@@ -63,7 +64,7 @@ export const AntennaController = ({ unit }) => {
     margin: '2px',
   };
   const sxInputApply = {
-    backgroundColor: theme.palette.primary.light,
+    backgroundColor: theme.palette.tertiary.light3,
     boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
     color: 'black',
     margin: '8px',
@@ -73,7 +74,7 @@ export const AntennaController = ({ unit }) => {
     width: '100px',
     padding: '8px',
     borderRadius: '5px',
-    backgroundColor: theme.palette.primary.light,
+    backgroundColor: theme.palette.tertiary.light3,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -87,14 +88,18 @@ export const AntennaController = ({ unit }) => {
   };
   const sxHPA = {
     marginTop: '5px',
-    backgroundColor: antennaData[unit - 1].hpa ? 'red' : theme.palette.primary.dark,
-    color: antennaData[unit - 1].hpa ? 'black' : 'white',
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
+    backgroundColor: antennaData[unit - 1].hpa ? 'red' : theme.palette.tertiary.light3,
+    color: antennaData[unit - 1].hpa ? 'white' : 'black',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
     border: '1px solid red',
+    '&:hover': {
+      backgroundColor: antennaData[unit - 1].hpa ? theme.palette.error.main : theme.palette.critical.main,
+      color: antennaData[unit - 1].hpa ? 'black' : 'white',
+    },
   };
   const sxTx = {
     backgroundColor: antennaData[unit - 1].loopback
-      ? theme.palette.primary.light
+      ? theme.palette.tertiary.light2
       : antennaData[unit - 1].hpa
       ? 'red'
       : 'green',

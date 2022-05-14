@@ -18,9 +18,10 @@ export const TxModem = ({ unit }) => {
   // Styles
   const sxCase = {
     flexGrow: 1,
-    backgroundColor: theme.palette.primary.main,
+    boxShadow: '0px 0px 5px rgba(0,0,0,0.5)',
+    backgroundColor: AstroTheme.palette.tertiary.light2,
+    border: '1px solid' + AstroTheme.palette.tertiary.light,
     borderRadius: '10px',
-    border: '1px solid black',
     display: 'grid',
     gridTemplateColumns: '30px 1fr 4fr 3fr 5fr',
     justifyContent: 'space-between',
@@ -32,38 +33,17 @@ export const TxModem = ({ unit }) => {
     textAlign: 'center',
   };
   const sxModemButtonBox = {
-    backgroundColor: theme.palette.primary.light,
+    boxShadow: '0px 0px 5px rgba(0,0,0,0.3)',
+    backgroundColor: AstroTheme.palette.tertiary.light3,
+    border: '1px solid' + AstroTheme.palette.tertiary.light,
     borderRadius: '5px',
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
   };
-  // const sxModemButton = {
-  //   backgroundColor: theme.palette.primary.light,
-  //   boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
-  //   color: 'black',
-  //   margin: '8px',
-  //   cursor: 'pointer',
-  // };
-  // const sxModemButtonActive = {
-  //   backgroundColor: theme.palette.primary.dark,
-  //   boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
-  //   color: 'white',
-  //   width: '1em',
-  //   margin: '8px',
-  //   outline: 'none',
-  // };
-  // const sxModemButtonLive = {
-  //   backgroundColor: theme.palette.primary.light,
-  //   boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
-  //   color: 'black',
-  //   margin: '8px',
-  //   cursor: 'pointer',
-  // };
   const sxValues = {
     fontWeight: 'bold',
     textDecoration: 'underline',
   };
   const sxInputBox = {
-    backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.tertiary.light2,
     margin: '8px',
     borderRadius: '4px',
     display: 'grid',
@@ -76,7 +56,7 @@ export const TxModem = ({ unit }) => {
     margin: '2px',
   };
   const sxInputApply = {
-    backgroundColor: theme.palette.primary.light,
+    backgroundColor: theme.palette.tertiary.light3,
     boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
     color: 'black',
     margin: '8px',
@@ -85,10 +65,16 @@ export const TxModem = ({ unit }) => {
   const sxTransmit = {
     cursor: 'pointer',
     margin: '8px',
-    backgroundColor: txData[(unit - 1) * 4 + activeModem].transmitting ? 'red' : theme.palette.primary.dark,
-    color: txData[(unit - 1) * 4 + activeModem].transmitting ? 'black' : 'white',
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
     border: '1px solid red',
+    backgroundColor: txData[(unit - 1) * 4 + activeModem].transmitting ? 'red' : theme.palette.tertiary.light3,
+    color: txData[(unit - 1) * 4 + activeModem].transmitting ? 'white' : 'black',
+    '&:hover': {
+      backgroundColor: txData[(unit - 1) * 4 + activeModem].transmitting
+        ? theme.palette.error.main
+        : theme.palette.critical.main,
+      color: txData[(unit - 1) * 4 + activeModem].transmitting ? 'black' : 'white',
+    },
   };
 
   // Modem Case Id
@@ -118,13 +104,15 @@ export const TxModem = ({ unit }) => {
   const TxModemButton = ({ modem, transmitting }) => (
     <Button
       sx={{
-        backgroundColor: modem - 1 == activeModem ? theme.palette.primary.dark : theme.palette.primary.light,
-        boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
-        color: 'white',
+        backgroundColor: modem - 1 == activeModem ? theme.palette.primary.dark : theme.palette.primary.light2,
+        border: transmitting ? '2px solid red' : '2px solid ' + theme.palette.primary.main,
+        color: modem - 1 == activeModem ? 'white' : 'black',
         width: '1em',
         margin: '8px',
         outline: 'none',
-        border: `1px solid ${transmitting ? 'red' : 'rgba(0,0,0,0)'}`,
+        '&:hover': {
+          backgroundColor: modem - 1 == activeModem ? theme.palette.primary.main : theme.palette.primary.light,
+        },
       }}
       onClick={e => {
         setActiveModem(parseInt(e.target.innerText) - 1);
