@@ -7,6 +7,7 @@ import './index.css';
 import './sewApp';
 
 window.sewApp.init();
+document.addEventListener('contextmenu', event => event.preventDefault());
 
 ReactDOM.render(
   <React.StrictMode>

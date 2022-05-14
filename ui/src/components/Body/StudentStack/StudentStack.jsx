@@ -3,8 +3,6 @@ import { ARTGrid, SpectrumAnalyzerGrid, TeamInfo } from '../../';
 import { Grid } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-// MUI Stack: https://mui.com/material-ui/react-stack/
-
 export const StudentStack = () => {
   const { state } = useLocation();
   const navigate = useNavigate();

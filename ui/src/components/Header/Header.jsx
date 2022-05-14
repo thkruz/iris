@@ -18,7 +18,7 @@ export const Header = () => {
   };
   return (
     <>
-      <Box sx={{ flexGrow: 1 }}>
+      <Box sx={{ flexGrow: 0 }}>
         <AppBar className={'appBar'} position='static'>
           <Toolbar sx={{ backgroundColor: theme.palette.primary.dark }}>
             <Link to='/'>

@@ -32,6 +32,11 @@ export default function Login() {
       onSubmit={handleSubmit}
       bgcolor='background.paper'
       sx={{
+        margin: 'auto',
+        borderRadius: '5px',
+        padding: '20px',
+        maxWidth: '500px',
+        boxShadow: '0px 0px 30px rgba(0, 0, 0, 0.2)',
         '& > :not(style)': { m: 1, width: '25ch' },
       }}
       novalidate
