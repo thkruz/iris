@@ -55,6 +55,7 @@ export const AnalyzerControl = props => {
   const [mhz, setMhz] = useState(null);
   const [khz, setKhz] = useState(null);
   const [isTraceOn, setIsTraceOn] = useState(false);
+  const [isMarkerOn, setIsMarkerOn] = useState(false);
   const [controlSelection, setControlSelection] = useState(null);
   const [numberSelection, setNumberSelection] = useState(null);
 
@@ -72,13 +73,19 @@ export const AnalyzerControl = props => {
     setControlSelection('freq');
   }, []);
 
-  // Used for holding max frequency
-  const handleTrackClick = () => {
+  // Used for holding max amplitude
+  const handleHoldClick = () => {
     if (typeof props.currentSpecAnalyzer.resetHoldData !== 'undefined') {
       props.currentSpecAnalyzer.resetHoldData();
       props.currentSpecAnalyzer.isDrawHold = !props.currentSpecAnalyzer.isDrawHold;
       setIsTraceOn(props.currentSpecAnalyzer.isDrawHold);
     }
+  };
+
+  // Used for marking max amplitude
+  const handleMarkerClick = () => {
+    props.currentSpecAnalyzer.isDrawMarker = !props.currentSpecAnalyzer.isDrawMarker;
+    setIsMarkerOn(props.currentSpecAnalyzer.isDrawMarker);
   };
 
   // Used for modifying the center frequency value
@@ -324,12 +331,17 @@ export const AnalyzerControl = props => {
                   ...yellowButtonStyle,
                   ...{ background: isTraceOn ? AstroTheme.palette.critical.main : AstroTheme.palette.warning.main },
                 }}
-                onClick={handleTrackClick}>
+                onClick={handleHoldClick}>
                 <h2>Trace</h2>
               </Button>
             </Grid>
             <Grid item xs={12}>
-              <Button sx={yellowButtonStyle}>
+              <Button
+                sx={{
+                  ...yellowButtonStyle,
+                  ...{ background: isMarkerOn ? AstroTheme.palette.critical.main : AstroTheme.palette.warning.main },
+                }}
+                onClick={handleMarkerClick}>
                 <h2>Marker</h2>
               </Button>
             </Grid>

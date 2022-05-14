@@ -97,7 +97,7 @@ export const SpectrumAnalyzerBox = props => {
       maxDecibels: -20,
       minFreq: 4650000000,
       maxFreq: 4750000000,
-      refreshRate: 5, // per second
+      refreshRate: 2, // per second
       noiseFloor: -115,
       isShowSignals: false,
     };
@@ -165,6 +165,11 @@ export const SpectrumAnalyzerBox = props => {
     const _specA = window.sewApp[`specA${specA.canvas.id.split('A')[1]}`];
     console.log(_specA.changeCenterFreq);
     _specA.isRfMode = !isRfMode;
+    if (_specA.isRfMode) {
+      _specA.noiseFloor -= _specA.noiseFloor * 0.05;
+    } else {
+      _specA.noiseFloor += _specA.noiseFloor * 0.05;
+    }
     props.handleRfClick(_specA);
   };
 

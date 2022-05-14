@@ -33,6 +33,8 @@ export class SpectrumAnalyzer {
     this.lock = true;
     this.operational = true;
     this.isRfMode = false;
+    this.isDrawMarker = false;
+    this.isDrawHold = false;
     this.resize(this.canvas.parentElement.offsetWidth - 6, this.canvas.parentElement.offsetWidth - 6);
 
     window.addEventListener('resize', () => {
@@ -284,7 +286,7 @@ export class SpectrumAnalyzer {
   }
 
   drawGridOverlay(ctx) {
-    ctx.globalAlpha = 0.2;
+    ctx.globalAlpha = 0.1;
     ctx.fillStyle = 'white';
     for (let x = 0; x < this.width; x += this.width / 10) {
       ctx.fillRect(x, 0, 1, this.height);
@@ -349,12 +351,20 @@ export class SpectrumAnalyzer {
 
     this.data = this.createSignal(this.data, center, signal.amp, inBandWidth, outOfBandWidth);
 
+    let maxX = 0;
+    let maxY = 1;
+    let maxSignalFreq = 0;
+
     ctx.strokeStyle = color;
     ctx.beginPath();
     const len = this.data.length;
     for (let x = 0; x < len; x++) {
       const lowestSignal = this.data[x] >= this.noiseData[x] ? this.data[x] : 0;
       const y = (lowestSignal - this.maxDecibels - this.decibelShift) / this.range;
+      maxSignalFreq = y < maxY ? lowestSignal : maxSignalFreq;
+      maxX = y < maxY ? x : maxX;
+      maxY = y < maxY ? y : maxY;
+
       if (x === 0) {
         ctx.moveTo(x, this.height * y);
       } else {
@@ -362,6 +372,29 @@ export class SpectrumAnalyzer {
       }
     }
     ctx.stroke();
+
+    // Draw Diamond Marker
+    if (maxX > 0 && this.isDrawMarker) {
+      maxY -= 0.025;
+      ctx.beginPath();
+      ctx.fillStyle = '#f00';
+      ctx.moveTo(maxX, this.height * maxY);
+      ctx.lineTo(maxX - 5, this.height * maxY - 5);
+      ctx.lineTo(maxX, this.height * maxY - 10);
+      ctx.lineTo(maxX + 5, this.height * maxY - 5);
+      ctx.lineTo(maxX, this.height * maxY);
+      ctx.fill();
+
+      // Write Frequency Label
+      ctx.fillStyle = '#fff';
+      ctx.font = '10px Arial';
+      ctx.fillText(
+        `${((this.minFreq + (maxX * (this.maxFreq - this.minFreq)) / this.width) / 1e6).toFixed(1)} Mhz`,
+        maxX - 20,
+        this.height * maxY - 30
+      );
+      ctx.fillText(`${(maxSignalFreq + this.minDecibels).toFixed(1)} dB`, maxX - 20, this.height * maxY - 20);
+    }
   }
 
   /**
