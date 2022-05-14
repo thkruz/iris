@@ -12,7 +12,7 @@ function App() {
         <Header />
         <Body>
           <Routes>
-            <Route path='/' element={<StudentStack />} />
+            <Route path='/' element={<Login />} />
             <Route path='login' element={<Login />} />
             <Route path='/student' element={<StudentStack />} />
             <Route path='/instructor' element={<InstructorStack />} />
