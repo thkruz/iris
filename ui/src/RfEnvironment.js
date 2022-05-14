@@ -18,15 +18,15 @@ export class RfEnvironment {
   updateSignals(update) {
     console.log(this.signals);
 
-    // Purge all signals that are from this user
+    // Purge all signals that are from this team
     this.signals = this.signals.filter(signal => {
-      return signal.user !== update.user;
+      return signal.team !== update.team;
     });
 
     // Add the new signals
     update.signals.forEach(signal => {
       if (signal.transmitting) {
-        this.signals.push({ ...{ user: update.user }, ...signal });
+        this.signals.push({ ...{ team: update.team }, ...signal });
       }
     });
 

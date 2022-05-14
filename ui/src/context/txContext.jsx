@@ -177,11 +177,11 @@ export const useUpdateTx = () => {
 export const TxProvider = ({ children }) => {
   const [tx, setTx] = useState(defaultTxContext);
 
-  window.sewApp.socket.on('updateTxClient', (data) => {
+  window.sewApp.socket.on('updateTxClient', data => {
     console.log('updateTxClient', data);
     if (data.user != window.sewApp.socket.id) {
-        console.log('actually updating the Tx');
-        setTx(data.signals);
+      console.log('actually updating the Tx');
+      setTx(data.signals);
     }
   });
 
@@ -189,7 +189,7 @@ export const TxProvider = ({ children }) => {
     console.log('updateTx');
     //  patch request to update database
     // if patch request is good
-    window.sewApp.socket.emit('updateTx', { user: window.sewApp.socket.id, signals: update });
+    window.sewApp.socket.emit('updateTx', { team: window.sewApp.teamInfo?.team || '', signals: update });
     setTx(update);
   };
 

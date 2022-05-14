@@ -39,11 +39,11 @@ const sewApp = {
         for (let i = 1; i <= 4; i++) {
           const specA = window.sewApp.getSpectrumAnalyzer(i);
           specA.signals = specA.signals.filter(signal => {
-            return signal.user !== update.user;
+            return signal.team !== update.team;
           });
           window.sewApp.environment.signals.forEach(signal => {
             specA.signals.push({
-              user: update.user,
+              team: update.team,
               freq: signal.frequency * 1e6,
               amp: signal.power,
               bw: signal.bandwidth * 1e6,
