@@ -6,7 +6,7 @@ const testSignal = {
   maxFreq: 0,
   minFreq: 0,
 };
-describe('placeholder', () => {
+describe('spectrumAnalyzer', () => {
   let spectrumAnalyzer;
   beforeEach(() => {
     spectrumAnalyzer = new SpectrumAnalyzer({

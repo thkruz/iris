@@ -1,5 +1,10 @@
-describe('placeholder', () => {
-  it('placeholder', () => {
-    expect(true).toBe(true);
+import React from 'react';
+import { render } from '@testing-library/react';
+import { Footer } from './Footer';
+
+describe('Footer', () => {
+  it('should render', () => {
+    const result = render(<Footer />);
+    expect(() => result).not.toThrow();
   });
 });

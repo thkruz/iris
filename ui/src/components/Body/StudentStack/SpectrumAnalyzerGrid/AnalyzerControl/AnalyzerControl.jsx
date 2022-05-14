@@ -50,7 +50,6 @@ const yellowButtonStyle = {
   margin: 'auto',
 };
 export const AnalyzerControl = props => {
-  console.log(props.currentSpecAnalyzer.changeCenterFreq);
   const [ghz, setGhz] = useState(null);
   const [mhz, setMhz] = useState(null);
   const [khz, setKhz] = useState(null);
@@ -240,9 +239,9 @@ export const AnalyzerControl = props => {
                       item
                       xs={6}
                       sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                      <h2>{ghz}</h2>
-                      <h2>{mhz}</h2>
-                      <h2>{khz}</h2>
+                      <h2>{ghz ? ghz.toString() : '0'}</h2>
+                      <h2>{mhz ? mhz.toString() : '0'}</h2>
+                      <h2>{khz ? khz.toString() : '0'}</h2>
                     </Grid>
                     <Grid
                       item
