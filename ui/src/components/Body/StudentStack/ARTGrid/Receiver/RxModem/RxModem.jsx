@@ -5,7 +5,7 @@ import { Box, Button, Typography } from '@mui/material';
 import './RxModem.css';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
 import { useAntenna, useRx, useUpdateRx, useSignal } from '../../../../../../context';
-import { antennas } from './../../../../../../antennas';
+import { antennas } from './../../../../../../constants';
 
 export const RxModem = ({ unit }) => {
   //TODO: modem buttons, update state, video,

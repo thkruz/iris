@@ -195,7 +195,9 @@ export const RxProvider = ({ children }) => {
 
     return (
         <rxContext.Provider value={rx}>
-            <updateRxContext.Provider value={updateRx}>{children}</updateRxContext.Provider>
+            <updateRxContext.Provider value={updateRx}>
+                {children}
+            </updateRxContext.Provider>
         </rxContext.Provider>
     );
 };

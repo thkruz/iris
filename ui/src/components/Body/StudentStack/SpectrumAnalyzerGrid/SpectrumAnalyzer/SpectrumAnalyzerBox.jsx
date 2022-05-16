@@ -3,7 +3,7 @@ import { SpectrumAnalyzer } from '../../../../';
 import React, { useLayoutEffect, useState } from 'react';
 import { AstroTheme } from '../../../../../themes/AstroTheme.js';
 import { useEffect } from 'react';
-import { targets } from '../../../../../targets';
+import { satellites } from '../../../../../constants';
 import { useAntenna } from './../../../../../context';
 import PropTypes from 'prop-types';
 
@@ -66,7 +66,7 @@ export const updateSpecAwAntennaInfo = (antenna_id, specA, antenna) => {
   specA.upconvertOffset = bandOffset.upconvert;
   if (!loopback) {
     // RF Settings
-    specA.targetOffset = targets.filter(target => target.id === id_target)[0].offset;
+    specA.targetOffset = satellites.filter(target => target.id === id_target)[0].offset;
   } else {
     // IF Settings
     specA.antennaOffset = offset * 1e6;
