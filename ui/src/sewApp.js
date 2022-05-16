@@ -1,15 +1,12 @@
 import { RfEnvironment } from './RfEnvironment';
-// eslint-disable-next-line no-unused-vars
 import { io, Socket } from 'socket.io-client';
 import { satellites, antennas, teams } from './constants';
-//import { useUpdateTx } from './context';
 
 // Create a sync global context for the RF Environments
 const sewApp = {
   teamInfo: {
     team: 'Persephone',
   },
-  //updateTxData: useUpdateTx(),
   init: () => {
     window.sewApp.socketInit(window.sewApp.socket);
   },

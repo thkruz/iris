@@ -202,7 +202,7 @@ export const TxModem = ({ unit }) => {
             type='string'
             value={inputData.power}
             onChange={e =>
-              handleInputChange({ param: 'power', val: parseInt(e.target.value) || e.target.value === '-' ? '-' : '' })
+              handleInputChange({ param: 'power', val: parseInt(e.target.value)})
             }></input>
           <Typography sx={sxValues}>{`${txData[currentRow].power} dBm`}</Typography>
         </Box>
