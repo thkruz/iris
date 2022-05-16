@@ -115,7 +115,7 @@ export const RxModem = ({ unit }) => {
   const RxModemButtonBox = () => (
     <Box sx={sxModemButtonBox}>
       {rxData.map((x, index) => {
-        if (x.unit == unit) return <RxModemButton key={index} modem={x.modem} />;
+        if (x.unit == unit) return <RxModemButton key={index} modem={x.number} />;
       })}
     </Box>
   );
@@ -142,11 +142,7 @@ export const RxModem = ({ unit }) => {
     };
 
     const handleApply = () => {
-      let tmpData = [...rxData];
-      tmpData[currentRow] = inputData;
-      console.log(tmpData[currentRow]);
-      updateRxData(tmpData);
-      console.log('rx data is here!!', rxData);
+      updateRxData(inputData, currentRow);
     };
 
     return (
