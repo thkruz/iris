@@ -231,14 +231,16 @@ export const RxModem = ({ unit }) => {
   const RxVideo = () => {
     let matchFound = false;
     let vidFeed = '';
+    const currentRow = (unit - 1) * 4 + activeModem;
 
-    const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = rxData[(unit - 1) * 4 + activeModem];
+    const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = rxData[currentRow];
     const antenna = useAntenna();
-    const { id_target: r_tgt, band: r_band } = antenna[rxData[(unit - 1) * 4 + activeModem].id_antenna - 1];
+    const { target_id: r_tgt, band: r_band } = antenna[rxData[currentRow].antenna_id - 1];
 
     //window.sewApp.environment?.signals?.forEach(signal => {
     //const { frequency: rf_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, target_id: s_tgt, feed } = signal;
     signalData.forEach(signal => {
+      console.log(signal)
       const { frequency: s_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, target_id: s_tgt, feed } = signal; // TODO: loop through all signals to find one that matches
 
       const dc_offset = antennas[r_band - 1]?.downconvert / 1e6;
@@ -255,8 +257,8 @@ export const RxModem = ({ unit }) => {
         r_rb >= s_rb && // receiver right bound is within tolerance
         r_rb <= s_frb &&
         r_mod === s_mod && // receiver modulation schema matches
-        r_fec === s_fec &&
-        r_tgt === s_tgt; // reciever fec rate matches
+        r_fec === s_fec && // reciever fec rate matches
+        r_tgt === s_tgt; // satellites match
 
       if (rxMatch) {
         vidFeed = degraded ? `degraded_${feed}` : feed;

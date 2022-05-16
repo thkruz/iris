@@ -229,15 +229,14 @@ export const RxProvider = ({ children }) => {
         console.log('updateRxClient', data);
         if (data.user != window.sewApp.socket.id) {
             console.log('actually updating the Rx');
-            let tmpUpdate = rx;
+            let tmpUpdate = [...rx];
             tmpUpdate[data.index] = data.update;
             setRx(tmpUpdate);
         }
     });
 
     const updateRx = (update, index) => {
-        console.log('updateRx', update);
-        let tmpUpdate = rx;
+        let tmpUpdate = [...rx];
         tmpUpdate[index] = update;
         // patch request to update database
         // if patch request is good
