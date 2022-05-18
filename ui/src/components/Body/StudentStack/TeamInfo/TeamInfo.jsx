@@ -2,13 +2,29 @@ import React, { useState, useEffect } from 'react';
 import './TeamInfo.css';
 import { Grid, Typography } from '@mui/material';
 import { AstroTheme } from '../../../../themes/AstroTheme';
+import { useSewApp } from '../../../../context';
+import { useUpdateSewApp } from '../../../../context';
 
 export const TeamInfo = () => {
   const [teamInfo, setTeamInfo] = useState({ team: '', members: [] });
+  const sewApp = useSewApp();
+  const updateSewApp = useUpdateSewApp();
+  let checkForConnection = null;
 
   useEffect(() => {
-    setTeamInfo(window.sewApp.teamInfo);
-  }, [window.sewApp.teamInfo]);
+    setTeamInfo(sewApp.teamInfo);
+  }, [sewApp]);
+
+  useEffect(() => {
+    updateSewApp();
+    checkForConnection = setInterval(() => {
+      updateSewApp();
+      if (window.sewApp.teamInfo.server === 'Connected') {
+        setTeamInfo(sewApp.teamInfo);
+        clearTimeout(checkForConnection);
+      }
+    }, 1000);
+  }, [sewApp]);
 
   return (
     <Grid
@@ -28,12 +44,12 @@ export const TeamInfo = () => {
       </Grid>
       <Grid item xs={4} sx={{ textAlign: 'center' }}>
         <Typography variant='h6' component='div'>
-          Team: {teamInfo.team}
+          Team: {teamInfo?.team || 'None'}
         </Typography>
       </Grid>
       <Grid item xs={4} sx={{ textAlign: 'right' }}>
         <Typography paddingRight='30px' variant='h6' component='div'>
-          Server: Server Name
+          Server: {teamInfo?.server || 'Disconnected'}
         </Typography>
       </Grid>
     </Grid>

@@ -45,7 +45,7 @@ const configButtonStyle = {
   margin: '8px',
   cursor: 'pointer',
   '&:hover': {
-    backgroundColor: AstroTheme.palette.warning.Lighten2,
+    backgroundColor: AstroTheme.palette.serious.main,
   },
 };
 
@@ -87,6 +87,7 @@ export const SpectrumAnalyzerBox = props => {
   const [specAConfig, setSpecAConfig] = useState({});
   const [specA, setSpecA] = useState({});
   const [isRfMode, setIsRfMode] = useState(false);
+  const [isPause, setIsPause] = useState(false);
   const antenna = useAntenna();
 
   useEffect(() => {
@@ -184,6 +185,15 @@ export const SpectrumAnalyzerBox = props => {
     props.handleRfClick(_specA);
   };
 
+  const handlePauseClicked = () => {
+    specA.isPause = !specA.isPause;
+    setSpecA(specA);
+    setIsPause(!isPause);
+    const _specA = window.sewApp[`specA${specA.canvas.id.split('A')[1]}`];
+    _specA.isPause = !isPause;
+    props.handlePauseClicked(_specA);
+  };
+
   // setSpectrumAnalyzer(specA);
   return (
     <Box sx={SpectrumAnalyzerBoxStyle}>
@@ -205,7 +215,7 @@ export const SpectrumAnalyzerBox = props => {
         <Grid item xs={12}>
           <Typography>CF: {specAConfig.centerFreq} MHz</Typography>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={3}>
           <Box sx={sxInputRow}>
             <label htmlFor='Antenna'>Ant</label>
             <select
@@ -217,16 +227,29 @@ export const SpectrumAnalyzerBox = props => {
             </select>
           </Box>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={3}>
           <Button sx={configButtonStyle} onClick={() => props.handleConfigClick(specA, setSpecAConfig)}>
             Config
           </Button>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={3}>
           <Button
-            sx={{ ...configButtonStyle, ...{ backgroundColor: isRfMode ? 'red' : 'yellow' } }}
+            sx={{
+              ...configButtonStyle,
+              ...{ backgroundColor: isRfMode ? 'red' : 'yellow', color: isRfMode ? 'white' : 'black' },
+            }}
             onClick={handleRfClicked}>
             {isRfMode ? 'RF' : 'IF'}
+          </Button>
+        </Grid>
+        <Grid item xs={3}>
+          <Button
+            sx={{
+              ...configButtonStyle,
+              ...{ backgroundColor: isPause ? 'red' : 'yellow', color: isPause ? 'white' : 'black' },
+            }}
+            onClick={handlePauseClicked}>
+            {isPause ? 'Unpause' : 'Pause'}
           </Button>
         </Grid>
       </Grid>
@@ -238,4 +261,5 @@ SpectrumAnalyzerBox.propTypes = {
   canvasId: PropTypes.any,
   handleConfigClick: PropTypes.any,
   handleRfClick: PropTypes.any,
+  handlePauseClicked: PropTypes.any,
 };

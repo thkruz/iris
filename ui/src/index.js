@@ -1,25 +1,23 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './App';
-import { AntennaProvider, RxProvider, TxProvider, SignalProvider } from './context';
+import { AntennaProvider, RxProvider, TxProvider, SignalProvider, SewAppProvider } from './context';
 import reportWebVitals from './reportWebVitals';
 import './index.css';
-import './sewApp';
-
-window.sewApp.init();
-document.addEventListener('contextmenu', event => event.preventDefault());
 
 ReactDOM.render(
   <React.StrictMode>
-    <SignalProvider>
-      <AntennaProvider>
-        <RxProvider>
-          <TxProvider>
-            <App />
-          </TxProvider>
-        </RxProvider>
-      </AntennaProvider>
-    </SignalProvider>
+    <SewAppProvider>
+      <SignalProvider>
+        <AntennaProvider>
+          <RxProvider>
+            <TxProvider>
+              <App />
+            </TxProvider>
+          </RxProvider>
+        </AntennaProvider>
+      </SignalProvider>
+    </SewAppProvider>
   </React.StrictMode>,
   document.getElementById('root')
 );

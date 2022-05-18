@@ -1,8 +1,10 @@
-import { RfEnvironment } from './RfEnvironment';
+import React, { useContext, useState } from 'react';
+import PropTypes from 'prop-types';
+import { RfEnvironment } from '../RfEnvironment';
 // eslint-disable-next-line no-unused-vars
 import { io, Socket } from 'socket.io-client';
-import { targets } from './targets';
-import { antennas } from './antennas';
+import { antennas } from '../antennas';
+import { targets } from '../targets';
 
 // Create a sync global context for the RF Environments
 const sewApp = {
@@ -25,9 +27,6 @@ const sewApp = {
    *
    * @param {Socket} socket
    */
-
-  // watch window.sewApp.environment variable with useUpdateSignals
-
   socketInit: socket => {
     socket.on('connect', () => {
       console.log('Connected to the server');
@@ -35,7 +34,6 @@ const sewApp = {
         team: 'blue',
         server: 'Connected',
       };
-
       socket.emit('updateTeam', { team: sewApp.team });
 
       socket.on('updateSignals', update => {
@@ -71,6 +69,39 @@ const sewApp = {
     if (i === 3) return window.sewApp.specA3;
     if (i === 4) return window.sewApp.specA4;
   },
+};
+
+/**
+ * ===============================
+ * Context Code
+ * ===============================
+ */
+const sewAppContext = React.createContext();
+const updateSewAppContext = React.createContext();
+
+export const useSewApp = () => {
+  return useContext(sewAppContext);
+};
+
+export const useUpdateSewApp = () => {
+  return useContext(updateSewAppContext);
+};
+
+export const SewAppProvider = ({ children }) => {
+  const [sewApp, setSewApp] = useState({});
+  const updateSewApp = () => {
+    setSewApp(window.sewApp);
+  };
+
+  return (
+    <sewAppContext.Provider value={sewApp}>
+      <updateSewAppContext.Provider value={updateSewApp}>{children}</updateSewAppContext.Provider>
+    </sewAppContext.Provider>
+  );
+};
+
+SewAppProvider.propTypes = {
+  children: PropTypes.any,
 };
 
 window.sewApp = sewApp;

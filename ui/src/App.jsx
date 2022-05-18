@@ -3,8 +3,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { StudentStack, InstructorStack, Body, Header, Footer } from './components';
 import Login from './components/Login/Login';
 
-// const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
-
 const App = () => {
   return (
     <Router>

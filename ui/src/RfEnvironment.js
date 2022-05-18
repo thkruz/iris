@@ -7,6 +7,30 @@ export class RfEnvironment {
     this.signals = signals;
   }
 
+  setTargets(targets) {
+    this.targets = targets;
+  }
+
+  setTeams(teams) {
+    this.teams = teams;
+  }
+
+  setAntennas(antennas) {
+    this.antennas = antennas;
+  }
+
+  setSpecAs(specAs) {
+    this.specAs = specAs;
+  }
+
+  setTransmitters(transmitters) {
+    this.transmitters = transmitters;
+  }
+
+  setReceivers(receivers) {
+    this.receivers = receivers;
+  }
+
   addSignal(signal) {
     this.signals.push(signal);
   }
