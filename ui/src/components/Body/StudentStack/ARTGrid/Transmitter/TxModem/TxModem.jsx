@@ -10,6 +10,7 @@ import { useAntenna } from './../../../../../../context/antennaContext';
 export const TxModem = ({ unit }) => {
   const txData = useTx();
   const updateTxData = useUpdateTx();
+  const powerBudget = 23886; // Decided by SEW team
 
   //TODO: modem buttons, update state, video,
   const theme = AstroTheme;
@@ -126,6 +127,7 @@ export const TxModem = ({ unit }) => {
   const TxModemInput = () => {
     const currentRow = (unit - 1) * 4 + activeModem;
     const [inputData, setInputData] = useState(txData[currentRow]);
+    const [modemPower, setModemPower] = useState(inputData.bandwidth * Math.pow(10, (120+inputData.power)/10))
 
     const antenna = useAntenna();
 
@@ -134,17 +136,17 @@ export const TxModem = ({ unit }) => {
       tmpData[param] = val;
       setInputData(tmpData);
     };
-
+    
     const handleApply = () => {
       let tmpData = [...txData];
       tmpData[currentRow] = inputData;
       updateTxData(tmpData);
+      setModemPower(inputData.bandwidth * Math.pow(10, (120+inputData.power)/10))
     };
 
     const handleTransmit = () => {
       let tmpData = [...txData];
       tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
-      // Add a Target
       tmpData[currentRow].target_id = antenna[tmpData[currentRow].antenna_id - 1].target_id;
       updateTxData(tmpData);
     };
@@ -205,7 +207,7 @@ export const TxModem = ({ unit }) => {
           <Typography sx={sxValues}>{`${txData[currentRow].power} dBm`}</Typography>
         </Box>
         <Box sx={sxInputRow}>
-          <div></div>
+          <Typography>Power Consumed: {Math.round(100 * modemPower / powerBudget)}%</Typography>
           <Button sx={sxInputApply} onClick={e => handleApply(e)}>
             Apply
           </Button>
