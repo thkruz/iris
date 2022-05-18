@@ -6,14 +6,14 @@ import CellTowerIcon from '@mui/icons-material/CellTower';
 import AlignHorizontalCenterIcon from '@mui/icons-material/AlignHorizontalCenter';
 import { AstroTheme } from '../../../../../themes/AstroTheme';
 import { useAntenna, useUpdateAntenna } from '../../../../../context';
-import { antennas, satellites } from '../../../../../constants'
+import { antennas, satellites } from '../../../../../constants';
 import './Antenna.css';
 
 export const AntennaController = ({ unit }) => {
   const theme = AstroTheme;
   const antennaData = useAntenna();
   const setAntennaData = useUpdateAntenna();
-  
+
   // Styles
   const sxAntennaCase = {
     flexGrow: 1,
@@ -113,8 +113,18 @@ export const AntennaController = ({ unit }) => {
   const AntennaInput = () => {
     const [inputData, setInputData] = useState(antennaData[unit - 1]);
     const handleInputChange = ({ param, val }) => {
+      if (param === 'offset') {
+        // if contains any symbols except - and number then return
+        if (val.match(/[^0-9-]/g)) return;
+        if (!isNaN(parseInt(val))) {
+          val = parseInt(val);
+        }
+      } else {
+        val = parseInt(val);
+      }
+
       const tmpInputData = { ...inputData };
-      tmpInputData[param] = parseInt(val);
+      tmpInputData[param] = val;
       setInputData(tmpInputData);
     };
     const handleApply = () => {
@@ -163,7 +173,7 @@ export const AntennaController = ({ unit }) => {
             type='text'
             value={inputData.offset}
             onChange={e => {
-              handleInputChange({ param: 'offset', val: parseInt(e.target.value) });
+              handleInputChange({ param: 'offset', val: e.target.value });
             }}></input>
           <Typography sx={sxValues}>{antennaData[unit - 1].offset + ' MHz'}</Typography>
         </Box>

@@ -70,7 +70,7 @@ const sewApp = {
     if (i === 4) return window.sewApp.specA4;
   },
   announceSpecAChange: i => {
-    const specA = sewApp.getSpectrumAnalyzer(i);
+    const specA = window.sewApp.getSpectrumAnalyzer(i);
     const patchData = {
       id: specA.isRfMode ? specA.config.rf.id : specA.config.if.id,
       server_id: 1,
@@ -83,7 +83,7 @@ const sewApp = {
       marker1freq: 1240,
       marker2freq: 1260,
       trace: specA.isDrawHold,
-      rf: false,
+      rf: specA.isRfMode ? true : false,
       antenna_id: specA.antenna_id,
     };
     console.log('announceSpecAChange', sewApp.socket.id);
