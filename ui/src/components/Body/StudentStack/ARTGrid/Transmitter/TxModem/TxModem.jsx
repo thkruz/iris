@@ -16,7 +16,7 @@ export const TxModem = ({ unit }) => {
   const [activeModem, setActiveModem] = useState(0);
 
   // Styles
-  const sxCase = { 
+  const sxCase = {
     flexGrow: 1,
     boxShadow: '0px 0px 5px rgba(0,0,0,0.5)',
     backgroundColor: AstroTheme.palette.tertiary.light2,
@@ -145,7 +145,7 @@ export const TxModem = ({ unit }) => {
       let tmpData = [...txData];
       tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
       // Add a Target
-      tmpData[currentRow].targetId = antenna[tmpData[currentRow].antenna_id - 1].id_target;
+      tmpData[currentRow].target_id = antenna[tmpData[currentRow].antenna_id - 1].target_id;
       updateTxData(tmpData);
     };
 
@@ -201,9 +201,7 @@ export const TxModem = ({ unit }) => {
             name='power'
             type='string'
             value={inputData.power}
-            onChange={e =>
-              handleInputChange({ param: 'power', val: parseInt(e.target.value)})
-            }></input>
+            onChange={e => handleInputChange({ param: 'power', val: parseInt(e.target.value) })}></input>
           <Typography sx={sxValues}>{`${txData[currentRow].power} dBm`}</Typography>
         </Box>
         <Box sx={sxInputRow}>

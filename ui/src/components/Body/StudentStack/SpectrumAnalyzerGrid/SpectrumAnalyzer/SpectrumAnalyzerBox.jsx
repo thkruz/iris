@@ -51,10 +51,10 @@ const configButtonStyle = {
 };
 
 export const updateSpecAwAntennaInfo = (antenna_id, specA, antenna) => {
-  specA.antennaId = antenna_id;
-  let { band, hpa, target_id, lock, loopback, offset, operational } = antenna[specA.antennaId - 1];
-  specA.targetId = target_id;
-  console.log('updateSpecAwAntennaInfo', specA.antennaId, specA.targetId);
+  specA.antenna_id = antenna_id;
+  let { band, hpa, target_id, lock, loopback, offset, operational } = antenna[specA.antenna_id - 1];
+  specA.target_id = target_id;
+  console.log('updateSpecAwAntennaInfo', specA.antenna_id, specA.target_id);
 
   specA.hpa = hpa;
   specA.loopback = loopback;
@@ -141,7 +141,7 @@ export const SpectrumAnalyzerBox = props => {
         };
 
         const { id_target } = antenna[1];
-        specA.targetId = id_target;
+        specA.target_id = id_target;
 
         specA.changeCenterFreq(specA.isRfMode ? specA.config.rf.freq : specA.config.if.freq);
         specA.changeBandwidth(specA.isRfMode ? specA.config.rf.span : specA.config.if.span);
@@ -168,10 +168,10 @@ export const SpectrumAnalyzerBox = props => {
   }, []);
 
   useEffect(() => {
-    if (!specA.antennaId) return;
-    const { id_target } = antenna[specA.antennaId - 1];
-    specA.targetId = id_target;
-  }, [antenna]);
+    if (!specA.antenna_id) return;
+    const { target_id } = antenna[specA.antenna_id - 1];
+    specA.target_id = target_id;
+  }, [antenna, specA]);
 
   const handleRfClicked = () => {
     specA.isRfMode = !specA.isRfMode;

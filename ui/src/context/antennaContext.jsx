@@ -55,7 +55,7 @@ export const AntennaProvider = ({ children }) => {
   const updateAntenna = update => {
     for (let i = 1; i <= 4; i++) {
       const specA = window.sewApp.getSpectrumAnalyzer(i);
-      updateSpecAwAntennaInfo(specA.antennaId, specA, update);
+      updateSpecAwAntennaInfo(specA.antenna_id, specA, update);
     }
     console.log('updateAntenna');
     window.sewApp.socket.emit('updateAntenna', { user: window.sewApp.socket.id, signals: update });

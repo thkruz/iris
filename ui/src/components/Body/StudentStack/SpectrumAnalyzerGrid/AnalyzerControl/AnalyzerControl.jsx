@@ -210,6 +210,8 @@ export const AnalyzerControl = props => {
       // TODO: Provide user feedback
       return;
     }
+
+    window.sewApp.announceSpecAChange(props.currentSpecAnalyzer.whichUnit);
   };
 
   return (

@@ -86,10 +86,10 @@ describe('spectrumAnalyzer', () => {
   it('should be able to animate', () => {
     let result;
     spectrumAnalyzer.signals = [
-      { ...testSignal, rf: true, targetId: 1 },
-      { ...testSignal, targetId: 1 },
+      { ...testSignal, rf: true, target_id: 1 },
+      { ...testSignal, target_id: 1 },
     ];
-    spectrumAnalyzer.targetId = 1;
+    spectrumAnalyzer.target_id = 1;
     spectrumAnalyzer.lastDrawTime = 0;
     result = spectrumAnalyzer.animate();
     expect(() => result).not.toThrow();
