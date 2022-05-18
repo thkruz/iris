@@ -3,13 +3,13 @@ import PropTypes from 'prop-types';
 import { RfEnvironment } from '../RfEnvironment';
 // eslint-disable-next-line no-unused-vars
 import { io, Socket } from 'socket.io-client';
-import { antennas, satellites } from './../constants';
+import { antennas, satellites } from '../constants';
 import { CRUDdataTable } from './../crud/crud';
 
 // Create a sync global context for the RF Environments
-const sewApp = {
+const sewApp = {  
   teamInfo: {
-    team: 'blue',
+    team: '',
     server: '',
   },
   //updateTxData: useUpdateTx(),
@@ -31,8 +31,8 @@ const sewApp = {
     socket.on('connect', () => {
       console.log('Connected to the server');
       window.sewApp.teamInfo = {
-        team: 'blue',
-        server: 'Connected',
+        team: '',
+        server: '',
       };
       socket.emit('updateTeam', { team: sewApp.team });
 
