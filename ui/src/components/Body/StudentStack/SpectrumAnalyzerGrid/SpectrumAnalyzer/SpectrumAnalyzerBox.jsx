@@ -51,8 +51,8 @@ const configButtonStyle = {
 
 export const updateSpecAwAntennaInfo = (antenna_id, specA, antenna) => {
   specA.antennaId = antenna_id;
-  let { band, hpa, id_target, lock, loopback, offset, operational } = antenna[specA.antennaId - 1];
-  specA.targetId = id_target;
+  let { band, hpa, target_id, lock, loopback, offset, operational } = antenna[specA.antennaId - 1];
+  specA.targetId = target_id;
   console.log('updateSpecAwAntennaInfo', specA.antennaId, specA.targetId);
 
   specA.hpa = hpa;
@@ -60,13 +60,13 @@ export const updateSpecAwAntennaInfo = (antenna_id, specA, antenna) => {
   specA.lock = lock;
   specA.operational = operational;
 
-  band = band === 1 ? 'c' : 'ku';
+  band = band === 0 ? 'c' : 'ku';
   const bandOffset = window.sewApp.constants.antennas.filter(antenna => antenna.band.toLowerCase() === band)[0];
   specA.downconvertOffset = bandOffset.downconvert;
   specA.upconvertOffset = bandOffset.upconvert;
   if (!loopback) {
     // RF Settings
-    specA.targetOffset = satellites.filter(target => target.id === id_target)[0].offset;
+    specA.targetOffset = satellites.filter(target => target.id === target_id)[0].offset;
   } else {
     // IF Settings
     specA.antennaOffset = offset * 1e6;

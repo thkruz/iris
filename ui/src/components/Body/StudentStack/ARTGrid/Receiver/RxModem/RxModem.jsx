@@ -235,7 +235,7 @@ export const RxModem = ({ unit }) => {
 
     const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = rxData[currentRow];
     const antenna = useAntenna();
-    const { id_target: r_tgt, band: r_band } = antenna[rxData[currentRow].antenna_id - 1];
+    const { target_id: r_tgt, band: r_band } = antenna[rxData[currentRow].antenna_id - 1];
 
     //window.sewApp.environment?.signals?.forEach(signal => {
     //const { frequency: rf_freq, bandwidth: s_bw, modulation: s_mod, fec: s_fec, target_id: s_tgt, feed } = signal;
@@ -263,7 +263,7 @@ export const RxModem = ({ unit }) => {
         const activeTransmitters = txData.filter(x => x.transmitting)
         activeTransmitters.forEach(transmission => {
           const { frequency: t_freq, bandwidth: t_bw, power: t_power } = transmission
-          const {id_target: t_tgt, band: t_band, offset: t_offset} = antenna[transmission.id_antenna - 1];
+          const {target_id: t_tgt, band: t_band, offset: t_offset} = antenna[transmission.id_antenna - 1];
           const t_uc_offset = antennas[t_band - 1]?.upconvert / 1e6;
           const t_dc_offset = antennas[t_band - 1]?.downconvert / 1e6;
           console.log(t_tgt)

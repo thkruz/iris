@@ -5,8 +5,8 @@ const antennaContext = React.createContext();
 const updateAntennaContext = React.createContext();
 
 const defaultAntennaContext = [
-  { unit: 1, operational: true, id_target: 1, lock: true, band: 1, offset: 0, hpa: false, loopback: true },
-  { unit: 2, operational: true, id_target: 1, lock: true, band: 1, offset: 0, hpa: false, loopback: true },
+  { id: 1, server_id: 1, team_id: 1, target_id: 1, unit: 1, operational: true, locked: true, band: 0, offset: 0, hpa: false, loopback: true },
+  { id: 2, server_id: 1, team_id: 1, target_id: 2, unit: 2, operational: true, locked: true, band: 0, offset: 0, hpa: false, loopback: true },
 ];
 
 export const useAntenna = () => {
@@ -31,6 +31,7 @@ export const AntennaProvider = ({ children }) => {
   const updateAntenna = update => {
     for (let i = 1; i <= 4; i++) {
       const specA = window.sewApp.getSpectrumAnalyzer(i);
+      console.log("update: ", update)
       updateSpecAwAntennaInfo(specA.antennaId, specA, update);
     }
     console.log('updateAntenna');
