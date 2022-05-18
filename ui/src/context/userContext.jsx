@@ -3,9 +3,7 @@ import PropTypes from 'prop-types';
 const userContext = React.createContext();
 const updateUserContext = React.createContext();
 
-const defaultUserContext = [
-  { server: 1, team: 1},
-];
+const defaultUserContext = { server_id: 1, team_id: 1};
 
 export const useUser = () => {
   return useContext(userContext);
