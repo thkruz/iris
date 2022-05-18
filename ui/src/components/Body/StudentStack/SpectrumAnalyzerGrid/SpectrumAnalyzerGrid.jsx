@@ -44,12 +44,12 @@ export const SpectrumAnalyzerGrid = () => {
               targetId: signal.target_id,
             });
           });
-          specA.signals.push({ freq: 425e6, amp: -108, bw: 3e6 });
+          /*specA.signals.push({ freq: 425e6, amp: -108, bw: 3e6 });
           specA.signals.push({ freq: 435e6, amp: -80, bw: 10e6 });
           specA.signals.push({ freq: 445e6, amp: -60, bw: 5e6 });
           specA.signals.push({ freq: 448e6, amp: -60, bw: 1e6 });
           specA.signals.push({ freq: 422e6, amp: -60, bw: 0.5e6 });
-          specA.signals.push({ freq: 423e6, amp: -60, bw: 1e6 });
+          specA.signals.push({ freq: 423e6, amp: -60, bw: 1e6 });*/ // What is this?
         }
       });
     });

@@ -1,12 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './App';
-import { AntennaProvider, RxProvider, TxProvider, SignalProvider, SewAppProvider } from './context';
+import { AntennaProvider, RxProvider, TxProvider, SignalProvider, SewAppProvider, UserProvider } from './context';
 import reportWebVitals from './reportWebVitals';
 import './index.css';
 
 ReactDOM.render(
   <React.StrictMode>
+    <UserProvider>
     <SewAppProvider>
       <SignalProvider>
         <AntennaProvider>
@@ -18,6 +19,7 @@ ReactDOM.render(
         </AntennaProvider>
       </SignalProvider>
     </SewAppProvider>
+    </UserProvider>
   </React.StrictMode>,
   document.getElementById('root')
 );
