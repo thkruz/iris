@@ -82,36 +82,19 @@ app.get('/authors', (request, response) => {
 });
 
 app.get('/data/:table_name', (request, response) => {
-  if (request.query.id !== undefined) {
-    knex(request.params.table_name)
-      .select('*')
-      .where('id', request.query.id)
-      .then(responseData => {
-        response.status(200).send(responseData);
-      })
-      .catch(error => {
-        response.status(500).send(error);
-      });
-  } else if (request.query.server_id !== undefined) {
-    knex(request.params.table_name)
-      .select('*')
-      .where('server_id', request.query.server_id)
-      .then(responseData => {
-        response.status(200).send(responseData);
-      })
-      .catch(error => {
-        response.status(500).send(error);
-      });
-  } else {
-    knex(request.params.table_name)
-      .select('*')
-      .then(responseData => {
-        response.status(200).send(responseData);
-      })
-      .catch(error => {
-        response.status(500).send(error);
-      });
-  }
+const builder = 
+  knex(request.params.table_name)
+
+if(request.query.id) builder.where('id', request.query.id)
+if(request.query.server_id) builder.where('server_id', request.query.server_id)
+if(request.query.team_id) builder.where('team_id', request.query.team_id)
+
+builder.then(responseData => {
+  response.status(200).send(responseData)
+})
+.catch(err => {
+  response.status(500).send(err)
+})
 });
 
 app.post('/data/:table_name', (request, response) => {
