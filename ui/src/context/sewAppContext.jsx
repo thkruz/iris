@@ -76,7 +76,7 @@ const sewApp = {
       server_id: 1,
       team_id: 1,
       unit: specA.whichUnit,
-      number: specA.isRfMode ? 1 : 0,
+      number: specA.isRfMode ? 2 : 1,
       operational: true,
       frequency: specA.centerFreq / 1e6,
       span: specA.bw / 1e6,
