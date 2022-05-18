@@ -49,7 +49,7 @@ const sewApp = {
               freq: signal.frequency * 1e6,
               amp: signal.power,
               bw: signal.bandwidth * 1e6,
-              targetId: signal.targetId,
+              target_id: signal.target_id,
             });
           });
         }
@@ -67,6 +67,24 @@ const sewApp = {
     if (i === 2) return window.sewApp.specA2;
     if (i === 3) return window.sewApp.specA3;
     if (i === 4) return window.sewApp.specA4;
+  },
+  announceSpecAChange: i => {
+    const specA = sewApp.getSpectrumAnalyzer(i);
+    sewApp.socket.emit('updateSpecA', {
+      id: 1,
+      server_id: 1,
+      team_id: 1,
+      unit: specA.whichUnit,
+      number: specA.isRfMode ? 1 : 0,
+      operational: true,
+      frequency: specA.centerFreq,
+      span: specA.span,
+      marker1freq: 1240,
+      marker2freq: 1260,
+      trace: specA.isDrawHold,
+      rf: false,
+      antenna_id: specA.antenna_id,
+    });
   },
 };
 

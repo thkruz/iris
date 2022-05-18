@@ -50,7 +50,7 @@ const sewApp = {
               freq: signal.frequency * 1e6,
               amp: signal.power,
               bw: signal.bandwidth * 1e6,
-              targetId: signal.targetId,
+              target_id: signal.target_id,
             });
           });
         }
@@ -64,7 +64,7 @@ const sewApp = {
     socket.connect();
   },
   getSpectrumAnalyzer: i => {
-    console.log(window.sewApp.specA1)
+    console.log(window.sewApp.specA1);
     if (i === 1) return window.sewApp.specA1;
     if (i === 2) return window.sewApp.specA2;
     if (i === 3) return window.sewApp.specA3;

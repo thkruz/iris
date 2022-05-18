@@ -22,12 +22,12 @@ export class SpectrumAnalyzer {
     this.bw = this.maxFreq - this.minFreq;
     this.centerFreq = this.minFreq + this.bw / 2;
     this.noiseColor = options.noiseColor || '#0bf';
-    this.antennaId = 1;
+    this.antenna_id = 1;
     this.antennaOffset = 0;
     this.targetOffset = 400e6;
     this.downconvertOffset = 3500e6; // Default to C Band
     this.upconvertOffset = 3350e6; // Default to C Band
-    this.targetId = null;
+    this.target_id = null;
     this.hpa = false;
     this.loopback = false;
     this.lock = true;
@@ -243,7 +243,7 @@ export class SpectrumAnalyzer {
 
         this.signals
           .filter(signal => {
-            return signal.targetId === this.targetId;
+            return signal.target_id === this.target_id;
           })
           .forEach((signal, i) => {
             let color = this.noiseColor;
