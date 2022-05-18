@@ -16,7 +16,7 @@ export const TxModem = ({ unit }) => {
   const [activeModem, setActiveModem] = useState(0);
 
   // Styles
-  const sxCase = {
+  const sxCase = { 
     flexGrow: 1,
     boxShadow: '0px 0px 5px rgba(0,0,0,0.5)',
     backgroundColor: AstroTheme.palette.tertiary.light2,
@@ -97,7 +97,7 @@ export const TxModem = ({ unit }) => {
   const TxModemButtonBox = () => (
     <Box sx={sxModemButtonBox}>
       {txData.map((x, index) => {
-        if (x.unit == unit) return <TxModemButton key={index} modem={x.modem} transmitting={x.transmitting} />;
+        if (x.unit == unit) return <TxModemButton key={index} modem={x.modem_number} transmitting={x.transmitting} />;
       })}
     </Box>
   );
@@ -145,7 +145,7 @@ export const TxModem = ({ unit }) => {
       let tmpData = [...txData];
       tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
       // Add a Target
-      tmpData[currentRow].targetId = antenna[tmpData[currentRow].id_antenna - 1].id_target;
+      tmpData[currentRow].targetId = antenna[tmpData[currentRow].antenna_id - 1].id_target;
       updateTxData(tmpData);
     };
 
@@ -155,17 +155,17 @@ export const TxModem = ({ unit }) => {
           <label htmlFor='Antenna'>Antenna</label>
           <select
             name='Antenna'
-            value={inputData.id_antenna}
+            value={inputData.antenna_id}
             onChange={e =>
               handleInputChange({
-                param: 'id_antenna',
+                param: 'antenna_id',
                 val: parseInt(e.target.value) || 0,
               })
             }>
             <option value={1}>1</option>
             <option value={2}>2</option>
           </select>
-          <Typography sx={sxValues}>{txData[currentRow].id_antenna}</Typography>
+          <Typography sx={sxValues}>{txData[currentRow].antenna_id}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='frequency'>Frequency</label>
