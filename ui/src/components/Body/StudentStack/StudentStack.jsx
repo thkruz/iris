@@ -7,6 +7,11 @@ export const StudentStack = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    window.sewApp.init();
+    document.addEventListener('contextmenu', event => event.preventDefault());
+  }, []);
+
   // Basic check that user is logged in
   useEffect(() => {
     if (!state || state?.isAuthenticated !== true) navigate('/login');

@@ -16,6 +16,10 @@ export const SpectrumAnalyzerGrid = () => {
     setCurrentSpecAnalyzer(specAnalyzer);
   };
 
+  const handlePauseClicked = specAnalyzer => {
+    setCurrentSpecAnalyzer(specAnalyzer);
+  };
+
   const handleBackgroundClick = e => {
     // Don't hide the screen unless the background was clicked
     // NOTE: Any click action triggers this event
@@ -25,7 +29,6 @@ export const SpectrumAnalyzerGrid = () => {
   };
 
   const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
-
   useEffect(() => {
     fetch(`${ApiUrl}/data/signal`).then(res => {
       res.json().then(data => {
@@ -60,6 +63,7 @@ export const SpectrumAnalyzerGrid = () => {
             <SpectrumAnalyzerBox
               handleConfigClick={handleConfigClick}
               handleRfClick={handleRfClick}
+              handlePauseClicked={handlePauseClicked}
               canvasId={'specA1'}
             />
           }
@@ -69,6 +73,7 @@ export const SpectrumAnalyzerGrid = () => {
             <SpectrumAnalyzerBox
               handleConfigClick={handleConfigClick}
               handleRfClick={handleRfClick}
+              handlePauseClicked={handlePauseClicked}
               canvasId={'specA2'}
             />
           }
@@ -78,6 +83,7 @@ export const SpectrumAnalyzerGrid = () => {
             <SpectrumAnalyzerBox
               handleConfigClick={handleConfigClick}
               handleRfClick={handleRfClick}
+              handlePauseClicked={handlePauseClicked}
               canvasId={'specA3'}
             />
           }
@@ -87,6 +93,7 @@ export const SpectrumAnalyzerGrid = () => {
             <SpectrumAnalyzerBox
               handleConfigClick={handleConfigClick}
               handleRfClick={handleRfClick}
+              handlePauseClicked={handlePauseClicked}
               canvasId={'specA4'}
             />
           }

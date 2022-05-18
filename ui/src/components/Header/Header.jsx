@@ -7,14 +7,15 @@ import IconButton from '@mui/material/IconButton';
 import Logout from '@mui/icons-material/Logout';
 import { AstroTheme } from '../../themes/AstroTheme';
 import './Header.css';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export const Header = () => {
   const auth = true; //TODO: get auth context
   const theme = AstroTheme;
+  const navigate = useNavigate();
 
   const handleLogout = () => {
-    console.log('logging out');
+    navigate('/');
   };
   return (
     <>
