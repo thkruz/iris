@@ -16,29 +16,30 @@ export const useUpdateUser = () => {
 };
 
 export const UserProvider = ({ children }) => {
-    window.sewApp.socket.on('updateUserClient', (data) => {
-        console.log('updateUserClient', data);
-        if (data.user != window.sewApp.socket.id) {
-            console.log('actually updating the User');
-            setUser(data.signals);
-        }
-    });
+  const [user, setUser] = useState(defaultUserContext);
+  window.sewApp.socket.on('updateUserClient', (data) => {
+      console.log('updateUserClient', data);
+      if (data.user != window.sewApp.socket.id) {
+          console.log('actually updating the User');
+          setUser(data.signals);
+      }
+  });
 
-    const updateUser = (update) => {
-        console.log('updateUser', update);
-        // patch request to update database
-        // if patch request is good
-        window.sewApp.socket.emit('updateUser', { user: window.sewApp.socket.id, signals: update });
-        setUser(update);
-    };
+  const updateUser = (update) => {
+      console.log('updateUser', update);
+      // patch request to update database
+      // if patch request is good
+      window.sewApp.socket.emit('updateUser', { user: window.sewApp.socket.id, signals: update });
+      setUser(update);
+  };
 
-    return (
-        <userContext.Provider value={user}>
-            <updateUserContext.Provider value={updateUser}>
-                {children}
-            </updateUserContext.Provider>
-        </userContext.Provider>
-    );
+  return (
+      <userContext.Provider value={user}>
+          <updateUserContext.Provider value={updateUser}>
+              {children}
+          </updateUserContext.Provider>
+      </userContext.Provider>
+  );
 };
 
 UserProvider.propTypes = {

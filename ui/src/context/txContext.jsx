@@ -226,8 +226,6 @@ export const TxProvider = ({ children }) => {
   const [tx, setTx] = useState(defaultTxContext);
 
   window.sewApp.socket.on('updateTxClient', data => {
-    console.log('updateTxClient', data);
-    console.log(`user: ${data.user}, id: ${window.sewApp.socket.id}`)
     if (data.user != window.sewApp.socket.id) {
       console.log('actually updating the Tx');
       setTx(data.signals);
@@ -235,12 +233,12 @@ export const TxProvider = ({ children }) => {
   });
 
   const updateTx = update => {
-    console.log('updateTx');
     //  patch request to update database
     // if patch request is good
     window.sewApp.socket.emit('updateTx', { user: window.sewApp.socket.id, signals: update });
     setTx(update);
-  };
+    console.log(update)
+  }; 
 
   return (
     <txContext.Provider value={tx}>

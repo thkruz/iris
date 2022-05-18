@@ -1,5 +1,5 @@
 import { RfEnvironment } from './RfEnvironment';
-import { io, Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
 import { satellites, antennas, teams } from './constants';
 
 // Create a sync global context for the RF Environments
@@ -58,6 +58,7 @@ const sewApp = {
     socket.connect();
   },
   getSpectrumAnalyzer: i => {
+    console.log(window.sewApp.specA1)
     if (i === 1) return window.sewApp.specA1;
     if (i === 2) return window.sewApp.specA2;
     if (i === 3) return window.sewApp.specA3;
