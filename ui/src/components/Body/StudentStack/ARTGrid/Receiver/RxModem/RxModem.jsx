@@ -262,12 +262,12 @@ export const RxModem = ({ unit }) => {
         const activeTransmitters = txData.filter(x => x.transmitting)
         activeTransmitters.forEach(transmission => {
           const { frequency: t_freq, bandwidth: t_bw, power: t_power } = transmission
-          const {target_id: t_tgt, band: t_band, offset: t_offset} = antenna[transmission.id_antenna - 1];
+          const {target_id: t_tgt, band: t_band, offset: t_offset} = antenna[transmission.antenna_id - 1];
           const t_uc_offset = antennas[t_band]?.upconvert / 1e6;
           const t_dc_offset = antennas[t_band]?.downconvert / 1e6;
           console.log(t_tgt)
           const s_offset = satellites[t_tgt - 1].offset / 1e6;
-          const offset = !antenna[transmission.id_antenna - 1].loopback && antenna[transmission.id_antenna - 1].hpa ? s_offset : t_offset;
+          const offset = !antenna[transmission.antenna_id - 1].loopback && antenna[transmission.antenna_id - 1].hpa ? s_offset : t_offset;
           const t_if_freq = t_freq + t_uc_offset + offset - t_dc_offset;
           const t_lb = t_if_freq - 0.5 * t_bw;
           const t_rb = t_if_freq + 0.5 * t_bw;
