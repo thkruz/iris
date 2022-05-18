@@ -96,11 +96,6 @@ const sewApp = {
   },
 };
 
-/**
- * ===============================
- * Context Code
- * ===============================
- */
 const sewAppContext = React.createContext();
 const updateSewAppContext = React.createContext();
 

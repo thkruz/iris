@@ -67,7 +67,6 @@ io.on('connection', socket => {
     console.log(`sending updateSpecA to clients`);
     clientManager.clients.forEach(client => {
       if (client.id !== socket.id) {
-        console.log(`sending updateSpecA to client ${client.id}`);
         client.emit('updateSpecA', update);
       }
     });

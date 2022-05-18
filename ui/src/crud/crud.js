@@ -15,8 +15,7 @@ export const CRUDdataTable = ({ method, path, data }) => {
     body: JSON.stringify(data),
   }).then(response => {
     if (response.ok) {
-      console.log(response);
-      return response.json();
+      return response;
     } else {
       throw new Error('Cannot convert response to json');
     }
