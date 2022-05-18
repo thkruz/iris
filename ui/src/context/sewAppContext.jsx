@@ -4,6 +4,7 @@ import { RfEnvironment } from '../RfEnvironment';
 // eslint-disable-next-line no-unused-vars
 import { io, Socket } from 'socket.io-client';
 import { antennas, satellites } from './../constants';
+import { CRUDdataTable } from './../crud/crud';
 
 // Create a sync global context for the RF Environments
 const sewApp = {
@@ -70,20 +71,27 @@ const sewApp = {
   },
   announceSpecAChange: i => {
     const specA = sewApp.getSpectrumAnalyzer(i);
-    sewApp.socket.emit('updateSpecA', {
-      id: 1,
+    const patchData = {
+      id: specA.isRfMode ? specA.config.rf.id : specA.config.if.id,
       server_id: 1,
       team_id: 1,
       unit: specA.whichUnit,
       number: specA.isRfMode ? 1 : 0,
       operational: true,
-      frequency: specA.centerFreq,
-      span: specA.span,
+      frequency: specA.centerFreq / 1e6,
+      span: specA.bw / 1e6,
       marker1freq: 1240,
       marker2freq: 1260,
       trace: specA.isDrawHold,
       rf: false,
       antenna_id: specA.antenna_id,
+    };
+    console.log('announceSpecAChange', sewApp.socket.id);
+    sewApp.socket.emit('updateSpecA', patchData);
+    CRUDdataTable({
+      method: 'PATCH',
+      path: 'spec_a',
+      data: patchData,
     });
   },
 };

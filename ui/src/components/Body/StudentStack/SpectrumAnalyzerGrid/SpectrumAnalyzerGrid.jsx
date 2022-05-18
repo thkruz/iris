@@ -33,18 +33,6 @@ export const SpectrumAnalyzerGrid = () => {
     fetch(`${ApiUrl}/data/signal`).then(res => {
       res.json().then(data => {
         window.sewApp.environment.setSignals(data);
-        for (let i = 1; i <= 4; i++) {
-          const specA = window.sewApp.getSpectrumAnalyzer(i);
-          data.forEach(signal => {
-            specA.signals.push({
-              rf: true,
-              freq: signal.frequency * 1e6,
-              amp: signal.power,
-              bw: signal.bandwidth * 1e6,
-              target_id: signal.target_id,
-            });
-          });
-        }
       });
     });
   }, []);

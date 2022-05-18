@@ -45,8 +45,10 @@ io.on('connection', socket => {
   socket.on('updateTx', update => {
     console.log(`sending updateTX and update Signals to clients`);
     clientManager.clients.forEach(client => {
-      client.emit('updateSignals', update);
-      client.emit('updateTxClient', update);
+      if (client.id !== socket.id) {
+        client.emit('updateSignals', update);
+        client.emit('updateTxClient', update);
+      }
       //anytime in transmitter apply is pressed update the signals
       //anytime in antenna baseball or hpa is turned on update the signals
     });
@@ -55,12 +57,20 @@ io.on('connection', socket => {
   socket.on('updateRx', update => {
     console.log(`sending updateRX to clients`);
     clientManager.clients.forEach(client => {
-      client.emit('updateRxClient', update);
+      if (client.id !== socket.id) {
+        client.emit('updateRxClient', update);
+      }
     });
   });
 
   socket.on('updateSpecA', update => {
-    console.log(update);
+    console.log(`sending updateSpecA to clients`);
+    clientManager.clients.forEach(client => {
+      if (client.id !== socket.id) {
+        console.log(`sending updateSpecA to client ${client.id}`);
+        client.emit('updateSpecA', update);
+      }
+    });
   });
 
   socket.on('updateAntenna', update => {
@@ -86,19 +96,19 @@ app.get('/authors', (request, response) => {
 });
 
 app.get('/data/:table_name', (request, response) => {
-const builder = 
-  knex(request.params.table_name)
+  const builder = knex(request.params.table_name);
 
-if(request.query.id) builder.where('id', request.query.id)
-if(request.query.server_id) builder.where('server_id', request.query.server_id)
-if(request.query.team_id) builder.where('team_id', request.query.team_id)
+  if (request.query.id) builder.where('id', request.query.id);
+  if (request.query.server_id) builder.where('server_id', request.query.server_id);
+  if (request.query.team_id) builder.where('team_id', request.query.team_id);
 
-builder.then(responseData => {
-  response.status(200).send(responseData)
-})
-.catch(err => {
-  response.status(500).send(err)
-})
+  builder
+    .then(responseData => {
+      response.status(200).send(responseData);
+    })
+    .catch(err => {
+      response.status(500).send(err);
+    });
 });
 
 app.post('/data/:table_name', (request, response) => {

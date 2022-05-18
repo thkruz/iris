@@ -91,7 +91,33 @@ export const SpectrumAnalyzerBox = props => {
   const [isPause, setIsPause] = useState(false);
   const antenna = useAntenna();
 
-  const updateSpecAConfig = () => {
+  useEffect(() => {
+    window.sewApp.socket.on('updateSpecA', data => {
+      console.log('updateSpecA');
+      const specA = window.sewApp.getSpectrumAnalyzer(parseInt(props.canvasId.split('A')[1]));
+      if (specA.whichUnit === data.unit) {
+        // TODO: Account for team
+        specA.isRfMode = data.number === 1 ? true : false; // If we changed an RF Mode row of data we must be in RF Mode now
+        if (specA.isRfMode) {
+          specA.config.rf.freq = data.frequency * 1e6;
+          specA.config.rf.span = data.span * 1e6;
+        } else {
+          specA.config.if.freq = data.frequency * 1e6;
+          specA.config.if.span = data.span * 1e6;
+        }
+        specA.isDrawHold = data.hold;
+        specA.antenna_id = data.antenna_id;
+
+        specA.changeCenterFreq(specA.isRfMode ? specA.config.rf.freq : specA.config.if.freq);
+        specA.changeBandwidth(specA.isRfMode ? specA.config.rf.span : specA.config.if.span);
+
+        setSpecA(specA);
+        updateSpecAConfig(specA);
+      }
+    });
+  }, []);
+
+  const updateSpecAConfig = specA => {
     setSpecAConfig({
       bandwidth: (specA.maxFreq - specA.minFreq) / 1e6,
       centerFreq: (specA.maxFreq - (specA.maxFreq - specA.minFreq) / 2) / 1e6,
@@ -131,10 +157,12 @@ export const SpectrumAnalyzerBox = props => {
         data = data.filter(specA_DB => specA_DB.unit === specA.whichUnit && specA_DB.team_id === 1); // TODO Allow other teams!
         specA.config = {
           if: {
+            id: data[0].id,
             freq: data[0].frequency * 1e6, // MHz to Hz
             span: data[0].span * 1e6, // MHz to Hz
           },
           rf: {
+            id: data[1].id,
             freq: data[1].frequency * 1e6, // MHz to Hz
             span: data[1].span * 1e6, // MHz to Hz
           },
@@ -147,7 +175,7 @@ export const SpectrumAnalyzerBox = props => {
         specA.changeBandwidth(specA.isRfMode ? specA.config.rf.span : specA.config.if.span);
 
         setSpecA(specA);
-        updateSpecAConfig();
+        updateSpecAConfig(specA);
         switch (props.canvasId) {
           case 'specA1':
             window.sewApp.specA1 = specA;
@@ -162,10 +190,31 @@ export const SpectrumAnalyzerBox = props => {
             window.sewApp.specA4 = specA;
             break;
         }
+
+        loadSignals(specA);
+
         specA.start();
       });
     });
   }, []);
+
+  const loadSignals = specA => {
+    if (window.sewApp.environment.signals.length > 0) {
+      window.sewApp.environment.signals.forEach(signal => {
+        specA.signals.push({
+          rf: true,
+          freq: signal.frequency * 1e6,
+          amp: signal.power,
+          bw: signal.bandwidth * 1e6,
+          target_id: signal.target_id,
+        });
+      });
+    } else {
+      setTimeout(() => {
+        loadSignals(specA);
+      }, 1000);
+    }
+  };
 
   useEffect(() => {
     if (!specA.antenna_id) return;
@@ -177,7 +226,7 @@ export const SpectrumAnalyzerBox = props => {
     specA.isRfMode = !specA.isRfMode;
     specA.changeCenterFreq(specA.isRfMode ? specA.config.rf.freq : specA.config.if.freq);
     specA.changeBandwidth(specA.isRfMode ? specA.config.rf.span : specA.config.if.span);
-    updateSpecAConfig();
+    updateSpecAConfig(specA);
     setSpecA(specA);
     setIsRfMode(!isRfMode);
     const _specA = window.sewApp[`specA${specA.canvas.id.split('A')[1]}`];
@@ -188,6 +237,8 @@ export const SpectrumAnalyzerBox = props => {
       _specA.noiseFloor += _specA.noiseFloor * 0.05;
     }
     props.handleRfClick(_specA);
+
+    window.sewApp.announceSpecAChange(specA.whichUnit);
   };
 
   const handlePauseClicked = () => {
