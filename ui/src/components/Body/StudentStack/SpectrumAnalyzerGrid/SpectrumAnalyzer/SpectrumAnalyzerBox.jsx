@@ -105,7 +105,7 @@ export const SpectrumAnalyzerBox = props => {
     const defaultSpecAConfig = {
       whichUnit: parseInt(props.canvasId.split('A')[1]),
       minDecibels: -120,
-      maxDecibels: -20,
+      maxDecibels: -80,
       minFreq: 4650000000,
       maxFreq: 4750000000,
       refreshRate: 2, // per second
