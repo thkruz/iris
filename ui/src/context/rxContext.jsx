@@ -226,7 +226,6 @@ export const RxProvider = ({ children }) => {
     const [rx, setRx] = useState(defaultRxContext);
     
     window.sewApp.socket.on('updateRxClient', (data) => {
-        console.log('updateRxClient', data);
         if (data.user != window.sewApp.socket.id) {
             console.log('actually updating the Rx');
             let tmpUpdate = [...rx];

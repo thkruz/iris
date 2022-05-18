@@ -146,7 +146,7 @@ export const AntennaController = ({ unit }) => {
             name='band'
             value={inputData.band}
             onChange={e => handleInputChange({ param: 'band', val: e.target.value })}>
-            {antennas.map((x, index) => { console.log(x)
+            {antennas.map((x, index) => {
               return (
                 <option value={index} key={index}>
                   {x.band}
