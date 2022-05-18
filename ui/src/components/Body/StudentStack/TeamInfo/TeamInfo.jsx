@@ -8,8 +8,7 @@ import { teams } from '../../../../constants';
 
 export const TeamInfo = () => {
   const user = useUser();
-  const { data } = useFetch('data/server');
-  console.log(data)
+  const { data: servers } = useFetch('data/server');
 
   return (
     <Grid
@@ -34,7 +33,7 @@ export const TeamInfo = () => {
       </Grid>
       <Grid item xs={4} sx={{ textAlign: 'right' }}>
         <Typography paddingRight='30px' variant='h6' component='div'>
-          Server: {data ? data[user.server_id - 1]?.name : 'Disconnected'}
+          Server: {servers ? servers[user.server_id - 1]?.name : 'Disconnected'}
         </Typography>
       </Grid>
     </Grid>

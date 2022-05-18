@@ -2,10 +2,12 @@ import { Grid } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { SpectrumAnalyzerBox, AnalyzerControl } from '../../../';
 import config from '../../../../config';
+import { useUpdateSewApp } from '../../../../context';
 
 export const SpectrumAnalyzerGrid = () => {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [currentSpecAnalyzer, setCurrentSpecAnalyzer] = useState(null);
+  const updateSewAppContext = useUpdateSewApp();
 
   const handleConfigClick = specAnalyzer => {
     setCurrentSpecAnalyzer(specAnalyzer);
@@ -33,6 +35,7 @@ export const SpectrumAnalyzerGrid = () => {
     fetch(`${ApiUrl}/data/signal`).then(res => {
       res.json().then(data => {
         window.sewApp.environment.setSignals(data);
+        updateSewAppContext();
       });
     });
   }, []);

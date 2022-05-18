@@ -110,7 +110,10 @@ export const useUpdateSewApp = () => {
 export const SewAppProvider = ({ children }) => {
   const [sewApp, setSewApp] = useState({});
   const updateSewApp = () => {
-    setSewApp(window.sewApp);
+    console.log('updateSewApp Context');
+    // eslint-disable-next-line no-debugger
+    console.log(window.sewApp);
+    setSewApp({ ...window.sewApp });
   };
 
   return (
