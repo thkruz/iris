@@ -50,11 +50,11 @@ const yellowButtonStyle = {
   margin: 'auto',
 };
 export const AnalyzerControl = props => {
-  console.log(props.currentSpecAnalyzer.changeCenterFreq);
   const [ghz, setGhz] = useState(null);
   const [mhz, setMhz] = useState(null);
   const [khz, setKhz] = useState(null);
   const [isTraceOn, setIsTraceOn] = useState(false);
+  const [isMarkerOn, setIsMarkerOn] = useState(false);
   const [controlSelection, setControlSelection] = useState(null);
   const [numberSelection, setNumberSelection] = useState(null);
 
@@ -72,13 +72,19 @@ export const AnalyzerControl = props => {
     setControlSelection('freq');
   }, []);
 
-  // Used for holding max frequency
-  const handleTrackClick = () => {
+  // Used for holding max amplitude
+  const handleHoldClick = () => {
     if (typeof props.currentSpecAnalyzer.resetHoldData !== 'undefined') {
       props.currentSpecAnalyzer.resetHoldData();
       props.currentSpecAnalyzer.isDrawHold = !props.currentSpecAnalyzer.isDrawHold;
       setIsTraceOn(props.currentSpecAnalyzer.isDrawHold);
     }
+  };
+
+  // Used for marking max amplitude
+  const handleMarkerClick = () => {
+    props.currentSpecAnalyzer.isDrawMarker = !props.currentSpecAnalyzer.isDrawMarker;
+    setIsMarkerOn(props.currentSpecAnalyzer.isDrawMarker);
   };
 
   // Used for modifying the center frequency value
@@ -204,6 +210,8 @@ export const AnalyzerControl = props => {
       // TODO: Provide user feedback
       return;
     }
+
+    window.sewApp.announceSpecAChange(props.currentSpecAnalyzer.whichUnit);
   };
 
   return (
@@ -233,9 +241,9 @@ export const AnalyzerControl = props => {
                       item
                       xs={6}
                       sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                      <h2>{ghz}</h2>
-                      <h2>{mhz}</h2>
-                      <h2>{khz}</h2>
+                      <h2>{ghz ? ghz.toString() : '0'}</h2>
+                      <h2>{mhz ? mhz.toString() : '0'}</h2>
+                      <h2>{khz ? khz.toString() : '0'}</h2>
                     </Grid>
                     <Grid
                       item
@@ -324,12 +332,17 @@ export const AnalyzerControl = props => {
                   ...yellowButtonStyle,
                   ...{ background: isTraceOn ? AstroTheme.palette.critical.main : AstroTheme.palette.warning.main },
                 }}
-                onClick={handleTrackClick}>
+                onClick={handleHoldClick}>
                 <h2>Trace</h2>
               </Button>
             </Grid>
             <Grid item xs={12}>
-              <Button sx={yellowButtonStyle}>
+              <Button
+                sx={{
+                  ...yellowButtonStyle,
+                  ...{ background: isMarkerOn ? AstroTheme.palette.critical.main : AstroTheme.palette.warning.main },
+                }}
+                onClick={handleMarkerClick}>
                 <h2>Marker</h2>
               </Button>
             </Grid>

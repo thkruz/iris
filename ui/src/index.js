@@ -1,24 +1,25 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './App';
-import { AntennaProvider, RxProvider, TxProvider, SignalProvider } from './context';
+import { AntennaProvider, RxProvider, TxProvider, SignalProvider, SewAppProvider, UserProvider } from './context';
 import reportWebVitals from './reportWebVitals';
 import './index.css';
-import './sewApp';
-
-window.sewApp.init();
 
 ReactDOM.render(
   <React.StrictMode>
-    <SignalProvider>
-      <AntennaProvider>
-        <RxProvider>
-          <TxProvider>
-            <App />
-          </TxProvider>
-        </RxProvider>
-      </AntennaProvider>
-    </SignalProvider>
+    <UserProvider>
+    <SewAppProvider>
+      <SignalProvider>
+        <AntennaProvider>
+          <RxProvider>
+            <TxProvider>
+              <App />
+            </TxProvider>
+          </RxProvider>
+        </AntennaProvider>
+      </SignalProvider>
+    </SewAppProvider>
+    </UserProvider>
   </React.StrictMode>,
   document.getElementById('root')
 );

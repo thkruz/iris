@@ -1,5 +1,5 @@
 export class SpectrumAnalyzer {
-  constructor(canvas, options) {
+  constructor(canvas, options = {}) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.options = options;
@@ -22,18 +22,32 @@ export class SpectrumAnalyzer {
     this.bw = this.maxFreq - this.minFreq;
     this.centerFreq = this.minFreq + this.bw / 2;
     this.noiseColor = options.noiseColor || '#0bf';
-    this.antennaId = 1;
+    this.antenna_id = 1;
     this.antennaOffset = 0;
     this.targetOffset = 400e6;
     this.downconvertOffset = 3500e6; // Default to C Band
     this.upconvertOffset = 3350e6; // Default to C Band
-    this.targetId = null;
+    this.target_id = null;
     this.hpa = false;
     this.loopback = false;
     this.lock = true;
     this.operational = true;
     this.isRfMode = false;
+    this.isDrawMarker = false;
+    this.isDrawHold = false;
+    this.isPause = false;
+    this.whichUnit = options.whichUnit || 0;
     this.resize(this.canvas.parentElement.offsetWidth - 6, this.canvas.parentElement.offsetWidth - 6);
+    this.config = {
+      if: {
+        freq: null, // Hz
+        span: null, // Hz
+      },
+      rf: {
+        freq: null, // Hz
+        span: null, // Hz
+      },
+    };
 
     window.addEventListener('resize', () => {
       if (this.canvas.parentElement.offsetWidth - 6 !== this.canvas.width - 6) {
@@ -48,7 +62,9 @@ export class SpectrumAnalyzer {
   start() {
     if (this.running) return;
     this.running = true;
-    this.draw();
+    setTimeout(() => {
+      this.draw();
+    }, Math.random() * 1000);
   }
 
   changeCenterFreq(freq) {
@@ -213,7 +229,11 @@ export class SpectrumAnalyzer {
    * This draws the spectrum analyzer
    */
   draw() {
-    requestAnimationFrame(() => {
+    requestAnimationFrame(() => this.animate());
+  }
+
+  animate() {
+    if (!this.isPause) {
       const now = Date.now();
       if (now - this.lastDrawTime > 1000 / this.refreshRate) {
         this.clearCanvas(this.ctx);
@@ -223,7 +243,7 @@ export class SpectrumAnalyzer {
 
         this.signals
           .filter(signal => {
-            return signal.targetId === this.targetId;
+            return signal.target_id === this.target_id;
           })
           .forEach((signal, i) => {
             let color = this.noiseColor;
@@ -279,12 +299,12 @@ export class SpectrumAnalyzer {
 
         this.lastDrawTime = now;
       }
-      this.draw();
-    });
+    }
+    this.draw();
   }
 
   drawGridOverlay(ctx) {
-    ctx.globalAlpha = 0.2;
+    ctx.globalAlpha = 0.1;
     ctx.fillStyle = 'white';
     for (let x = 0; x < this.width; x += this.width / 10) {
       ctx.fillRect(x, 0, 1, this.height);
@@ -349,12 +369,20 @@ export class SpectrumAnalyzer {
 
     this.data = this.createSignal(this.data, center, signal.amp, inBandWidth, outOfBandWidth);
 
+    let maxX = 0;
+    let maxY = 1;
+    let maxSignalFreq = 0;
+
     ctx.strokeStyle = color;
     ctx.beginPath();
     const len = this.data.length;
     for (let x = 0; x < len; x++) {
       const lowestSignal = this.data[x] >= this.noiseData[x] ? this.data[x] : 0;
       const y = (lowestSignal - this.maxDecibels - this.decibelShift) / this.range;
+      maxSignalFreq = y < maxY ? lowestSignal : maxSignalFreq;
+      maxX = y < maxY ? x : maxX;
+      maxY = y < maxY ? y : maxY;
+
       if (x === 0) {
         ctx.moveTo(x, this.height * y);
       } else {
@@ -362,6 +390,35 @@ export class SpectrumAnalyzer {
       }
     }
     ctx.stroke();
+
+    // Draw Diamond Marker
+    if (this.isDrawMarker) {
+      this.drawMarker(maxX, maxY, ctx, maxSignalFreq);
+    }
+  }
+
+  drawMarker(maxX, maxY, ctx, maxSignalFreq) {
+    if (maxX > 0) {
+      maxY -= 0.025;
+      ctx.beginPath();
+      ctx.fillStyle = '#f00';
+      ctx.moveTo(maxX, this.height * maxY);
+      ctx.lineTo(maxX - 5, this.height * maxY - 5);
+      ctx.lineTo(maxX, this.height * maxY - 10);
+      ctx.lineTo(maxX + 5, this.height * maxY - 5);
+      ctx.lineTo(maxX, this.height * maxY);
+      ctx.fill();
+
+      // Write Frequency Label
+      ctx.fillStyle = '#fff';
+      ctx.font = '10px Arial';
+      ctx.fillText(
+        `${((this.minFreq + (maxX * (this.maxFreq - this.minFreq)) / this.width) / 1e6).toFixed(1)} Mhz`,
+        maxX - 20,
+        this.height * maxY - 30
+      );
+      ctx.fillText(`${(maxSignalFreq + this.minDecibels).toFixed(1)} dB`, maxX - 20, this.height * maxY - 20);
+    }
   }
 
   /**
@@ -371,13 +428,6 @@ export class SpectrumAnalyzer {
    * @param {*} signal Object containing signal properties
    */
   drawMaxHold(ctx, color = '#ff0') {
-    if (!color) {
-      console.log(color);
-    }
-
-    // const center = ((signal.freq - this.minFreq) / (this.maxFreq - this.minFreq)) * this.width;
-    // const width = ((signal.bw / (this.maxFreq - this.minFreq)) * this.width) / 2;
-
     ctx.strokeStyle = color;
     ctx.beginPath();
     const len = this.data.length;

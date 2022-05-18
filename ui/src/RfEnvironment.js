@@ -7,6 +7,30 @@ export class RfEnvironment {
     this.signals = signals;
   }
 
+  setTargets(targets) {
+    this.targets = targets;
+  }
+
+  setTeams(teams) {
+    this.teams = teams;
+  }
+
+  setAntennas(antennas) {
+    this.antennas = antennas;
+  }
+
+  setSpecAs(specAs) {
+    this.specAs = specAs;
+  }
+
+  setTransmitters(transmitters) {
+    this.transmitters = transmitters;
+  }
+
+  setReceivers(receivers) {
+    this.receivers = receivers;
+  }
+
   addSignal(signal) {
     this.signals.push(signal);
   }
@@ -17,16 +41,16 @@ export class RfEnvironment {
 
   updateSignals(update) {
     console.log(this.signals);
-
-    // Purge all signals that are from this user
+    
+    // Purge all signals that are from this team
     this.signals = this.signals.filter(signal => {
-      return signal.user !== update.user;
+      console.log(signal.team_id)
+      return signal.team_id !== update.signals[0].team_id;
     });
-
     // Add the new signals
     update.signals.forEach(signal => {
       if (signal.transmitting) {
-        this.signals.push({ ...{ user: update.user }, ...signal });
+        this.signals.push({ ...{ team_id: update.team_id }, ...signal });
       }
     });
 

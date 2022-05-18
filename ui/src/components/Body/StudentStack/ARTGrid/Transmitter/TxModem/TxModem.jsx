@@ -10,6 +10,7 @@ import { useAntenna } from './../../../../../../context/antennaContext';
 export const TxModem = ({ unit }) => {
   const txData = useTx();
   const updateTxData = useUpdateTx();
+  const powerBudget = 23886; // Decided by SEW team
 
   //TODO: modem buttons, update state, video,
   const theme = AstroTheme;
@@ -18,9 +19,10 @@ export const TxModem = ({ unit }) => {
   // Styles
   const sxCase = {
     flexGrow: 1,
-    backgroundColor: theme.palette.primary.main,
+    boxShadow: '0px 0px 5px rgba(0,0,0,0.5)',
+    backgroundColor: AstroTheme.palette.tertiary.light2,
+    border: '1px solid' + AstroTheme.palette.tertiary.light,
     borderRadius: '10px',
-    border: '1px solid black',
     display: 'grid',
     gridTemplateColumns: '30px 1fr 4fr 3fr 5fr',
     justifyContent: 'space-between',
@@ -32,38 +34,17 @@ export const TxModem = ({ unit }) => {
     textAlign: 'center',
   };
   const sxModemButtonBox = {
-    backgroundColor: theme.palette.primary.light,
+    boxShadow: '0px 0px 5px rgba(0,0,0,0.3)',
+    backgroundColor: AstroTheme.palette.tertiary.light3,
+    border: '1px solid' + AstroTheme.palette.tertiary.light,
     borderRadius: '5px',
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
   };
-  // const sxModemButton = {
-  //   backgroundColor: theme.palette.primary.light,
-  //   boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
-  //   color: 'black',
-  //   margin: '8px',
-  //   cursor: 'pointer',
-  // };
-  // const sxModemButtonActive = {
-  //   backgroundColor: theme.palette.primary.dark,
-  //   boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
-  //   color: 'white',
-  //   width: '1em',
-  //   margin: '8px',
-  //   outline: 'none',
-  // };
-  // const sxModemButtonLive = {
-  //   backgroundColor: theme.palette.primary.light,
-  //   boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
-  //   color: 'black',
-  //   margin: '8px',
-  //   cursor: 'pointer',
-  // };
   const sxValues = {
     fontWeight: 'bold',
     textDecoration: 'underline',
   };
   const sxInputBox = {
-    backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.tertiary.light2,
     margin: '8px',
     borderRadius: '4px',
     display: 'grid',
@@ -76,7 +57,7 @@ export const TxModem = ({ unit }) => {
     margin: '2px',
   };
   const sxInputApply = {
-    backgroundColor: theme.palette.primary.light,
+    backgroundColor: theme.palette.tertiary.light3,
     boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
     color: 'black',
     margin: '8px',
@@ -85,10 +66,16 @@ export const TxModem = ({ unit }) => {
   const sxTransmit = {
     cursor: 'pointer',
     margin: '8px',
-    backgroundColor: txData[(unit - 1) * 4 + activeModem].transmitting ? 'red' : theme.palette.primary.dark,
-    color: txData[(unit - 1) * 4 + activeModem].transmitting ? 'black' : 'white',
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
     border: '1px solid red',
+    backgroundColor: txData[(unit - 1) * 4 + activeModem].transmitting ? 'red' : theme.palette.tertiary.light3,
+    color: txData[(unit - 1) * 4 + activeModem].transmitting ? 'white' : 'black',
+    '&:hover': {
+      backgroundColor: txData[(unit - 1) * 4 + activeModem].transmitting
+        ? theme.palette.error.main
+        : theme.palette.critical.main,
+      color: txData[(unit - 1) * 4 + activeModem].transmitting ? 'black' : 'white',
+    },
   };
 
   // Modem Case Id
@@ -111,20 +98,22 @@ export const TxModem = ({ unit }) => {
   const TxModemButtonBox = () => (
     <Box sx={sxModemButtonBox}>
       {txData.map((x, index) => {
-        if (x.unit == unit) return <TxModemButton key={index} modem={x.modem} transmitting={x.transmitting} />;
+        if (x.unit == unit) return <TxModemButton key={index} modem={x.modem_number} transmitting={x.transmitting} />;
       })}
     </Box>
   );
   const TxModemButton = ({ modem, transmitting }) => (
     <Button
       sx={{
-        backgroundColor: modem - 1 == activeModem ? theme.palette.primary.dark : theme.palette.primary.light,
-        boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
-        color: 'white',
+        backgroundColor: modem - 1 == activeModem ? theme.palette.primary.dark : theme.palette.primary.light2,
+        border: transmitting ? '2px solid red' : '2px solid ' + theme.palette.primary.main,
+        color: modem - 1 == activeModem ? 'white' : 'black',
         width: '1em',
         margin: '8px',
         outline: 'none',
-        border: `1px solid ${transmitting ? 'red' : 'rgba(0,0,0,0)'}`,
+        '&:hover': {
+          backgroundColor: modem - 1 == activeModem ? theme.palette.primary.main : theme.palette.primary.light,
+        },
       }}
       onClick={e => {
         setActiveModem(parseInt(e.target.innerText) - 1);
@@ -138,6 +127,7 @@ export const TxModem = ({ unit }) => {
   const TxModemInput = () => {
     const currentRow = (unit - 1) * 4 + activeModem;
     const [inputData, setInputData] = useState(txData[currentRow]);
+    const [modemPower, setModemPower] = useState(inputData.bandwidth * Math.pow(10, (120+inputData.power)/10))
 
     const antenna = useAntenna();
 
@@ -146,38 +136,38 @@ export const TxModem = ({ unit }) => {
       tmpData[param] = val;
       setInputData(tmpData);
     };
-
+    
     const handleApply = () => {
       let tmpData = [...txData];
       tmpData[currentRow] = inputData;
       updateTxData(tmpData);
+      setModemPower(inputData.bandwidth * Math.pow(10, (120+inputData.power)/10))
     };
 
     const handleTransmit = () => {
       let tmpData = [...txData];
       tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
-      // Add a Target
-      tmpData[currentRow].targetId = antenna[tmpData[currentRow].id_antenna - 1].id_target;
+      tmpData[currentRow].target_id = antenna[tmpData[currentRow].antenna_id - 1].target_id;
       updateTxData(tmpData);
     };
-    
+
     return (
       <Box sx={sxInputBox}>
         <Box sx={sxInputRow}>
           <label htmlFor='Antenna'>Antenna</label>
           <select
             name='Antenna'
-            value={inputData.id_antenna}
+            value={inputData.antenna_id}
             onChange={e =>
               handleInputChange({
-                param: 'id_antenna',
-                val: parseInt(e.target.value),
+                param: 'antenna_id',
+                val: parseInt(e.target.value) || 0,
               })
             }>
             <option value={1}>1</option>
             <option value={2}>2</option>
           </select>
-          <Typography sx={sxValues}>{txData[currentRow].id_antenna}</Typography>
+          <Typography sx={sxValues}>{txData[currentRow].antenna_id}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='frequency'>Frequency</label>
@@ -188,7 +178,7 @@ export const TxModem = ({ unit }) => {
             onChange={e =>
               handleInputChange({
                 param: 'frequency',
-                val: parseInt(e.target.value),
+                val: parseInt(e.target.value) || 0,
               })
             }></input>
           <Typography sx={sxValues}>{txData[currentRow].frequency + ' MHz'}</Typography>
@@ -202,7 +192,7 @@ export const TxModem = ({ unit }) => {
             onChange={e =>
               handleInputChange({
                 param: 'bandwidth',
-                val: parseInt(e.target.value),
+                val: parseInt(e.target.value) || 0,
               })
             }></input>
           <Typography sx={sxValues}>{txData[currentRow].bandwidth + ' MHz'}</Typography>
@@ -217,7 +207,7 @@ export const TxModem = ({ unit }) => {
           <Typography sx={sxValues}>{`${txData[currentRow].power} dBm`}</Typography>
         </Box>
         <Box sx={sxInputRow}>
-          <div></div>
+          <Typography>Power Consumed: {Math.round(100 * modemPower / powerBudget)}%</Typography>
           <Button sx={sxInputApply} onClick={e => handleApply(e)}>
             Apply
           </Button>

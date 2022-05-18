@@ -1,22 +1,20 @@
 import { RfEnvironment } from './RfEnvironment';
-// eslint-disable-next-line no-unused-vars
-import { io, Socket } from 'socket.io-client';
-import { targets } from './targets';
-import { antennas } from './antennas';
-//import { useUpdateTx } from './context';
+import { io } from 'socket.io-client';
+import { satellites, antennas, teams } from './constants';
 
 // Create a sync global context for the RF Environments
 const sewApp = {
   teamInfo: {
-    team: 'blue',
+    team: 'Persephone',
+    server: '',
   },
-  //updateTxData: useUpdateTx(),
   init: () => {
     window.sewApp.socketInit(window.sewApp.socket);
   },
   constants: {
-    targets,
+    satellites,
     antennas,
+    teams,
   },
   environment: new RfEnvironment(),
   socket: io('http://localhost:8080', { transports: ['websocket'] }),
@@ -31,6 +29,11 @@ const sewApp = {
   socketInit: socket => {
     socket.on('connect', () => {
       console.log('Connected to the server');
+      window.sewApp.teamInfo = {
+        team: 'blue',
+        server: 'Connected',
+      };
+
       socket.emit('updateTeam', { team: sewApp.team });
 
       socket.on('updateSignals', update => {
@@ -39,15 +42,15 @@ const sewApp = {
         for (let i = 1; i <= 4; i++) {
           const specA = window.sewApp.getSpectrumAnalyzer(i);
           specA.signals = specA.signals.filter(signal => {
-            return signal.user !== update.user;
+            return signal.team !== update.team;
           });
           window.sewApp.environment.signals.forEach(signal => {
             specA.signals.push({
-              user: update.user,
+              team: update.team,
               freq: signal.frequency * 1e6,
               amp: signal.power,
               bw: signal.bandwidth * 1e6,
-              targetId: signal.targetId,
+              target_id: signal.target_id,
             });
           });
         }
@@ -61,6 +64,7 @@ const sewApp = {
     socket.connect();
   },
   getSpectrumAnalyzer: i => {
+    console.log(window.sewApp.specA1);
     if (i === 1) return window.sewApp.specA1;
     if (i === 2) return window.sewApp.specA2;
     if (i === 3) return window.sewApp.specA3;

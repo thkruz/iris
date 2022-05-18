@@ -9,8 +9,14 @@ export const AstroTheme = {
     },
     primary: {
       main: '#005a8f',
-      light: '#649cbd',
-      dark: '#003655',
+      light: '#2f7aa7',
+      light2: '#649cbd',
+      light3: '#98bdd3',
+      light4: '#cbdee9',
+      dark: '#004872',
+      dark2: '#003655',
+      dark3: '#002439',
+      dark4: '#00121c',
     },
     secondary: {
       main: '#4dacff',
@@ -19,8 +25,14 @@ export const AstroTheme = {
     },
     tertiary: {
       main: '#274059',
-      light: '#7e8c9b',
-      dark: '#172635',
+      light: '#52667a',
+      light2: '#7e8c9b',
+      light3: '#a9b2bc',
+      light4: '#d4d8dd',
+      dark: '#1f3347',
+      dark2: '#172635',
+      dark3: '#101923',
+      dark4: '#080c11',
     },
     error: {
       main: '#ffb302',

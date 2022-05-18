@@ -6,35 +6,22 @@ import CellTowerIcon from '@mui/icons-material/CellTower';
 import AlignHorizontalCenterIcon from '@mui/icons-material/AlignHorizontalCenter';
 import { AstroTheme } from '../../../../../themes/AstroTheme';
 import { useAntenna, useUpdateAntenna } from '../../../../../context';
+import { antennas, satellites } from '../../../../../constants'
 import './Antenna.css';
 
 export const AntennaController = ({ unit }) => {
   const theme = AstroTheme;
   const antennaData = useAntenna();
   const setAntennaData = useUpdateAntenna();
-  const bands = [
-    { id: 1, name: 'C', ul: 3350, dl: 3500 },
-    { id: 2, name: 'Ku', ul: 14100, dl: 14250 },
-  ];
-  const targets = [
-    { id: 1, name: 'ARKE 3G', offset: 400 },
-    { id: 2, name: 'AURORA 2B', offset: 450 },
-    { id: 3, name: 'AUXO STAR', offset: 420 },
-    { id: 4, name: 'ENYO', offset: 300 },
-    { id: 5, name: 'HASHCOMM 7', offset: 365 },
-    { id: 6, name: 'HUF UHF FO', offset: 210 },
-    { id: 7, name: 'MERCURY PAWN', offset: 150 },
-    { id: 8, name: 'NYXSAT', offset: 250 },
-    { id: 9, name: 'RASCAL', offset: 120 },
-    { id: 10, name: 'WILL 1-AM', offset: 345 },
-  ];
+  
   // Styles
   const sxAntennaCase = {
     flexGrow: 1,
     margin: 'auto',
-    backgroundColor: theme.palette.primary.main,
     borderRadius: '10px',
-    border: '1px solid black',
+    boxShadow: '0px 0px 5px rgba(0,0,0,0.5)',
+    backgroundColor: AstroTheme.palette.tertiary.light2,
+    border: '1px solid' + AstroTheme.palette.tertiary.light,
     display: 'grid',
     gridTemplateColumns: '30px 6fr 12fr',
     justifyContent: 'space-between',
@@ -50,7 +37,7 @@ export const AntennaController = ({ unit }) => {
     textDecoration: 'underline',
   };
   const sxInputBox = {
-    backgroundColor: theme.palette.primary.main,
+    backgroundColor: AstroTheme.palette.tertiary.light2,
     margin: '8px',
     borderRadius: '4px',
     display: 'grid',
@@ -63,7 +50,7 @@ export const AntennaController = ({ unit }) => {
     margin: '2px',
   };
   const sxInputApply = {
-    backgroundColor: theme.palette.primary.light,
+    backgroundColor: theme.palette.tertiary.light3,
     boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
     color: 'black',
     margin: '8px',
@@ -73,7 +60,7 @@ export const AntennaController = ({ unit }) => {
     width: '100px',
     padding: '8px',
     borderRadius: '5px',
-    backgroundColor: theme.palette.primary.light,
+    backgroundColor: theme.palette.tertiary.light3,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -87,14 +74,18 @@ export const AntennaController = ({ unit }) => {
   };
   const sxHPA = {
     marginTop: '5px',
-    backgroundColor: antennaData[unit - 1].hpa ? 'red' : theme.palette.primary.dark,
-    color: antennaData[unit - 1].hpa ? 'black' : 'white',
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
+    backgroundColor: antennaData[unit - 1].hpa ? 'red' : theme.palette.tertiary.light3,
+    color: antennaData[unit - 1].hpa ? 'white' : 'black',
+    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
     border: '1px solid red',
+    '&:hover': {
+      backgroundColor: antennaData[unit - 1].hpa ? theme.palette.error.main : theme.palette.critical.main,
+      color: antennaData[unit - 1].hpa ? 'black' : 'white',
+    },
   };
   const sxTx = {
     backgroundColor: antennaData[unit - 1].loopback
-      ? theme.palette.primary.light
+      ? theme.palette.tertiary.light2
       : antennaData[unit - 1].hpa
       ? 'red'
       : 'green',
@@ -137,9 +128,9 @@ export const AntennaController = ({ unit }) => {
           <label htmlFor='Target'>Target</label>
           <select
             name='Target'
-            value={inputData.id_target}
-            onChange={e => handleInputChange({ param: 'id_target', val: e.target.value })}>
-            {targets.map((x, index) => {
+            value={inputData.target_id}
+            onChange={e => handleInputChange({ param: 'target_id', val: e.target.value })}>
+            {satellites.map((x, index) => {
               return (
                 <option value={x.id} key={index}>
                   {x.name}
@@ -147,7 +138,7 @@ export const AntennaController = ({ unit }) => {
               );
             })}
           </select>
-          <Typography sx={sxValues}>{targets[antennaData[unit - 1].id_target - 1].name}</Typography>
+          <Typography sx={sxValues}>{satellites[antennaData[unit - 1].target_id - 1].name}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='Band'>Band</label>
@@ -155,15 +146,15 @@ export const AntennaController = ({ unit }) => {
             name='band'
             value={inputData.band}
             onChange={e => handleInputChange({ param: 'band', val: e.target.value })}>
-            {bands.map((x, index) => {
+            {antennas.map((x, index) => {
               return (
-                <option value={x.id} key={index}>
-                  {x.name}
+                <option value={index} key={index}>
+                  {x.band}
                 </option>
               );
             })}
           </select>
-          <Typography sx={sxValues}>{bands[antennaData[unit - 1].band - 1].name}</Typography>
+          <Typography sx={sxValues}>{antennas[antennaData[unit - 1].band].band}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='offset'>Offset</label>

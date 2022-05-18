@@ -7,6 +7,6 @@ exports.seed = async function(knex) {
   await knex.schema.raw('TRUNCATE server CASCADE');
   await knex('server').del()
   await knex('server').insert([
-    {id: 1, name: '000533'}
+    {id: 1, name: '533TRS'}
   ]);
 };

@@ -1,7 +1,7 @@
 export { Header } from './Header/Header';
 export { Body } from './Body/Body';
 export { Footer } from './Footer/Footer';
-export { Login } from './Login/Login';
+//export { Login } from './Login/Login';
 export { StudentStack } from './Body/StudentStack/StudentStack';
 export { TeamInfo } from './Body/StudentStack/TeamInfo/TeamInfo';
 export { SpectrumAnalyzerGrid } from './Body/StudentStack/SpectrumAnalyzerGrid/SpectrumAnalyzerGrid';
