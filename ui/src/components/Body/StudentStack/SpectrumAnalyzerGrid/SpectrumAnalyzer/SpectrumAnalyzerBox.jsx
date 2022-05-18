@@ -60,30 +60,6 @@ const canvasContainer = {
   borderRadius: '10px',
 };
 
-export const updateSpecAwAntennaInfo = (antenna_id, specA, antenna) => {
-  specA.antenna_id = antenna_id;
-  let { band, hpa, target_id, lock, loopback, offset, operational } = antenna[specA.antenna_id - 1];
-  specA.target_id = target_id;
-  console.log('updateSpecAwAntennaInfo', specA.antenna_id, specA.target_id);
-
-  specA.hpa = hpa;
-  specA.loopback = loopback;
-  specA.lock = lock;
-  specA.operational = operational;
-
-  band = band === 0 ? 'c' : 'ku';
-  const bandOffset = window.sewApp.constants.antennas.filter(antenna => antenna.band.toLowerCase() === band)[0];
-  specA.downconvertOffset = bandOffset.downconvert;
-  specA.upconvertOffset = bandOffset.upconvert;
-  if (!loopback) {
-    // RF Settings
-    specA.targetOffset = satellites.filter(target => target.id === target_id)[0].offset;
-  } else {
-    // IF Settings
-    specA.antennaOffset = offset * 1e6;
-  }
-};
-
 export const SpectrumAnalyzerBox = props => {
   const [isRfMode, setIsRfMode] = useState(false);
   const [isPause, setIsPause] = useState(false);
@@ -110,10 +86,13 @@ export const SpectrumAnalyzerBox = props => {
         }
         specA.isDrawHold = data.hold;
         specA.antenna_id = data.antenna_id;
+        const { target_id } = antenna[specA.antenna_id - 1];
+        specA.target_id = target_id;
 
         specA.changeCenterFreq(specA.isRfMode ? specA.config.rf.freq : specA.config.if.freq);
         specA.changeBandwidth(specA.isRfMode ? specA.config.rf.span : specA.config.if.span);
 
+        window.sewApp[`specA${whichSpecA}`] = specA;
         updateSewAppContext();
       }
     });
@@ -157,6 +136,10 @@ export const SpectrumAnalyzerBox = props => {
 
         specA.changeCenterFreq(specA.isRfMode ? specA.config.rf.freq : specA.config.if.freq);
         specA.changeBandwidth(specA.isRfMode ? specA.config.rf.span : specA.config.if.span);
+
+        specA.antenna_id = data[0].antenna_id;
+        const { target_id } = antenna[specA.antenna_id - 1];
+        specA.target_id = target_id;
 
         loadSignals(specA);
         specA.start();
@@ -203,11 +186,6 @@ export const SpectrumAnalyzerBox = props => {
     setIsRfMode(!isRfMode);
     const _specA = window.sewApp[`specA${specA.canvas.id.split('A')[1]}`];
     _specA.isRfMode = !isRfMode;
-    if (_specA.isRfMode) {
-      _specA.noiseFloor -= _specA.noiseFloor * 0.05;
-    } else {
-      _specA.noiseFloor += _specA.noiseFloor * 0.05;
-    }
     props.handleRfClick(_specA);
 
     window.sewApp.announceSpecAChange(specA.whichUnit);
@@ -221,12 +199,48 @@ export const SpectrumAnalyzerBox = props => {
     const _specA = window.sewApp[`specA${specA.canvas.id.split('A')[1]}`];
     _specA.isPause = !isPause;
     props.handlePauseClicked(_specA);
+    window.sewApp.announceSpecAChange(specA.whichUnit);
     updateSewAppContext();
   };
 
   useEffect(() => {
-    console.log('specA', sewApp);
-  }, [sewApp[`specA${whichSpecA}`]?.centerFreq]);
+    updateSpecAwAntennaInfo();
+  }, [antenna]);
+
+  const updateSpecAwAntennaInfo = (antenna_id, specA, isRemoteChange = true) => {
+    specA ??= window.sewApp[`specA${whichSpecA}`];
+    if (!specA) return;
+    antenna_id ??= specA.antenna_id;
+
+    specA.antenna_id = antenna_id;
+    let { band, hpa, target_id, lock, loopback, offset, operational } = antenna[specA.antenna_id - 1];
+    specA.target_id = target_id;
+    console.log('updateSpecAwAntennaInfo', specA.antenna_id, specA.target_id);
+    console.log(antenna);
+
+    specA.hpa = hpa;
+    specA.loopback = loopback;
+    specA.lock = lock;
+    specA.operational = operational;
+
+    band = band === 0 ? 'c' : 'ku';
+    const bandOffset = window.sewApp.constants.antennas.filter(antenna => antenna.band.toLowerCase() === band)[0];
+    specA.downconvertOffset = bandOffset.downconvert;
+    specA.upconvertOffset = bandOffset.upconvert;
+    if (!loopback) {
+      // RF Settings
+      specA.targetOffset = satellites.filter(target => target.id === target_id)[0].offset;
+    } else {
+      // IF Settings
+      specA.antennaOffset = offset * 1e6;
+    }
+    window.sewApp[`specA${whichSpecA}`] = specA;
+    if (!isRemoteChange) {
+      // Dont tell anyone else if they made the change
+      window.sewApp.announceSpecAChange(specA.whichUnit);
+    }
+    updateSewAppContext();
+  };
 
   return (
     <Box sx={SpectrumAnalyzerBoxStyle}>
@@ -253,8 +267,8 @@ export const SpectrumAnalyzerBox = props => {
             <label htmlFor='Antenna'>Ant</label>
             <select
               name='Antenna'
-              value={sewApp[`specA${whichSpecA}`]?.id_antenna}
-              onChange={e => updateSpecAwAntennaInfo(parseInt(e.target.value), sewApp[`specA${whichSpecA}`], antenna)}>
+              value={sewApp[`specA${whichSpecA}`]?.antenna_id}
+              onChange={e => updateSpecAwAntennaInfo(parseInt(e.target.value), sewApp[`specA${whichSpecA}`], false)}>
               <option value={1}>1</option>
               <option value={2}>2</option>
             </select>
