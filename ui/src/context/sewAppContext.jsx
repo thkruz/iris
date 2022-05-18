@@ -7,7 +7,7 @@ import { antennas, satellites } from '../constants';
 import { CRUDdataTable } from './../crud/crud';
 
 // Create a sync global context for the RF Environments
-const sewApp = {  
+const sewApp = {
   teamInfo: {
     team: '',
     server: '',
@@ -31,7 +31,7 @@ const sewApp = {
     socket.on('connect', () => {
       console.log('Connected to the server');
       window.sewApp.teamInfo = {
-        team: '',
+        team: 'default', // TODO: Replace this properly
         server: '',
       };
       socket.emit('updateTeam', { team: sewApp.team });
@@ -42,11 +42,11 @@ const sewApp = {
         for (let i = 1; i <= 4; i++) {
           const specA = window.sewApp.getSpectrumAnalyzer(i);
           specA.signals = specA.signals.filter(signal => {
-            return signal.team !== update.team;
+            return signal.team_id !== update.signals[0].team_id;
           });
           window.sewApp.environment.signals.forEach(signal => {
             specA.signals.push({
-              team: update.team,
+              team_id: signal.team_id,
               freq: signal.frequency * 1e6,
               amp: signal.power,
               bw: signal.bandwidth * 1e6,
