@@ -59,6 +59,10 @@ io.on('connection', socket => {
     });
   });
 
+  socket.on('updateSpecA', update => {
+    console.log(update);
+  });
+
   socket.on('updateAntenna', update => {
     console.log(`sending updateAntenna to clients`);
     clientManager.clients.forEach(client => {
