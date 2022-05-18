@@ -1,28 +1,31 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
 import { Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { teams } from '../../constants';
+import { useUser, useUpdateUser } from '../../context';
+import { useFetch } from '../../hooks/useFetch';
 
 export default function Login() {
-  const [userName, setUserName] = useState('');
-  const [password, setPassword] = useState('');
+  const user = useUser();
+  console.log(user)
+  const setUser = useUpdateUser();
   const navigate = useNavigate();
-  let staticUserName = 'admin';
-  let staticUserPassword = 'admin';
-  let staticStudentUserName = 'student';
-  let staticStudentUserPassword = 'student';
+  const { data: servers } = useFetch('data/server')
+  console.log(servers)
 
   const handleSubmit = event => {
     event.preventDefault();
-    if (userName === staticUserName && password === staticUserPassword) {
-      navigate('/instructor', { state: { isAuthenticated: true } });
-    } else if (userName === staticStudentUserName && password === staticStudentUserPassword) {
-      navigate('/student', { state: { isAuthenticated: true } });
-    } else {
-      alert('Invalid username or password');
-    }
+    navigate('/student', { state: { isAuthenticated: true } });
   };
+
+  const handleTeamChange = (value) => {
+    console.log(value)
+    setUser({...user, team_id: value})
+  }
+  const handleServerChange = (server_id) => {
+    setUser({...user, server_id: server_id})
+  }
 
   return (
     <Box
@@ -41,21 +44,30 @@ export default function Login() {
       }}
       novalidate
       autocomplete='off'>
-      <TextField
-        value={userName}
-        onInput={e => setUserName(e.target.value)}
-        id='login-username'
-        label='Login'
-        variant='outlined'
-      />
-      <TextField
-        value={password}
-        onInput={e => setPassword(e.target.value)}
-        id='login-password'
-        label='Password'
-        variant='outlined'
-        type='password'
-      />
+      <div>
+        <label htmlFor='team'>Team</label>
+        <select
+          name='team'
+          type='string'
+          value={teams[user.team_id-1].id}
+          onChange={e => handleTeamChange(parseInt(e.target.value))}>
+            {teams.map((x, index) => (
+              <option key={index} value={x.id}>{x.name}</option>
+            ))}
+          </select>
+        <label htmlFor='server'>Server</label>
+      </div>
+      <div>
+        <select
+          name='server'
+          type='string'
+          value={user.server_id}
+          onChange={e => handleServerChange(parseInt(e.target.value))}>
+            {servers.map((x, index) => (
+              <option key={index} value={x.id}>{x.name}</option>
+            ))}
+          </select>
+      </div>
       <Button type='submit' size='large' variant='contained' color='primary'>
         Submit
       </Button>
