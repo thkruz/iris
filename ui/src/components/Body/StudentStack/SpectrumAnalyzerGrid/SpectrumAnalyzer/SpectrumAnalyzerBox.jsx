@@ -6,8 +6,9 @@ import { useEffect } from 'react';
 import { satellites } from '../../../../../constants';
 import { useAntenna } from './../../../../../context';
 import PropTypes from 'prop-types';
+import config from './../../../../../config';
 
-// MUI Stack: https://mui.com/material-ui/react-stack/
+const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
 const SpectrumAnalyzerBoxStyle = {
   textAlign: 'center',
@@ -90,6 +91,15 @@ export const SpectrumAnalyzerBox = props => {
   const [isPause, setIsPause] = useState(false);
   const antenna = useAntenna();
 
+  const updateSpecAConfig = () => {
+    setSpecAConfig({
+      bandwidth: (specA.maxFreq - specA.minFreq) / 1e6,
+      centerFreq: (specA.maxFreq - (specA.maxFreq - specA.minFreq) / 2) / 1e6,
+      minDecibels: specA.minDecibels,
+      maxDecibels: specA.maxDecibels,
+    });
+  };
+
   useEffect(() => {
     setSpecAConfig({
       bandwidth: (specA.maxFreq - specA.minFreq) / 1e6,
@@ -103,8 +113,8 @@ export const SpectrumAnalyzerBox = props => {
     const canvasDom = document.getElementById(props.canvasId);
     canvasDom.width = canvasDom.parentElement.offsetWidth - 6;
     canvasDom.height = canvasDom.parentElement.offsetWidth - 6;
-
     const defaultSpecAConfig = {
+      whichUnit: parseInt(props.canvasId.split('A')[1]),
       minDecibels: -120,
       maxDecibels: -20,
       minFreq: 4650000000,
@@ -114,54 +124,47 @@ export const SpectrumAnalyzerBox = props => {
       isShowSignals: false,
     };
 
-    switch (props.canvasId) {
-      case 'specA1':
-        defaultSpecAConfig.minFreq = 1300 * 1e6;
-        defaultSpecAConfig.maxFreq = 1400 * 1e6;
-        break;
-      case 'specA2':
-        defaultSpecAConfig.minFreq = 4650 * 1e6;
-        defaultSpecAConfig.maxFreq = 4750 * 1e6;
-        break;
-      case 'specA3':
-        defaultSpecAConfig.minFreq = 5050 * 1e6;
-        defaultSpecAConfig.maxFreq = 5150 * 1e6;
-        break;
-      case 'specA4':
-        defaultSpecAConfig.minFreq = 1550 * 1e6;
-        defaultSpecAConfig.maxFreq = 1650 * 1e6;
-        break;
-    }
+    fetch(`${ApiUrl}/data/spec_a`).then(res => {
+      res.json().then(data => {
+        const specA = new SpectrumAnalyzer(canvasDom, defaultSpecAConfig);
 
-    const specA = new SpectrumAnalyzer(canvasDom, defaultSpecAConfig);
+        data = data.filter(specA_DB => specA_DB.unit === specA.whichUnit && specA_DB.team_id === 1); // TODO Allow other teams!
+        specA.config = {
+          if: {
+            freq: data[0].frequency * 1e6, // MHz to Hz
+            span: data[0].span * 1e6, // MHz to Hz
+          },
+          rf: {
+            freq: data[1].frequency * 1e6, // MHz to Hz
+            span: data[1].span * 1e6, // MHz to Hz
+          },
+        };
 
-    const { id_target } = antenna[1];
-    specA.targetId = id_target;
+        const { id_target } = antenna[1];
+        specA.targetId = id_target;
 
-    setSpecA(specA);
+        specA.changeCenterFreq(specA.isRfMode ? specA.config.rf.freq : specA.config.if.freq);
+        specA.changeBandwidth(specA.isRfMode ? specA.config.rf.span : specA.config.if.span);
 
-    setSpecAConfig({
-      bandwidth: (specA.maxFreq - specA.minFreq) / 1e6,
-      centerFreq: (specA.maxFreq - (specA.maxFreq - specA.minFreq) / 2) / 1e6,
-      minDecibels: specA.minDecibels,
-      maxDecibels: specA.maxDecibels,
+        setSpecA(specA);
+        updateSpecAConfig();
+        switch (props.canvasId) {
+          case 'specA1':
+            window.sewApp.specA1 = specA;
+            break;
+          case 'specA2':
+            window.sewApp.specA2 = specA;
+            break;
+          case 'specA3':
+            window.sewApp.specA3 = specA;
+            break;
+          case 'specA4':
+            window.sewApp.specA4 = specA;
+            break;
+        }
+        specA.start();
+      });
     });
-
-    switch (props.canvasId) {
-      case 'specA1':
-        window.sewApp.specA1 = specA;
-        break;
-      case 'specA2':
-        window.sewApp.specA2 = specA;
-        break;
-      case 'specA3':
-        window.sewApp.specA3 = specA;
-        break;
-      case 'specA4':
-        window.sewApp.specA4 = specA;
-        break;
-    }
-    specA.start();
   }, []);
 
   useEffect(() => {
@@ -172,10 +175,12 @@ export const SpectrumAnalyzerBox = props => {
 
   const handleRfClicked = () => {
     specA.isRfMode = !specA.isRfMode;
+    specA.changeCenterFreq(specA.isRfMode ? specA.config.rf.freq : specA.config.if.freq);
+    specA.changeBandwidth(specA.isRfMode ? specA.config.rf.span : specA.config.if.span);
+    updateSpecAConfig();
     setSpecA(specA);
     setIsRfMode(!isRfMode);
     const _specA = window.sewApp[`specA${specA.canvas.id.split('A')[1]}`];
-    console.log(_specA.changeCenterFreq);
     _specA.isRfMode = !isRfMode;
     if (_specA.isRfMode) {
       _specA.noiseFloor -= _specA.noiseFloor * 0.05;

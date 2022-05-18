@@ -36,7 +36,18 @@ export class SpectrumAnalyzer {
     this.isDrawMarker = false;
     this.isDrawHold = false;
     this.isPause = false;
+    this.whichUnit = options.whichUnit || 0;
     this.resize(this.canvas.parentElement.offsetWidth - 6, this.canvas.parentElement.offsetWidth - 6);
+    this.config = {
+      if: {
+        freq: null, // Hz
+        span: null, // Hz
+      },
+      rf: {
+        freq: null, // Hz
+        span: null, // Hz
+      },
+    };
 
     window.addEventListener('resize', () => {
       if (this.canvas.parentElement.offsetWidth - 6 !== this.canvas.width - 6) {
