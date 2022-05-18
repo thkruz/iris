@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import PropTypes from 'prop-types';
 const txContext = React.createContext();
 const updateTxContext = React.createContext();
- 
+
 const defaultTxContext = [
   {
     id: 1,
@@ -237,8 +237,8 @@ export const TxProvider = ({ children }) => {
     // if patch request is good
     window.sewApp.socket.emit('updateTx', { user: window.sewApp.socket.id, signals: update });
     setTx(update);
-    console.log(update)
-  }; 
+    console.log(update);
+  };
 
   return (
     <txContext.Provider value={tx}>

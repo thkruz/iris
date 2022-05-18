@@ -45,9 +45,7 @@ export const AntennaProvider = ({ children }) => {
   const [antenna, setAntenna] = useState(defaultAntennaContext);
 
   window.sewApp.socket.on('updateAntennaClient', data => {
-    console.log('updateAntennaClient', data);
     if (data.user != window.sewApp.socket.id) {
-      console.log('actually updating the antenna');
       setAntenna(data.signals);
     }
   });

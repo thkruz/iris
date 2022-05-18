@@ -8,7 +8,7 @@ import { useUpdateSewApp } from '../../../../context';
 export const TeamInfo = () => {
   const [teamInfo, setTeamInfo] = useState({ team: '', members: [] });
   const sewApp = useSewApp();
-  const updateSewApp = useUpdateSewApp();
+  const updateSewAppContext = useUpdateSewApp();
   let checkForConnection = null;
 
   useEffect(() => {
@@ -16,15 +16,14 @@ export const TeamInfo = () => {
   }, [sewApp]);
 
   useEffect(() => {
-    updateSewApp();
     checkForConnection = setInterval(() => {
-      updateSewApp();
       if (window.sewApp.teamInfo.server === 'Connected') {
         setTeamInfo(sewApp.teamInfo);
+        updateSewAppContext();
         clearTimeout(checkForConnection);
       }
     }, 1000);
-  }, [sewApp]);
+  }, []);
 
   return (
     <Grid
