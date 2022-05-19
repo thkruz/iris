@@ -1,7 +1,10 @@
 import React, { useContext, useState } from 'react';
 import PropTypes from 'prop-types';
+import axios from 'axios';
 const txContext = React.createContext();
 const updateTxContext = React.createContext();
+
+const url = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
 const defaultTxContext = [
   {
@@ -227,17 +230,26 @@ export const TxProvider = ({ children }) => {
 
   window.sewApp.socket.on('updateTxClient', data => {
     if (data.user != window.sewApp.socket.id) {
-      console.log('actually updating the Tx');
+      console.log('received update for Tx');
       setTx(data.signals);
     }
   });
 
   const updateTx = update => {
-    //  patch request to update database
-    // if patch request is good
-    window.sewApp.socket.emit('updateTx', { user: window.sewApp.socket.id, signals: update });
-    setTx(update);
-    console.log(update);
+    axios.patch(`${url}/data/tx`, update)
+      .then(res => {
+        if (res.status === 200) {
+          window.sewApp.socket.emit('updateTx', { user: window.sewApp.socket.id, signals: update });
+          setTx(update);
+        }
+        else {
+          console.log('error patching transmitter');
+          window.alert("Error patching transmitter");
+        }
+      })
+      .catch(err => {
+        console.log('error patching signal', err);
+      });
   };
 
   return (

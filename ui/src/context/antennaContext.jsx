@@ -1,7 +1,10 @@
 import React, { useContext, useState } from 'react';
 import PropTypes from 'prop-types';
+import axios from 'axios';
 const antennaContext = React.createContext();
 const updateAntennaContext = React.createContext();
+
+const url = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
 const defaultAntennaContext = [
   {
@@ -50,9 +53,25 @@ export const AntennaProvider = ({ children }) => {
   });
 
   const updateAntenna = update => {
-    console.log('updateAntenna');
-    window.sewApp.socket.emit('updateAntenna', { user: window.sewApp.socket.id, signals: update });
-    setAntenna(update);
+    console.log('updateAntenna', update);
+    // send patch request to server
+
+    // I think we're going to need to attach ?id={$id} to the end of the url
+    axios.patch(`${url}/data/antenna`, update)
+      .then(res => {
+        console.log(res);
+        if (res.status === 200) {
+          window.sewApp.socket.emit('updateAntenna', { user: window.sewApp.socket.id, signals: update });
+          setAntenna(update);
+        }
+        else {
+          console.log('error patching antenna');
+          window.alert("Error patching antenna");
+        }
+      })
+      .catch(err => {
+        console.log("Error patching receiver", err);
+      });
   };
 
   return (

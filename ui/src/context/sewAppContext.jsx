@@ -5,6 +5,9 @@ import { RfEnvironment } from '../RfEnvironment';
 import { io, Socket } from 'socket.io-client';
 import { antennas, satellites } from '../constants';
 import { CRUDdataTable } from './../crud/crud';
+import axios from 'axios';
+
+const url = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
 // Create a sync global context for the RF Environments
 const sewApp = {
@@ -12,7 +15,6 @@ const sewApp = {
     team: '',
     server: '',
   },
-  //updateTxData: useUpdateTx(),
   init: () => {
     window.sewApp.socketInit(window.sewApp.socket);
   },
@@ -34,7 +36,20 @@ const sewApp = {
         team: 'default', // TODO: Replace this properly
         server: '',
       };
-      socket.emit('updateTeam', { team: sewApp.team });
+
+      // patch the server with the team info
+      axios.patch(`${url}/data/server?id=${window.sewApp.teamInfo.server.id}`, window.sewApp.teamInfo)
+        .then(res => {
+          if (res.status === 200) {
+            socket.emit('updateTeam', { team: sewApp.team });
+          } else {
+            console.log('error patching team');
+            window.alert('error patching team');
+          }
+        })
+        .catch(err => {
+          console.log('error patching team', err);
+        });
 
       socket.on('updateSignals', update => {
         window.sewApp.environment.updateSignals(update);
@@ -87,12 +102,29 @@ const sewApp = {
       antenna_id: specA.antenna_id,
     };
     console.log('announceSpecAChange', sewApp.socket.id);
-    sewApp.socket.emit('updateSpecA', patchData);
+    
+    // send patch request to server
+    axios.patch(`${url}/data/spec_a`, patchData)
+      .then(res => {
+        if (res.status === 200) {
+          sewApp.socket.emit('updateSpecA', patchData);
+        }
+        else {
+          console.log('Error patching SpecA');
+        }
+      })
+      .catch(err => {
+        console.log('Error patching SpecA', err);
+      });
+    
+    // I don't think this is needed if we use axios
+    /*
     CRUDdataTable({
       method: 'PATCH',
       path: 'spec_a',
       data: patchData,
     });
+    */
   },
 };
 

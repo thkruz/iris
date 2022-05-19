@@ -1,7 +1,10 @@
 import React, { useContext, useState } from 'react';
 import PropTypes from 'prop-types';
+import axios from 'axios';
 const signalContext = React.createContext();
 const updateSignalContext = React.createContext();
+
+const url = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
 const defaultSignalContext = [
     {id: 1, server_id: 1, target_id: 1, frequency: 4710, power: -45, bandwidth: 5, modulation: '8QAM', fec: '1/2', feed:'red 1.mp4', operational: 'false'},
@@ -30,7 +33,18 @@ export const useUpdateSignal = () => {
 export const SignalProvider = ({ children }) => {
     const [signal, setSignal] = useState(defaultSignalContext);
     const updateSignal = (update) => {
-        setSignal(update);
+        axios.patch(`${url}/data/signal`, update)
+            .then(res => {
+                if (res.status === 200) {
+                    setSignal(res.data);
+                }
+                else {
+                    console.log('error patching signal');
+                }
+            })
+            .catch(err => {
+                console.log('error patching signal', err);
+            });
     };
 
     return (

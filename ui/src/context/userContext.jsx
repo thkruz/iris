@@ -1,7 +1,10 @@
 import React, { useContext, useState } from 'react';
 import PropTypes from 'prop-types';
+import axios from 'axios';
 const userContext = React.createContext();
 const updateUserContext = React.createContext();
+
+const url = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
 const defaultUserContext = { server_id: 1, team_id: 1};
 
@@ -25,10 +28,22 @@ export const UserProvider = ({ children }) => {
 
   const updateUser = (update) => {
       console.log('updateUser', update);
-      // patch request to update database
-      // if patch request is good
-      window.sewApp.socket.emit('updateUser', { user: window.sewApp.socket.id, signals: update });
-      setUser(update);
+      // send patch request to server
+      axios.patch(`${url}/data/player/${user.id}`, update)
+          .then(res => {
+            if(res.status === 200) {
+              window.sewApp.socket.emit('updateUser', { user: window.sewApp.socket.id, signals: update });
+              setUser(update);
+            }
+            else {
+              console.log('error patching user');
+              window.alert("Error patching user");
+            }
+          })
+          .catch(err => {
+            console.log("Error patching user", err);
+          }
+      );
   };
 
   return (

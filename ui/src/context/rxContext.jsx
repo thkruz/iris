@@ -1,7 +1,10 @@
 import React, { useContext, useState } from 'react';
 import PropTypes from 'prop-types';
+import axios from 'axios';
 const rxContext = React.createContext();
 const updateRxContext = React.createContext();
+
+const url = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
 const defaultRxContext = [
     {
@@ -227,7 +230,7 @@ export const RxProvider = ({ children }) => {
     
     window.sewApp.socket.on('updateRxClient', (data) => {
         if (data.user != window.sewApp.socket.id) {
-            console.log('actually updating the Rx');
+            console.log('received update for Rx');
             let tmpUpdate = [...rx];
             tmpUpdate[data.index] = data.update;
             setRx(tmpUpdate);
@@ -239,8 +242,22 @@ export const RxProvider = ({ children }) => {
         tmpUpdate[index] = update;
         // patch request to update database
         // if patch request is good
-        window.sewApp.socket.emit('updateRx', { user: window.sewApp.socket.id, update: update, index: index });
-        setRx(tmpUpdate);
+        // send patch request to server
+        axios.patch(`${url}/data/receiver`, update)
+            .then(res => {
+                console.log(res);
+                if (res.status === 200) {
+                    window.sewApp.socket.emit('updateRx', { user: window.sewApp.socket.id, update: update, index: index });
+                    setRx(tmpUpdate);
+                }
+                else {
+                    console.log('error patching receiver');
+                    window.alert("Error patching receiver");
+                }
+            })
+            .catch(err => {
+                window.alert("Error patching receiver", err);
+            });
     };
 
     return (
