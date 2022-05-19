@@ -118,16 +118,18 @@ export const SpectrumAnalyzerBox = props => {
         const specA = new SpectrumAnalyzer(canvasDom, defaultSpecAConfig);
 
         data = data.filter(specA_DB => specA_DB.unit === specA.whichUnit && specA_DB.team_id === 1); // TODO Allow other teams!
+        const ifData = data.filter(specA_DB => !specA_DB.rf)[0];
+        const rfData = data.filter(specA_DB => specA_DB.rf)[0];
         specA.config = {
           if: {
-            id: data[0].id,
-            freq: data[0].frequency * 1e6, // MHz to Hz
-            span: data[0].span * 1e6, // MHz to Hz
+            id: ifData.id,
+            freq: ifData.frequency * 1e6, // MHz to Hz
+            span: ifData.span * 1e6, // MHz to Hz
           },
           rf: {
-            id: data[1].id,
-            freq: data[1].frequency * 1e6, // MHz to Hz
-            span: data[1].span * 1e6, // MHz to Hz
+            id: rfData.id,
+            freq: rfData.frequency * 1e6, // MHz to Hz
+            span: rfData.span * 1e6, // MHz to Hz
           },
         };
 

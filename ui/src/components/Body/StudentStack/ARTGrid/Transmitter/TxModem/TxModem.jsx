@@ -127,21 +127,28 @@ export const TxModem = ({ unit }) => {
   const TxModemInput = () => {
     const currentRow = (unit - 1) * 4 + activeModem;
     const [inputData, setInputData] = useState(txData[currentRow]);
-    const [modemPower, setModemPower] = useState(inputData.bandwidth * Math.pow(10, (120+inputData.power)/10))
+    const [modemPower, setModemPower] = useState(inputData.bandwidth * Math.pow(10, (120 + inputData.power) / 10));
 
     const antenna = useAntenna();
 
     const handleInputChange = ({ param, val }) => {
+      if (param === 'power') {
+        // if contains any symbols except - and number then return
+        if (val.match(/[^0-9-]/g)) return;
+        if (!isNaN(parseInt(val))) {
+          val = parseInt(val);
+        }
+      }
       let tmpData = { ...inputData };
       tmpData[param] = val;
       setInputData(tmpData);
     };
-    
+
     const handleApply = () => {
       let tmpData = [...txData];
       tmpData[currentRow] = inputData;
       updateTxData(tmpData);
-      setModemPower(inputData.bandwidth * Math.pow(10, (120+inputData.power)/10))
+      setModemPower(inputData.bandwidth * Math.pow(10, (120 + inputData.power) / 10));
     };
 
     const handleTransmit = () => {
@@ -203,11 +210,11 @@ export const TxModem = ({ unit }) => {
             name='power'
             type='string'
             value={inputData.power}
-            onChange={e => handleInputChange({ param: 'power', val: parseInt(e.target.value) })}></input>
+            onChange={e => handleInputChange({ param: 'power', val: e.target.value })}></input>
           <Typography sx={sxValues}>{`${txData[currentRow].power} dBm`}</Typography>
         </Box>
         <Box sx={sxInputRow}>
-          <Typography>Power Consumed: {Math.round(100 * modemPower / powerBudget)}%</Typography>
+          <Typography>Power Consumed: {Math.round((100 * modemPower) / powerBudget)}%</Typography>
           <Button sx={sxInputApply} onClick={e => handleApply(e)}>
             Apply
           </Button>
