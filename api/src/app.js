@@ -119,6 +119,7 @@ app.post('/data/:table_name', (request, response) => {
 
 app.patch('/data/:table_name', (request, response) => {
   if (request.query.id !== undefined) {
+    console.log(request.body)
     knex(request.params.table_name)
       .where('id', request.query.id)
       .update(request.body)

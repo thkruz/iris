@@ -1,5 +1,6 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import config from '../config';
 const txContext = React.createContext();
 const updateTxContext = React.createContext();
 
@@ -225,13 +226,23 @@ export const useUpdateTx = () => {
 export const TxProvider = ({ children }) => {
   const [tx, setTx] = useState(defaultTxContext);
 
+  useEffect(() => {
+    const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
+    fetch(`${ApiUrl}/data/transmitter`)
+      .then(response => response.json())
+      .then(data => {
+        console.log('TransmitterProvider', data);
+        setTx([...data]);
+      });
+  }, []);
+
   window.sewApp.socket.on('updateTxClient', data => {
     if (data.user != window.sewApp.socket.id) {
       console.log('actually updating the Tx');
       setTx(data.signals);
     }
   });
-
+ 
   const updateTx = update => {
     //  patch request to update database
     // if patch request is good
