@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import { Box, Button, Typography } from '@mui/material';
 import './TxModem.css';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
-import { useTx, useUpdateTx, useAntenna, useUser } from '../../../../../../context';
+import { useTx, useUpdateTx, useUser } from '../../../../../../context';
 import { CRUDdataTable } from '../../../../../../crud';
 
 export const TxModem = ({ unit }) => {
@@ -17,6 +17,7 @@ export const TxModem = ({ unit }) => {
   //TODO: modem buttons, update state, video,
   const theme = AstroTheme;
   const [activeModem, setActiveModem] = useState(1);
+  console.log(unitData.filter(x => x.modem_number == activeModem))
 
   // Styles
   const sxCase = {
@@ -70,13 +71,13 @@ export const TxModem = ({ unit }) => {
     margin: '8px',
     boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
     border: '1px solid red',
-    backgroundColor: txContext[(unit - 1) * 4 + activeModem].transmitting ? 'red' : theme.palette.tertiary.light3,
-    color: txContext[(unit - 1) * 4 + activeModem].transmitting ? 'white' : 'black',
+    backgroundColor: unitData.filter(x => x.modem_number == activeModem)[0].transmitting ? 'red' : theme.palette.tertiary.light3,
+    color: unitData.filter(x => x.modem_number == activeModem)[0].transmitting ? 'white' : 'black',
     '&:hover': {
-      backgroundColor: txContext[(unit - 1) * 4 + activeModem].transmitting
+      backgroundColor: unitData.filter(x => x.modem_number == activeModem)[0].transmitting
         ? theme.palette.error.main
         : theme.palette.critical.main,
-      color: txContext[(unit - 1) * 4 + activeModem].transmitting ? 'black' : 'white',
+      color: unitData.filter(x => x.modem_number == activeModem)[0].transmitting ? 'black' : 'white',
     },
   };
 
@@ -129,12 +130,9 @@ export const TxModem = ({ unit }) => {
   const TxModemInput = () => {
     console.log('unit: ', unit, 'active modem: ', activeModem, unitData)
     const currentModem = unitData.map(x => x.modem_number).indexOf(activeModem);
-    console.log("modem", currentModem)
     const currentRow = txContext.map(x => x.id).indexOf(unitData[currentModem].id);
-    console.log('id', currentRow)
     const [inputData, setInputData] = useState(txContext[currentRow]);
     const [modemPower, setModemPower] = useState(inputData.bandwidth * Math.pow(10, (120 + inputData.power) / 10));
-    const antenna = useAntenna();
 
     const handleInputChange = ({ param, val }) => {
       if (param === 'power') {
@@ -160,9 +158,8 @@ export const TxModem = ({ unit }) => {
     const handleTransmit = () => {
       let tmpData = [...txContext];
       tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
-      tmpData[currentRow].target_id = antenna[tmpData[currentRow].antenna_id - 1].target_id;
       setTx(tmpData);
-      console.log('tmp', tmpData[currentRow])
+      console.log("CRUD: ", tmpData[currentRow])
       CRUDdataTable({method: 'PATCH', path: 'transmitter', data: tmpData[currentRow]})
     };
 

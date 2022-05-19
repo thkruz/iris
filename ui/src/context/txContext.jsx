@@ -244,11 +244,8 @@ export const TxProvider = ({ children }) => {
   });
  
   const updateTx = update => {
-    //  patch request to update database
-    // if patch request is good
     window.sewApp.socket.emit('updateTx', { user: window.sewApp.socket.id, signals: update });
     setTx(update);
-    console.log(update);
   };
 
   return (
