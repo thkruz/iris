@@ -1,5 +1,6 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import config from '../config';
 const rxContext = React.createContext();
 const updateRxContext = React.createContext();
 
@@ -225,23 +226,26 @@ export const useUpdateRx = () => {
 export const RxProvider = ({ children }) => {
   const [rx, setRx] = useState(defaultRxContext);
 
+  useEffect(() => {
+    const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
+    fetch(`${ApiUrl}/data/receiver`)
+      .then(response => response.json())
+      .then(data => {
+        console.log('ReceiverProvider', data);
+        setRx([...data]);
+      });
+  }, []);
+
   window.sewApp.socket.on('updateRxClient', data => {
     if (data.user != window.sewApp.socket.id) {
       console.log('actually updating the Rx');
-      let tmpUpdate = [...rx];
-      tmpUpdate[data.index] = data.update;
-      setRx(tmpUpdate);
+      setRx(data.signals);
     }
   });
-
-  const updateRx = (update, index) => {
-    let tmpUpdate = [...rx];
-    tmpUpdate[index] = update;
-    // patch request to update database
-    // if patch request is good
-    console.log('updating the Rx');
-    window.sewApp.socket.emit('updateRx', { user: window.sewApp.socket.id, update: update, index: index });
-    setRx(tmpUpdate);
+ 
+  const updateRx = (update) => {
+    window.sewApp.socket.emit('updateRx', { user: window.sewApp.socket.id, signals: update });
+    setRx(update);
   };
 
   return (

@@ -6,12 +6,12 @@ exports.seed = async function(knex) {
   // Deletes ALL existing entries
   await knex('transmitter').del()
   await knex('transmitter').insert([
-    {id: 1, server_id: 1, team_id: 1, unit: 1, modem_number: 1, operational: true, antenna_id: 1, frequency: 1000, bandwidth: 10, power: -100, transmitting: false},
-    {id: 2, server_id: 1, team_id: 1, unit: 1, modem_number: 2, operational: true, antenna_id: 1, frequency: 1000, bandwidth: 10, power: -100, transmitting: false},
-    {id: 3, server_id: 1, team_id: 1, unit: 1, modem_number: 3, operational: true, antenna_id: 1, frequency: 1000, bandwidth: 10, power: -100, transmitting: false},
-    {id: 4, server_id: 1, team_id: 1, unit: 1, modem_number: 4, operational: true, antenna_id: 1, frequency: 1000, bandwidth: 10, power: -100, transmitting: false},
-    {id: 5, server_id: 1, team_id: 1, unit: 2, modem_number: 1, operational: true, antenna_id: 1, frequency: 1000, bandwidth: 10, power: -100, transmitting: false},
-    {id: 6, server_id: 1, team_id: 1, unit: 2, modem_number: 2, operational: true, antenna_id: 1, frequency: 1000, bandwidth: 10, power: -100, transmitting: false},
+    {id: 1, server_id: 1, team_id: 1, unit: 1, modem_number: 1, operational: true, antenna_id: 1, frequency: 1060, bandwidth: 10, power: -103, transmitting: false},
+    {id: 2, server_id: 1, team_id: 1, unit: 1, modem_number: 2, operational: true, antenna_id: 1, frequency: 1060, bandwidth: 10, power: -97, transmitting: false},
+    {id: 3, server_id: 1, team_id: 1, unit: 1, modem_number: 3, operational: true, antenna_id: 1, frequency: 1070, bandwidth: 10, power: -103, transmitting: false},
+    {id: 4, server_id: 1, team_id: 1, unit: 1, modem_number: 4, operational: true, antenna_id: 1, frequency: 1070, bandwidth: 10, power: -97, transmitting: false},
+    {id: 5, server_id: 1, team_id: 1, unit: 2, modem_number: 1, operational: true, antenna_id: 1, frequency: 1070, bandwidth: 10, power: -103, transmitting: false},
+    {id: 6, server_id: 1, team_id: 1, unit: 2, modem_number: 2, operational: true, antenna_id: 1, frequency: 1070, bandwidth: 10, power: -97, transmitting: false},
     {id: 7, server_id: 1, team_id: 1, unit: 2, modem_number: 3, operational: true, antenna_id: 1, frequency: 1000, bandwidth: 10, power: -100, transmitting: false},
     {id: 8, server_id: 1, team_id: 1, unit: 2, modem_number: 4, operational: true, antenna_id: 1, frequency: 1000, bandwidth: 10, power: -100, transmitting: false},
     {id: 9, server_id: 1, team_id: 1, unit: 3, modem_number: 1, operational: true, antenna_id: 1, frequency: 1000, bandwidth: 10, power: -100, transmitting: false},
