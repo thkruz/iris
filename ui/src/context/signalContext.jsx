@@ -4,6 +4,32 @@ import config from './../config';
 const signalContext = React.createContext();
 const updateSignalContext = React.createContext();
 
+const defaultSignal = [{
+  "id": 1,
+  "server_id": 1,
+  "target_id": 3,
+  "frequency": 15720,
+  "power": -100,
+  "bandwidth": 10,
+  "modulation": "8QAM",
+  "fec": "3/4",
+  "feed": "red 1.mp4",
+  "operational": false
+  },
+  {
+    "id": 1,
+    "server_id": 1,
+    "target_id": 3,
+    "frequency": 15720,
+    "power": -100,
+    "bandwidth": 10,
+    "modulation": "8QAM",
+    "fec": "3/4",
+    "feed": "red 1.mp4",
+    "operational": false
+    }
+  ];
+
 export const useSignal = () => {
   return useContext(signalContext);
 };
@@ -13,7 +39,7 @@ export const useUpdateSignal = () => {
 };
 
 export const SignalProvider = ({ children }) => {
-  const [signal, setSignal] = useState(null);
+  const [signal, setSignal] = useState(defaultSignal);
   const updateSignal = update => {
     setSignal(update);
   };

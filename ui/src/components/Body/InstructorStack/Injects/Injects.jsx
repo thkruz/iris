@@ -81,13 +81,13 @@ export const Injects = () => {
     margin: '8px',
     boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
     border: '1px solid red',
-    backgroundColor: signals[activeModem].operational ? 'red' : theme.palette.tertiary.light3,
-    color: signals[activeModem].operational ? 'white' : 'black',
+    backgroundColor: signals[activeModem]?.operational ? 'red' : theme.palette.tertiary.light3,
+    color: signals[activeModem]?.operational ? 'white' : 'black',
     '&:hover': {
-      backgroundColor: signals[activeModem].operational
+      backgroundColor: signals[activeModem]?.operational
         ? theme.palette.error.main
         : theme.palette.critical.main,
-      color: signals[activeModem].operational ? 'black' : 'white',
+      color: signals[activeModem]?.operational ? 'black' : 'white',
     },
   };
 
