@@ -297,6 +297,8 @@ export const RxModem = ({ unit }) => {
       <Box sx={sxVideo}>
         {matchFound && !denied ? (
           <ReactPlayer
+            config={{ file: { attributes: { controlsList: 'nodownload' } } }}
+            onContextMenu={e => e.preventDefault()}
             url={`/videos/${vidFeed}`}
             width='100%'
             height='100%'
