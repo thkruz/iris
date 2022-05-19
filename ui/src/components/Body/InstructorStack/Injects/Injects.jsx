@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import ReactPlayer from 'react-player';
 import PropTypes from 'prop-types';
 import { Box, Button, Typography } from '@mui/material';
@@ -11,12 +11,13 @@ import { CRUDdataTable } from '../../../../crud/crud';
 export const Injects = () => {
   const signals = useSignal()
   const setSignals = useUpdateSignal();
+  /*
   useEffect(() => {
     fetch('http://localhost:8080/data/signal')
         .then(res => res.json())
         .then(res => setSignals(res))
   }, [])
-  //TODO: modem buttons, update state, video,
+  */
   const theme = AstroTheme;
   const [activeModem, setActiveModem] = useState(0);
 
@@ -175,7 +176,7 @@ export const Injects = () => {
           <label htmlFor='Satellite'>Satellite</label>
           <select
             name='Satellite'
-            value={inputData.target_id - 1}
+            value={inputData.target_id}
             onChange={e =>
               handleInputChange({
                 param: 'target_id',

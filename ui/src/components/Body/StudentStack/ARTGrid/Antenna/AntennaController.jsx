@@ -5,14 +5,18 @@ import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore
 import CellTowerIcon from '@mui/icons-material/CellTower';
 import AlignHorizontalCenterIcon from '@mui/icons-material/AlignHorizontalCenter';
 import { AstroTheme } from '../../../../../themes/AstroTheme';
-import { useAntenna, useUpdateAntenna } from '../../../../../context';
+import { useAntenna, useUpdateAntenna, useUser } from '../../../../../context';
 import { antennas, satellites } from '../../../../../constants';
 import './Antenna.css';
+import { CRUDdataTable } from '../../../../../crud/crud';
 
 export const AntennaController = ({ unit }) => {
+  const user = useUser()
   const theme = AstroTheme;
-  const antennaData = useAntenna();
+  const antennaContext = useAntenna();
   const setAntennaData = useUpdateAntenna();
+  const unitData = antennaContext.filter(x => x.unit == unit && x.team_id == user.team_id && x.server_id == user.server_id)
+  const index = antennaContext.map(x => x.id).indexOf(unitData[0].id)
 
   // Styles
   const sxAntennaCase = {
@@ -74,19 +78,19 @@ export const AntennaController = ({ unit }) => {
   };
   const sxHPA = {
     marginTop: '5px',
-    backgroundColor: antennaData[unit - 1].hpa ? 'red' : theme.palette.tertiary.light3,
-    color: antennaData[unit - 1].hpa ? 'white' : 'black',
+    backgroundColor: antennaContext[index].hpa ? 'red' : theme.palette.tertiary.light3,
+    color: antennaContext[index].hpa ? 'white' : 'black',
     boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
     border: '1px solid red',
     '&:hover': {
-      backgroundColor: antennaData[unit - 1].hpa ? theme.palette.error.main : theme.palette.critical.main,
-      color: antennaData[unit - 1].hpa ? 'black' : 'white',
+      backgroundColor: antennaContext[index].hpa ? theme.palette.error.main : theme.palette.critical.main,
+      color: antennaContext[index].hpa ? 'black' : 'white',
     },
   };
   const sxTx = {
-    backgroundColor: antennaData[unit - 1].loopback
+    backgroundColor: antennaContext[index].loopback
       ? theme.palette.tertiary.light2
-      : antennaData[unit - 1].hpa
+      : antennaContext[index].hpa
       ? 'red'
       : 'green',
     borderRadius: '10px',
@@ -111,7 +115,7 @@ export const AntennaController = ({ unit }) => {
   // Antenna User Inputs
   // Target Band Offset
   const AntennaInput = () => {
-    const [inputData, setInputData] = useState(antennaData[unit - 1]);
+    const [inputData, setInputData] = useState(antennaContext[index]);
     const handleInputChange = ({ param, val }) => {
       if (param === 'offset') {
         // if contains any symbols except - and number then return
@@ -122,15 +126,15 @@ export const AntennaController = ({ unit }) => {
       } else {
         val = parseInt(val);
       }
-
       const tmpInputData = { ...inputData };
       tmpInputData[param] = val;
       setInputData(tmpInputData);
     };
     const handleApply = () => {
-      const tmpData = [...antennaData];
-      tmpData[unit - 1] = inputData;
+      const tmpData = [...antennaContext];
+      tmpData[index] = inputData;
       setAntennaData(tmpData);
+      CRUDdataTable({method: 'PATCH', path: 'antenna', data: tmpData[index]})
     };
     return (
       <Box sx={sxInputBox}>
@@ -148,7 +152,7 @@ export const AntennaController = ({ unit }) => {
               );
             })}
           </select>
-          <Typography sx={sxValues}>{satellites[antennaData[unit - 1].target_id - 1].name}</Typography>
+          <Typography sx={sxValues}>{satellites[antennaContext[index].target_id - 1].name}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='Band'>Band</label>
@@ -164,7 +168,7 @@ export const AntennaController = ({ unit }) => {
               );
             })}
           </select>
-          <Typography sx={sxValues}>{antennas[antennaData[unit - 1].band].band}</Typography>
+          <Typography sx={sxValues}>{antennas[antennaContext[index]?.band]?.band}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='offset'>Offset</label>
@@ -175,7 +179,7 @@ export const AntennaController = ({ unit }) => {
             onChange={e => {
               handleInputChange({ param: 'offset', val: e.target.value });
             }}></input>
-          <Typography sx={sxValues}>{antennaData[unit - 1].offset + ' MHz'}</Typography>
+          <Typography sx={sxValues}>{antennaContext[index].offset + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <div></div>
@@ -190,16 +194,18 @@ export const AntennaController = ({ unit }) => {
   // Baseball switch
   const LoopbackSwitch = () => {
     const toggleSwitch = () => {
-      const tmpData = [...antennaData];
-      const loopback = tmpData[unit - 1].loopback;
-      tmpData[unit - 1].loopback = !loopback;
+      const tmpData = [...antennaContext];
+      const loopback = tmpData[index].loopback;
+      tmpData[index].loopback = !loopback;
       setAntennaData(tmpData);
+      CRUDdataTable({method: 'PATCH', path: 'antenna', data: tmpData[index]})
     };
     const handleHPA = () => {
-      const tmpData = [...antennaData];
-      const hpa = tmpData[unit - 1].hpa;
-      tmpData[unit - 1].hpa = !hpa;
+      const tmpData = [...antennaContext];
+      const hpa = tmpData[index].hpa;
+      tmpData[index].hpa = !hpa;
       setAntennaData(tmpData);
+      CRUDdataTable({method: 'PATCH', path: 'antenna', data: tmpData[index]})
     };
     return (
       <Box sx={sxLoopback}>
@@ -209,7 +215,7 @@ export const AntennaController = ({ unit }) => {
           <center>
             <img
               className='lb_img'
-              src={`baseball_switch${antennaData[unit - 1].loopback ? '' : '2'}.png`}
+              src={`baseball_switch${antennaContext[index].loopback ? '' : '2'}.png`}
               alt='baseball_switch'
               onClick={e => toggleSwitch(e)}
             />
