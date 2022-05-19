@@ -156,8 +156,8 @@ export const TxModem = ({ unit }) => {
       let tmpData = [...txContext];
       tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
       setTx(tmpData);
-      console.log("CRUD: ", tmpData[currentRow])
-      CRUDdataTable({method: 'PATCH', path: 'transmitter', data: tmpData[currentRow]})
+      console.log("CRUD Tx: ", tmpData[currentRow]);
+      CRUDdataTable({method: 'PATCH', path: 'transmitter', data: tmpData[currentRow]});
     };
 
     return (

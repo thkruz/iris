@@ -231,7 +231,7 @@ export const RxProvider = ({ children }) => {
     fetch(`${ApiUrl}/data/receiver`)
       .then(response => response.json())
       .then(data => {
-        console.log('ReceiverProvider', data);
+        //console.log('ReceiverProvider', data);
         setRx([...data]);
       });
   }, []);

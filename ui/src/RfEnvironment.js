@@ -44,13 +44,14 @@ export class RfEnvironment {
 
     // Purge all signals that are from this team
     this.signals = this.signals.filter(signal => {
-      console.log(signal.team_id);
       return signal.team_id !== update.signals[0].team_id;
     });
     // Add the new signals
     update.signals.forEach(signal => {
+      console.log(signal)
       if (signal.transmitting) {
-        this.signals.push({ ...{ team_id: update.team_id }, ...signal });
+        //this.signals.push({ ...{ team_id: signal.team_id }, ...signal });
+        this.signals.push(signal);
       }
     });
 

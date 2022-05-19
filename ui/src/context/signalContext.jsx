@@ -49,7 +49,7 @@ export const SignalProvider = ({ children }) => {
     fetch(`${ApiUrl}/data/signal`)
       .then(response => response.json())
       .then(data => {
-        console.log('SignalProvider', data);
+        //console.log('SignalProvider', data);
         window.sewApp.environment.setSignals(data);
         setSignal([...data]);
       });

@@ -245,9 +245,10 @@ export const RxModem = ({ unit }) => {
     useEffect(() => {
       const currentModem = unitData.map(x => x.number).indexOf(activeModem); 
       const currentRow = rxContext.map(x => x.id).indexOf(unitData[currentModem].id); 
-      console.log(`========== modem: ${currentModem} | currentRow: ${currentRow} | id: ${unitData[currentModem].id} =============`)
+      //console.log(`========== modem: ${currentModem} | currentRow: ${currentRow} | id: ${unitData[currentModem].id} =============`)
   
-      const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = rxContext[currentRow]; console.log('rx: ', rxContext[currentRow])
+      const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = rxContext[currentRow]; 
+      //console.log('rx: ', rxContext[currentRow])
       const { target_id: r_tgt, band: r_band } = antenna[rxContext[currentRow].antenna_id - 1];
       signalData?.forEach(signal => {
         const {
@@ -278,10 +279,12 @@ export const RxModem = ({ unit }) => {
           r_fec === s_fec && // reciever fec rate matches
           r_tgt === s_tgt; // satellites match 
 
-        if (rxMatch) { console.log('rxMatch signal: ', signal)
+        if (rxMatch) { 
+          //console.log('rxMatch signal: ', signal)
           let degraded = '';
           const activeTransmitters = txData.filter(x => x.transmitting);
-          activeTransmitters.forEach(transmission => { console.log(transmission)
+          activeTransmitters.forEach(transmission => { 
+            //console.log(transmission)
             const { frequency: t_freq, bandwidth: t_bw, power: t_power } = transmission;
             const { target_id: t_tgt, band: t_band, offset: t_offset } = antenna[transmission.antenna_id - 1];
             const t_uc_offset = antennas[t_band]?.upconvert / 1e6;
@@ -299,6 +302,7 @@ export const RxModem = ({ unit }) => {
               denied = true;
               deniedFound = true;
             }
+            /*
             if(signal.id == 1){
               console.log('signal', signal);
               console.log('antennas', antennas, 'band', r_band, 'd/c', antennas[parseInt(r_band)]?.downconvert / 1e6)
@@ -312,11 +316,12 @@ export const RxModem = ({ unit }) => {
               console.log('feed: ', feed)
               console.log('tp vs sp: ', t_power, power, 'denied? ', denied)
             }
+            */
           });
           setVidFeed(`${degraded}${feed}`);
           setMatchFound(true);
           if (!deniedFound) denied = false;
-          console.log('denied?', denied)
+          //console.log('denied?', denied)
         }
       });
     }, [signalData, txData, rxContext, antenna]);

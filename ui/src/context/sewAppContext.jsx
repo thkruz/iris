@@ -86,7 +86,7 @@ const sewApp = {
       rf: specA.isRfMode ? true : false,
       antenna_id: specA.antenna_id,
     };
-    console.log('announceSpecAChange', sewApp.socket.id);
+    //console.log('announceSpecAChange', sewApp.socket.id);
     sewApp.socket.emit('updateSpecA', patchData);
     CRUDdataTable({
       method: 'PATCH',
