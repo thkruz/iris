@@ -48,7 +48,9 @@ export const AntennaProvider = ({ children }) => {
     fetch(`${ApiUrl}/data/antenna`)
       .then(response => response.json())
       .then(data => {
-        //console.log('AntennaProvider', data);
+        data.forEach(x => {
+          x.band = parseInt(x.band);
+        });
         setAntenna([...data]);
       });
   }, []);
@@ -58,14 +60,12 @@ export const AntennaProvider = ({ children }) => {
       setAntenna(data.signals);
     }
   });
- 
-  const updateAntenna = (update) => {
+
+  const updateAntenna = update => {
     //console.log('updateAntenna');
     window.sewApp.socket.emit('updateAntenna', { user: window.sewApp.socket.id, signals: update });
     setAntenna(update);
   };
-
-  
 
   return (
     <antennaContext.Provider value={antenna}>
