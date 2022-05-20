@@ -1,4 +1,4 @@
-/* eslint-disable react/prop-types */
+/* eslint-disable react/prop-types */ 
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { Box, Button, Typography } from '@mui/material';
@@ -8,16 +8,14 @@ import { useTx, useUpdateTx, useUser } from '../../../../../../context';
 import { CRUDdataTable } from '../../../../../../crud';
 
 export const TxModem = ({ unit }) => {
+  const theme = AstroTheme;
   const user = useUser()
   const txContext = useTx();
   const setTx = useUpdateTx();
   const unitData = txContext.filter(x => x.unit == unit && x.team_id == user.team_id && x.server_id == user.server_id)
   const powerBudget = 23886; // Decided by SEW team
 
-  //TODO: modem buttons, update state, video,
-  const theme = AstroTheme;
   const [activeModem, setActiveModem] = useState(1);
-  console.log(unitData.filter(x => x.modem_number == activeModem))
 
   // Styles
   const sxCase = {
@@ -128,7 +126,6 @@ export const TxModem = ({ unit }) => {
 
   // Modem User Inputs
   const TxModemInput = () => {
-    console.log('unit: ', unit, 'active modem: ', activeModem, unitData)
     const currentModem = unitData.map(x => x.modem_number).indexOf(activeModem);
     const currentRow = txContext.map(x => x.id).indexOf(unitData[currentModem].id);
     const [inputData, setInputData] = useState(txContext[currentRow]);
@@ -149,7 +146,7 @@ export const TxModem = ({ unit }) => {
 
     const handleApply = () => {
       let tmpData = [...txContext];
-      tmpData[currentRow] = inputData;
+      tmpData[currentRow] = {...inputData};
       setTx(tmpData);
       setModemPower(inputData.bandwidth * Math.pow(10, (120 + inputData.power) / 10));
       CRUDdataTable({method: 'PATCH', path: 'transmitter', data: tmpData[currentRow]})
@@ -159,8 +156,8 @@ export const TxModem = ({ unit }) => {
       let tmpData = [...txContext];
       tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
       setTx(tmpData);
-      console.log("CRUD: ", tmpData[currentRow])
-      CRUDdataTable({method: 'PATCH', path: 'transmitter', data: tmpData[currentRow]})
+      console.log("CRUD Tx: ", tmpData[currentRow]);
+      CRUDdataTable({method: 'PATCH', path: 'transmitter', data: tmpData[currentRow]});
     };
 
     return (

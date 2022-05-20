@@ -5,6 +5,7 @@ import { RfEnvironment } from '../RfEnvironment';
 import { io, Socket } from 'socket.io-client';
 import { antennas, satellites } from '../constants';
 import { CRUDdataTable } from './../crud/crud';
+//import { useAntenna } from './antennaContext';
 
 // Create a sync global context for the RF Environments
 const sewApp = {
@@ -37,8 +38,19 @@ const sewApp = {
       socket.emit('updateTeam', { team: sewApp.team });
 
       socket.on('updateSignals', update => {
+        const update_targetsAdded = update.signals.map( x => {
+          //const antenna_id = x.antenna_id;
+          //const target_id = antennaContext.filter(y => y.id == antenna_id).target_id
+          const target_id = 1;
+          return({...x, target_id});
+        })
+        console.log("targeted list", update_targetsAdded)
+        window.sewApp.environment.updateSignals(update_targetsAdded);
+        console.log('updateSignals received', update_targetsAdded);
+        /*
         window.sewApp.environment.updateSignals(update);
         console.log('updateSignals received', update);
+        */
         for (let i = 1; i <= 4; i++) {
           const specA = window.sewApp.getSpectrumAnalyzer(i);
           specA.signals = specA.signals.filter(signal => {
@@ -86,7 +98,7 @@ const sewApp = {
       rf: specA.isRfMode ? true : false,
       antenna_id: specA.antenna_id,
     };
-    console.log('announceSpecAChange', sewApp.socket.id);
+    //console.log('announceSpecAChange', sewApp.socket.id);
     sewApp.socket.emit('updateSpecA', patchData);
     CRUDdataTable({
       method: 'PATCH',

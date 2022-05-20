@@ -222,7 +222,7 @@ export const useTx = () => {
 export const useUpdateTx = () => {
   return useContext(updateTxContext);
 };
-
+ 
 export const TxProvider = ({ children }) => {
   const [tx, setTx] = useState(defaultTxContext);
 
@@ -231,7 +231,7 @@ export const TxProvider = ({ children }) => {
     fetch(`${ApiUrl}/data/transmitter`)
       .then(response => response.json())
       .then(data => {
-        console.log('TransmitterProvider', data);
+        //console.log('TransmitterProvider', data);
         setTx([...data]);
       });
   }, []);

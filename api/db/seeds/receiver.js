@@ -6,11 +6,11 @@
   // Deletes ALL existing entries
   await knex('receiver').del()
   await knex('receiver').insert([
-    {id: 1, server_id: 1, team_id: 1, unit: 1, number: 1, operational: true, antenna_id: 1, frequency: 1250, bandwidth: 10, modulation: 'BPSK', fec: '1/2'},
+    {id: 1, server_id: 1, team_id: 1, unit: 1, number: 1, operational: true, antenna_id: 1, frequency: 1310, bandwidth: 5, modulation: '8QAM', fec: '3/4'},
     {id: 2, server_id: 1, team_id: 1, unit: 1, number: 2, operational: true, antenna_id: 1, frequency: 1250, bandwidth: 10, modulation: 'BPSK', fec: '1/2'},
     {id: 3, server_id: 1, team_id: 1, unit: 1, number: 3, operational: true, antenna_id: 1, frequency: 1250, bandwidth: 10, modulation: 'BPSK', fec: '1/2'},
     {id: 4, server_id: 1, team_id: 1, unit: 1, number: 4, operational: true, antenna_id: 1, frequency: 1250, bandwidth: 10, modulation: 'BPSK', fec: '1/2'},
-    {id: 5, server_id: 1, team_id: 1, unit: 2, number: 1, operational: true, antenna_id: 1, frequency: 1250, bandwidth: 10, modulation: 'BPSK', fec: '1/2'},
+    {id: 5, server_id: 1, team_id: 1, unit: 2, number: 1, operational: true, antenna_id: 1, frequency: 1320, bandwidth: 3, modulation: '8QAM', fec: '1/2'},
     {id: 6, server_id: 1, team_id: 1, unit: 2, number: 2, operational: true, antenna_id: 1, frequency: 1250, bandwidth: 10, modulation: 'BPSK', fec: '1/2'},
     {id: 7, server_id: 1, team_id: 1, unit: 2, number: 3, operational: true, antenna_id: 1, frequency: 1250, bandwidth: 10, modulation: 'BPSK', fec: '1/2'},
     {id: 8, server_id: 1, team_id: 1, unit: 2, number: 4, operational: true, antenna_id: 1, frequency: 1250, bandwidth: 10, modulation: 'BPSK', fec: '1/2'},

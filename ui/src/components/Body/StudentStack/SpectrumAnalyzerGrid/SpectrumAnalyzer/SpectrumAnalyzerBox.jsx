@@ -217,8 +217,8 @@ export const SpectrumAnalyzerBox = props => {
     specA.antenna_id = antenna_id;
     let { band, hpa, target_id, lock, loopback, offset, operational } = antenna[specA.antenna_id - 1];
     specA.target_id = target_id;
-    console.log('updateSpecAwAntennaInfo', specA.antenna_id, specA.target_id);
-    console.log(antenna);
+    //console.log('updateSpecAwAntennaInfo', specA.antenna_id, specA.target_id);
+    //console.log(antenna);
 
     specA.hpa = hpa;
     specA.loopback = loopback;

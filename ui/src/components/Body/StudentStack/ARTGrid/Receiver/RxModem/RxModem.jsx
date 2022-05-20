@@ -4,17 +4,20 @@ import PropTypes from 'prop-types';
 import { Box, Button, Typography } from '@mui/material';
 import './RxModem.css';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
-import { useAntenna, useTx, useRx, useUpdateRx, useSignal } from '../../../../../../context';
+import { useAntenna, useTx, useRx, useUpdateRx, useSignal, useUser } from '../../../../../../context';
 import { antennas, satellites } from './../../../../../../constants';
+import { CRUDdataTable } from '../../../../../../crud';
 
 export const RxModem = ({ unit }) => {
-  //TODO: modem buttons, update state, video,
   const theme = AstroTheme;
-  let denied = false;
-  const rxData = useRx();
-  const updateRxData = useUpdateRx();
+  const user = useUser();
+  const rxContext = useRx();
+  const setRx = useUpdateRx();
+  const unitData = rxContext.filter(x => x.unit == unit && x.team_id == user.team_id && x.server_id == user.server_id)
   const signalData = useSignal();
-  const [activeModem, setActiveModem] = useState(0);
+
+  const [activeModem, setActiveModem] = useState(1);
+  let denied = false;
 
   // Styles
   const sxCase = {
@@ -113,16 +116,16 @@ export const RxModem = ({ unit }) => {
   // Modem selector buttons
   const RxModemButtonBox = () => (
     <Box sx={sxModemButtonBox}>
-      {rxData.map((x, index) => {
+      {unitData.sort((a, b) => a.id - b.id).map((x, index) => {
         if (x.unit == unit) return <RxModemButton key={index} modem={x.number} />;
       })}
     </Box>
   );
   const RxModemButton = ({ modem }) => (
     <Button
-      sx={modem - 1 == activeModem ? sxModemButtonActive : sxModemButton}
+      sx={modem == activeModem ? sxModemButtonActive : sxModemButton}
       onClick={e => {
-        setActiveModem(parseInt(e.target.innerText) - 1);
+        setActiveModem(modem, e);
       }}>
       {modem}
     </Button>
@@ -131,8 +134,9 @@ export const RxModem = ({ unit }) => {
 
   // Modem User Inputs
   const RxModemInput = () => {
-    const currentRow = (unit - 1) * 4 + activeModem;
-    const [inputData, setInputData] = useState(rxData[currentRow]);
+    const currentModem = unitData.map(x => x.number).indexOf(activeModem);
+    const currentRow = rxContext.map(x => x.id).indexOf(unitData[currentModem].id);
+    const [inputData, setInputData] = useState(rxContext[currentRow]);
 
     const handleInputChange = ({ param, val }) => {
       let tmpData = { ...inputData };
@@ -141,7 +145,10 @@ export const RxModem = ({ unit }) => {
     };
 
     const handleApply = () => {
-      updateRxData(inputData, currentRow);
+      let tmpData = [...rxContext];
+      tmpData[currentRow] = {...inputData};
+      setRx(tmpData);
+      CRUDdataTable({method: 'PATCH', path: 'receiver', data: tmpData[currentRow]})
     };
 
     return (
@@ -160,7 +167,7 @@ export const RxModem = ({ unit }) => {
             <option value={1}>1</option>
             <option value={2}>2</option>
           </select>
-          <Typography sx={sxValues}>{rxData[currentRow].antenna_id}</Typography>
+          <Typography sx={sxValues}>{rxContext[currentRow].antenna_id}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='frequency'>Frequency</label>
@@ -174,7 +181,7 @@ export const RxModem = ({ unit }) => {
                 val: parseInt(e.target.value) || 0,
               })
             }></input>
-          <Typography sx={sxValues}>{rxData[currentRow].frequency + ' MHz'}</Typography>
+          <Typography sx={sxValues}>{rxContext[currentRow].frequency + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='bandwidth'>Bandwidth</label>
@@ -188,7 +195,7 @@ export const RxModem = ({ unit }) => {
                 val: parseInt(e.target.value) || 0,
               })
             }></input>
-          <Typography sx={sxValues}>{rxData[currentRow].bandwidth + ' MHz'}</Typography>
+          <Typography sx={sxValues}>{rxContext[currentRow].bandwidth + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='modulation'>Modulation</label>
@@ -201,7 +208,7 @@ export const RxModem = ({ unit }) => {
             <option value='8QAM'>8QAM</option>
             <option value='16QAM'>16QAM</option>
           </select>
-          <Typography sx={sxValues}>{rxData[currentRow].modulation}</Typography>
+          <Typography sx={sxValues}>{rxContext[currentRow].modulation}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='fec'>FEC</label>
@@ -215,7 +222,7 @@ export const RxModem = ({ unit }) => {
             <option value='5/6'>5/6</option>
             <option value='7/8'>7/8</option>
           </select>
-          <Typography sx={sxValues}>{rxData[currentRow].fec}</Typography>
+          <Typography sx={sxValues}>{rxContext[currentRow].fec}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <div></div>
@@ -230,17 +237,19 @@ export const RxModem = ({ unit }) => {
   const RxVideo = () => {
     const [matchFound, setMatchFound] = useState(false);
     const [vidFeed, setVidFeed] = useState('');
-    const [deniedFound, setDeniedFound] = useState(false);
+    let deniedFound = false
 
     const txData = useTx();
     const antenna = useAntenna();
-
-    const currentRow = (unit - 1) * 4 + activeModem;
-
-    const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = rxData[currentRow];
-    const { target_id: r_tgt, band: r_band } = antenna[rxData[currentRow].antenna_id - 1];
-
+    
     useEffect(() => {
+      const currentModem = unitData.map(x => x.number).indexOf(activeModem); 
+      const currentRow = rxContext.map(x => x.id).indexOf(unitData[currentModem].id); 
+      //console.log(`========== modem: ${currentModem} | currentRow: ${currentRow} | id: ${unitData[currentModem].id} =============`)
+  
+      const { frequency: r_freq, bandwidth: r_bw, modulation: r_mod, fec: r_fec } = rxContext[currentRow]; 
+      //console.log('rx: ', rxContext[currentRow])
+      const { target_id: r_tgt, band: r_band } = antenna[rxContext[currentRow].antenna_id - 1];
       signalData?.forEach(signal => {
         const {
           frequency: s_freq,
@@ -250,15 +259,17 @@ export const RxModem = ({ unit }) => {
           target_id: s_tgt,
           feed,
           power,
-        } = signal; // TODO: loop through all signals to find one that matches
-        const dc_offset = antennas[r_band]?.downconvert / 1e6;
-        const if_freq = s_freq - dc_offset; //rf_freq
-        const s_lb = if_freq - 0.5 * s_bw;
-        const s_rb = if_freq + 0.5 * s_bw;
-        const s_flb = s_lb - 0.5 * s_bw;
-        const s_frb = s_rb + 0.5 * s_bw;
-        const r_lb = r_freq - 0.5 * r_bw;
+        } = signal;// TODO: loop through all signals to find one that matches
+
+        const dc_offset = antennas[parseInt(r_band)]?.downconvert / 1e6; 
+        const if_freq = s_freq - dc_offset;
+        const s_lb = if_freq - 0.5 * s_bw;   
+        const s_rb = if_freq + 0.5 * s_bw;   
+        const s_flb = s_lb - 0.5 * s_bw;     
+        const s_frb = s_rb + 0.5 * s_bw;     
+        const r_lb = r_freq - 0.5 * r_bw;    
         const r_rb = r_freq + 0.5 * r_bw;
+
         const rxMatch =
           r_lb <= s_lb && // receiver left bound is withing tolerance
           r_lb >= s_flb &&
@@ -266,16 +277,18 @@ export const RxModem = ({ unit }) => {
           r_rb <= s_frb &&
           r_mod === s_mod && // receiver modulation schema matches
           r_fec === s_fec && // reciever fec rate matches
-          r_tgt === s_tgt; // satellites match
-        if (rxMatch) {
+          r_tgt === s_tgt; // satellites match 
+
+        if (rxMatch) { 
+          //console.log('rxMatch signal: ', signal)
           let degraded = '';
           const activeTransmitters = txData.filter(x => x.transmitting);
-          activeTransmitters.forEach(transmission => {
+          activeTransmitters.forEach(transmission => { 
+            //console.log(transmission)
             const { frequency: t_freq, bandwidth: t_bw, power: t_power } = transmission;
             const { target_id: t_tgt, band: t_band, offset: t_offset } = antenna[transmission.antenna_id - 1];
             const t_uc_offset = antennas[t_band]?.upconvert / 1e6;
             const t_dc_offset = antennas[t_band]?.downconvert / 1e6;
-            console.log(t_tgt);
             const s_offset = satellites[t_tgt - 1].offset / 1e6;
             const offset =
               !antenna[transmission.antenna_id - 1].loopback && antenna[transmission.antenna_id - 1].hpa
@@ -284,19 +297,34 @@ export const RxModem = ({ unit }) => {
             const t_if_freq = t_freq + t_uc_offset + offset - t_dc_offset;
             const t_lb = t_if_freq - 0.5 * t_bw;
             const t_rb = t_if_freq + 0.5 * t_bw;
-            if (t_lb <= s_rb && t_rb >= s_lb && t_tgt === s_tgt) degraded = 'degraded ';
+            if (t_lb <= s_rb && t_rb >= s_lb && t_tgt === s_tgt) degraded = 'degraded '; 
             if (t_lb <= s_lb && t_rb >= s_rb && t_tgt === s_tgt && t_power > power) {
               denied = true;
-              setDeniedFound(true);
+              deniedFound = true;
             }
-            console.log(t_lb, s_lb, t_rb, s_rb);
+            /*
+            if(signal.id == 1){
+              console.log('signal', signal);
+              console.log('antennas', antennas, 'band', r_band, 'd/c', antennas[parseInt(r_band)]?.downconvert / 1e6)
+              console.log('offset', dc_offset)
+              console.log('if ', if_freq)
+              console.log('lb', s_lb, r_lb, r_lb <= s_lb);
+              console.log('rb', s_rb, r_rb, r_rb >= s_rb);
+              console.log('flb', s_flb, r_lb, r_lb >= s_flb);
+              console.log('frb', s_frb, r_rb, r_rb <= s_frb);
+              console.log('tgt', s_tgt, r_tgt, r_tgt === s_tgt);
+              console.log('feed: ', feed)
+              console.log('tp vs sp: ', t_power, power, 'denied? ', denied)
+            }
+            */
           });
           setVidFeed(`${degraded}${feed}`);
           setMatchFound(true);
           if (!deniedFound) denied = false;
+          //console.log('denied?', denied)
         }
       });
-    }, [signalData]);
+    }, [signalData, txData, rxContext, antenna]);
 
     return (
       <Box sx={sxVideo}>
