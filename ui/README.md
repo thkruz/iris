@@ -1,70 +1,68 @@
-# Getting Started with Create React App
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/thkruz/iris?style=flat-square) ![language](https://img.shields.io/github/languages/top/thkruz/iris?style=flat-square) ![Languages](https://img.shields.io/github/languages/count/thkruz/iris?style=flat-square) ![GitHub issues](https://img.shields.io/github/issues/thkruz/iris?style=flat-square) [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier) ![License](https://img.shields.io/github/license/thkruz/iris?style=flat-square)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# IRIS - Space Electronic Warfare Sandbox
 
-## Available Scripts
+A stand-alone training platform for Space Electronic Warfare. The application has a "Student front-end" as well as an "instructor front-end." Users have their own "session/game" that the instructor creates and students join. Each "game" has its own unique id. Games exist as standalone objects that can be "spun up" from the database.
 
-In the project directory, you can run:
+The student makes choices given the unique problem set presented and can take action to "jam" electronic signals.
 
-### `npm start`
+The interface responds if the student chooses the correct setting to jam the signal.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+The problem set is presented as a visual representation of electronic signals that force the student to perform the analysis they are trained for.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Table of Contents
 
-### `npm test`
+- [Setting up a Local Copy](#Setting-up-a-Local-Copy)
+- [Versioning](#Versioning)
+- [Tests](#Tests)
+- [Contributors](#Contributors)
+- [License](#License)
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Setting up a Local Copy
 
-### `npm run build`
+```bash
+git clone https://github.com/thkruz/iris        #Clone the github files.
+cd ./iris/                                      #Switch into the directory.
+docker compose up -d                            #Start the docker containers.
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Versioning
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+We use [SemVer](http://semver.org/) for versioning.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Tests
 
-### `npm run eject`
+### Unit/Functional
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Currently we are using Jest for unit and functional tests that should cover at least 80% of the functions. All of these tests can be run using:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```bash
+npm run test
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### End-To-End
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+For end-to-end (E2E) testing we will be using the cypress framework. This is on the to-do list.
 
-## Learn More
+### Security
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+For security testing we are using SonarCloud automatically in the CI/CD pipeline.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Contributors
 
-### Code Splitting
+- [@bjhufstetler](https://github.com/bjhufstetler)
+- [@thkruz](https://github.com/thkruz/)
+- [@filmo003](https://github.com/filmo003/)
+- [@bigbpete](https://github.com/bigbpete)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## License
 
-### Analyzing the Bundle Size
+Copyright (C) 2022 Theodore Kruczek
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-### Making a Progressive Web App
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+[Full License](https://github.com/thkruz/iris/blob/master/LICENSE.md)
