@@ -34,9 +34,10 @@ We use [SemVer](http://semver.org/) for versioning.
 
 ### Unit/Functional
 
-Currently we are using Jest for unit and functional tests that should cover at least 80% of the functions. All of these tests can be run using:
+Currently we are using Jest for ui unit and functional tests that should ideally cover at least 80% of the functions. All of these tests can be run using:
 
 ```bash
+cd ./ui/
 npm run test
 ```
 
