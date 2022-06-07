@@ -1,0 +1,16 @@
+{
+  "files": {
+    "main.css": "/static/css/main.54cdf918.css",
+    "main.js": "/static/js/main.5091721e.js",
+    "static/js/787.349b0e60.chunk.js": "/static/js/787.349b0e60.chunk.js",
+    "static/media/nasalization-rg.otf": "/static/media/nasalization-rg.4cbf2019f1f7337b2594.otf",
+    "index.html": "/index.html",
+    "main.54cdf918.css.map": "/static/css/main.54cdf918.css.map",
+    "main.5091721e.js.map": "/static/js/main.5091721e.js.map",
+    "787.349b0e60.chunk.js.map": "/static/js/787.349b0e60.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.54cdf918.css",
+    "static/js/main.5091721e.js"
+  ]
+}
