@@ -143,7 +143,8 @@ export const AntennaController = ({ unit }) => {
           <select
             name='Target'
             value={inputData.target_id}
-            onChange={e => handleInputChange({ param: 'target_id', val: e.target.value })}>
+            onChange={e => handleInputChange({ param: 'target_id', val: e.target.value })}
+          >
             {satellites.map((x, index) => {
               return (
                 <option value={x.id} key={index}>
@@ -159,7 +160,8 @@ export const AntennaController = ({ unit }) => {
           <select
             name='band'
             value={inputData.band}
-            onChange={e => handleInputChange({ param: 'band', val: e.target.value })}>
+            onChange={e => handleInputChange({ param: 'band', val: e.target.value })}
+          >
             {antennas.map((x, index) => {
               return (
                 <option value={index} key={index}>
@@ -178,7 +180,8 @@ export const AntennaController = ({ unit }) => {
             value={inputData.offset}
             onChange={e => {
               handleInputChange({ param: 'offset', val: e.target.value });
-            }}></input>
+            }}
+          ></input>
           <Typography sx={sxValues}>{sewAppCtx.antenna[index].offset + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>

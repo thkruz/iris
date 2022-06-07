@@ -10,7 +10,6 @@ const DATABASE = process.env.POSTGRES_DB || 'capstone';
 const PORT = process.env.PORT || 5432;
 
 module.exports = {
-
   development: {
     client: 'postgresql',
     connection: {
@@ -18,45 +17,44 @@ module.exports = {
       user: USER,
       password: PASSWORD,
       port: PORT,
-      database: DATABASE
+      database: DATABASE,
     },
     migrations: {
-      directory: './db/migrations'
+      directory: './db/migrations',
     },
     seeds: {
-      directory: './db/seeds'
-    }
+      directory: './db/seeds',
+    },
   },
 
   test: {
     client: 'postgresql',
     connection: {
       database: 'my_db',
-      user:     'username',
-      password: 'password'
+      user: 'username',
+      password: 'password',
     },
     pool: {
       min: 2,
-      max: 10
+      max: 10,
     },
     migrations: {
-      tableName: 'knex_migrations'
-    }
+      tableName: 'knex_migrations',
+    },
   },
 
   production: {
     client: 'postgresql',
-    connection: process.env.DATABASE_URL+'?ssl=no-verify',
+    connection: process.env.DATABASE_URL + '?ssl=no-verify',
     pool: {
       min: 2,
-      max: 10
+      max: 10,
     },
     migrations: {
-      directory: './db/migrations'
+      directory: './db/migrations',
     },
     seeds: {
-      directory: './db/seeds'
-    }
-  }
-
+      directory: './db/seeds',
+    },
+  },
 };

@@ -2,7 +2,7 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = function(knex) {
+exports.up = function (knex) {
   return knex.schema.createTable('transmitter', table => {
     table.increments('id').primary();
     table.integer('server_id').notNullable();
@@ -18,13 +18,13 @@ exports.up = function(knex) {
     table.double('bandwidth').notNullable();
     table.double('power').notNullable();
     table.boolean('transmitting').defaultTo(false);
-    });
+  });
 };
 
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = function(knex) {
-    return knex.schema.dropTable('transmitter');
+exports.down = function (knex) {
+  return knex.schema.dropTable('transmitter');
 };

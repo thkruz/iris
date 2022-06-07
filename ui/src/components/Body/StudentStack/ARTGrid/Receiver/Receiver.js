@@ -9,4 +9,4 @@ export const Receiver = () => {
       <RxModem unit={x} />
     </Grid>
   ));
-}
+};
