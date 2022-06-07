@@ -1,1 +1,9 @@
 version = 1
+
+test_patterns = ["*.test.js"]
+
+exclude_patterns = []
+
+[[analyzers]]
+name = "javascript"
+enabled = true
