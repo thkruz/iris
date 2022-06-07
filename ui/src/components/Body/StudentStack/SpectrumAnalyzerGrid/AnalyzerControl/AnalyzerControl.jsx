@@ -233,14 +233,17 @@ export const AnalyzerControl = props => {
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                  }}>
+                  }}
+                >
                   <Grid
                     container
-                    sx={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
+                    sx={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}
+                  >
                     <Grid
                       item
                       xs={6}
-                      sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+                    >
                       <h2>{ghz ? ghz.toString() : '0'}</h2>
                       <h2>{mhz ? mhz.toString() : '0'}</h2>
                       <h2>{khz ? khz.toString() : '0'}</h2>
@@ -248,7 +251,8 @@ export const AnalyzerControl = props => {
                     <Grid
                       item
                       xs={6}
-                      sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+                    >
                       <h2>GHz</h2>
                       <h2>MHz</h2>
                       <h2>KHz</h2>
@@ -266,7 +270,8 @@ export const AnalyzerControl = props => {
                           numberSelection === 'ghz' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
                       },
                     }}
-                    onClick={handleGhzSelectClick}>
+                    onClick={handleGhzSelectClick}
+                  >
                     <h2>&#8249;</h2>
                   </Button>
                 </Grid>
@@ -279,7 +284,8 @@ export const AnalyzerControl = props => {
                           numberSelection === 'mhz' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
                       },
                     }}
-                    onClick={handleMhzSelectClick}>
+                    onClick={handleMhzSelectClick}
+                  >
                     <h2>&#8249;</h2>
                   </Button>
                 </Grid>
@@ -292,7 +298,8 @@ export const AnalyzerControl = props => {
                           numberSelection === 'khz' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
                       },
                     }}
-                    onClick={handleKhzSelectClick}>
+                    onClick={handleKhzSelectClick}
+                  >
                     <h2>&#8249;</h2>
                   </Button>
                 </Grid>
@@ -309,7 +316,8 @@ export const AnalyzerControl = props => {
                       controlSelection === 'freq' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
                   },
                 }}
-                onClick={handleFreqClick}>
+                onClick={handleFreqClick}
+              >
                 <h2>Freq</h2>
               </Button>
             </Grid>
@@ -322,7 +330,8 @@ export const AnalyzerControl = props => {
                       controlSelection === 'span' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
                   },
                 }}
-                onClick={handleSpanClick}>
+                onClick={handleSpanClick}
+              >
                 <h2>Span</h2>
               </Button>
             </Grid>
@@ -332,7 +341,8 @@ export const AnalyzerControl = props => {
                   ...yellowButtonStyle,
                   ...{ background: isTraceOn ? AstroTheme.palette.critical.main : AstroTheme.palette.warning.main },
                 }}
-                onClick={handleHoldClick}>
+                onClick={handleHoldClick}
+              >
                 <h2>Trace</h2>
               </Button>
             </Grid>
@@ -342,7 +352,8 @@ export const AnalyzerControl = props => {
                   ...yellowButtonStyle,
                   ...{ background: isMarkerOn ? AstroTheme.palette.critical.main : AstroTheme.palette.warning.main },
                 }}
-                onClick={handleMarkerClick}>
+                onClick={handleMarkerClick}
+              >
                 <h2>Marker</h2>
               </Button>
             </Grid>

@@ -33,7 +33,8 @@ export const TeamInfo = () => {
         boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.8)',
         height: '60px',
         alignItems: 'center',
-      }}>
+      }}
+    >
       <Grid item xs={4} sx={{ textAlign: 'left' }}>
         <Typography variant='h5' paddingLeft='30px' component='div' sx={{ fontFamily: 'Nasa', paddingLeft: '10px' }}>
           Space Electronic Warfare Sandbox
