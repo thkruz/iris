@@ -71,12 +71,24 @@ export class SpectrumAnalyzer {
     this.centerFreq = freq;
     this.minFreq = freq - this.bw / 2;
     this.maxFreq = freq + this.bw / 2;
+
+    if (this.isRfMode) {
+      this.config.rf.freq = freq;
+    } else {
+      this.config.if.freq = freq;
+    }
   }
 
   changeBandwidth(freqSpan) {
     this.bw = freqSpan;
     this.minFreq = this.centerFreq - this.bw / 2;
     this.maxFreq = this.centerFreq + this.bw / 2;
+
+    if (this.isRfMode) {
+      this.config.rf.span = freqSpan;
+    } else {
+      this.config.if.span = freqSpan;
+    }
   }
 
   resize(width, height) {

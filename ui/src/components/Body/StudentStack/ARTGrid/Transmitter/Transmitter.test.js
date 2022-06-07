@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { Transmitter } from './Transmitter';
-import { TxProvider } from '../../../../../context';
+import { SewAppProvider } from '../../../../../context/sewAppContext';
 
 describe('Transmitter', () => {
   beforeAll(() => {
@@ -15,9 +15,9 @@ describe('Transmitter', () => {
 
   it('should render', () => {
     const result = render(
-      <TxProvider>
+      <SewAppProvider>
         <Transmitter />
-      </TxProvider>
+      </SewAppProvider>
     );
     expect(() => result).not.toThrow();
   });

@@ -1,10 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import App from './App';
-import { SignalProvider } from './context/signalContext';
-import { RxProvider } from './context/rxContext';
-import { AntennaProvider } from './context/antennaContext';
-import { TxProvider } from './context';
+import { SewAppProvider } from './context/sewAppContext';
 import { RfEnvironment } from './RfEnvironment';
 
 describe('App', () => {
@@ -19,15 +16,9 @@ describe('App', () => {
 
   it('should render', () => {
     const result = render(
-      <SignalProvider>
-        <RxProvider>
-          <TxProvider>
-            <AntennaProvider>
-              <App />
-            </AntennaProvider>
-          </TxProvider>
-        </RxProvider>
-      </SignalProvider>
+      <SewAppProvider>
+        <App />
+      </SewAppProvider>
     );
     expect(() => result).not.toThrow();
   });

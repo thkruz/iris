@@ -1,31 +1,41 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import { Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { teams } from '../../constants';
-import { useUser, useUpdateUser } from '../../context';
-import { useFetch } from '../../hooks/useFetch';
+import { githubCheck } from '../../lib/github-check';
+import { useSewApp } from '../../context/sewAppContext';
 
 export default function Login() {
-  const user = useUser();
-  console.log(user)
-  const setUser = useUpdateUser();
+  const [servers, setServers] = useState([]);
+  const sewAppCtx = useSewApp();
   const navigate = useNavigate();
-  const { data: servers } = useFetch('data/server')
-  console.log(servers)
+
+  useEffect(() => {
+    if (!githubCheck()) {
+      const { data: _servers } = fetch('data/server');
+      setServers(_servers);
+    } else {
+      fetch('./data/server.json').then(res =>
+        res.json().then(data => {
+          setServers(data);
+        })
+      );
+    }
+  }, []);
 
   const handleSubmit = event => {
     event.preventDefault();
     navigate('/student', { state: { isAuthenticated: true } });
   };
 
-  const handleTeamChange = (value) => {
-    console.log(value)
-    setUser({...user, team_id: value})
-  }
-  const handleServerChange = (server_id) => {
-    setUser({...user, server_id: server_id})
-  }
+  const handleTeamChange = value => {
+    console.log(value);
+    sewAppCtx.updateUser({ ...sewAppCtx.user, team_id: value });
+  };
+  const handleServerChange = server_id => {
+    sewAppCtx.updateUser({ ...sewAppCtx.user, server_id: server_id });
+  };
 
   return (
     <Box
@@ -49,24 +59,28 @@ export default function Login() {
         <select
           name='team'
           type='string'
-          value={teams[user.team_id-1].id}
+          value={teams[sewAppCtx.user.team_id - 1].id}
           onChange={e => handleTeamChange(parseInt(e.target.value))}>
-            {teams.map((x, index) => (
-              <option key={index} value={x.id}>{x.name}</option>
-            ))}
-          </select>
+          {teams.map((x, index) => (
+            <option key={index} value={x.id}>
+              {x.name}
+            </option>
+          ))}
+        </select>
         <label htmlFor='server'>Server</label>
       </div>
       <div>
         <select
           name='server'
           type='string'
-          value={user.server_id}
+          value={sewAppCtx.user.server_id}
           onChange={e => handleServerChange(parseInt(e.target.value))}>
-            {servers.map((x, index) => (
-              <option key={index} value={x.id}>{x.name}</option>
-            ))}
-          </select>
+          {servers?.map((x, index) => (
+            <option key={index} value={x.id}>
+              {x.name}
+            </option>
+          ))}
+        </select>
       </div>
       <Button type='submit' size='large' variant='contained' color='primary'>
         Submit

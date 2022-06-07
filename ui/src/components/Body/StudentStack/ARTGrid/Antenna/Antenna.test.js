@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { Antenna } from './Antenna';
-import { AntennaProvider, RxProvider, SignalProvider } from '../../../../../context';
+import { SewAppProvider } from '../../../../../context/sewAppContext';
 
 describe('Antenna', () => {
   beforeAll(() => {
@@ -15,13 +15,9 @@ describe('Antenna', () => {
 
   it('should render', () => {
     const result = render(
-      <SignalProvider>
-        <RxProvider>
-          <AntennaProvider>
-            <Antenna />
-          </AntennaProvider>
-        </RxProvider>
-      </SignalProvider>
+      <SewAppProvider>
+        <Antenna />
+      </SewAppProvider>
     );
     expect(() => result).not.toThrow();
   });

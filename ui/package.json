@@ -1,6 +1,6 @@
 {
   "name": "ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.9.0",
@@ -8,26 +8,19 @@
     "@material-ui/core": "^4.12.4",
     "@mui/icons-material": "^5.6.2",
     "@mui/material": "^5.6.2",
-    "@testing-library/jest-dom": "^5.16.2",
-    "@testing-library/react": "^12.1.4",
-    "@testing-library/user-event": "^13.5.0",
     "axios": "^0.26.1",
     "engine.io-client": "^6.2.2",
-    "jest-canvas-mock": "^2.4.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-player": "^2.10.0",
     "react-router-dom": "^6.3.0",
-    "react-scripts": "^5.0.1",
-    "serve": "^13.0.2",
-    "socket.io-client": "^4.5.0",
-    "web-vitals": "^2.1.4"
+    "socket.io-client": "^4.5.0"
   },
   "scripts": {
     "start": "npx react-scripts start",
     "build": "npx react-scripts build",
     "serve": "npx serve -s build",
-    "test": "npx react-scripts test  --watchAll=false --coverage",
+    "test": "npx react-scripts test  --watchAll=false --coverage --env=jsdom",
     "test:watch": "npx react-scripts test",
     "eject": "npx react-scripts eject",
     "lint": "npx eslint src/**/*.js"
@@ -62,6 +55,13 @@
     "babel-jest": "^28.1.0",
     "eslint": "^8.13.0",
     "eslint-plugin-jest": "^26.1.4",
-    "eslint-plugin-react": "^7.29.4"
+    "eslint-plugin-react": "^7.29.4",
+    "react-scripts": "^5.0.1",
+    "jest-canvas-mock": "^2.4.0",
+    "web-vitals": "^2.1.4",
+    "serve": "^13.0.2",
+    "@testing-library/jest-dom": "^5.16.2",
+    "@testing-library/react": "^12.1.4",
+    "@testing-library/user-event": "^13.5.0"
   }
 }

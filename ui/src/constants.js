@@ -1,3 +1,10 @@
+import { githubCheck } from './lib/github-check';
+import { defaultAntennaData } from './constants/defaultAntennaData';
+import { defaultRxData } from './constants/defaultRxData';
+import { defaultTxData } from './constants/defaultTxData';
+import { defaultSignalData } from './constants/defaultSignalData';
+import { defaultUserData } from './constants/defaultUserData';
+
 export const antennas = [
   { band: 'C', upconvert: 3350e6, downconvert: 3500e6 },
   { band: 'Ku', upconvert: 14400e6, downconvert: 14250e6 },
@@ -16,9 +23,13 @@ export const satellites = [
   { id: 10, name: 'WILL 1-AM', offset: 345e6 },
 ];
 
-export const teams = [
-  {id: 1, name: 'Persephone'},
-  {id: 2, name: 'Sisyphus'},
-  {id: 3, name: 'Tartarus'},
-  {id: 4, name: 'Zagreus'}
-];
+export const teams = githubCheck()
+  ? [{ id: 1, name: 'Lone Player' }]
+  : [
+      { id: 1, name: 'Persephone' },
+      { id: 2, name: 'Sisyphus' },
+      { id: 3, name: 'Tartarus' },
+      { id: 4, name: 'Zagreus' },
+    ];
+
+export { defaultAntennaData, defaultRxData, defaultTxData, defaultSignalData, defaultUserData };

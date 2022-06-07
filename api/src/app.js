@@ -45,10 +45,8 @@ io.on('connection', socket => {
   socket.on('updateTx', update => {
     console.log(`sending updateTX and update Signals to clients`);
     clientManager.clients.forEach(client => {
-      if (client.id !== socket.id) {
-        client.emit('updateSignals', update);
-        client.emit('updateTxClient', update);
-      }
+      client.emit('updateSignals', update);
+      client.emit('updateTxClient', update);
       //anytime in transmitter apply is pressed update the signals
       //anytime in antenna baseball or hpa is turned on update the signals
     });
@@ -57,9 +55,7 @@ io.on('connection', socket => {
   socket.on('updateRx', update => {
     console.log(`sending updateRX to clients`);
     clientManager.clients.forEach(client => {
-      if (client.id !== socket.id) {
-        client.emit('updateRxClient', update);
-      }
+      client.emit('updateRxClient', update);
     });
   });
 
@@ -123,6 +119,7 @@ app.post('/data/:table_name', (request, response) => {
 
 app.patch('/data/:table_name', (request, response) => {
   if (request.query.id !== undefined) {
+    console.log(request.body)
     knex(request.params.table_name)
       .where('id', request.query.id)
       .update(request.body)

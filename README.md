@@ -1,37 +1,69 @@
-TODO: 
-1. Create Volumes for API and UI - set up in docker compose
-1. Set up deployment pipeline
-1. Map node_modules as volume in docker-compose
-1. Set up Env variables for email and API names.
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/thkruz/iris?style=flat-square) ![language](https://img.shields.io/github/languages/top/thkruz/iris?style=flat-square) ![Languages](https://img.shields.io/github/languages/count/thkruz/iris?style=flat-square) ![GitHub issues](https://img.shields.io/github/issues/thkruz/iris?style=flat-square) [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier) ![License](https://img.shields.io/github/license/thkruz/iris?style=flat-square)
 
-TODO: NICE TO HAVE
-1. Web pack deploy on the pipeline
-1. break apart UI and API repositories with Manifest file repository
-1. install and run cypress tests
+# IRIS - Space Electronic Warfare Sandbox
 
-# sdi-capstone-proof-of-concept
+A stand-alone training platform for Space Electronic Warfare. The application has a "Student front-end" as well as an "instructor front-end." Users have their own "session/game" that the instructor creates and students join. Each "game" has its own unique id. Games exist as standalone objects that can be "spun up" from the database.
 
+The student makes choices given the unique problem set presented and can take action to "jam" electronic signals.
 
-To set up application:
+The interface responds if the student chooses the correct setting to jam the signal.
 
-`git clone <url here>`
+The problem set is presented as a visual representation of electronic signals that force the student to perform the analysis they are trained for.
 
-create volumes
-* db volume somehow
+## Table of Contents
 
-* UI volume: 
-    * `docker service create  --mount 'type=bind,src=/Users/jeffhaddock/code/blended/capstone-proof/sdi-capstone-proof-of-concept/ui/src,target=/app/src'  --name capstone-ui-volume node:alpine`
+- [Setting up a Local Copy](#Setting-up-a-Local-Copy)
+- [Versioning](#Versioning)
+- [Tests](#Tests)
+- [Contributors](#Contributors)
+- [License](#License)
 
-Need to include directions for how to 
-start up Docker containers and make 
-sure database is already created.
+### Setting up a Local Copy
 
-to run a particular env for make command:
-`knex migrate:make --env local creat_about_table`
+```bash
+git clone https://github.com/thkruz/iris        #Clone the github files.
+cd ./iris/                                      #Switch into the directory.
+docker compose up -d                            #Start the docker containers.
+```
 
-to run against the running database (if 'docker-compose up' has been executed)
-`knex migrate:latest --env local`
+## Versioning
 
+We use [SemVer](http://semver.org/) for versioning.
 
-Check Heroku Logs
-`heroku logs --tail -a bsdi-poc-api`
+## Tests
+
+### Unit/Functional
+
+Currently we are using Jest for ui unit and functional tests that should ideally cover at least 80% of the functions. All of these tests can be run using:
+
+```bash
+cd ./ui/
+npm run test
+```
+
+### End-To-End
+
+For end-to-end (E2E) testing we will be using the cypress framework. This is on the to-do list.
+
+### Security
+
+For security testing we are using SonarCloud automatically in the CI/CD pipeline.
+
+## Contributors
+
+- [@bjhufstetler](https://github.com/bjhufstetler)
+- [@thkruz](https://github.com/thkruz/)
+- [@filmo003](https://github.com/filmo003/)
+- [@bigbpete](https://github.com/bigbpete)
+
+## License
+
+Copyright (C) 2022 Theodore Kruczek
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+[Full License](https://github.com/thkruz/iris/blob/master/LICENSE.md)

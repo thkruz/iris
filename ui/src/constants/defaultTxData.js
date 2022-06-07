@@ -1,9 +1,4 @@
-import React, { useContext, useState } from 'react';
-import PropTypes from 'prop-types';
-const txContext = React.createContext();
-const updateTxContext = React.createContext();
-
-const defaultTxContext = [
+export const defaultTxData = [
   {
     id: 1,
     server_id: 1,
@@ -213,40 +208,3 @@ const defaultTxContext = [
     transmitting: false,
   },
 ];
-
-export const useTx = () => {
-  return useContext(txContext);
-};
-
-export const useUpdateTx = () => {
-  return useContext(updateTxContext);
-};
-
-export const TxProvider = ({ children }) => {
-  const [tx, setTx] = useState(defaultTxContext);
-
-  window.sewApp.socket.on('updateTxClient', data => {
-    if (data.user != window.sewApp.socket.id) {
-      console.log('actually updating the Tx');
-      setTx(data.signals);
-    }
-  });
-
-  const updateTx = update => {
-    //  patch request to update database
-    // if patch request is good
-    window.sewApp.socket.emit('updateTx', { user: window.sewApp.socket.id, signals: update });
-    setTx(update);
-    console.log(update);
-  };
-
-  return (
-    <txContext.Provider value={tx}>
-      <updateTxContext.Provider value={updateTx}>{children}</updateTxContext.Provider>
-    </txContext.Provider>
-  );
-};
-
-TxProvider.propTypes = {
-  children: PropTypes.any,
-};

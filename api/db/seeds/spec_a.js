@@ -6,14 +6,14 @@ exports.seed = async function(knex) {
   // Deletes ALL existing entries
   await knex('spec_a').del()
   await knex('spec_a').insert([
-    {id: 1, server_id: 1, team_id: 1, unit: 1, number: 1, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: false, antenna_id: 1},
-    {id: 2, server_id: 1, team_id: 1, unit: 1, number: 2, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: true, antenna_id: 1},
-    {id: 3, server_id: 1, team_id: 1, unit: 2, number: 1, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: false, antenna_id: 1},
-    {id: 4, server_id: 1, team_id: 1, unit: 2, number: 2, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: true, antenna_id: 1},
-    {id: 5, server_id: 1, team_id: 1, unit: 3, number: 1, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: false, antenna_id: 1},
-    {id: 6, server_id: 1, team_id: 1, unit: 3, number: 2, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: true, antenna_id: 1},
+    {id: 1, server_id: 1, team_id: 1, unit: 1, number: 1, operational: true, frequency: 1060, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: false, antenna_id: 1},
+    {id: 2, server_id: 1, team_id: 1, unit: 1, number: 2, operational: true, frequency: 4410, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: true, antenna_id: 1},
+    {id: 3, server_id: 1, team_id: 1, unit: 2, number: 1, operational: true, frequency: 1310, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: false, antenna_id: 1},
+    {id: 4, server_id: 1, team_id: 1, unit: 2, number: 2, operational: true, frequency: 4810, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: true, antenna_id: 1},
+    {id: 5, server_id: 1, team_id: 1, unit: 3, number: 1, operational: true, frequency: 1060, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: false, antenna_id: 1},
+    {id: 6, server_id: 1, team_id: 1, unit: 3, number: 2, operational: true, frequency: 4410, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: true, antenna_id: 1},
     {id: 7, server_id: 1, team_id: 1, unit: 4, number: 1, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: false, antenna_id: 1},
-    {id: 8, server_id: 1, team_id: 1, unit: 4, number: 2, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: true, antenna_id: 1},
+    {id: 8, server_id: 1, team_id: 1, unit: 4, number: 2, operational: true, frequency: 4700, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: true, antenna_id: 1},
     {id: 9, server_id: 1, team_id: 2, unit: 1, number: 1, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: false, antenna_id: 1},
     {id: 10, server_id: 1, team_id: 2, unit: 1, number: 2, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: true, antenna_id: 1},
     {id: 11, server_id: 1, team_id: 2, unit: 2, number: 1, operational: true, frequency: 1250, span: 50, trace: true, marker1freq: 1240, marker2freq: 1260, rf: false, antenna_id: 1},

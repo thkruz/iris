@@ -2,16 +2,16 @@ import React, { useEffect } from 'react';
 import { ARTGrid, SpectrumAnalyzerGrid, TeamInfo } from '../../';
 import { Grid } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useUpdateSewApp } from '../../../context';
+import { useSewApp } from '../../../context/sewAppContext';
 
 export const StudentStack = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const updateSewAppContext = useUpdateSewApp();
+  const sewAppCtx = useSewApp();
 
   useEffect(() => {
     window.sewApp.init();
-    updateSewAppContext();
+    sewAppCtx.updateSewApp();
     document.addEventListener('contextmenu', event => event.preventDefault());
   }, []);
 
