@@ -296,7 +296,8 @@ export const SewAppProvider = ({ children }) => {
         updateAntenna,
         user,
         updateUser,
-      }}>
+      }}
+    >
       {children}
     </sewAppCtx.Provider>
   );

@@ -141,7 +141,8 @@ export const Injects = () => {
         }}
         onClick={e => {
           onClickHandler(e);
-        }}>
+        }}
+      >
         {modem}
       </Button>
     );
@@ -184,7 +185,8 @@ export const Injects = () => {
                 param: 'target_id',
                 val: parseInt(e.target.value),
               })
-            }>
+            }
+          >
             {satellites.map((x, index) => (
               <option key={index} value={x.id}>
                 {x.name}
@@ -204,7 +206,8 @@ export const Injects = () => {
                 param: 'frequency',
                 val: parseInt(e.target.value) || 0,
               })
-            }></input>
+            }
+          ></input>
           <Typography sx={sxValues}>{sewAppCtx.signals[index].frequency + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
@@ -218,7 +221,8 @@ export const Injects = () => {
                 param: 'bandwidth',
                 val: parseInt(e.target.value) || 0,
               })
-            }></input>
+            }
+          ></input>
           <Typography sx={sxValues}>{sewAppCtx.signals[index].bandwidth + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
@@ -226,7 +230,8 @@ export const Injects = () => {
           <select
             name='modulation'
             value={inputData.modulation}
-            onChange={e => handleInputChange({ param: 'modulation', val: e.target.value || 0 })}>
+            onChange={e => handleInputChange({ param: 'modulation', val: e.target.value || 0 })}
+          >
             <option value='BPSK'>BPSK</option>
             <option value='QPSK'>QPSK</option>
             <option value='8QAM'>8QAM</option>
@@ -239,7 +244,8 @@ export const Injects = () => {
           <select
             name='fec'
             value={inputData.fec}
-            onChange={e => handleInputChange({ param: 'fec', val: e.target.value || 0 })}>
+            onChange={e => handleInputChange({ param: 'fec', val: e.target.value || 0 })}
+          >
             <option value='1/2'>1/2</option>
             <option value='2/3'>2/3</option>
             <option value='3/4'>3/4</option>
@@ -253,7 +259,8 @@ export const Injects = () => {
           <select
             name='feed'
             value={inputData.feed}
-            onChange={e => handleInputChange({ param: 'feed', val: e.target.value })}>
+            onChange={e => handleInputChange({ param: 'feed', val: e.target.value })}
+          >
             <option value='blue 1.mp4'>Blue 1</option>
             <option value='blue 2.mp4'>Blue 2</option>
             <option value='red 1.mp4'>Red 1</option>

@@ -3,7 +3,7 @@ import { Grid } from '@mui/material';
 import { AntennaController } from '../../../../';
 
 export const Antenna = () => {
-  return(
+  return (
     <>
       <Grid item xs={6}>
         <AntennaController unit={1} />
@@ -12,4 +12,5 @@ export const Antenna = () => {
         <AntennaController unit={2} />
       </Grid>
     </>
-)};
+  );
+};

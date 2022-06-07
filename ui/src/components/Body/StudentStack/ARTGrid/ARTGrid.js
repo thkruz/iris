@@ -1,6 +1,6 @@
 import React from 'react';
 import { Grid } from '@mui/material';
-import {Receiver, Antenna, Transmitter } from '../../../';
+import { Receiver, Antenna, Transmitter } from '../../../';
 
 export const ARTGrid = () => (
   <>
