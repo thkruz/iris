@@ -123,7 +123,8 @@ export const TxModem = ({ unit }) => {
       }}
       onClick={e => {
         setActiveModem(modem, e);
-      }}>
+      }}
+    >
       {modem}
     </Button>
   );
@@ -177,7 +178,8 @@ export const TxModem = ({ unit }) => {
                 param: 'antenna_id',
                 val: parseInt(e.target.value) || 0,
               })
-            }>
+            }
+          >
             <option value={1}>1</option>
             <option value={2}>2</option>
           </select>
@@ -194,7 +196,8 @@ export const TxModem = ({ unit }) => {
                 param: 'frequency',
                 val: parseInt(e.target.value) || 0,
               })
-            }></input>
+            }
+          ></input>
           <Typography sx={sxValues}>{sewAppCtx.tx[currentRow].frequency + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
@@ -208,7 +211,8 @@ export const TxModem = ({ unit }) => {
                 param: 'bandwidth',
                 val: parseInt(e.target.value) || 0,
               })
-            }></input>
+            }
+          ></input>
           <Typography sx={sxValues}>{sewAppCtx.tx[currentRow].bandwidth + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
@@ -217,7 +221,8 @@ export const TxModem = ({ unit }) => {
             name='power'
             type='string'
             value={inputData.power}
-            onChange={e => handleInputChange({ param: 'power', val: e.target.value })}></input>
+            onChange={e => handleInputChange({ param: 'power', val: e.target.value })}
+          ></input>
           <Typography sx={sxValues}>{`${sewAppCtx.tx[currentRow].power} dBm`}</Typography>
         </Box>
         <Box sx={sxInputRow}>

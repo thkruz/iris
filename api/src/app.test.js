@@ -1,5 +1,5 @@
 describe('baseline test', () => {
-    test('should return true', () => {
-        expect(true).toBe(true)
-    })
-})
+  test('should return true', () => {
+    expect(true).toBe(true);
+  });
+});
