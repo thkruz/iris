@@ -5,18 +5,18 @@ import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore
 import CellTowerIcon from '@mui/icons-material/CellTower';
 import AlignHorizontalCenterIcon from '@mui/icons-material/AlignHorizontalCenter';
 import { AstroTheme } from '../../../../../themes/AstroTheme';
-import { useAntenna, useUpdateAntenna, useUser } from '../../../../../context';
+import { useSewApp } from '../../../../../context/sewAppContext';
 import { antennas, satellites } from '../../../../../constants';
 import './Antenna.css';
 import { CRUDdataTable } from '../../../../../crud/crud';
 
 export const AntennaController = ({ unit }) => {
-  const user = useUser()
   const theme = AstroTheme;
-  const antennaContext = useAntenna();
-  const setAntennaData = useUpdateAntenna();
-  const unitData = antennaContext.filter(x => x.unit == unit && x.team_id == user.team_id && x.server_id == user.server_id)
-  const index = antennaContext.map(x => x.id).indexOf(unitData[0].id)
+  const sewAppCtx = useSewApp();
+  const unitData = sewAppCtx.antenna.filter(
+    x => x.unit == unit && x.team_id == sewAppCtx.user.team_id && x.server_id == sewAppCtx.user.server_id
+  );
+  const index = sewAppCtx.antenna.map(x => x.id).indexOf(unitData[0].id);
 
   // Styles
   const sxAntennaCase = {
@@ -78,19 +78,19 @@ export const AntennaController = ({ unit }) => {
   };
   const sxHPA = {
     marginTop: '5px',
-    backgroundColor: antennaContext[index].hpa ? 'red' : theme.palette.tertiary.light3,
-    color: antennaContext[index].hpa ? 'white' : 'black',
+    backgroundColor: sewAppCtx.antenna[index].hpa ? 'red' : theme.palette.tertiary.light3,
+    color: sewAppCtx.antenna[index].hpa ? 'white' : 'black',
     boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
     border: '1px solid red',
     '&:hover': {
-      backgroundColor: antennaContext[index].hpa ? theme.palette.error.main : theme.palette.critical.main,
-      color: antennaContext[index].hpa ? 'black' : 'white',
+      backgroundColor: sewAppCtx.antenna[index].hpa ? theme.palette.error.main : theme.palette.critical.main,
+      color: sewAppCtx.antenna[index].hpa ? 'black' : 'white',
     },
   };
   const sxTx = {
-    backgroundColor: antennaContext[index].loopback
+    backgroundColor: sewAppCtx.antenna[index].loopback
       ? theme.palette.tertiary.light2
-      : antennaContext[index].hpa
+      : sewAppCtx.antenna[index].hpa
       ? 'red'
       : 'green',
     borderRadius: '10px',
@@ -115,7 +115,7 @@ export const AntennaController = ({ unit }) => {
   // Antenna User Inputs
   // Target Band Offset
   const AntennaInput = () => {
-    const [inputData, setInputData] = useState(antennaContext[index]);
+    const [inputData, setInputData] = useState(sewAppCtx.antenna[index]);
     const handleInputChange = ({ param, val }) => {
       if (param === 'offset') {
         // if contains any symbols except - and number then return
@@ -131,10 +131,10 @@ export const AntennaController = ({ unit }) => {
       setInputData(tmpInputData);
     };
     const handleApply = () => {
-      const tmpData = [...antennaContext];
+      const tmpData = [...sewAppCtx.antenna];
       tmpData[index] = inputData;
-      setAntennaData(tmpData);
-      CRUDdataTable({method: 'PATCH', path: 'antenna', data: tmpData[index]})
+      sewAppCtx.updateAntenna(tmpData);
+      CRUDdataTable({ method: 'PATCH', path: 'antenna', data: tmpData[index] });
     };
     return (
       <Box sx={sxInputBox}>
@@ -152,7 +152,7 @@ export const AntennaController = ({ unit }) => {
               );
             })}
           </select>
-          <Typography sx={sxValues}>{satellites[antennaContext[index].target_id - 1].name}</Typography>
+          <Typography sx={sxValues}>{satellites[sewAppCtx.antenna[index].target_id - 1].name}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='Band'>Band</label>
@@ -168,7 +168,7 @@ export const AntennaController = ({ unit }) => {
               );
             })}
           </select>
-          <Typography sx={sxValues}>{antennas[antennaContext[index]?.band]?.band}</Typography>
+          <Typography sx={sxValues}>{antennas[sewAppCtx.antenna[index]?.band]?.band}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='offset'>Offset</label>
@@ -179,7 +179,7 @@ export const AntennaController = ({ unit }) => {
             onChange={e => {
               handleInputChange({ param: 'offset', val: e.target.value });
             }}></input>
-          <Typography sx={sxValues}>{antennaContext[index].offset + ' MHz'}</Typography>
+          <Typography sx={sxValues}>{sewAppCtx.antenna[index].offset + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <div></div>
@@ -194,18 +194,18 @@ export const AntennaController = ({ unit }) => {
   // Baseball switch
   const LoopbackSwitch = () => {
     const toggleSwitch = () => {
-      const tmpData = [...antennaContext];
+      const tmpData = [...sewAppCtx.antenna];
       const loopback = tmpData[index].loopback;
       tmpData[index].loopback = !loopback;
-      setAntennaData(tmpData);
-      CRUDdataTable({method: 'PATCH', path: 'antenna', data: tmpData[index]})
+      sewAppCtx.updateAntenna(tmpData);
+      CRUDdataTable({ method: 'PATCH', path: 'antenna', data: tmpData[index] });
     };
     const handleHPA = () => {
-      const tmpData = [...antennaContext];
+      const tmpData = [...sewAppCtx.antenna];
       const hpa = tmpData[index].hpa;
       tmpData[index].hpa = !hpa;
-      setAntennaData(tmpData);
-      CRUDdataTable({method: 'PATCH', path: 'antenna', data: tmpData[index]})
+      sewAppCtx.updateAntenna(tmpData);
+      CRUDdataTable({ method: 'PATCH', path: 'antenna', data: tmpData[index] });
     };
     return (
       <Box sx={sxLoopback}>
@@ -215,7 +215,7 @@ export const AntennaController = ({ unit }) => {
           <center>
             <img
               className='lb_img'
-              src={`baseball_switch${antennaContext[index].loopback ? '' : '2'}.png`}
+              src={`baseball_switch${sewAppCtx.antenna[index].loopback ? '' : '2'}.png`}
               alt='baseball_switch'
               onClick={e => toggleSwitch(e)}
             />

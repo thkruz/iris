@@ -1,0 +1,26 @@
+export const defaultSignalData = [
+  {
+    id: 1,
+    server_id: 1,
+    target_id: 3,
+    frequency: 15720,
+    power: -100,
+    bandwidth: 10,
+    modulation: '8QAM',
+    fec: '3/4',
+    feed: 'red 1.mp4',
+    operational: false,
+  },
+  {
+    id: 1,
+    server_id: 1,
+    target_id: 3,
+    frequency: 15720,
+    power: -100,
+    bandwidth: 10,
+    modulation: '8QAM',
+    fec: '3/4',
+    feed: 'red 1.mp4',
+    operational: false,
+  },
+];

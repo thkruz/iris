@@ -34,7 +34,7 @@ const sewApp = {
         server: 'Connected',
       };
 
-      socket.emit('updateTeam', { team: sewApp.team });
+      socket?.emit('updateTeam', { team: sewApp.team });
 
       socket.on('updateSignals', update => {
         window.sewApp.environment.updateSignals(update);

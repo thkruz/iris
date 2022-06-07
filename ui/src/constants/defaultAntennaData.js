@@ -1,0 +1,28 @@
+export const defaultAntennaData = [
+  {
+    id: 1,
+    server_id: 1,
+    team_id: 1,
+    target_id: 1,
+    unit: 1,
+    operational: true,
+    locked: true,
+    band: 0,
+    offset: 0,
+    hpa: false,
+    loopback: true,
+  },
+  {
+    id: 2,
+    server_id: 1,
+    team_id: 1,
+    target_id: 2,
+    unit: 2,
+    operational: true,
+    locked: true,
+    band: 0,
+    offset: 0,
+    hpa: false,
+    loopback: true,
+  },
+];

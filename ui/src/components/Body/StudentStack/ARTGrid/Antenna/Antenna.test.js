@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { Antenna } from './Antenna';
-import { AntennaProvider, RxProvider, SignalProvider } from '../../../../../context';
+import { AntennaProvider, RxProvider, SignalProvider } from '../../../../../context/sewAppCtx';
 
 describe('Antenna', () => {
   beforeAll(() => {

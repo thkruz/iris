@@ -1,7 +1,9 @@
-import config from './../config';
+import { githubCheck } from '../lib/github-check';
+import config from '../constants/config';
 const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
 
 export const CRUDdataTable = ({ method, path, data }) => {
+  if (githubCheck()) return; // Dont run on github pages
   //methods: POST, PATCH
   const id = data.id ? data.id : '';
   const baseURL = `${ApiUrl}/data/`;

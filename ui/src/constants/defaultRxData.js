@@ -1,10 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
-import config from '../config';
-const rxContext = React.createContext();
-const updateRxContext = React.createContext();
-
-const defaultRxContext = [
+export const defaultRxData = [
   {
     id: 1,
     server_id: 1,
@@ -214,47 +208,3 @@ const defaultRxContext = [
     fec: '1/2',
   },
 ];
-
-export const useRx = () => {
-  return useContext(rxContext);
-};
-
-export const useUpdateRx = () => {
-  return useContext(updateRxContext);
-};
-
-export const RxProvider = ({ children }) => {
-  const [rx, setRx] = useState(defaultRxContext);
-
-  useEffect(() => {
-    const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
-    fetch(`${ApiUrl}/data/receiver`)
-      .then(response => response.json())
-      .then(data => {
-        //console.log('ReceiverProvider', data);
-        setRx([...data]);
-      });
-  }, []);
-
-  window.sewApp.socket.on('updateRxClient', data => {
-    if (data.user != window.sewApp.socket.id) {
-      console.log('actually updating the Rx');
-      setRx(data.signals);
-    }
-  });
- 
-  const updateRx = (update) => {
-    window.sewApp.socket.emit('updateRx', { user: window.sewApp.socket.id, signals: update });
-    setRx(update);
-  };
-
-  return (
-    <rxContext.Provider value={rx}>
-      <updateRxContext.Provider value={updateRx}>{children}</updateRxContext.Provider>
-    </rxContext.Provider>
-  );
-};
-
-RxProvider.propTypes = {
-  children: PropTypes.any,
-};

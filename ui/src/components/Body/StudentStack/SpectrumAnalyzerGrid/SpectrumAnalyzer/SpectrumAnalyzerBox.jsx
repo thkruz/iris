@@ -4,12 +4,14 @@ import React, { useLayoutEffect, useState } from 'react';
 import { AstroTheme } from '../../../../../themes/AstroTheme.js';
 import { useEffect } from 'react';
 import { satellites } from '../../../../../constants';
-import { useAntenna, useUpdateSewApp } from './../../../../../context';
 import PropTypes from 'prop-types';
-import config from './../../../../../config';
-import { useSewApp } from './../../../../../context/sewAppContext';
+import config from '../../../../../constants/config';
+import { useSewApp } from '../../../../../context/sewAppContext';
+import { githubCheck } from '../../../../../lib/github-check';
 
 const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
+// If this is github then use a local file instead
+const specADataLocation = !githubCheck() ? `${ApiUrl}/data/spec_a` : './data/spec_a.json';
 
 const SpectrumAnalyzerBoxStyle = {
   textAlign: 'center',
@@ -63,13 +65,11 @@ const canvasContainer = {
 export const SpectrumAnalyzerBox = props => {
   const [isRfMode, setIsRfMode] = useState(false);
   const [isPause, setIsPause] = useState(false);
-  const antenna = useAntenna();
-  const updateSewAppContext = useUpdateSewApp();
-  const sewApp = useSewApp();
+  const sewAppCtx = useSewApp();
   const whichSpecA = props.canvasId.split('A')[1];
 
   useEffect(() => {
-    window.sewApp.socket.on('updateSpecA', data => {
+    window.sewApp.socket?.on('updateSpecA', data => {
       // We need to reference the global variable here
       // NOT the context object
       const specA = window.sewApp[`specA${whichSpecA}`];
@@ -86,14 +86,14 @@ export const SpectrumAnalyzerBox = props => {
         }
         specA.isDrawHold = data.hold;
         specA.antenna_id = data.antenna_id;
-        const { target_id } = antenna[specA.antenna_id - 1];
+        const { target_id } = sewAppCtx.antenna[specA.antenna_id - 1];
         specA.target_id = target_id;
 
         specA.changeCenterFreq(specA.isRfMode ? specA.config.rf.freq : specA.config.if.freq);
         specA.changeBandwidth(specA.isRfMode ? specA.config.rf.span : specA.config.if.span);
 
         window.sewApp[`specA${whichSpecA}`] = specA;
-        updateSewAppContext();
+        sewAppCtx.updateSewApp();
       }
     });
   }, []);
@@ -113,7 +113,7 @@ export const SpectrumAnalyzerBox = props => {
       isShowSignals: false,
     };
 
-    fetch(`${ApiUrl}/data/spec_a`).then(res => {
+    fetch(specADataLocation).then(res => {
       res.json().then(data => {
         const specA = new SpectrumAnalyzer(canvasDom, defaultSpecAConfig);
 
@@ -133,21 +133,21 @@ export const SpectrumAnalyzerBox = props => {
           },
         };
 
-        const { id_target } = antenna[1];
+        const { id_target } = sewAppCtx.antenna[1];
         specA.target_id = id_target;
 
         specA.changeCenterFreq(specA.isRfMode ? specA.config.rf.freq : specA.config.if.freq);
         specA.changeBandwidth(specA.isRfMode ? specA.config.rf.span : specA.config.if.span);
 
         specA.antenna_id = data[0].antenna_id;
-        const { target_id } = antenna[specA.antenna_id - 1];
+        const { target_id } = sewAppCtx.antenna[specA.antenna_id - 1];
         specA.target_id = target_id;
 
         loadSignals(specA);
         specA.start();
 
         window.sewApp[`specA${whichSpecA}`] = specA;
-        updateSewAppContext();
+        sewAppCtx.updateSewApp();
       });
     });
   }, []);
@@ -164,7 +164,7 @@ export const SpectrumAnalyzerBox = props => {
         });
       });
       window.sewApp[`specA${whichSpecA}`] = specA;
-      updateSewAppContext();
+      sewAppCtx.updateSewApp();
     } else {
       setTimeout(() => {
         loadSignals(specA);
@@ -173,15 +173,15 @@ export const SpectrumAnalyzerBox = props => {
   };
 
   useEffect(() => {
-    const specA = sewApp[`specA${whichSpecA}`];
+    const specA = sewAppCtx.sewApp[`specA${whichSpecA}`];
     if (!specA || !specA.antenna_id) return;
-    const { target_id } = antenna[specA.antenna_id - 1];
+    const { target_id } = sewAppCtx.antenna[specA.antenna_id - 1];
     specA.target_id = target_id;
-    updateSewAppContext();
-  }, [antenna, sewApp[`specA${whichSpecA}`]]);
+    sewAppCtx.updateSewApp();
+  }, [sewAppCtx.antenna, sewAppCtx.sewApp[`specA${whichSpecA}`]]);
 
   const handleRfClicked = () => {
-    const specA = sewApp[`specA${whichSpecA}`];
+    const specA = sewAppCtx.sewApp[`specA${whichSpecA}`];
     specA.isRfMode = !specA.isRfMode;
     specA.changeCenterFreq(specA.isRfMode ? specA.config.rf.freq : specA.config.if.freq);
     specA.changeBandwidth(specA.isRfMode ? specA.config.rf.span : specA.config.if.span);
@@ -191,23 +191,23 @@ export const SpectrumAnalyzerBox = props => {
     props.handleRfClick(_specA);
 
     window.sewApp.announceSpecAChange(specA.whichUnit);
-    updateSewAppContext();
+    sewAppCtx.updateSewApp();
   };
 
   const handlePauseClicked = () => {
-    const specA = sewApp[`specA${whichSpecA}`];
+    const specA = sewAppCtx.sewApp[`specA${whichSpecA}`];
     specA.isPause = !specA.isPause;
     setIsPause(!isPause);
     const _specA = window.sewApp[`specA${specA.canvas.id.split('A')[1]}`];
     _specA.isPause = !isPause;
     props.handlePauseClicked(_specA);
     window.sewApp.announceSpecAChange(specA.whichUnit);
-    updateSewAppContext();
+    sewAppCtx.updateSewApp();
   };
 
   useEffect(() => {
     updateSpecAwAntennaInfo();
-  }, [antenna]);
+  }, [sewAppCtx.antenna]);
 
   const updateSpecAwAntennaInfo = (antenna_id, specA, isRemoteChange = true) => {
     specA ??= window.sewApp[`specA${whichSpecA}`];
@@ -215,7 +215,7 @@ export const SpectrumAnalyzerBox = props => {
     antenna_id ??= specA.antenna_id;
 
     specA.antenna_id = antenna_id;
-    let { band, hpa, target_id, lock, loopback, offset, operational } = antenna[specA.antenna_id - 1];
+    let { band, hpa, target_id, lock, loopback, offset, operational } = sewAppCtx.antenna[specA.antenna_id - 1];
     specA.target_id = target_id;
     //console.log('updateSpecAwAntennaInfo', specA.antenna_id, specA.target_id);
     //console.log(antenna);
@@ -241,36 +241,38 @@ export const SpectrumAnalyzerBox = props => {
       // Dont tell anyone else if they made the change
       window.sewApp.announceSpecAChange(specA.whichUnit);
     }
-    updateSewAppContext();
+    sewAppCtx.updateSewApp();
   };
 
   return (
     <Box sx={SpectrumAnalyzerBoxStyle}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
-          <Typography>Span: {sewApp[`specA${whichSpecA}`]?.bw / 1e6} MHz</Typography>
+          <Typography>Span: {sewAppCtx.sewApp[`specA${whichSpecA}`]?.bw / 1e6} MHz</Typography>
         </Grid>
         <Grid container item sx={{ display: 'flex', alignContent: 'space-between' }} xs={2}>
           <Grid item xs={12}>
-            <Typography>{sewApp[`specA${whichSpecA}`]?.maxDecibels} (dB)</Typography>
+            <Typography>{sewAppCtx.sewApp[`specA${whichSpecA}`]?.maxDecibels} (dB)</Typography>
           </Grid>
           <Grid item xs={12}>
-            <Typography>{sewApp[`specA${whichSpecA}`]?.minDecibels} (dB)</Typography>
+            <Typography>{sewAppCtx.sewApp[`specA${whichSpecA}`]?.minDecibels} (dB)</Typography>
           </Grid>
         </Grid>
         <Grid container item sx={canvasContainer} xs={9}>
           <canvas id={props.canvasId} />
         </Grid>
         <Grid item xs={12}>
-          <Typography>CF: {sewApp[`specA${whichSpecA}`]?.centerFreq / 1e6} MHz</Typography>
+          <Typography>CF: {sewAppCtx.sewApp[`specA${whichSpecA}`]?.centerFreq / 1e6} MHz</Typography>
         </Grid>
         <Grid item xs={3}>
           <Box sx={sxInputRow}>
             <label htmlFor='Antenna'>Ant</label>
             <select
               name='Antenna'
-              value={sewApp[`specA${whichSpecA}`]?.antenna_id}
-              onChange={e => updateSpecAwAntennaInfo(parseInt(e.target.value), sewApp[`specA${whichSpecA}`], false)}>
+              value={sewAppCtx.sewApp[`specA${whichSpecA}`]?.antenna_id}
+              onChange={e =>
+                updateSpecAwAntennaInfo(parseInt(e.target.value), sewAppCtx.sewApp[`specA${whichSpecA}`], false)
+              }>
               <option value={1}>1</option>
               <option value={2}>2</option>
             </select>
@@ -279,7 +281,9 @@ export const SpectrumAnalyzerBox = props => {
         <Grid item xs={3}>
           <Button
             sx={configButtonStyle}
-            onClick={() => props.handleConfigClick(sewApp[`specA${whichSpecA}`], sewApp[`specA${whichSpecA}`])}>
+            onClick={() =>
+              props.handleConfigClick(sewAppCtx.sewApp[`specA${whichSpecA}`], sewAppCtx.sewApp[`specA${whichSpecA}`])
+            }>
             Config
           </Button>
         </Grid>
@@ -288,12 +292,12 @@ export const SpectrumAnalyzerBox = props => {
             sx={{
               ...configButtonStyle,
               ...{
-                backgroundColor: sewApp[`specA${whichSpecA}`]?.isRfMode ? 'red' : 'yellow',
-                color: sewApp[`specA${whichSpecA}`]?.isRfMode ? 'white' : 'black',
+                backgroundColor: sewAppCtx.sewApp[`specA${whichSpecA}`]?.isRfMode ? 'red' : 'yellow',
+                color: sewAppCtx.sewApp[`specA${whichSpecA}`]?.isRfMode ? 'white' : 'black',
               },
             }}
             onClick={handleRfClicked}>
-            {sewApp[`specA${whichSpecA}`]?.isRfMode ? 'RF' : 'IF'}
+            {sewAppCtx.sewApp[`specA${whichSpecA}`]?.isRfMode ? 'RF' : 'IF'}
           </Button>
         </Grid>
         <Grid item xs={3}>
@@ -301,12 +305,12 @@ export const SpectrumAnalyzerBox = props => {
             sx={{
               ...configButtonStyle,
               ...{
-                backgroundColor: sewApp[`specA${whichSpecA}`]?.isPause ? 'red' : 'yellow',
-                color: sewApp[`specA${whichSpecA}`]?.isPause ? 'white' : 'black',
+                backgroundColor: sewAppCtx.sewApp[`specA${whichSpecA}`]?.isPause ? 'red' : 'yellow',
+                color: sewAppCtx.sewApp[`specA${whichSpecA}`]?.isPause ? 'white' : 'black',
               },
             }}
             onClick={handlePauseClicked}>
-            {sewApp[`specA${whichSpecA}`]?.isPause ? 'Unpause' : 'Pause'}
+            {sewAppCtx.sewApp[`specA${whichSpecA}`]?.isPause ? 'Unpause' : 'Pause'}
           </Button>
         </Grid>
       </Grid>

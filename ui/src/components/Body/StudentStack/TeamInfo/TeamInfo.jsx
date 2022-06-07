@@ -1,14 +1,27 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './TeamInfo.css';
 import { Grid, Typography } from '@mui/material';
 import { AstroTheme } from '../../../../themes/AstroTheme';
-import { useFetch } from '../../../../hooks';
-import { useUser } from '../../../../context';
 import { teams } from '../../../../constants';
+import { githubCheck } from '../../../../lib/github-check';
+import { useSewApp } from '../../../../context/sewAppContext';
 
 export const TeamInfo = () => {
-  const user = useUser();
-  const { data: servers } = useFetch('data/server');
+  const sewAppCtx = useSewApp();
+  const [servers, setServers] = useState([]);
+
+  useEffect(() => {
+    if (!githubCheck()) {
+      const { data: _servers } = fetch('data/server');
+      setServers(_servers);
+    } else {
+      fetch('./data/server.json').then(res =>
+        res.json().then(data => {
+          setServers(data);
+        })
+      );
+    }
+  }, []);
 
   return (
     <Grid
@@ -28,12 +41,12 @@ export const TeamInfo = () => {
       </Grid>
       <Grid item xs={4} sx={{ textAlign: 'center' }}>
         <Typography variant='h6' component='div'>
-          Team: {teams[user?.team_id - 1].name}
+          Team: {teams[sewAppCtx.user?.team_id - 1].name}
         </Typography>
       </Grid>
       <Grid item xs={4} sx={{ textAlign: 'right' }}>
         <Typography paddingRight='30px' variant='h6' component='div'>
-          Server: {servers ? servers[user.server_id - 1]?.name : 'Disconnected'}
+          Server: {servers ? servers[sewAppCtx.user.server_id - 1]?.name : 'Disconnected'}
         </Typography>
       </Grid>
     </Grid>

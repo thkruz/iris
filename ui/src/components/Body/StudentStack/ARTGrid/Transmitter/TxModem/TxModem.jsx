@@ -1,18 +1,18 @@
-/* eslint-disable react/prop-types */ 
+/* eslint-disable react/prop-types */
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { Box, Button, Typography } from '@mui/material';
 import './TxModem.css';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
-import { useTx, useUpdateTx, useUser } from '../../../../../../context';
+import { useSewApp } from '../../../../../../context/sewAppContext';
 import { CRUDdataTable } from '../../../../../../crud';
 
 export const TxModem = ({ unit }) => {
   const theme = AstroTheme;
-  const user = useUser()
-  const txContext = useTx();
-  const setTx = useUpdateTx();
-  const unitData = txContext.filter(x => x.unit == unit && x.team_id == user.team_id && x.server_id == user.server_id)
+  const sewAppCtx = useSewApp();
+  const unitData = sewAppCtx.tx.filter(
+    x => x.unit == unit && x.team_id == sewAppCtx.user.team_id && x.server_id == sewAppCtx.user.server_id
+  );
   const powerBudget = 23886; // Decided by SEW team
 
   const [activeModem, setActiveModem] = useState(1);
@@ -69,7 +69,9 @@ export const TxModem = ({ unit }) => {
     margin: '8px',
     boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
     border: '1px solid red',
-    backgroundColor: unitData.filter(x => x.modem_number == activeModem)[0].transmitting ? 'red' : theme.palette.tertiary.light3,
+    backgroundColor: unitData.filter(x => x.modem_number == activeModem)[0].transmitting
+      ? 'red'
+      : theme.palette.tertiary.light3,
     color: unitData.filter(x => x.modem_number == activeModem)[0].transmitting ? 'white' : 'black',
     '&:hover': {
       backgroundColor: unitData.filter(x => x.modem_number == activeModem)[0].transmitting
@@ -98,9 +100,12 @@ export const TxModem = ({ unit }) => {
   // Modem selector buttons
   const TxModemButtonBox = () => (
     <Box sx={sxModemButtonBox}>
-      {unitData.sort((a, b) => a.id - b.id).map((x, index) => {
-        if (x.unit == unit) return <TxModemButton key={index} modem={x.modem_number} transmitting={x.transmitting} id={x.id}/>;
-      })}
+      {unitData
+        .sort((a, b) => a.id - b.id)
+        .map((x, index) => {
+          if (x.unit == unit)
+            return <TxModemButton key={index} modem={x.modem_number} transmitting={x.transmitting} id={x.id} />;
+        })}
     </Box>
   );
   const TxModemButton = ({ modem, transmitting }) => (
@@ -127,8 +132,8 @@ export const TxModem = ({ unit }) => {
   // Modem User Inputs
   const TxModemInput = () => {
     const currentModem = unitData.map(x => x.modem_number).indexOf(activeModem);
-    const currentRow = txContext.map(x => x.id).indexOf(unitData[currentModem].id);
-    const [inputData, setInputData] = useState(txContext[currentRow]);
+    const currentRow = sewAppCtx.tx.map(x => x.id).indexOf(unitData[currentModem].id);
+    const [inputData, setInputData] = useState(sewAppCtx.tx[currentRow]);
     const [modemPower, setModemPower] = useState(inputData.bandwidth * Math.pow(10, (120 + inputData.power) / 10));
 
     const handleInputChange = ({ param, val }) => {
@@ -145,19 +150,19 @@ export const TxModem = ({ unit }) => {
     };
 
     const handleApply = () => {
-      let tmpData = [...txContext];
-      tmpData[currentRow] = {...inputData};
-      setTx(tmpData);
+      let tmpData = [...sewAppCtx.tx];
+      tmpData[currentRow] = { ...inputData };
+      sewAppCtx.updateTx(tmpData);
       setModemPower(inputData.bandwidth * Math.pow(10, (120 + inputData.power) / 10));
-      CRUDdataTable({method: 'PATCH', path: 'transmitter', data: tmpData[currentRow]})
+      CRUDdataTable({ method: 'PATCH', path: 'transmitter', data: tmpData[currentRow] });
     };
 
     const handleTransmit = () => {
-      let tmpData = [...txContext];
+      let tmpData = [...sewAppCtx.tx];
       tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
-      setTx(tmpData);
-      console.log("CRUD Tx: ", tmpData[currentRow]);
-      CRUDdataTable({method: 'PATCH', path: 'transmitter', data: tmpData[currentRow]});
+      sewAppCtx.updateTx(tmpData);
+      // console.log('CRUD Tx: ', tmpData[currentRow]);
+      CRUDdataTable({ method: 'PATCH', path: 'transmitter', data: tmpData[currentRow] });
     };
 
     return (
@@ -176,7 +181,7 @@ export const TxModem = ({ unit }) => {
             <option value={1}>1</option>
             <option value={2}>2</option>
           </select>
-          <Typography sx={sxValues}>{txContext[currentRow].antenna_id}</Typography>
+          <Typography sx={sxValues}>{sewAppCtx.tx[currentRow].antenna_id}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='frequency'>Frequency</label>
@@ -190,7 +195,7 @@ export const TxModem = ({ unit }) => {
                 val: parseInt(e.target.value) || 0,
               })
             }></input>
-          <Typography sx={sxValues}>{txContext[currentRow].frequency + ' MHz'}</Typography>
+          <Typography sx={sxValues}>{sewAppCtx.tx[currentRow].frequency + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='bandwidth'>Bandwidth</label>
@@ -204,7 +209,7 @@ export const TxModem = ({ unit }) => {
                 val: parseInt(e.target.value) || 0,
               })
             }></input>
-          <Typography sx={sxValues}>{txContext[currentRow].bandwidth + ' MHz'}</Typography>
+          <Typography sx={sxValues}>{sewAppCtx.tx[currentRow].bandwidth + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='power'>Power</label>
@@ -213,7 +218,7 @@ export const TxModem = ({ unit }) => {
             type='string'
             value={inputData.power}
             onChange={e => handleInputChange({ param: 'power', val: e.target.value })}></input>
-          <Typography sx={sxValues}>{`${txContext[currentRow].power} dBm`}</Typography>
+          <Typography sx={sxValues}>{`${sewAppCtx.tx[currentRow].power} dBm`}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <Typography>Power Consumed: {Math.round((100 * modemPower) / powerBudget)}%</Typography>
