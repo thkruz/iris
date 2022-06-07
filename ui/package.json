@@ -19,6 +19,7 @@
   "scripts": {
     "start": "npx react-scripts start",
     "build": "npx react-scripts build",
+    "build:gh": "cross-env PUBLIC_URL=/iris/ npx react-scripts build",
     "serve": "npx serve -s build",
     "test": "npx react-scripts test  --watchAll=false --coverage --env=jsdom",
     "test:watch": "npx react-scripts test",
@@ -52,16 +53,17 @@
     ]
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^5.16.2",
+    "@testing-library/react": "^12.1.4",
+    "@testing-library/user-event": "^13.5.0",
     "babel-jest": "^28.1.0",
+    "cross-env": "^7.0.3",
     "eslint": "^8.13.0",
     "eslint-plugin-jest": "^26.1.4",
     "eslint-plugin-react": "^7.29.4",
-    "react-scripts": "^5.0.1",
     "jest-canvas-mock": "^2.4.0",
-    "web-vitals": "^2.1.4",
+    "react-scripts": "^5.0.1",
     "serve": "^13.0.2",
-    "@testing-library/jest-dom": "^5.16.2",
-    "@testing-library/react": "^12.1.4",
-    "@testing-library/user-event": "^13.5.0"
+    "web-vitals": "^2.1.4"
   }
 }

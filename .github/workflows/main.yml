@@ -140,7 +140,7 @@ jobs:
         run: cd ui && npm ci --ignore-scripts
       # Build
       - name: Build
-        run: cd ui && npm run build
+        run: cd ui && npm run build:gh
 
       # Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
