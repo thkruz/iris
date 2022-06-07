@@ -1,4 +1,4 @@
-![GitHub commit activity](https://img.shields.io/github/commit-activity/m/thkruz/iris?style=flat-square) ![language](https://img.shields.io/github/languages/top/thkruz/iris?style=flat-square) ![Languages](https://img.shields.io/github/languages/count/thkruz/iris?style=flat-square) ![GitHub issues](https://img.shields.io/github/issues/thkruz/iris?style=flat-square) [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier) ![License](https://img.shields.io/github/license/thkruz/iris?style=flat-square)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/thkruz/iris?style=flat-square) ![language](https://img.shields.io/github/languages/top/thkruz/iris?style=flat-square) [![DeepSource](https://deepsource.io/gh/thkruz/iris.svg/?label=active+issues&token=qoGmD9EJGXA_iwh6h-5mGA6m)](https://deepsource.io/gh/thkruz/iris/) ![Languages](https://img.shields.io/github/languages/count/thkruz/iris?style=flat-square) ![GitHub issues](https://img.shields.io/github/issues/thkruz/iris?style=flat-square) [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier) ![License](https://img.shields.io/github/license/thkruz/iris?style=flat-square)
 
 # IRIS - Space Electronic Warfare Sandbox
 
@@ -14,6 +14,7 @@ The problem set is presented as a visual representation of electronic signals th
 
 - [Setting up a Local Copy](#Setting-up-a-Local-Copy)
 - [Versioning](#Versioning)
+- [DeepSource](#DeepSource)
 - [Tests](#Tests)
 - [Contributors](#Contributors)
 - [License](#License)
@@ -29,6 +30,12 @@ docker compose up -d                            #Start the docker containers.
 ## Versioning
 
 We use [SemVer](http://semver.org/) for versioning.
+
+## DeepSource
+
+We are using DeepSource for static code analysis. It will automatically scan the `dev` branch and continuously find and fix security vulnerabilities, performance issues, and more.
+
+You can see the current results here:[https://deepsource.io/gh/thkruz/iris/](https://deepsource.io/gh/thkruz/iris/).
 
 ## Tests
 
