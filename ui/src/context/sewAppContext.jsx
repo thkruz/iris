@@ -64,86 +64,6 @@ const onSocketUpdateSignals = update => {
   }
 };
 
-// Create a sync global context for the RF Environments
-const sewApp = {
-  teamInfo: {
-    team: '',
-    server: '',
-  },
-  //updateTxData: useUpdateTx(),
-  init: () => {
-    if (!githubCheck()) {
-      window.sewApp.socketInit(window.sewApp.socket);
-    }
-  },
-  constants: {
-    satellites,
-    antennas,
-  },
-  environment: new RfEnvironment(),
-  socket: !githubCheck() ? io('http://localhost:8080', { transports: ['websocket'] }) : null,
-
-  /**
-   *
-   * @param {Socket} socket
-   */
-  socketInit: socket => {
-    socket.on('connect', () => {
-      console.log('Connected to the server');
-      window.sewApp.teamInfo = {
-        team: 'default', // TODO: Replace this properly
-        server: '',
-      };
-      socket?.emit('updateTeam', { team: sewApp.team });
-
-      socket.on('updateSignals', update => {
-        onSocketUpdateSignals(update);
-      });
-    });
-
-    socket.on('disconnect', () => {
-      console.log('Disconnected from the server');
-    });
-
-    socket.connect();
-  },
-  getSpectrumAnalyzer: i => {
-    if (i === 1) return window.sewApp.specA1;
-    if (i === 2) return window.sewApp.specA2;
-    if (i === 3) return window.sewApp.specA3;
-    if (i === 4) return window.sewApp.specA4;
-  },
-  announceSpecAChange: i => {
-    const specA = window.sewApp.getSpectrumAnalyzer(i);
-    const patchData = {
-      id: specA.isRfMode ? specA.config.rf.id : specA.config.if.id,
-      server_id: 1,
-      team_id: 1,
-      unit: specA.whichUnit,
-      number: specA.isRfMode ? 2 : 1,
-      operational: true,
-      frequency: specA.centerFreq / 1e6,
-      span: specA.bw / 1e6,
-      marker1freq: 1240,
-      marker2freq: 1260,
-      trace: specA.isDrawHold,
-      rf: specA.isRfMode ? true : false,
-      antenna_id: specA.antenna_id,
-    };
-    //console.log('announceSpecAChange', sewApp.socket.id);
-    sewApp.socket?.emit('updateSpecA', patchData);
-    CRUDdataTable({
-      method: 'PATCH',
-      path: 'spec_a',
-      data: patchData,
-    });
-  },
-  socketMocks: {
-    updateSignalsCb: onSocketUpdateSignals,
-    updateSignals: update => sewApp.socketMocks.updateSignalsCb({ signals: update }),
-  },
-};
-
 export const SewAppProvider = ({ children }) => {
   const [sewApp, setSewApp] = useState({});
   const [rx, setRx] = useState(defaultRxData);
@@ -151,6 +71,87 @@ export const SewAppProvider = ({ children }) => {
   const [signal, setSignal] = useState(defaultSignalData);
   const [antenna, setAntenna] = useState(defaultAntennaData);
   const [user, setUser] = useState(defaultUserData);
+
+  // Create a sync global context for the RF Environments
+  const _sewApp = {
+    teamInfo: {
+      team: '',
+      server: '',
+    },
+    //updateTxData: useUpdateTx(),
+    init: () => {
+      if (!githubCheck()) {
+        window.sewApp.socketInit(window.sewApp.socket);
+      }
+    },
+    constants: {
+      satellites,
+      antennas,
+    },
+    environment: new RfEnvironment(),
+    socket: !githubCheck() ? io('http://localhost:8080', { transports: ['websocket'] }) : null,
+
+    /**
+     *
+     * @param {Socket} socket
+     */
+    socketInit: socket => {
+      socket.on('connect', () => {
+        console.log('Connected to the server');
+        window.sewApp.teamInfo = {
+          team: 'default', // TODO: Replace this properly
+          server: '',
+        };
+        socket?.emit('updateTeam', { team: sewApp.team });
+
+        socket.on('updateSignals', update => {
+          onSocketUpdateSignals(update);
+        });
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Disconnected from the server');
+      });
+
+      socket.connect();
+    },
+    getSpectrumAnalyzer: i => {
+      if (i === 1) return window.sewApp.specA1;
+      if (i === 2) return window.sewApp.specA2;
+      if (i === 3) return window.sewApp.specA3;
+      if (i === 4) return window.sewApp.specA4;
+    },
+    announceSpecAChange: i => {
+      const specA = window.sewApp.getSpectrumAnalyzer(i);
+      const patchData = {
+        id: specA.isRfMode ? specA.config.rf.id : specA.config.if.id,
+        server_id: 1,
+        team_id: 1,
+        unit: specA.whichUnit,
+        number: specA.isRfMode ? 2 : 1,
+        operational: true,
+        frequency: specA.centerFreq / 1e6,
+        span: specA.bw / 1e6,
+        marker1freq: 1240,
+        marker2freq: 1260,
+        trace: specA.isDrawHold,
+        rf: specA.isRfMode ? true : false,
+        antenna_id: specA.antenna_id,
+      };
+      //console.log('announceSpecAChange', sewApp.socket.id);
+      sewApp.socket?.emit('updateSpecA', patchData);
+      CRUDdataTable({
+        method: 'PATCH',
+        path: 'spec_a',
+        data: patchData,
+      });
+    },
+    socketMocks: {
+      updateSignalsCb: onSocketUpdateSignals,
+      updateSignals: update => sewApp.socketMocks.updateSignalsCb({ signals: update }),
+    },
+  };
+  window.sewApp = _sewApp;
 
   // Overall App
   const updateSewApp = () => {
@@ -304,5 +305,3 @@ export const SewAppProvider = ({ children }) => {
 SewAppProvider.propTypes = {
   children: PropTypes.any,
 };
-
-window.sewApp = sewApp;

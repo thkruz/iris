@@ -12,32 +12,55 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# 'jobs' is the list of all the workflows that will kick off.
 jobs:
-  # This workflow kicks off the build and test for the UI
-  build-and-test-ui:
-    # Name of the build job
-    name: Build and Test UI
-    # The type of runner that the job will run on
+  run-api-linter:
+    name: Lint API Code Base
     runs-on: ubuntu-latest
-
-    # `steps` are the actions that will execute on this job.
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          # Full git history is needed to get a proper list of changed files
+          fetch-depth: 0
+      # Installs dependencies on the runner for API
+      - name: Install linter options
+        run: npm --prefix ./api install
+      # Executes the linter on the API code base.
+      - name: Run Linter
+        run: npm --prefix ./api run lint
+  run-ui-linter:
+    name: Lint UI Code Base
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      # Installs dependencies on the runner for UI
+      - name: Install linter options
+        run: npm --prefix ./ui install
+      # Executes the linter on the UI code base.
+      - name: Run Linter
+        run: npm --prefix ./ui run lint
+  build-and-test-ui:
+    name: Build and Test UI
+    runs-on: ubuntu-latest
+    needs: [run-ui-linter]
+
+    steps:
       - uses: actions/checkout@v3
-      # Runs a single command using the runners shell to build the UI
       - name: Build UI
         run: |
           docker build -t capstone-ui ./ui
-      # Runs a set of commands using the runners shell to test the UI
+
       - name: Test UI
         run: |
           docker run -e CI=true capstone-ui npm run test
 
-  # This workflow kicks off the build and test for the API
   build-and-test-api:
     name: Build and Test API
     runs-on: ubuntu-latest
+    needs: [run-api-linter]
     steps:
       - uses: actions/checkout@v3
       - name: Build API
@@ -84,40 +107,6 @@ jobs:
           heroku_email: "bigbpete2@gmail.com"
           appdir: "api/"
           usedocker: true
-
-  # This workflow kicks off the linter for your API.
-  run-api-linter:
-    name: Lint API Code Base
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-        with:
-          # Full git history is needed to get a proper list of changed files
-          fetch-depth: 0
-      # Installs dependencies on the runner for API
-      - name: Install linter options
-        run: npm --prefix ./api install
-      # Executes the linter on the API code base.
-      - name: Run Linter
-        run: npm --prefix ./api run lint
-
-  # This workflow kicks off the linter for API.
-  run-ui-linter:
-    name: Lint UI Code Base
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      # Installs dependencies on the runner for UI
-      - name: Install linter options
-        run: npm --prefix ./ui install
-      # Executes the linter on the UI code base.
-      - name: Run Linter
-        run: npm --prefix ./ui run lint
   gh-pages:
     name: Deploy to GitHub Pages
     environment: Development
