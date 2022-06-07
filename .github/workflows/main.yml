@@ -52,6 +52,7 @@ jobs:
     name: Deploy UI to Heroku
     # Needs specifies the steps that must previously complete in order to deploy your application.
     needs: [build-and-test-ui, build-and-test-api]
+    environment: Heroku
     runs-on: ubuntu-latest
 
     steps:
@@ -67,6 +68,7 @@ jobs:
   # This workflow kicks off the deployment to Heroku for the UI
   deploy-api:
     name: Deploy API to Heroku
+    environment: Heroku
     needs: [build-and-test-ui, build-and-test-api]
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
@@ -116,3 +118,49 @@ jobs:
       # Executes the linter on the UI code base.
       - name: Run Linter
         run: npm --prefix ./ui run lint
+  gh-pages:
+    name: Deploy to GitHub Pages
+    environment: Development
+    needs: [build-and-test-ui, build-and-test-api]
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout code
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      # Setup Node
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "17"
+      # Get Node Modules from Cache
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-
+            ${{ env.cache-name }}-
+            ${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      # Ensure Node Modules Setup
+      - name: Install Dependencies
+        run: cd ui && npm ci --ignore-scripts
+      # Build
+      - name: Build
+        run: cd ui && npm run build
+
+      # Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4.3.3
+        with:
+          GITHUB_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
+          # The branch the action should deploy to.
+          BRANCH: gh-pages
+          # The folder the action should deploy.
+          FOLDER: ui/build
+          # Automatically remove deleted files from the deploy branch
+          CLEAN: true
