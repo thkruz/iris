@@ -22,7 +22,7 @@ export const Header = () => {
       <Box sx={{ flexGrow: 0 }}>
         <AppBar className={'appBar'} position='static'>
           <Toolbar sx={{ backgroundColor: theme.palette.tertiary.dark }}>
-            <Link to='/'>
+            <Link to={process.env.PUBLIC_URL + '/'}>
               <img src='./patch.png' alt='patch.png' height='80px'></img>
             </Link>
             <Typography variant='h1' component='div' sx={{ flexGrow: 1, fontFamily: 'Nasa' }}>

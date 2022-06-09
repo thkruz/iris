@@ -10,7 +10,7 @@ const App = () => {
       <Body>
         <Routes basename={process.env.PUBLIC_URL}>
           <Route path='/' element={<Login />} />
-          <Route path='login' element={<Login />} />
+          <Route path='/login' element={<Login />} />
           <Route path='/student' element={<StudentStack />} />
           <Route path='/instructor' element={<InstructorStack />} />
         </Routes>
