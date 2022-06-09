@@ -15,14 +15,14 @@ export const Header = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    navigate(process.env.PUBLIC_URL + '/');
+    navigate('/');
   };
   return (
     <>
       <Box sx={{ flexGrow: 0 }}>
         <AppBar className={'appBar'} position='static'>
           <Toolbar sx={{ backgroundColor: theme.palette.tertiary.dark }}>
-            <Link to={process.env.PUBLIC_URL + '/'}>
+            <Link to={'/'}>
               <img src='./patch.png' alt='patch.png' height='80px'></img>
             </Link>
             <Typography variant='h1' component='div' sx={{ flexGrow: 1, fontFamily: 'Nasa' }}>
