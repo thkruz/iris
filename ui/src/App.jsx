@@ -7,17 +7,19 @@ import NotFound from './components/NotFound/NotFound';
 const App = () => {
   return (
     <Router>
-      <Header />
-      <Body>
-        <Routes basename={`${process.env.PUBLIC_URL}/`}>
-          <Route path='/' element={<Login />} />
-          <Route path='/login' element={<Login />} />
-          <Route path='/student' element={<StudentStack />} />
-          <Route path='/instructor' element={<InstructorStack />} />
-          <Route path='*' element={<NotFound />} />
-        </Routes>
-      </Body>
-      <Footer />
+      <Routes basename={`${process.env.PUBLIC_URL}/`}>
+        <Header />
+        <Body>
+          <Routes>
+            <Route path='/' element={<Login />} />
+            <Route path='/login' element={<Login />} />
+            <Route path='/student' element={<StudentStack />} />
+            <Route path='/instructor' element={<InstructorStack />} />
+            <Route path='*' element={<NotFound />} />
+          </Routes>
+        </Body>
+        <Footer />
+      </Routes>
     </Router>
   );
 };
