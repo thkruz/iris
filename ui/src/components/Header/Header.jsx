@@ -15,7 +15,7 @@ export const Header = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    navigate('/');
+    navigate(process.env.PUBLIC_URL + '/');
   };
   return (
     <>
@@ -23,7 +23,7 @@ export const Header = () => {
         <AppBar className={'appBar'} position='static'>
           <Toolbar sx={{ backgroundColor: theme.palette.tertiary.dark }}>
             <Link to='/'>
-              <img src='/patch.png' alt='patch.png' height='80px'></img>
+              <img src='./patch.png' alt='patch.png' height='80px'></img>
             </Link>
             <Typography variant='h1' component='div' sx={{ flexGrow: 1, fontFamily: 'Nasa' }}>
               IRIS
