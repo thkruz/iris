@@ -1,16 +1,16 @@
 {
   "files": {
     "main.css": "/iris/static/css/main.21ef9d81.css",
-    "main.js": "/iris/static/js/main.15ea24f6.js",
+    "main.js": "/iris/static/js/main.ee072ade.js",
     "static/js/787.349b0e60.chunk.js": "/iris/static/js/787.349b0e60.chunk.js",
     "static/media/nasalization-rg.otf": "/iris/static/media/nasalization-rg.4cbf2019f1f7337b2594.otf",
     "index.html": "/iris/index.html",
     "main.21ef9d81.css.map": "/iris/static/css/main.21ef9d81.css.map",
-    "main.15ea24f6.js.map": "/iris/static/js/main.15ea24f6.js.map",
+    "main.ee072ade.js.map": "/iris/static/js/main.ee072ade.js.map",
     "787.349b0e60.chunk.js.map": "/iris/static/js/787.349b0e60.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.21ef9d81.css",
-    "static/js/main.15ea24f6.js"
+    "static/js/main.ee072ade.js"
   ]
 }
