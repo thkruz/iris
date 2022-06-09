@@ -68,43 +68,43 @@ jobs:
         run: |
           docker run -e CI=true capstone-api npm run test
 
-  # This workflow kicks off the deployment to Heroku for the UI
-  deploy-ui:
-    name: Deploy UI to Heroku
-    # Needs specifies the steps that must previously complete in order to deploy your application.
-    needs: [build-and-test-ui, build-and-test-api]
-    environment: Heroku
-    runs-on: ubuntu-latest
+  # # This workflow kicks off the deployment to Heroku for the UI
+  # deploy-ui:
+  #   name: Deploy UI to Heroku
+  #   # Needs specifies the steps that must previously complete in order to deploy your application.
+  #   needs: [build-and-test-ui, build-and-test-api]
+  #   environment: Heroku
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v3
-      - uses: akhileshns/heroku-deploy@v3.12.12
-        with:
-          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
-          heroku_app_name: "sew-ui"
-          heroku_email: "bigbpete2@gmail.com"
-          appdir: "ui/"
-          usedocker: true
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: akhileshns/heroku-deploy@v3.12.12
+  #       with:
+  #         heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+  #         heroku_app_name: "sew-ui"
+  #         heroku_email: "bigbpete2@gmail.com"
+  #         appdir: "ui/"
+  #         usedocker: true
 
-  # This workflow kicks off the deployment to Heroku for the UI
-  deploy-api:
-    name: Deploy API to Heroku
-    environment: Heroku
-    needs: [build-and-test-ui, build-and-test-api]
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+  # # This workflow kicks off the deployment to Heroku for the UI
+  # deploy-api:
+  #   name: Deploy API to Heroku
+  #   environment: Heroku
+  #   needs: [build-and-test-ui, build-and-test-api]
+  #   # The type of runner that the job will run on
+  #   runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-      - uses: akhileshns/heroku-deploy@v3.12.12
-        with:
-          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
-          heroku_app_name: "sew-api"
-          heroku_email: "bigbpete2@gmail.com"
-          appdir: "api/"
-          usedocker: true
+  #   # Steps represent a sequence of tasks that will be executed as part of the job
+  #   steps:
+  #     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+  #     - uses: actions/checkout@v3
+  #     - uses: akhileshns/heroku-deploy@v3.12.12
+  #       with:
+  #         heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+  #         heroku_app_name: "sew-api"
+  #         heroku_email: "bigbpete2@gmail.com"
+  #         appdir: "api/"
+  #         usedocker: true
   gh-pages:
     name: Deploy to GitHub Pages
     environment: Development
