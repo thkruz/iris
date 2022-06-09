@@ -133,15 +133,12 @@ export const SpectrumAnalyzerBox = props => {
           },
         };
 
-        const { id_target } = sewAppCtx.antenna[1];
-        specA.target_id = id_target;
-
-        specA.changeCenterFreq(specA.isRfMode ? specA.config.rf.freq : specA.config.if.freq);
-        specA.changeBandwidth(specA.isRfMode ? specA.config.rf.span : specA.config.if.span);
-
         specA.antenna_id = data[0].antenna_id;
         const { target_id } = sewAppCtx.antenna[specA.antenna_id - 1];
         specA.target_id = target_id;
+
+        specA.changeCenterFreq(specA.isRfMode ? specA.config.rf.freq : specA.config.if.freq);
+        specA.changeBandwidth(specA.isRfMode ? specA.config.rf.span : specA.config.if.span);
 
         loadSignals(specA);
         specA.start();
@@ -272,8 +269,7 @@ export const SpectrumAnalyzerBox = props => {
               value={sewAppCtx.sewApp[`specA${whichSpecA}`]?.antenna_id}
               onChange={e =>
                 updateSpecAwAntennaInfo(parseInt(e.target.value), sewAppCtx.sewApp[`specA${whichSpecA}`], false)
-              }
-            >
+              }>
               <option value={1}>1</option>
               <option value={2}>2</option>
             </select>
@@ -284,8 +280,7 @@ export const SpectrumAnalyzerBox = props => {
             sx={configButtonStyle}
             onClick={() =>
               props.handleConfigClick(sewAppCtx.sewApp[`specA${whichSpecA}`], sewAppCtx.sewApp[`specA${whichSpecA}`])
-            }
-          >
+            }>
             Config
           </Button>
         </Grid>
@@ -298,8 +293,7 @@ export const SpectrumAnalyzerBox = props => {
                 color: sewAppCtx.sewApp[`specA${whichSpecA}`]?.isRfMode ? 'white' : 'black',
               },
             }}
-            onClick={handleRfClicked}
-          >
+            onClick={handleRfClicked}>
             {sewAppCtx.sewApp[`specA${whichSpecA}`]?.isRfMode ? 'RF' : 'IF'}
           </Button>
         </Grid>
@@ -312,8 +306,7 @@ export const SpectrumAnalyzerBox = props => {
                 color: sewAppCtx.sewApp[`specA${whichSpecA}`]?.isPause ? 'white' : 'black',
               },
             }}
-            onClick={handlePauseClicked}
-          >
+            onClick={handlePauseClicked}>
             {sewAppCtx.sewApp[`specA${whichSpecA}`]?.isPause ? 'Unpause' : 'Pause'}
           </Button>
         </Grid>
