@@ -2,7 +2,7 @@ export const defaultSignalData = [
   {
     id: 1,
     server_id: 1,
-    target_id: 3,
+    target_id: 1,
     frequency: 15720,
     power: -100,
     bandwidth: 10,

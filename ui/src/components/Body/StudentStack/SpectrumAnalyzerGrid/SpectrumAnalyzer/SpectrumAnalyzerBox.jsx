@@ -144,6 +144,7 @@ export const SpectrumAnalyzerBox = props => {
         specA.start();
 
         window.sewApp[`specA${whichSpecA}`] = specA;
+        window[`specA${whichSpecA}`] = specA;
         sewAppCtx.updateSewApp();
       });
     });
