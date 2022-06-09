@@ -17,7 +17,7 @@ export const StudentStack = () => {
 
   // Basic check that user is logged in
   useEffect(() => {
-    if (!state || state?.isAuthenticated !== true) navigate(process.env.PUBLIC_URL + '/login');
+    if (!state || state?.isAuthenticated !== true) navigate('/login');
   }, [state, navigate]);
 
   return (

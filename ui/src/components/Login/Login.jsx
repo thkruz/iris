@@ -26,7 +26,7 @@ export default function Login() {
 
   const handleSubmit = event => {
     event.preventDefault();
-    navigate(process.env.PUBLIC_URL + '/student', { state: { isAuthenticated: true } });
+    navigate('/student', { state: { isAuthenticated: true } });
   };
 
   const handleTeamChange = value => {
@@ -53,16 +53,14 @@ export default function Login() {
         '& > :not(style)': { m: 1, width: '25ch' },
       }}
       novalidate
-      autocomplete='off'
-    >
+      autocomplete='off'>
       <div>
         <label htmlFor='team'>Team</label>
         <select
           name='team'
           type='string'
           value={teams[sewAppCtx.user.team_id - 1].id}
-          onChange={e => handleTeamChange(parseInt(e.target.value))}
-        >
+          onChange={e => handleTeamChange(parseInt(e.target.value))}>
           {teams.map((x, index) => (
             <option key={index} value={x.id}>
               {x.name}
@@ -76,8 +74,7 @@ export default function Login() {
           name='server'
           type='string'
           value={sewAppCtx.user.server_id}
-          onChange={e => handleServerChange(parseInt(e.target.value))}
-        >
+          onChange={e => handleServerChange(parseInt(e.target.value))}>
           {servers?.map((x, index) => (
             <option key={index} value={x.id}>
               {x.name}
