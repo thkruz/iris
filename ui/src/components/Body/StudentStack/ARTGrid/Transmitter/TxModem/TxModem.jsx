@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Modal, Typography } from '@mui/material';
 import './TxModem.css';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
 import { useSewApp } from '../../../../../../context/sewAppContext';
@@ -16,8 +16,20 @@ export const TxModem = ({ unit }) => {
   const powerBudget = 23886; // Decided by SEW team
 
   const [activeModem, setActiveModem] = useState(1);
+  const [isModalActive, setIsModalActive] = useState(false);
 
   // Styles
+  const sxModal = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    bgcolor: AstroTheme.palette.critical.main,
+    color: '#000',
+    border: '2px solid #000',
+    boxShadow: 24,
+    p: 4,
+  };
   const sxCase = {
     flexGrow: 1,
     boxShadow: '0px 0px 5px rgba(0,0,0,0.5)',
@@ -123,8 +135,7 @@ export const TxModem = ({ unit }) => {
       }}
       onClick={e => {
         setActiveModem(modem, e);
-      }}
-    >
+      }}>
       {modem}
     </Button>
   );
@@ -150,91 +161,109 @@ export const TxModem = ({ unit }) => {
       setInputData(tmpData);
     };
 
+    const validatePowerConsumption = (_modemPower = modemPower) => Math.round((100 * _modemPower) / powerBudget) <= 100;
+
     const handleApply = () => {
       let tmpData = [...sewAppCtx.tx];
       tmpData[currentRow] = { ...inputData };
-      sewAppCtx.updateTx(tmpData);
-      setModemPower(inputData.bandwidth * Math.pow(10, (120 + inputData.power) / 10));
-      CRUDdataTable({ method: 'PATCH', path: 'transmitter', data: tmpData[currentRow] });
+
+      if (
+        validatePowerConsumption(inputData.bandwidth * Math.pow(10, (120 + inputData.power) / 10)) ||
+        !tmpData[currentRow].transmitting
+      ) {
+        sewAppCtx.updateTx(tmpData);
+        setModemPower(inputData.bandwidth * Math.pow(10, (120 + inputData.power) / 10));
+        CRUDdataTable({ method: 'PATCH', path: 'transmitter', data: tmpData[currentRow] });
+      } else {
+        setIsModalActive(true);
+      }
     };
 
     const handleTransmit = () => {
       let tmpData = [...sewAppCtx.tx];
-      tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
-      sewAppCtx.updateTx(tmpData);
-      // console.log('CRUD Tx: ', tmpData[currentRow]);
-      CRUDdataTable({ method: 'PATCH', path: 'transmitter', data: tmpData[currentRow] });
+
+      if (validatePowerConsumption()) {
+        tmpData[currentRow].transmitting = !tmpData[currentRow].transmitting;
+        sewAppCtx.updateTx(tmpData);
+        // console.log('CRUD Tx: ', tmpData[currentRow]);
+        CRUDdataTable({ method: 'PATCH', path: 'transmitter', data: tmpData[currentRow] });
+      } else {
+        setIsModalActive(true);
+      }
     };
 
     return (
-      <Box sx={sxInputBox}>
-        <Box sx={sxInputRow}>
-          <label htmlFor='Antenna'>Antenna</label>
-          <select
-            name='Antenna'
-            value={inputData.antenna_id}
-            onChange={e =>
-              handleInputChange({
-                param: 'antenna_id',
-                val: parseInt(e.target.value) || 0,
-              })
-            }
-          >
-            <option value={1}>1</option>
-            <option value={2}>2</option>
-          </select>
-          <Typography sx={sxValues}>{sewAppCtx.tx[currentRow].antenna_id}</Typography>
+      <>
+        <Modal open={isModalActive} onClose={() => setIsModalActive(false)}>
+          <Box sx={sxModal}>
+            <Typography sx={{ fontWeight: 'bold' }}>Power consumption exceeds the budget.</Typography>
+          </Box>
+        </Modal>
+        <Box sx={sxInputBox}>
+          <Box sx={sxInputRow}>
+            <label htmlFor='Antenna'>Antenna</label>
+            <select
+              name='Antenna'
+              value={inputData.antenna_id}
+              onChange={e =>
+                handleInputChange({
+                  param: 'antenna_id',
+                  val: parseInt(e.target.value) || 0,
+                })
+              }>
+              <option value={1}>1</option>
+              <option value={2}>2</option>
+            </select>
+            <Typography sx={sxValues}>{sewAppCtx.tx[currentRow].antenna_id}</Typography>
+          </Box>
+          <Box sx={sxInputRow}>
+            <label htmlFor='frequency'>Frequency</label>
+            <input
+              name='frequency'
+              type='text'
+              value={inputData.frequency}
+              onChange={e =>
+                handleInputChange({
+                  param: 'frequency',
+                  val: parseInt(e.target.value) || 0,
+                })
+              }></input>
+            <Typography sx={sxValues}>{sewAppCtx.tx[currentRow].frequency + ' MHz'}</Typography>
+          </Box>
+          <Box sx={sxInputRow}>
+            <label htmlFor='bandwidth'>Bandwidth</label>
+            <input
+              name='bandwidth'
+              type='text'
+              value={inputData.bandwidth}
+              onChange={e =>
+                handleInputChange({
+                  param: 'bandwidth',
+                  val: parseInt(e.target.value) || 0,
+                })
+              }></input>
+            <Typography sx={sxValues}>{sewAppCtx.tx[currentRow].bandwidth + ' MHz'}</Typography>
+          </Box>
+          <Box sx={sxInputRow}>
+            <label htmlFor='power'>Power</label>
+            <input
+              name='power'
+              type='string'
+              value={inputData.power}
+              onChange={e => handleInputChange({ param: 'power', val: e.target.value })}></input>
+            <Typography sx={sxValues}>{`${sewAppCtx.tx[currentRow].power} dBm`}</Typography>
+          </Box>
+          <Box sx={sxInputRow}>
+            <Typography>Power Consumed: {Math.round((100 * modemPower) / powerBudget)}%</Typography>
+            <Button sx={sxInputApply} onClick={e => handleApply(e)}>
+              Apply
+            </Button>
+            <Button sx={sxTransmit} onClick={e => handleTransmit(e)}>
+              TX
+            </Button>
+          </Box>
         </Box>
-        <Box sx={sxInputRow}>
-          <label htmlFor='frequency'>Frequency</label>
-          <input
-            name='frequency'
-            type='text'
-            value={inputData.frequency}
-            onChange={e =>
-              handleInputChange({
-                param: 'frequency',
-                val: parseInt(e.target.value) || 0,
-              })
-            }
-          ></input>
-          <Typography sx={sxValues}>{sewAppCtx.tx[currentRow].frequency + ' MHz'}</Typography>
-        </Box>
-        <Box sx={sxInputRow}>
-          <label htmlFor='bandwidth'>Bandwidth</label>
-          <input
-            name='bandwidth'
-            type='text'
-            value={inputData.bandwidth}
-            onChange={e =>
-              handleInputChange({
-                param: 'bandwidth',
-                val: parseInt(e.target.value) || 0,
-              })
-            }
-          ></input>
-          <Typography sx={sxValues}>{sewAppCtx.tx[currentRow].bandwidth + ' MHz'}</Typography>
-        </Box>
-        <Box sx={sxInputRow}>
-          <label htmlFor='power'>Power</label>
-          <input
-            name='power'
-            type='string'
-            value={inputData.power}
-            onChange={e => handleInputChange({ param: 'power', val: e.target.value })}
-          ></input>
-          <Typography sx={sxValues}>{`${sewAppCtx.tx[currentRow].power} dBm`}</Typography>
-        </Box>
-        <Box sx={sxInputRow}>
-          <Typography>Power Consumed: {Math.round((100 * modemPower) / powerBudget)}%</Typography>
-          <Button sx={sxInputApply} onClick={e => handleApply(e)}>
-            Apply
-          </Button>
-          <Button sx={sxTransmit} onClick={e => handleTransmit(e)}>
-            TX
-          </Button>
-        </Box>
-      </Box>
+      </>
     );
   };
 
