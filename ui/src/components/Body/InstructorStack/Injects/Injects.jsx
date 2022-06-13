@@ -114,7 +114,7 @@ export const Injects = () => {
   const RxModemButton = ({ modem }) => {
     const timer = useRef();
 
-    const onClickHandler = e => {
+    const onClickHandler = (e) => {
       clearTimeout(timer.current);
       if (e.detail === 1) {
         timer.current = setTimeout(setActiveModem(parseInt(e.target.innerText) - 1), 200);
@@ -130,7 +130,7 @@ export const Injects = () => {
         sx={{
           backgroundColor: modem - 1 == activeModem ? theme.palette.primary.dark : theme.palette.primary.light2,
           color: modem - 1 == activeModem ? 'white' : 'black',
-          border: sewAppCtx.signals[sewAppCtx.signals.map(x => x.id).indexOf(modem)].operational
+          border: sewAppCtx.signals[sewAppCtx.signals.map((x) => x.id).indexOf(modem)].operational
             ? '2px solid red'
             : '2px solid ' + theme.palette.primary.main,
           margin: '8px',
@@ -139,10 +139,9 @@ export const Injects = () => {
             backgroundColor: theme.palette.primary.light3,
           },
         }}
-        onClick={e => {
+        onClick={(e) => {
           onClickHandler(e);
-        }}
-      >
+        }}>
         {modem}
       </Button>
     );
@@ -151,7 +150,7 @@ export const Injects = () => {
 
   // Modem User Inputs
   const RxModemInput = () => {
-    const index = sewAppCtx.signals.map(x => x.id).indexOf(activeModem + 1);
+    const index = sewAppCtx.signals.map((x) => x.id).indexOf(activeModem + 1);
     const [inputData, setInputData] = useState(sewAppCtx.signals[index]);
     const handleInputChange = ({ param, val }) => {
       let tmpData = { ...inputData };
@@ -180,13 +179,12 @@ export const Injects = () => {
           <select
             name='Satellite'
             value={inputData.target_id}
-            onChange={e =>
+            onChange={(e) =>
               handleInputChange({
                 param: 'target_id',
                 val: parseInt(e.target.value),
               })
-            }
-          >
+            }>
             {satellites.map((x, index) => (
               <option key={index} value={x.id}>
                 {x.name}
@@ -201,13 +199,12 @@ export const Injects = () => {
             name='frequency'
             type='text'
             value={inputData.frequency}
-            onChange={e =>
+            onChange={(e) =>
               handleInputChange({
                 param: 'frequency',
                 val: parseInt(e.target.value) || 0,
               })
-            }
-          ></input>
+            }></input>
           <Typography sx={sxValues}>{sewAppCtx.signals[index].frequency + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
@@ -216,13 +213,12 @@ export const Injects = () => {
             name='bandwidth'
             type='text'
             value={inputData.bandwidth}
-            onChange={e =>
+            onChange={(e) =>
               handleInputChange({
                 param: 'bandwidth',
                 val: parseInt(e.target.value) || 0,
               })
-            }
-          ></input>
+            }></input>
           <Typography sx={sxValues}>{sewAppCtx.signals[index].bandwidth + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
@@ -230,8 +226,7 @@ export const Injects = () => {
           <select
             name='modulation'
             value={inputData.modulation}
-            onChange={e => handleInputChange({ param: 'modulation', val: e.target.value || 0 })}
-          >
+            onChange={(e) => handleInputChange({ param: 'modulation', val: e.target.value || 0 })}>
             <option value='BPSK'>BPSK</option>
             <option value='QPSK'>QPSK</option>
             <option value='8QAM'>8QAM</option>
@@ -244,8 +239,7 @@ export const Injects = () => {
           <select
             name='fec'
             value={inputData.fec}
-            onChange={e => handleInputChange({ param: 'fec', val: e.target.value || 0 })}
-          >
+            onChange={(e) => handleInputChange({ param: 'fec', val: e.target.value || 0 })}>
             <option value='1/2'>1/2</option>
             <option value='2/3'>2/3</option>
             <option value='3/4'>3/4</option>
@@ -259,8 +253,7 @@ export const Injects = () => {
           <select
             name='feed'
             value={inputData.feed}
-            onChange={e => handleInputChange({ param: 'feed', val: e.target.value })}
-          >
+            onChange={(e) => handleInputChange({ param: 'feed', val: e.target.value })}>
             <option value='blue 1.mp4'>Blue 1</option>
             <option value='blue 2.mp4'>Blue 2</option>
             <option value='red 1.mp4'>Red 1</option>
@@ -277,10 +270,10 @@ export const Injects = () => {
         </Box>
         <Box sx={sxInputRow}>
           <div></div>
-          <Button sx={sxInputApply} onClick={e => handleApply(e)}>
+          <Button sx={sxInputApply} onClick={(e) => handleApply(e)}>
             Apply
           </Button>
-          <Button sx={sxTransmit} onClick={e => handleTransmit(e)}>
+          <Button sx={sxTransmit} onClick={(e) => handleTransmit(e)}>
             TX
           </Button>
         </Box>
@@ -293,8 +286,8 @@ export const Injects = () => {
       <Box sx={sxVideo}>
         <ReactPlayer
           config={{ file: { attributes: { controlsList: 'nodownload' } } }}
-          onContextMenu={e => e.preventDefault()}
-          url={`/videos/${sewAppCtx.signals[activeModem].feed}`}
+          onContextMenu={(e) => e.preventDefault()}
+          url={`./videos/${sewAppCtx.signals[activeModem].feed}`}
           width='100%'
           height='100%'
           controls={false}
