@@ -6,20 +6,20 @@ export const SpectrumAnalyzerGrid = () => {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [currentSpecAnalyzer, setCurrentSpecAnalyzer] = useState(null);
 
-  const handleConfigClick = specAnalyzer => {
+  const handleConfigClick = (specAnalyzer) => {
     setCurrentSpecAnalyzer(specAnalyzer);
     setIsConfigOpen(true);
   };
 
-  const handleRfClick = specAnalyzer => {
+  const handleRfClick = (specAnalyzer) => {
     setCurrentSpecAnalyzer(specAnalyzer);
   };
 
-  const handlePauseClicked = specAnalyzer => {
+  const handlePauseClicked = (specAnalyzer) => {
     setCurrentSpecAnalyzer(specAnalyzer);
   };
 
-  const handleBackgroundClick = e => {
+  const handleBackgroundClick = (e) => {
     // Don't hide the screen unless the background was clicked
     // NOTE: Any click action triggers this event
     if (e.target.id === 'analyzerControlModalOverlay') {
@@ -29,47 +29,33 @@ export const SpectrumAnalyzerGrid = () => {
 
   return (
     <>
-      <Grid container item spacing={1.5} xs={12}>
-        <Grid item xs={6} s={6} md={6} lg={6} xl={3}>
-          {
-            <SpectrumAnalyzerBox
-              handleConfigClick={handleConfigClick}
-              handleRfClick={handleRfClick}
-              handlePauseClicked={handlePauseClicked}
-              canvasId={'specA1'}
-            />
-          }
-        </Grid>
-        <Grid item xs={6} s={6} md={6} lg={6} xl={3}>
-          {
-            <SpectrumAnalyzerBox
-              handleConfigClick={handleConfigClick}
-              handleRfClick={handleRfClick}
-              handlePauseClicked={handlePauseClicked}
-              canvasId={'specA2'}
-            />
-          }
-        </Grid>
-        <Grid item xs={6} s={6} md={6} lg={6} xl={3}>
-          {
-            <SpectrumAnalyzerBox
-              handleConfigClick={handleConfigClick}
-              handleRfClick={handleRfClick}
-              handlePauseClicked={handlePauseClicked}
-              canvasId={'specA3'}
-            />
-          }
-        </Grid>
-        <Grid item xs={6} s={6} md={6} lg={6} xl={3}>
-          {
-            <SpectrumAnalyzerBox
-              handleConfigClick={handleConfigClick}
-              handleRfClick={handleRfClick}
-              handlePauseClicked={handlePauseClicked}
-              canvasId={'specA4'}
-            />
-          }
-        </Grid>
+      <Grid container item spacing={2} xs={12} lg={6}>
+        {[1, 2].map((unit) => (
+          <Grid key={unit} item xs={true} minWidth={300}>
+            {
+              <SpectrumAnalyzerBox
+                handleConfigClick={handleConfigClick}
+                handleRfClick={handleRfClick}
+                handlePauseClicked={handlePauseClicked}
+                canvasId={`specA${unit}`}
+              />
+            }
+          </Grid>
+        ))}
+      </Grid>
+      <Grid container item spacing={2} xs={12} lg={6}>
+        {[3, 4].map((unit) => (
+          <Grid key={unit} item xs={true} minWidth={300}>
+            {
+              <SpectrumAnalyzerBox
+                handleConfigClick={handleConfigClick}
+                handleRfClick={handleRfClick}
+                handlePauseClicked={handlePauseClicked}
+                canvasId={`specA${unit}`}
+              />
+            }
+          </Grid>
+        ))}
       </Grid>
       {isConfigOpen ? (
         <AnalyzerControl currentSpecAnalyzer={currentSpecAnalyzer} handleBackgroundClick={handleBackgroundClick} />
