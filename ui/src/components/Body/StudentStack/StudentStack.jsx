@@ -23,7 +23,7 @@ export const StudentStack = () => {
   return (
     <>
       <TeamInfo />
-      <Grid container spacing={1} paddingTop={2} paddingBottom={2} paddingLeft={6} paddingRight={6}>
+      <Grid container spacing={2} paddingTop={2} paddingBottom={2} paddingLeft={2} paddingRight={2}>
         <SpectrumAnalyzerGrid />
         <ARTGrid />
       </Grid>

@@ -35,11 +35,10 @@ export const useSewApp = () => {
   return useContext(sewAppCtx);
 };
 
-const onSocketUpdateSignals = update => {
-  const update_targetsAdded = update.signals.map(x => {
-    //const antenna_id = x.antenna_id;
-    //const target_id = antennaContext.filter(y => y.id == antenna_id).target_id
-    const target_id = 1;
+const onSocketUpdateSignals = (update, antennaState) => {
+  const update_targetsAdded = update.signals.map((x) => {
+    const antenna_id = x.antenna_id;
+    const target_id = antennaState.filter((y) => y.id == antenna_id)[0]?.target_id;
     return { ...x, target_id };
   });
   window.sewApp.environment.updateSignals(update_targetsAdded);
@@ -49,10 +48,10 @@ const onSocketUpdateSignals = update => {
     */
   for (let i = 1; i <= 4; i++) {
     const specA = window.sewApp.getSpectrumAnalyzer(i);
-    specA.signals = specA.signals.filter(signal => {
+    specA.signals = specA.signals.filter((signal) => {
       return signal.team_id !== update.signals[0].team_id;
     });
-    window.sewApp.environment.signals.forEach(signal => {
+    window.sewApp.environment.signals.forEach((signal) => {
       specA.signals.push({
         team_id: signal.team_id,
         freq: signal.frequency * 1e6,
@@ -91,7 +90,7 @@ const _sewApp = {
    *
    * @param {Socket} socket
    */
-  socketInit: socket => {
+  socketInit: (socket) => {
     socket.on('connect', () => {
       console.log('Connected to the server');
       window.sewApp.teamInfo = {
@@ -99,10 +98,6 @@ const _sewApp = {
         server: '',
       };
       socket?.emit('updateTeam', { team: window.sewApp.team });
-
-      socket.on('updateSignals', update => {
-        onSocketUpdateSignals(update);
-      });
     });
 
     socket.on('disconnect', () => {
@@ -111,13 +106,13 @@ const _sewApp = {
 
     socket.connect();
   },
-  getSpectrumAnalyzer: i => {
+  getSpectrumAnalyzer: (i) => {
     if (i === 1) return window.sewApp.specA1;
     if (i === 2) return window.sewApp.specA2;
     if (i === 3) return window.sewApp.specA3;
     if (i === 4) return window.sewApp.specA4;
   },
-  announceSpecAChange: i => {
+  announceSpecAChange: (i) => {
     const specA = window.sewApp.getSpectrumAnalyzer(i);
     const patchData = {
       id: specA.isRfMode ? specA.config.rf.id : specA.config.if.id,
@@ -144,7 +139,8 @@ const _sewApp = {
   },
   socketMocks: {
     updateSignalsCb: onSocketUpdateSignals,
-    updateSignals: update => window.sewApp.socketMocks.updateSignalsCb({ signals: update }),
+    updateSignals: (update, antennaState) =>
+      window.sewApp.socketMocks.updateSignalsCb({ signals: update }, antennaState),
   },
 };
 
@@ -168,8 +164,8 @@ export const SewAppProvider = ({ children }) => {
     const ApiUrl = config[process.env.REACT_APP_NODE_ENV || 'development'].apiUrl;
     if (!githubCheck()) {
       fetch(`${ApiUrl}/data/receiver`)
-        .then(response => response.json())
-        .then(data => {
+        .then((response) => response.json())
+        .then((data) => {
           //console.log('ReceiverProvider', data);
           setRx([...data]);
         });
@@ -178,14 +174,14 @@ export const SewAppProvider = ({ children }) => {
     }
   }, []);
 
-  window.sewApp.socket?.on('updateRxClient', data => {
+  window.sewApp.socket?.on('updateRxClient', (data) => {
     if (data.user != window.sewApp.socket.id) {
       console.log('actually updating the Rx');
       setRx(data.signals);
     }
   });
 
-  const updateRx = update => {
+  const updateRx = (update) => {
     window.sewApp.socket?.emit('updateRx', { user: window.sewApp.socket.id, signals: update });
     setRx(update);
   };
@@ -194,8 +190,8 @@ export const SewAppProvider = ({ children }) => {
   useEffect(() => {
     if (!githubCheck()) {
       fetch(`${ApiUrl}/data/transmitter`)
-        .then(response => response.json())
-        .then(data => {
+        .then((response) => response.json())
+        .then((data) => {
           //console.log('TransmitterProvider', data);
           setTx([...data]);
         });
@@ -204,33 +200,33 @@ export const SewAppProvider = ({ children }) => {
     }
   }, []);
 
-  window.sewApp.socket?.on('updateTxClient', data => {
+  window.sewApp.socket?.on('updateTxClient', (data) => {
     if (data.user != window.sewApp.socket.id) {
       console.log('actually updating the Tx');
       setTx(data.signals);
     }
   });
 
-  const updateTx = update => {
+  const updateTx = (update) => {
     if (!githubCheck()) {
       window.sewApp.socket?.emit('updateTx', { user: window.sewApp.socket.id, signals: update });
     } else {
-      window.sewApp.socketMocks.updateSignals(update);
+      window.sewApp.socketMocks.updateSignals(update, antenna);
     }
     setTx(update);
   };
 
   // //////////// Signal //////////////
 
-  const updateSignal = update => {
+  const updateSignal = (update) => {
     setSignal(update);
   };
 
   useEffect(() => {
     if (!githubCheck()) {
       fetch(`${ApiUrl}/data/signal`)
-        .then(response => response.json())
-        .then(data => {
+        .then((response) => response.json())
+        .then((data) => {
           //console.log('SignalProvider', data);
           window.sewApp.environment.setSignals(data);
           setSignal([...data]);
@@ -239,15 +235,19 @@ export const SewAppProvider = ({ children }) => {
       // Use the default context instead!
       window.sewApp.environment.setSignals(defaultSignalData);
     }
+
+    window.sewApp.socket?.on('updateSignals', (update) => {
+      onSocketUpdateSignals(update, antenna);
+    });
   }, []);
 
   // //////////// Antenna //////////////
   useEffect(() => {
     if (!githubCheck()) {
       fetch(`${ApiUrl}/data/antenna`)
-        .then(response => response.json())
-        .then(data => {
-          data.forEach(x => {
+        .then((response) => response.json())
+        .then((data) => {
+          data.forEach((x) => {
             x.band = parseInt(x.band);
           });
           setAntenna([...data]);
@@ -257,20 +257,20 @@ export const SewAppProvider = ({ children }) => {
     }
   }, []);
 
-  window.sewApp.socket?.on('updateAntennaClient', data => {
+  window.sewApp.socket?.on('updateAntennaClient', (data) => {
     if (data.user != window.sewApp.socket.id) {
       setAntenna(data.signals);
     }
   });
 
-  const updateAntenna = update => {
+  const updateAntenna = (update) => {
     //console.log('updateAntenna');
     window.sewApp.socket?.emit('updateAntenna', { user: window.sewApp.socket.id, signals: update });
     setAntenna(update);
   };
 
   // //////////// User //////////////
-  window.sewApp.socket?.on('updateUserClient', data => {
+  window.sewApp.socket?.on('updateUserClient', (data) => {
     console.log('updateUserClient', data);
     if (data.user != window.sewApp.socket.id) {
       console.log('actually updating the User');
@@ -278,7 +278,7 @@ export const SewAppProvider = ({ children }) => {
     }
   });
 
-  const updateUser = update => {
+  const updateUser = (update) => {
     console.log('updateUser', update);
     // patch request to update database
     // if patch request is good
