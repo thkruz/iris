@@ -1,23 +1,27 @@
-/* eslint-disable react/prop-types */
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Grid } from '@mui/material';
+import { Box, Grid } from '@mui/material';
 import { AstroTheme } from '../../../../../themes/AstroTheme';
+import { PropTypes } from 'prop-types';
+import { PhysicalButton } from '../../../PhysicalButton';
+import useSound from 'use-sound';
+import { selectSound } from '../../../../../audio';
 
 const popupStyle = {
-  backgroundColor: AstroTheme.palette.tertiary.main,
+  backgroundColor: '#282a2b',
   position: 'absolute',
   minWidth: '60%',
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  border: '1px solid',
-  borderColor: AstroTheme.palette.tertiary.dark,
-  padding: '15px',
+  border: '8px solid transparent',
+  borderImageSource: 'url(./bezel.png)',
+  borderImageSlice: '30 fill',
+  borderImageOutset: 0,
   zIndex: '9999',
   color: 'white',
   textAlign: 'center',
   borderRadius: '10px',
-  boxShadow: '0px 0px 30px rgba(0, 0, 0, 1)',
+  boxShadow: '0px 0px 12px 5px rgba(0, 0, 0, 1)',
 };
 
 const fullscreenFadeStyle = {
@@ -26,30 +30,20 @@ const fullscreenFadeStyle = {
   left: 0,
   width: '100%',
   height: '100%',
-  backgroundColor: 'rgba(0, 0, 0, 0.75)',
+  backgroundColor: 'rgba(0, 0, 0, 0.4)',
   zIndex: '9998',
 };
 
 const controlsGridStyle = {
   display: 'flex',
+  backgroundColor: AstroTheme.palette.tertiary.light2,
   padding: '10px',
   justifyContent: 'space-around',
   alignItems: 'center',
 };
 
-const yellowButtonStyle = {
-  backgroundColor: AstroTheme.palette.warning.main,
-  '&:hover': {
-    backgroundColor: AstroTheme.palette.warning.Lighten2,
-  },
-  color: 'black',
-  border: '1px solid black',
-  boxShadow: '0px 0px 5px rgba(0, 0, 0, 0.5)',
-  borderColor: AstroTheme.palette.warning.dark,
-  height: '50px',
-  margin: 'auto',
-};
-export const AnalyzerControl = props => {
+export const AnalyzerControl = (props) => {
+  const [playSelectSound] = useSound(selectSound);
   const [ghz, setGhz] = useState(null);
   const [mhz, setMhz] = useState(null);
   const [khz, setKhz] = useState(null);
@@ -74,6 +68,7 @@ export const AnalyzerControl = props => {
 
   // Used for holding max amplitude
   const handleHoldClick = () => {
+    playSelectSound();
     if (typeof props.currentSpecAnalyzer.resetHoldData !== 'undefined') {
       props.currentSpecAnalyzer.resetHoldData();
       props.currentSpecAnalyzer.isDrawHold = !props.currentSpecAnalyzer.isDrawHold;
@@ -83,12 +78,14 @@ export const AnalyzerControl = props => {
 
   // Used for marking max amplitude
   const handleMarkerClick = () => {
+    playSelectSound();
     props.currentSpecAnalyzer.isDrawMarker = !props.currentSpecAnalyzer.isDrawMarker;
     setIsMarkerOn(props.currentSpecAnalyzer.isDrawMarker);
   };
 
   // Used for modifying the center frequency value
   const handleFreqClick = () => {
+    playSelectSound();
     const centerFreq =
       props.currentSpecAnalyzer.maxFreq - (props.currentSpecAnalyzer.maxFreq - props.currentSpecAnalyzer.minFreq) / 2;
     let _ghz, _mhz, _khz;
@@ -109,6 +106,7 @@ export const AnalyzerControl = props => {
   };
   // Used for modifying the span value
   const handleSpanClick = () => {
+    playSelectSound();
     const bw = props.currentSpecAnalyzer.bw;
     let _ghz, _mhz, _khz;
     if (numberSelection === 'ghz') {
@@ -127,6 +125,7 @@ export const AnalyzerControl = props => {
     setControlSelection('span');
   };
   const handleGhzSelectClick = () => {
+    playSelectSound();
     setNumberSelection('ghz');
     setMhz(0);
     setKhz(0);
@@ -138,6 +137,7 @@ export const AnalyzerControl = props => {
     }
   };
   const handleMhzSelectClick = () => {
+    playSelectSound();
     setNumberSelection('mhz');
     setGhz(0);
     setKhz(0);
@@ -149,6 +149,7 @@ export const AnalyzerControl = props => {
     }
   };
   const handleKhzSelectClick = () => {
+    playSelectSound();
     setNumberSelection('khz');
     setGhz(0);
     setMhz(0);
@@ -159,7 +160,8 @@ export const AnalyzerControl = props => {
       setKhz(props.currentSpecAnalyzer.bw / 1e3);
     }
   };
-  const handleNumberClicked = value => {
+  const handleNumberClicked = (value) => {
+    playSelectSound();
     let _ghz, _mhz, _khz;
     if (numberSelection === 'ghz') {
       _ghz = ghz;
@@ -215,8 +217,7 @@ export const AnalyzerControl = props => {
   };
 
   return (
-    <Box id={'analyzerControlModalOverlay'} style={fullscreenFadeStyle} onClick={e => props.handleBackgroundClick(e)}>
-      <h1 style={{ color: 'white', textAlign: 'center' }}>{props.currentSpecAnalyzer.canvas.id}</h1>
+    <Box id={'analyzerControlModalOverlay'} style={fullscreenFadeStyle} onClick={(e) => props.handleBackgroundClick(e)}>
       <Box sx={popupStyle}>
         <Grid container sx={controlsGridStyle}>
           <Grid item xs={4}>
@@ -233,17 +234,14 @@ export const AnalyzerControl = props => {
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                  }}
-                >
+                  }}>
                   <Grid
                     container
-                    sx={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}
-                  >
+                    sx={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
                     <Grid
                       item
                       xs={6}
-                      sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
-                    >
+                      sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                       <h2>{ghz ? ghz.toString() : '0'}</h2>
                       <h2>{mhz ? mhz.toString() : '0'}</h2>
                       <h2>{khz ? khz.toString() : '0'}</h2>
@@ -251,8 +249,7 @@ export const AnalyzerControl = props => {
                     <Grid
                       item
                       xs={6}
-                      sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
-                    >
+                      sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                       <h2>GHz</h2>
                       <h2>MHz</h2>
                       <h2>KHz</h2>
@@ -262,184 +259,85 @@ export const AnalyzerControl = props => {
               </Grid>
               <Grid container item xs={4} sx={{ padding: '8px', justifyContent: 'space-around', alignItems: 'center' }}>
                 <Grid item xs={12}>
-                  <Button
-                    sx={{
-                      ...yellowButtonStyle,
-                      ...{
-                        background:
-                          numberSelection === 'ghz' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
-                      },
-                    }}
-                    onClick={handleGhzSelectClick}
-                  >
-                    <h2>&#8249;</h2>
-                  </Button>
+                  <PhysicalButton isEnabled={numberSelection === 'ghz'} onClick={handleGhzSelectClick} text={'<'} />
                 </Grid>
                 <Grid item xs={12}>
-                  <Button
-                    sx={{
-                      ...yellowButtonStyle,
-                      ...{
-                        background:
-                          numberSelection === 'mhz' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
-                      },
-                    }}
-                    onClick={handleMhzSelectClick}
-                  >
-                    <h2>&#8249;</h2>
-                  </Button>
+                  <PhysicalButton isEnabled={numberSelection === 'mhz'} onClick={handleMhzSelectClick} text={'<'} />
                 </Grid>
                 <Grid item xs={12}>
-                  <Button
-                    sx={{
-                      ...yellowButtonStyle,
-                      ...{
-                        background:
-                          numberSelection === 'khz' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
-                      },
-                    }}
-                    onClick={handleKhzSelectClick}
-                  >
-                    <h2>&#8249;</h2>
-                  </Button>
+                  <PhysicalButton isEnabled={numberSelection === 'khz'} onClick={handleKhzSelectClick} text={'<'} />
                 </Grid>
               </Grid>
             </Grid>
           </Grid>
           <Grid container item sx={{ rowGap: '10px', padding: '20px' }} xs={2}>
             <Grid item xs={12}>
-              <Button
-                sx={{
-                  ...yellowButtonStyle,
-                  ...{
-                    background:
-                      controlSelection === 'freq' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
-                  },
-                }}
-                onClick={handleFreqClick}
-              >
-                <h2>Freq</h2>
-              </Button>
+              <PhysicalButton isEnabled={controlSelection === 'freq'} onClick={handleFreqClick} text={'Freq'} />
             </Grid>
             <Grid item xs={12}>
-              <Button
-                sx={{
-                  ...yellowButtonStyle,
-                  ...{
-                    background:
-                      controlSelection === 'span' ? AstroTheme.palette.normal.main : AstroTheme.palette.warning.main,
-                  },
-                }}
-                onClick={handleSpanClick}
-              >
-                <h2>Span</h2>
-              </Button>
+              <PhysicalButton isEnabled={controlSelection === 'span'} onClick={handleSpanClick} text={'Span'} />
             </Grid>
             <Grid item xs={12}>
-              <Button
-                sx={{
-                  ...yellowButtonStyle,
-                  ...{ background: isTraceOn ? AstroTheme.palette.critical.main : AstroTheme.palette.warning.main },
-                }}
-                onClick={handleHoldClick}
-              >
-                <h2>Trace</h2>
-              </Button>
+              <PhysicalButton isEnabled={isTraceOn} onClick={handleHoldClick} text={'Trace'} />
             </Grid>
             <Grid item xs={12}>
-              <Button
-                sx={{
-                  ...yellowButtonStyle,
-                  ...{ background: isMarkerOn ? AstroTheme.palette.critical.main : AstroTheme.palette.warning.main },
-                }}
-                onClick={handleMarkerClick}
-              >
-                <h2>Marker</h2>
-              </Button>
+              <PhysicalButton isEnabled={isMarkerOn} onClick={handleMarkerClick} text={'Marker'} />
             </Grid>
           </Grid>
           <Grid item sx={{ padding: '20px' }} xs={4}>
-            <Grid container sx={{ justifyContent: 'space-around' }}>
+            <Grid container sx={{ justifyContent: 'space-around' }} spacing={2}>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(7)}>
-                    <h2>7</h2>
-                  </Button>
+                  <PhysicalButton onClick={() => handleNumberClicked(7)} text={'7'} />
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(8)}>
-                    <h2>8</h2>
-                  </Button>
+                  <PhysicalButton onClick={() => handleNumberClicked(8)} text={'8'} />
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(9)}>
-                    <h2>9</h2>
-                  </Button>
+                  <PhysicalButton onClick={() => handleNumberClicked(9)} text={'9'} />
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(4)}>
-                    <h2>4</h2>
-                  </Button>
+                  <PhysicalButton onClick={() => handleNumberClicked(4)} text={'4'} />
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(5)}>
-                    <h2>5</h2>
-                  </Button>
+                  <PhysicalButton onClick={() => handleNumberClicked(5)} text={'5'} />
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(6)}>
-                    <h2>6</h2>
-                  </Button>
+                  <PhysicalButton onClick={() => handleNumberClicked(6)} text={'6'} />
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(1)}>
-                    <h2>1</h2>
-                  </Button>
+                  <PhysicalButton onClick={() => handleNumberClicked(1)} text={'1'} />
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(2)}>
-                    <h2>2</h2>
-                  </Button>
+                  <PhysicalButton onClick={() => handleNumberClicked(2)} text={'2'} />
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(3)}>
-                    <h2>3</h2>
-                  </Button>
+                  <PhysicalButton onClick={() => handleNumberClicked(3)} text={'3'} />
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked('-')}>
-                    <h2>-</h2>
-                  </Button>
+                  <PhysicalButton onClick={() => handleNumberClicked('-')} text={'-'} />
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked(0)}>
-                    <h2>0</h2>
-                  </Button>
+                  <PhysicalButton onClick={() => handleNumberClicked(0)} text={'0'} />
                 </Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked('.')}>
-                    <h2>.</h2>
-                  </Button>
+                  <PhysicalButton onClick={() => handleNumberClicked('.')} text={'.'} />
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
-                <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked('bksp')}>
-                    <h2>bskp</h2>
-                  </Button>
+                <Grid item xs={5}>
+                  <PhysicalButton onClick={() => handleNumberClicked('bksp')} text={'bskp'} />
                 </Grid>
+                <Grid item xs={3}></Grid>
                 <Grid item xs={4}>
-                  <Button sx={yellowButtonStyle} onClick={() => handleNumberClicked('C')}>
-                    <h2>C</h2>
-                  </Button>
+                  <PhysicalButton onClick={() => handleNumberClicked('C')} text={'C'} />
                 </Grid>
-                <Grid item xs={4}></Grid>
               </Grid>
             </Grid>
           </Grid>
@@ -447,4 +345,9 @@ export const AnalyzerControl = props => {
       </Box>
     </Box>
   );
+};
+
+AnalyzerControl.propTypes = {
+  currentSpecAnalyzer: PropTypes.object,
+  handleBackgroundClick: PropTypes.func,
 };

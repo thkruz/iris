@@ -30,8 +30,8 @@ export class SpectrumAnalyzer {
     this.target_id = null;
     this.hpa = false;
     this.loopback = false;
-    this.lock = true;
-    this.operational = true;
+    this.locked = options.locked || false;
+    this.operational = options.operational || false;
     this.isRfMode = false;
     this.isDrawMarker = false;
     this.isDrawHold = false;
@@ -99,7 +99,7 @@ export class SpectrumAnalyzer {
     this.data = new Float32Array(this.width);
     this.noiseData = new Float32Array(this.width);
     this.maxHoldData = new Float32Array(this.width);
-    this.signals.forEach(signal => {
+    this.signals.forEach((signal) => {
       signal.maxHold = new Float32Array(this.width);
     });
   }
@@ -254,11 +254,12 @@ export class SpectrumAnalyzer {
         this.drawNoise(this.ctx);
 
         this.signals
-          .filter(signal => {
+          .filter((signal) => {
             return signal.target_id === this.target_id;
           })
           .forEach((signal, i) => {
             let color = this.noiseColor;
+            if (!this.locked || !this.operational) return;
             if (this.isShowSignals) {
               color = SpectrumAnalyzer.getRandomRgb(i);
             }
@@ -525,7 +526,7 @@ export class SpectrumAnalyzer {
 
   static rgb2hex(rgb) {
     return `#${rgb
-      .map(x => {
+      .map((x) => {
         const hex = x.toString(16);
         return hex.length === 1 ? `0${hex}` : hex;
       })
