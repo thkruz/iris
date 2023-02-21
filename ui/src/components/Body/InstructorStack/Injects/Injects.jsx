@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ReactPlayer from 'react-player';
 import PropTypes from 'prop-types';
 import { Box, Button, Typography } from '@mui/material';
@@ -10,15 +10,16 @@ import { useSewApp } from '../../../../context/sewAppContext';
 
 export const Injects = () => {
   const sewAppCtx = useSewApp();
-  /*
+  
   useEffect(() => {
     fetch('http://localhost:8080/data/signal')
         .then(res => res.json())
         .then(res => sewAppCtx.updateSignals(res))
   }, [])
-  */
+  
   const theme = AstroTheme;
   const [activeModem, setActiveModem] = useState(0);
+  sewAppCtx.signals = sewAppCtx.signal
 
   // Styles
   const sxCase = {
