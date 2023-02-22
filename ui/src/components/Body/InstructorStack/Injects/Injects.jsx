@@ -14,12 +14,12 @@ export const Injects = () => {
   useEffect(() => {
     fetch('http://localhost:8080/data/signal')
         .then(res => res.json())
-        .then(res => sewAppCtx.updateSignals(res))
+        .then(res => sewAppCtx.updateSignal(res))
   }, [])
   
   const theme = AstroTheme;
   const [activeModem, setActiveModem] = useState(0);
-  sewAppCtx.signals = sewAppCtx.signal
+  console.log(sewAppCtx.signal)
 
   // Styles
   const sxCase = {
@@ -82,13 +82,13 @@ export const Injects = () => {
     margin: '8px',
     boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
     border: '1px solid red',
-    backgroundColor: sewAppCtx.signals[activeModem]?.operational ? 'red' : theme.palette.tertiary.light3,
-    color: sewAppCtx.signals[activeModem]?.operational ? 'white' : 'black',
+    backgroundColor: sewAppCtx.signal[activeModem]?.operational ? 'red' : theme.palette.tertiary.light3,
+    color: sewAppCtx.signal[activeModem]?.operational ? 'white' : 'black',
     '&:hover': {
-      backgroundColor: sewAppCtx.signals[activeModem]?.operational
+      backgroundColor: sewAppCtx.signal[activeModem]?.operational
         ? theme.palette.error.main
         : theme.palette.critical.main,
-      color: sewAppCtx.signals[activeModem]?.operational ? 'black' : 'white',
+      color: sewAppCtx.signal[activeModem]?.operational ? 'black' : 'white',
     },
   };
 
@@ -105,7 +105,7 @@ export const Injects = () => {
   // Modem selector buttons
   const RxModemButtonBox = () => (
     <Box sx={sxModemButtonBox}>
-      {sewAppCtx.signals
+      {sewAppCtx.signal
         .sort((a, b) => a.id - b.id)
         .map((x, index) => (
           <RxModemButton key={index} modem={x.id} />
@@ -120,9 +120,9 @@ export const Injects = () => {
       if (e.detail === 1) {
         timer.current = setTimeout(setActiveModem(parseInt(e.target.innerText) - 1), 200);
       } else if (e.detail === 2) {
-        let tmpData = [...sewAppCtx.signals];
+        let tmpData = [...sewAppCtx.signal];
         tmpData[activeModem].operational = !tmpData[activeModem].operational;
-        sewAppCtx.updateSignals(tmpData);
+        sewAppCtx.updateSignal(tmpData);
         CRUDdataTable({ method: 'PATCH', path: 'signal', data: tmpData[activeModem] });
       }
     };
@@ -131,7 +131,7 @@ export const Injects = () => {
         sx={{
           backgroundColor: modem - 1 == activeModem ? theme.palette.primary.dark : theme.palette.primary.light2,
           color: modem - 1 == activeModem ? 'white' : 'black',
-          border: sewAppCtx.signals[sewAppCtx.signals.map((x) => x.id).indexOf(modem)].operational
+          border: sewAppCtx.signal[sewAppCtx.signal.map((x) => x.id).indexOf(modem)].operational
             ? '2px solid red'
             : '2px solid ' + theme.palette.primary.main,
           margin: '8px',
@@ -151,8 +151,8 @@ export const Injects = () => {
 
   // Modem User Inputs
   const RxModemInput = () => {
-    const index = sewAppCtx.signals.map((x) => x.id).indexOf(activeModem + 1);
-    const [inputData, setInputData] = useState(sewAppCtx.signals[index]);
+    const index = sewAppCtx.signal.map((x) => x.id).indexOf(activeModem + 1);
+    const [inputData, setInputData] = useState(sewAppCtx.signal[index]);
     const handleInputChange = ({ param, val }) => {
       let tmpData = { ...inputData };
       tmpData[param] = val;
@@ -160,16 +160,16 @@ export const Injects = () => {
     };
 
     const handleApply = () => {
-      const tmpData = [...sewAppCtx.signals];
+      const tmpData = [...sewAppCtx.signal];
       tmpData[index] = inputData;
-      sewAppCtx.updateSignals(tmpData);
+      sewAppCtx.updateSignal(tmpData);
       CRUDdataTable({ method: 'PATCH', path: 'signal', data: tmpData[index] });
     };
 
     const handleTransmit = () => {
-      let tmpData = [...sewAppCtx.signals];
+      let tmpData = [...sewAppCtx.signal];
       tmpData[index].operational = !tmpData[index].operational;
-      sewAppCtx.updateSignals(tmpData);
+      sewAppCtx.updateSignal(tmpData);
       CRUDdataTable({ method: 'PATCH', path: 'signal', data: tmpData[index] });
     };
 
@@ -192,7 +192,7 @@ export const Injects = () => {
               </option>
             ))}
           </select>
-          <Typography sx={sxValues}>{satellites[sewAppCtx.signals[index]]?.name}</Typography>
+          <Typography sx={sxValues}>{satellites[sewAppCtx.signal[index]]?.name}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='frequency'>Frequency</label>
@@ -206,7 +206,7 @@ export const Injects = () => {
                 val: parseInt(e.target.value) || 0,
               })
             }></input>
-          <Typography sx={sxValues}>{sewAppCtx.signals[index].frequency + ' MHz'}</Typography>
+          <Typography sx={sxValues}>{sewAppCtx.signal[index].frequency + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='bandwidth'>Bandwidth</label>
@@ -220,7 +220,7 @@ export const Injects = () => {
                 val: parseInt(e.target.value) || 0,
               })
             }></input>
-          <Typography sx={sxValues}>{sewAppCtx.signals[index].bandwidth + ' MHz'}</Typography>
+          <Typography sx={sxValues}>{sewAppCtx.signal[index].bandwidth + ' MHz'}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='modulation'>Modulation</label>
@@ -233,7 +233,7 @@ export const Injects = () => {
             <option value='8QAM'>8QAM</option>
             <option value='16QAM'>16QAM</option>
           </select>
-          <Typography sx={sxValues}>{sewAppCtx.signals[index].modulation}</Typography>
+          <Typography sx={sxValues}>{sewAppCtx.signal[index].modulation}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='fec'>FEC</label>
@@ -247,7 +247,7 @@ export const Injects = () => {
             <option value='5/6'>5/6</option>
             <option value='7/8'>7/8</option>
           </select>
-          <Typography sx={sxValues}>{sewAppCtx.signals[index].fec}</Typography>
+          <Typography sx={sxValues}>{sewAppCtx.signal[index].fec}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <label htmlFor='feed'>Feed</label>
@@ -267,7 +267,7 @@ export const Injects = () => {
             <option value='red 8.mp4'>Red 8</option>
             <option value='red 9.mp4'>Red 9</option>
           </select>
-          <Typography sx={sxValues}>{sewAppCtx.signals[activeModem].feed}</Typography>
+          <Typography sx={sxValues}>{sewAppCtx.signal[activeModem].feed}</Typography>
         </Box>
         <Box sx={sxInputRow}>
           <div></div>
@@ -288,7 +288,7 @@ export const Injects = () => {
         <ReactPlayer
           config={{ file: { attributes: { controlsList: 'nodownload' } } }}
           onContextMenu={(e) => e.preventDefault()}
-          url={`./videos/${sewAppCtx.signals[activeModem].feed}`}
+          url={`./videos/${sewAppCtx.signal[activeModem].feed}`}
           width='100%'
           height='100%'
           controls={false}
