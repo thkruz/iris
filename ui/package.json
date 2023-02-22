@@ -19,6 +19,7 @@
   },
   "scripts": {
     "start": "npx react-scripts start",
+    "prestart": "npm install",
     "build": "npx react-scripts build",
     "build:gh": "cross-env PUBLIC_URL=/iris/ npx react-scripts build",
     "serve": "npx serve -s build",
