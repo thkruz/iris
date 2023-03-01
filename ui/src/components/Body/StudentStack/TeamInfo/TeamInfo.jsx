@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { RuxContainer } from '@astrouxds/react'
 import './TeamInfo.css';
-import { Grid, Typography } from '@mui/material';
-import { AstroTheme } from '../../../../themes/AstroTheme';
+import { Typography } from '@mui/material';
+//import { AstroTheme } from '../../../../themes/AstroTheme';
 import { teams } from '../../../../constants';
 import { githubCheck } from '../../../../lib/github-check';
 import { useSewApp } from '../../../../context/sewAppContext';
@@ -26,30 +27,19 @@ export const TeamInfo = () => {
   }, []);
 
   return (
-    <Grid
-      container
-      spacing={1}
-      pl={4}
-      pr={4}
-      height={60}
-      sx={{
-        backgroundColor: AstroTheme.palette.tertiary.main,
-        color: 'white',
-        boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.8)',
-        alignItems: 'center',
-      }}>
+    <RuxContainer>
       {state?.isAuthenticated ? (
         <>
-          <Grid item xs={6} textAlign={'left'}>
+          <div>
             <Typography variant='h6'>Team: {teams[sewAppCtx.user?.team_id - 1].name}</Typography>
-          </Grid>
-          <Grid item xs={6} textAlign={'right'}>
+          </div>
+          <div>
             <Typography variant='h6'>
               Server: {servers ? servers[sewAppCtx.user.server_id - 1]?.name : 'Disconnected'}
             </Typography>
-          </Grid>
+          </div>
         </>
       ) : null}
-    </Grid>
+    </RuxContainer>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Box, Button, Grid, Tooltip, Typography } from '@mui/material';
-import { AstroTheme } from '../../../../../../themes/AstroTheme';
+import { RuxButton, RuxPushButton, RuxTooltip, } from '@astrouxds/react'
+import { Box, Grid, Typography } from '@mui/material';
+//import { AstroTheme } from '../../../../../../themes/AstroTheme';
 import { useSewApp } from '../../../../../../context/sewAppContext';
 import { CRUDdataTable } from '../../../../../../crud';
 import { sxModalError, sxValues, sxValuesGrid } from '../../../../../styles';
@@ -13,12 +14,6 @@ import { LinearProgressWithLabel } from './LinearProgressWithLabel';
 const popupTimeoutTime = 3000;
 let errorResetTimeout;
 
-const sxInputApply = {
-  backgroundColor: AstroTheme.palette.tertiary.light3,
-  boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
-  color: 'black',
-  cursor: 'pointer',
-};
 
 export const TxModemInput = ({ unitData, activeModem, currentRow }) => {
   const [playSelectSound] = useSound(selectSound);
@@ -29,23 +24,6 @@ export const TxModemInput = ({ unitData, activeModem, currentRow }) => {
   const [isErrorActive, setErrorActive] = useState(false);
   const [inputData, setInputData] = useState(sewAppCtx.tx[currentRow]);
   const [modemPower, setModemPower] = useState(inputData.bandwidth * Math.pow(10, (120 + inputData.power) / 10));
-
-  const sxTransmit = {
-    cursor: 'pointer',
-    marginLeft: '10px',
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
-    border: '1px solid red',
-    backgroundColor: unitData.filter((x) => x.modem_number == activeModem)[0].transmitting
-      ? 'red'
-      : AstroTheme.palette.tertiary.light3,
-    color: unitData.filter((x) => x.modem_number == activeModem)[0].transmitting ? 'white' : 'black',
-    '&:hover': {
-      backgroundColor: unitData.filter((x) => x.modem_number == activeModem)[0].transmitting
-        ? AstroTheme.palette.error.main
-        : AstroTheme.palette.critical.main,
-      color: unitData.filter((x) => x.modem_number == activeModem)[0].transmitting ? 'black' : 'white',
-    },
-  };
 
   useEffect(() => {
     setInputData(sewAppCtx.tx[currentRow]);
@@ -215,21 +193,19 @@ export const TxModemInput = ({ unitData, activeModem, currentRow }) => {
           justifyContent={'flex-end'}
           flexGrow={true}
           display={'flex'}>
-          <Tooltip title='Commit Changes'>
-            <Button sx={sxInputApply} onClick={(e) => handleApply(e)}>
+          <RuxTooltip message='Commit Changes'>
+            <RuxButton style={{ marginRight: '8px' }} onClick={(e) => handleApply(e)}>
               Apply
-            </Button>
-          </Tooltip>
-          <Tooltip
-            title={
+            </RuxButton>
+          </RuxTooltip>
+          <RuxTooltip
+            message={
               !unitData.filter((x) => x.modem_number == activeModem)[0].transmitting
                 ? 'Enable Transmitter'
                 : 'Disable Transmitter'
             }>
-            <Button sx={sxTransmit} onClick={(e) => handleTransmit(e)}>
-              TX
-            </Button>
-          </Tooltip>
+            <RuxPushButton label='TX' onRuxchange={(e) => handleTransmit(e)} />
+          </RuxTooltip>
         </Grid>
       </Grid>
     </>

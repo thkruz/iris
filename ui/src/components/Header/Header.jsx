@@ -1,35 +1,32 @@
 import React, { useState } from 'react';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Toolbar from '@mui/material/Toolbar';
+import { RuxDialog, RuxGlobalStatusBar, RuxTooltip, RuxButton, RuxIcon } from '@astrouxds/react'
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import HelpCenterIcon from '@mui/icons-material/HelpCenter';
 import GitHubIcon from '@mui/icons-material/GitHub';
-import Logout from '@mui/icons-material/Logout';
-import { AstroTheme } from '../../themes/AstroTheme';
+// import { AstroTheme } from '../../themes/AstroTheme';
 import './Header.css';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Button, Grid, Modal, Tooltip } from '@mui/material';
-import { sxModal } from '../styles/sxModal';
 
 export const Header = () => {
   const [isHelpModalActive, setIsHelpModalActive] = useState(false);
   const { state } = useLocation();
-  const theme = AstroTheme;
+  //const theme = AstroTheme;
   const navigate = useNavigate();
 
   const handleLogout = () => {
     navigate('/');
   };
 
+  const iconStyles = {
+    color: '#FFFFFF',
+    cursor: 'pointer',
+    padding: '12px',
+  }
+
   return (
     <>
-      <Modal open={isHelpModalActive} onClose={() => setIsHelpModalActive(false)}>
-        <Box sx={{ ...sxModal, ...{ color: AstroTheme.palette.tertiary.light4 } }}>
-          <Typography m={1} variant='h3'>
-            IRIS Space Electronic Warfare Sandbox
-          </Typography>
+      <RuxDialog clickToClose header='IRIS Space Electronic Warfare Sandbox' open={isHelpModalActive} onClose={() => setIsHelpModalActive(false)}>
+        <div>
           <Typography m={1} variant='h5'>
             Introduction
           </Typography>
@@ -74,65 +71,41 @@ export const Header = () => {
             then your changes will impact other students in your server. If you are playing alone, then you most likely
             will not need all of the equipment.
           </Typography>
-        </Box>
-      </Modal>
-      <AppBar className={'appBar'} position='static'>
-        <Toolbar sx={{ backgroundColor: theme.palette.tertiary.dark }}>
-          <Grid container>
-            <Grid item xs={'auto'}>
-              <Tooltip title='Home' placement='bottom'>
-                <Button onClick={() => navigate('/')}>
-                  <img src='./patch.png' alt='patch.png' height='80px'></img>
-                </Button>
-              </Tooltip>
-            </Grid>
-            <Grid item xs={true} container spacing={1}>
-              <Grid item xs={12} mt={-1} mb={-5}>
-                <Typography fontSize={'64px'} fontFamily={'Nasa'}>
-                  IRIS
-                </Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <Typography fontSize={'24px'} sx={{ fontFamily: 'Nasa', color: AstroTheme.palette.tertiary.light3 }}>
-                  Space Electronic Warfare Sandbox
-                </Typography>
-              </Grid>
-            </Grid>
-            <Grid
-              item
-              xs={'auto'}
-              sx={{
-                display: 'flex',
-                flexDirection: 'row',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-              }}>
-              <Tooltip title='View Code on Github' placement='bottom'>
-                <IconButton target='_blank' href='http://github.com/thkruz/iris' size='large' color='inherit'>
-                  <GitHubIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title='Help' placement='bottom'>
-                <IconButton
-                  size='large'
-                  onClick={() => {
-                    setIsHelpModalActive(true);
-                  }}
-                  color='inherit'>
-                  <HelpCenterIcon />
-                </IconButton>
-              </Tooltip>
-              {state?.isAuthenticated && (
-                <Tooltip title='Logout' placement='bottom'>
-                  <IconButton size='large' onClick={handleLogout} color='inherit'>
-                    <Logout />
-                  </IconButton>
-                </Tooltip>
-              )}
-            </Grid>
-          </Grid>
-        </Toolbar>
-      </AppBar>
+        </div>
+      </RuxDialog>
+      <RuxGlobalStatusBar appDomain='IRIS' appName='Space Electronic Warfare Sandox'>
+        <div slot='left-side'>
+          <RuxTooltip message='Home' placement='bottom'>
+            <RuxButton borderless onClick={() => navigate('/')}>
+              <img src='./patch.png' alt='patch.png' height='80px'></img>
+            </RuxButton>
+          </RuxTooltip>
+        </div>
+        <div slot='right-side' style={{ display: 'flex', alignItems: 'center' }}>
+          <RuxTooltip message='View Code on Github' placement='bottom'>
+            <IconButton target='_blank' href='http://github.com/thkruz/iris' size='large' color='inherit'>
+              <GitHubIcon />
+            </IconButton>
+          </RuxTooltip>
+          <RuxTooltip message='Help' placement='bottom'>
+            <RuxIcon
+              icon='help-outline'
+              size='small'
+              style={iconStyles}
+              onClick={() => {
+                setIsHelpModalActive(true);
+              }}
+              color='inherit'>
+            </RuxIcon>
+          </RuxTooltip>
+          {state?.isAuthenticated && (
+            <RuxTooltip message='Logout' placement='bottom'>
+              <RuxIcon icon='exit-to-app' size='small' onClick={handleLogout} style={iconStyles}>
+              </RuxIcon>
+            </RuxTooltip>
+          )}
+        </div>
+      </RuxGlobalStatusBar>
     </>
   );
 };

@@ -5,3 +5,4 @@ export { sxModal } from './sxModal';
 export { sxModalError } from './sxModalError';
 export { sxValues } from './sxValues';
 export { sxValuesGrid } from './sxValues';
+export { helpModalButton } from './helpModalButton';

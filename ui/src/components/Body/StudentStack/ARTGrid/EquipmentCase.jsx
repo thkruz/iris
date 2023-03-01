@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import { RuxContainer, RuxIcon } from '@astrouxds/react'
 import PropTypes from 'prop-types';
-import { Box, Grid, IconButton, Tooltip } from '@mui/material';
+import { Grid, Tooltip } from '@mui/material';
 import { EquipmentCaseId } from './EquipmentCaseId';
 import { InstructionsIcon } from '../HelpModals/InstructionsIcon';
-import { sxEquipmentCase } from '../../../styles';
+import { helpModalButton } from '../../../styles';
 
 export const EquipmentCase = ({ children, helpTitle, helpComponent, unit, icon }) => {
   const [helpState, setHelpState] = useState(false);
@@ -11,7 +12,7 @@ export const EquipmentCase = ({ children, helpTitle, helpComponent, unit, icon }
   return (
     <>
       {helpComponent({ modalState: helpState, setModalState: setHelpState })}
-      <Box sx={sxEquipmentCase}>
+      <RuxContainer>
         <Grid container>
           <Grid item width={30}>
             <EquipmentCaseId unit={unit} icon={icon} />
@@ -21,16 +22,18 @@ export const EquipmentCase = ({ children, helpTitle, helpComponent, unit, icon }
           </Grid>
           <Grid item xs={'auto'} ml={0}>
             <Tooltip title={helpTitle} placement='top'>
-              <IconButton
+              <RuxIcon icon='help-outline'
+              size='small'
+              style={helpModalButton}
                 onClick={() => {
                   setHelpState(true);
                 }}>
                 <InstructionsIcon />
-              </IconButton>
+              </RuxIcon>
             </Tooltip>
           </Grid>
         </Grid>
-      </Box>
+      </RuxContainer>
     </>
   );
 };

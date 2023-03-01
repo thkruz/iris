@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import Switch from '@mui/material/Switch';
+import { RuxButton, RuxPushButton, RuxTooltip, RuxSwitch, RuxNotification, } from '@astrouxds/react'
 import PropTypes from 'prop-types';
-import { Typography, Button, Grid, Box, Tooltip } from '@mui/material';
-import { AstroTheme } from '../../../../../themes/AstroTheme';
+import { Typography, Grid } from '@mui/material';
+//import { AstroTheme } from '../../../../../themes/AstroTheme';
 import { useSewApp } from '../../../../../context/sewAppContext';
 import { antennas, satellites } from '../../../../../constants';
 import { CRUDdataTable } from '../../../../../crud/crud';
-import { sxModalError, sxValues, sxValuesGrid } from '../../../../styles';
+import { sxValues, sxValuesGrid } from '../../../../styles';
 import { breakerSound, errorSound, selectSound } from '../../../../../audio';
 import useSound from 'use-sound';
 
@@ -26,24 +26,6 @@ export const AntennaInput = ({ unit }) => {
   );
   const antennaIdx = sewAppCtx.antenna.map((x) => x.id).indexOf(unitData[0].id);
   const [inputData, setInputData] = useState(sewAppCtx.antenna[antennaIdx]);
-
-  const sxButton = {
-    backgroundColor: AstroTheme.palette.tertiary.light3,
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
-    color: 'black',
-    cursor: 'pointer',
-  };
-
-  const sxEnable = {
-    marginLeft: '10px',
-    border: '1px solid red',
-    backgroundColor: inputData.operational ? 'red' : AstroTheme.palette.tertiary.light3,
-    color: inputData.operational ? 'white' : 'black',
-    '&:hover': {
-      backgroundColor: inputData.operational ? AstroTheme.palette.error.main : AstroTheme.palette.critical.main,
-      color: inputData.operational ? 'black' : 'white',
-    },
-  };
 
   useEffect(() => {
     setInputData(sewAppCtx.antenna[antennaIdx]);
@@ -94,11 +76,9 @@ export const AntennaInput = ({ unit }) => {
 
   return (
     <>
-      {isErrorActive ? (
-        <Box sx={sxModalError}>
-          <Typography>Antenna is currently not operational. Try enabling it first!</Typography>
-        </Box>
-      ) : null}
+      <RuxNotification open={isErrorActive} status='critical' closeAfter={3} hideClose>
+        <Typography>Antenna is currently not operational. Try enabling it first!</Typography>
+      </RuxNotification>
       <Grid container mt={1} pb={2} height={'100%'}>
         <Grid container item xs={12} spacing={0.5}>
           <Grid container item xs={12}>
@@ -170,9 +150,9 @@ export const AntennaInput = ({ unit }) => {
               <Typography textAlign={'right'}>Auto-Track</Typography>
             </Grid>
             <Grid item xs={true}>
-              <Switch
+              <RuxSwitch
                 checked={inputData.track}
-                onChange={() => {
+                onRuxchange={() => {
                   if (!inputData.operational) {
                     setErrorActive(true);
                     playErrorSound();
@@ -192,7 +172,7 @@ export const AntennaInput = ({ unit }) => {
                     },
                     newValue ? DELAY_TO_ACQ_LOCK : 0
                   );
-                }}></Switch>
+                }}></RuxSwitch>
             </Grid>
             <Grid item xs={1}></Grid>
             <Grid item xs={true}></Grid>
@@ -206,16 +186,14 @@ export const AntennaInput = ({ unit }) => {
           justifyContent={'flex-end'}
           flexGrow={true}
           display={'flex'}>
-          <Tooltip title='Commit Changes'>
-            <Button sx={sxButton} onClick={(e) => handleApply(e)}>
+          <RuxTooltip message='Commit Changes'>
+            <RuxButton style={{ marginRight: '8px' }} onClick={(e) => handleApply(e)}>
               Apply
-            </Button>
-          </Tooltip>
-          <Tooltip title={!sewAppCtx.antenna[antennaIdx]?.operational ? 'Enable Antenna' : 'Disable Antenna'}>
-            <Button sx={{ ...sxButton, ...sxEnable }} onClick={(e) => handleEnable(e)}>
-              {sewAppCtx.antenna[antennaIdx]?.operational ? 'Power' : 'Power'}
-            </Button>
-          </Tooltip>
+            </RuxButton>
+          </RuxTooltip>
+          <RuxTooltip message={!sewAppCtx.antenna[antennaIdx]?.operational ? 'Enable Antenna' : 'Disable Antenna'}>
+            <RuxPushButton label={sewAppCtx.antenna[antennaIdx]?.operational ? 'Power' : 'Power'} onRuxchange={(e) => handleEnable(e)} />
+          </RuxTooltip>
         </Grid>
       </Grid>
     </>

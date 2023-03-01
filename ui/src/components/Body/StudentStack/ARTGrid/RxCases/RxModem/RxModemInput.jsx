@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { RuxButton, RuxTooltip, } from '@astrouxds/react'
 import PropTypes from 'prop-types';
-import { Button, Grid, Tooltip, Typography } from '@mui/material';
+import { Grid, Typography } from '@mui/material';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
 import { useSewApp } from '../../../../../../context/sewAppContext';
 import { CRUDdataTable } from '../../../../../../crud';
@@ -156,11 +157,11 @@ export const RxModemInput = ({ currentRow }) => {
           justifyContent={'flex-end'}
           flexGrow={true}
           display={'flex'}>
-          <Tooltip title='Commit Changes'>
-            <Button sx={sxInputApply} onClick={(e) => handleApply(e)}>
+          <RuxTooltip message='Commit Changes'>
+            <RuxButton sx={sxInputApply} onClick={(e) => handleApply(e)}>
               Apply
-            </Button>
-          </Tooltip>
+            </RuxButton>
+          </RuxTooltip>
         </Grid>
       </Grid>
     </Grid>

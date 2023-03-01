@@ -1,4 +1,5 @@
 import React from 'react';
+import { RuxContainer } from '@astrouxds/react'
 import PropTypes from 'prop-types';
 import { Box, Typography, Button, IconButton, Tooltip } from '@mui/material';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
@@ -44,15 +45,15 @@ export const LoopbackSwitch = ({ unit }) => {
 
   const sxLoopback = {
     width: '100px',
-    backgroundColor: AstroTheme.palette.tertiary.light3,
-    border: '1px solid' + AstroTheme.palette.tertiary.light,
+    // backgroundColor: AstroTheme.palette.tertiary.light3,
+    // border: '1px solid' + AstroTheme.palette.tertiary.light,
     padding: '10px 30px',
-    marginTop: '-1px',
-    marginBottom: '-1px',
+    // marginTop: '-1px',
+    // marginBottom: '-1px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    height: 'calc(100% - 20px)',
+    // height: 'calc(100% - 20px)',
   };
   const sxLoopbackSwitch = {
     display: 'flex',
@@ -79,7 +80,7 @@ export const LoopbackSwitch = ({ unit }) => {
     CRUDdataTable({ method: 'PATCH', path: 'antenna', data: tmpData[antennaIdx] });
   };
   return (
-    <Box sx={sxLoopback}>
+    <RuxContainer style={sxLoopback}>
       <Tooltip title='Intermediate Frequency'>
         <Typography align='center'>IF</Typography>
       </Tooltip>
@@ -115,7 +116,7 @@ export const LoopbackSwitch = ({ unit }) => {
           <Typography>HPA</Typography>
         </Button>
       </Tooltip>
-    </Box>
+    </RuxContainer>
   );
 };
 LoopbackSwitch.propTypes = {
