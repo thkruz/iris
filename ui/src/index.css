@@ -27,3 +27,8 @@ body {
   flex-direction: column;
   flex: 1;
 }
+
+.helpIcon {
+  color: #FFFFFF;
+  cursor: pointer;
+}

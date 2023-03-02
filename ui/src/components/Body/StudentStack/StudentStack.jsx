@@ -12,7 +12,7 @@ export const StudentStack = () => {
   useEffect(() => {
     window.sewApp.init();
     sewAppCtx.updateSewApp();
-    document.addEventListener('contextmenu', event => event.preventDefault());
+    // document.addEventListener('contextmenu', event => event.preventDefault());
   }, []);
 
   // Basic check that user is logged in

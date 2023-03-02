@@ -11,3 +11,9 @@
   color: #fff;
   text-decoration: none;
 }
+
+.main-help::part(dialog){
+  width: 60rem;
+  max-width: 100%;
+  padding: var(--spacing-3) var(--spacing-4)
+}

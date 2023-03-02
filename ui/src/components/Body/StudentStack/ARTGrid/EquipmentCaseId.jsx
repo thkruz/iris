@@ -4,7 +4,7 @@ import { Box, Typography } from '@mui/material';
 
 export const EquipmentCaseId = ({ unit, icon }) => {
   return (
-    <Box mt={2} textAlign={'center'}>
+    <Box textAlign={'center'}>
       {icon}
       <Typography sx={{ color: 'white', fontWeight: 700, fontFamily: 'Nasa' }} fontSize={20}>
         {unit.toString()}

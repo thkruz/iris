@@ -1,7 +1,7 @@
-import { Grid, Tooltip, Typography } from '@mui/material';
+import { Grid, Typography } from '@mui/material';
 import { SpectrumAnalyzer } from '../../../../';
 import React, { useLayoutEffect, useState } from 'react';
-import { RuxContainer, RuxButton, RuxButtonGroup, RuxPushButton, RuxIcon, RuxDialog, RuxTooltip, RuxSelect, RuxOption, RuxCard, } from '@astrouxds/react'
+import { RuxContainer, RuxButton, RuxButtonGroup, RuxPushButton, RuxIcon, RuxDialog, RuxTooltip, RuxSelect, RuxOption,  } from '@astrouxds/react'
 //import { AstroTheme } from '../../../../../themes/AstroTheme.js';
 import { useEffect } from 'react';
 import { satellites } from '../../../../../constants';
@@ -10,7 +10,7 @@ import config from '../../../../../constants/config';
 import { useSewApp } from '../../../../../context/sewAppContext';
 import { githubCheck } from '../../../../../lib/github-check';
 import SpecAHelp from '../../HelpModals/SpecAHelp';
-import { helpModalButton } from '../../../../styles';
+import './SpectrumAnalyzer.css'
 // import { InstructionsIcon } from './../../HelpModals/InstructionsIcon';
 import useSound from 'use-sound';
 import { selectSound } from '../../../../../audio';
@@ -224,20 +224,20 @@ export const SpectrumAnalyzerBox = (props) => {
       </RuxDialog>
       <RuxContainer>
         <Grid container spacing={0}>
-          <Grid item xs={11} pl={10}>
+          <Grid item xs={11} pl={20}>
             <Typography>Span: {sewAppCtx.sewApp[`specA${whichSpecA}`]?.bw / 1e6} MHz</Typography>
           </Grid>
           <Grid item xs={1}>
-            <Tooltip title='Spectrum Analyzer Help' placement='top'>
+            <RuxTooltip message='Spectrum Analyzer Help' placement='top'>
               <RuxIcon
                 icon='help-outline'
-                size='small'
-                style={helpModalButton}
+                size='24px'
+                className='helpIcon'
                 onClick={() => {
                   setIsHelpModalActive(true);
                 }}>
               </RuxIcon>
-            </Tooltip>
+            </RuxTooltip>
           </Grid>
           <Grid container item sx={{ display: 'flex', alignContent: 'space-between' }} xs={2}>
             <Grid item xs={12}>
@@ -247,10 +247,10 @@ export const SpectrumAnalyzerBox = (props) => {
               <Typography>{sewAppCtx.sewApp[`specA${whichSpecA}`]?.minDecibels} (dB)</Typography>
             </Grid>
           </Grid>
-          <Grid container item xs={9}>
-            <RuxCard style={canvasContainer}>
+          <Grid container sx={canvasContainer} item xs={10}>
+
               <canvas id={props.canvasId} />
-            </RuxCard>
+
           </Grid>
           <Grid item xs={12}>
             <Typography>CF: {sewAppCtx.sewApp[`specA${whichSpecA}`]?.centerFreq / 1e6} MHz</Typography>

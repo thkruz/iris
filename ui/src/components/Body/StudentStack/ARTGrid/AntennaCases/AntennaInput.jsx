@@ -1,14 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { RuxButton, RuxPushButton, RuxTooltip, RuxSwitch, RuxNotification, } from '@astrouxds/react'
+import { RuxButton, RuxPushButton, RuxTooltip, RuxSwitch, RuxNotification, RuxSelect, RuxOption, RuxInput } from '@astrouxds/react'
 import PropTypes from 'prop-types';
-import { Typography, Grid } from '@mui/material';
+import { Typography, Grid, Card } from '@mui/material';
 //import { AstroTheme } from '../../../../../themes/AstroTheme';
 import { useSewApp } from '../../../../../context/sewAppContext';
 import { antennas, satellites } from '../../../../../constants';
 import { CRUDdataTable } from '../../../../../crud/crud';
-import { sxValues, sxValuesGrid } from '../../../../styles';
 import { breakerSound, errorSound, selectSound } from '../../../../../audio';
 import useSound from 'use-sound';
+import './AntennaCase.css'
+
+const outputStyle = {
+  padding: '4px 8px',
+  border: '1px solid #51555B', 
+  color: '#a4abb6',
+  lineHeight: '20px',
+  fontWeight: 400,
+  backgroundColor: '#101923'
+}
 
 const DELAY_TO_ACQ_LOCK = 5000;
 const popupTimeoutTime = 3000;
@@ -79,78 +88,91 @@ export const AntennaInput = ({ unit }) => {
       <RuxNotification open={isErrorActive} status='critical' closeAfter={3} hideClose>
         <Typography>Antenna is currently not operational. Try enabling it first!</Typography>
       </RuxNotification>
-      <Grid container mt={1} pb={2} height={'100%'}>
+      <Grid container pl={2} height={'100%'}>
         <Grid container item xs={12} spacing={0.5}>
           <Grid container item xs={12}>
-            <Grid item xs={2}>
+            {/* <Grid item xs={2}>
               <Typography textAlign={'right'}>Target</Typography>
-            </Grid>
+            </Grid> */}
             <Grid item xs={true}>
-              <select
+              <RuxSelect 
                 name='Target'
+                size='small'
+                label='Target'
                 value={inputData.target_id}
-                onChange={(e) => handleInputChange({ param: 'target_id', val: e.target.value })}>
-                {satellites.map((x, index) => {
+                onRuxchange={(e) => handleInputChange({ param: 'target_id', val: e.target.value })}>
+                  {satellites.map((x, index) => {
                   return (
-                    <option value={x.id} key={index}>
+                    <RuxOption value={x.id} label={x.name} key={index}>
                       {x.name}
-                    </option>
+                    </RuxOption>
                   );
                 })}
-              </select>
+                </RuxSelect>
             </Grid>
             <Grid item xs={1}></Grid>
-            <Grid item xs={true} sx={sxValuesGrid}>
-              <Typography sx={sxValues}>{satellites[sewAppCtx.antenna[antennaIdx].target_id - 1].name}</Typography>
+            <Grid item xs={true}>
+              <Card
+                variant='outlined'
+                sx={outputStyle}
+                >
+                  {satellites[sewAppCtx.antenna[antennaIdx].target_id - 1].name}
+              </Card>
             </Grid>
           </Grid>
           <Grid container item xs={12}>
-            <Grid item xs={2}>
-              <Typography textAlign={'right'}>Band</Typography>
-            </Grid>
             <Grid item xs={true}>
-              <select
+            <RuxSelect 
                 name='band'
+                size='small'
+                label='Band'
                 value={inputData.band}
-                onChange={(e) => handleInputChange({ param: 'band', val: e.target.value })}>
+                onRuxchange={(e) => handleInputChange({ param: 'band', val: e.target.value })}>
                 {antennas.map((x, index) => {
                   return (
-                    <option value={index} key={index}>
+                    <RuxOption value={index} label={x.band} key={index}>
                       {x.band}
-                    </option>
+                    </RuxOption>
                   );
                 })}
-              </select>
+                </RuxSelect>
             </Grid>
             <Grid item xs={1}></Grid>
-            <Grid item xs={true} sx={sxValuesGrid}>
-              <Typography sx={sxValues}>{antennas[sewAppCtx.antenna[antennaIdx]?.band]?.band}</Typography>
+            <Grid item xs={true}>
+              <Card
+                variant='outlined'
+                sx={outputStyle}
+                >
+                {antennas[sewAppCtx.antenna[antennaIdx]?.band]?.band}
+              </Card>
             </Grid>
           </Grid>
           <Grid container item xs={12}>
-            <Grid item xs={2}>
-              <Typography textAlign={'right'}>Offset</Typography>
-            </Grid>
             <Grid item xs={true}>
-              <input
+              <RuxInput
                 name='offset'
+                size='small'
+                label='Offset'
                 type='text'
                 value={inputData.offset}
-                onChange={(e) => {
+                onRuxchange={(e) => {
                   handleInputChange({ param: 'offset', val: e.target.value });
-                }}></input>
+                }}></RuxInput>
             </Grid>
             <Grid item xs={1}></Grid>
-            <Grid item xs={true} sx={sxValuesGrid}>
-              <Typography sx={sxValues}>{sewAppCtx.antenna[antennaIdx].offset + ' MHz'}</Typography>
+            <Grid item xs={true}>
+              <Card
+                variant='outlined'
+                sx={outputStyle}
+                >
+                  {sewAppCtx.antenna[antennaIdx].offset + ' MHz'}
+              </Card>
             </Grid>
           </Grid>
           <Grid container item xs={12}>
-            <Grid item xs={2} display={'flex'} alignItems={'center'} justifyContent={'right'}>
-              <Typography textAlign={'right'}>Auto-Track</Typography>
-            </Grid>
             <Grid item xs={true}>
               <RuxSwitch
+                label='Auto-Track'
                 checked={inputData.track}
                 onRuxchange={() => {
                   if (!inputData.operational) {

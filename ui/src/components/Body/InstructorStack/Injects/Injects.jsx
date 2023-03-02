@@ -287,7 +287,7 @@ export const Injects = () => {
       <Box sx={sxVideo}>
         <ReactPlayer
           config={{ file: { attributes: { controlsList: 'nodownload' } } }}
-          onContextMenu={(e) => e.preventDefault()}
+          // onContextMenu={(e) => e.preventDefault()}
           url={`./videos/${sewAppCtx.signal[activeModem].feed}`}
           width='100%'
           height='100%'

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { RuxDialog, RuxGlobalStatusBar, RuxTooltip, RuxButton, RuxIcon } from '@astrouxds/react'
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -8,7 +8,7 @@ import './Header.css';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export const Header = () => {
-  const [isHelpModalActive, setIsHelpModalActive] = useState(false);
+  // const [isHelpModalActive, setIsHelpModalActive] = useState(false);
   const { state } = useLocation();
   //const theme = AstroTheme;
   const navigate = useNavigate();
@@ -23,9 +23,14 @@ export const Header = () => {
     padding: '12px',
   }
 
+  const handleClick = () =>{
+    const dialog = document.querySelector('.main-help');
+    dialog.setAttribute('open', '');
+  }
+
   return (
     <>
-      <RuxDialog clickToClose header='IRIS Space Electronic Warfare Sandbox' open={isHelpModalActive} onClose={() => setIsHelpModalActive(false)}>
+      <RuxDialog clickToClose header='IRIS Space Electronic Warfare Sandbox' class="main-help">
         <div>
           <Typography m={1} variant='h5'>
             Introduction
@@ -73,7 +78,7 @@ export const Header = () => {
           </Typography>
         </div>
       </RuxDialog>
-      <RuxGlobalStatusBar appDomain='IRIS' appName='Space Electronic Warfare Sandox'>
+      <RuxGlobalStatusBar appDomain='IRIS' appName='Space Electronic Warfare Sandox' style={{position: 'relative',}}>
         <div slot='left-side'>
           <RuxTooltip message='Home' placement='bottom'>
             <RuxButton borderless onClick={() => navigate('/')}>
@@ -90,17 +95,18 @@ export const Header = () => {
           <RuxTooltip message='Help' placement='bottom'>
             <RuxIcon
               icon='help-outline'
-              size='small'
+              className='helpIcon'
+              size='24px'
               style={iconStyles}
               onClick={() => {
-                setIsHelpModalActive(true);
+                handleClick()
               }}
               color='inherit'>
             </RuxIcon>
           </RuxTooltip>
           {state?.isAuthenticated && (
             <RuxTooltip message='Logout' placement='bottom'>
-              <RuxIcon icon='exit-to-app' size='small' onClick={handleLogout} style={iconStyles}>
+              <RuxIcon icon='exit-to-app' size='24px' onClick={handleLogout} style={iconStyles}>
               </RuxIcon>
             </RuxTooltip>
           )}

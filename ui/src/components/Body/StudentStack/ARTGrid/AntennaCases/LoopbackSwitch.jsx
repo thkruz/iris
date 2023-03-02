@@ -1,7 +1,7 @@
 import React from 'react';
-import { RuxContainer } from '@astrouxds/react'
+import { RuxContainer, RuxPushButton, RuxTooltip } from '@astrouxds/react'
 import PropTypes from 'prop-types';
-import { Box, Typography, Button, IconButton, Tooltip } from '@mui/material';
+import { Box, Typography, IconButton } from '@mui/material';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
 import CellTowerIcon from '@mui/icons-material/CellTower';
 import AlignHorizontalCenterIcon from '@mui/icons-material/AlignHorizontalCenter';
@@ -21,19 +21,6 @@ export const LoopbackSwitch = ({ unit }) => {
   );
   const antennaIdx = sewAppCtx.antenna.map((x) => x.id).indexOf(unitData[0].id);
 
-  const sxHPA = {
-    marginTop: '5px',
-    backgroundColor: sewAppCtx.antenna[antennaIdx].hpa ? 'red' : AstroTheme.palette.tertiary.light3,
-    color: sewAppCtx.antenna[antennaIdx].hpa ? 'white' : 'black',
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
-    border: '1px solid red',
-    '&:hover': {
-      backgroundColor: sewAppCtx.antenna[antennaIdx].hpa
-        ? AstroTheme.palette.error.main
-        : AstroTheme.palette.critical.main,
-      color: sewAppCtx.antenna[antennaIdx].hpa ? 'black' : 'white',
-    },
-  };
   const sxTx = {
     backgroundColor: sewAppCtx.antenna[antennaIdx].loopback
       ? AstroTheme.palette.tertiary.light2
@@ -44,15 +31,11 @@ export const LoopbackSwitch = ({ unit }) => {
   };
 
   const sxLoopback = {
-    width: '100px',
-    // backgroundColor: AstroTheme.palette.tertiary.light3,
-    // border: '1px solid' + AstroTheme.palette.tertiary.light,
-    padding: '10px 30px',
-    // marginTop: '-1px',
-    // marginBottom: '-1px',
+    width: '140px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
+    justifyContent: 'center'
     // height: 'calc(100% - 20px)',
   };
   const sxLoopbackSwitch = {
@@ -81,13 +64,13 @@ export const LoopbackSwitch = ({ unit }) => {
   };
   return (
     <RuxContainer style={sxLoopback}>
-      <Tooltip title='Intermediate Frequency'>
+      <RuxTooltip style={{ display: 'flex', }} message='Intermediate Frequency'>
         <Typography align='center'>IF</Typography>
-      </Tooltip>
+      </RuxTooltip>
       <Box sx={sxLoopbackSwitch} width={'100%'}>
-        <Tooltip title='Loopback'>
+        <RuxTooltip message='Loopback'>
           <SettingsBackupRestoreIcon />
-        </Tooltip>
+        </RuxTooltip>
         <IconButton
           onClick={toggleSwitch}
           sx={{
@@ -103,19 +86,17 @@ export const LoopbackSwitch = ({ unit }) => {
             style={{ width: '100%' }}
           />
         </IconButton>
-        <Tooltip title='Antenna'>
+        <RuxTooltip message='Antenna'>
           <CellTowerIcon sx={sxTx} />
-        </Tooltip>
+        </RuxTooltip>
       </Box>
-      <Tooltip title='Ground'>
+      <RuxTooltip message='Ground'>
         <AlignHorizontalCenterIcon />
-      </Tooltip>
-      <Tooltip
-        title={!sewAppCtx.antenna[antennaIdx].hpa ? 'Enable High Powered Amplifier' : 'Disable High Powered Amplifier'}>
-        <Button sx={sxHPA} onClick={(e) => handleHPA(e)}>
-          <Typography>HPA</Typography>
-        </Button>
-      </Tooltip>
+      </RuxTooltip>
+      <RuxTooltip
+        message={!sewAppCtx.antenna[antennaIdx].hpa ? 'Enable High Powered Amplifier' : 'Disable High Powered Amplifier'}>
+        <RuxPushButton label='HPA' onRuxchange={(e) => handleHPA(e)} />
+      </RuxTooltip>
     </RuxContainer>
   );
 };

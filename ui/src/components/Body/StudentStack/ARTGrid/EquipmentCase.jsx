@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { RuxContainer, RuxIcon } from '@astrouxds/react'
+import { RuxContainer, RuxIcon, RuxTooltip } from '@astrouxds/react'
 import PropTypes from 'prop-types';
-import { Grid, Tooltip } from '@mui/material';
+import { Grid } from '@mui/material';
 import { EquipmentCaseId } from './EquipmentCaseId';
 import { InstructionsIcon } from '../HelpModals/InstructionsIcon';
-import { helpModalButton } from '../../../styles';
+import './equipmentCase.css';
 
 export const EquipmentCase = ({ children, helpTitle, helpComponent, unit, icon }) => {
   const [helpState, setHelpState] = useState(false);
@@ -12,25 +12,26 @@ export const EquipmentCase = ({ children, helpTitle, helpComponent, unit, icon }
   return (
     <>
       {helpComponent({ modalState: helpState, setModalState: setHelpState })}
-      <RuxContainer>
+      <RuxContainer className="container_equipment-case">
         <Grid container>
-          <Grid item width={30}>
+          <Grid item mr={1} width={30}>
             <EquipmentCaseId unit={unit} icon={icon} />
           </Grid>
           <Grid item xs={true}>
             {children}
           </Grid>
           <Grid item xs={'auto'} ml={0}>
-            <Tooltip title={helpTitle} placement='top'>
+            <RuxTooltip message={helpTitle} placement='top'>
               <RuxIcon icon='help-outline'
-              size='small'
-              style={helpModalButton}
+              size='24px'
+              className='helpIcon'
+              style={{ paddingLeft: '8px' }}
                 onClick={() => {
                   setHelpState(true);
                 }}>
                 <InstructionsIcon />
               </RuxIcon>
-            </Tooltip>
+            </RuxTooltip>
           </Grid>
         </Grid>
       </RuxContainer>
