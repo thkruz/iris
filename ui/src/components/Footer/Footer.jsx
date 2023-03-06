@@ -3,6 +3,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import { AstroTheme } from '../../themes/AstroTheme';
 import { Box, Link } from '@mui/material';
+import {Link as RouterLink} from 'react-router-dom';
 
 export const Footer = () => (
   <Box
@@ -19,7 +20,12 @@ export const Footer = () => (
         alignItems: 'center',
       }}>
       <Typography variant='h6' sx={{ color: 'white' }}>
-        Copyright © 2022{' '}
+      <Link
+          component={RouterLink}
+          to="/instructor"
+          sx={{
+            textDecoration: 'none', color: 'inherit',
+          }}>Copyright</Link> © 2022{' '}
         <Link
           href='https://github.com/thkruz/'
           target='_new'

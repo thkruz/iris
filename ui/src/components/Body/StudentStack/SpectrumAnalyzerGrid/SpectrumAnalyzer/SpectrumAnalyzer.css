@@ -1,3 +1,6 @@
 rux-card::part(body) {
-    padding: 0;
+  padding: 0;
+}
+canvas {
+  background-color: #000;
 }
