@@ -6,7 +6,7 @@ export const sxRxModemButton = params => {
     backgroundColor: isActive ? AstroTheme.palette.primary.dark : AstroTheme.palette.primary.light2,
     border: '2px solid ' + AstroTheme.palette.primary.main,
     color: isActive ? 'white' : 'black',
-    width: '5px',
+    minWidth: '36px',
     margin: '8px',
     outline: 'none',
     '&:hover': {

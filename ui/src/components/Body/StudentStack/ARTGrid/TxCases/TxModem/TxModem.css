@@ -3,3 +3,31 @@ rux-card::part(body) {
     display: flex;
     flex-direction: column;
   }
+
+rux-button.isActive::part(container){
+  outline: 1px solid #da9ce7;
+  outline-offset: 1px;
+}
+
+rux-button.isTransmitting::part(container){
+  background: #56f000;
+  box-shadow: #56f000;
+  color: #000;
+}
+
+.modemButtonBox{
+    display: flex;
+    height: calc(100% + 2rem);
+    margin-top: -1rem;
+}
+.modemButtonBox::part(container){
+  background: #101923;
+  border: none;
+  display:flex;
+}
+.modemButtonBox::part(body){
+  display:flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-self: stretch;
+}

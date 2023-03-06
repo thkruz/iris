@@ -1,5 +1,5 @@
 import React from 'react';
-import { RuxCard } from '@astrouxds/react'
+import { RuxContainer } from '@astrouxds/react'
 import PropTypes from 'prop-types';
 // import { Box } from '@mui/material';
 import { TxModemButton } from './TxModemButton';
@@ -7,7 +7,7 @@ import { TxModemButton } from './TxModemButton';
 
 export const TxModemButtonBox = ({ unitData, unit, activeModem, updateActiveModem }) => {
   return (
-    <RuxCard width={80}>
+    <RuxContainer className="modemButtonBox">
       {unitData
         .sort((a, b) => a.id - b.id)
         .map((x, index) => {
@@ -23,7 +23,7 @@ export const TxModemButtonBox = ({ unitData, unit, activeModem, updateActiveMode
             );
           }
         })}
-    </RuxCard>
+    </RuxContainer>
   );
 };
 TxModemButtonBox.propTypes = {

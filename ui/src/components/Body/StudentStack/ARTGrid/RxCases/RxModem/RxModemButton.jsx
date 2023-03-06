@@ -1,23 +1,30 @@
 import React from 'react';
+import { useEffect, useRef } from 'react';
+import { RuxTooltip, RuxButton } from '@astrouxds/react'
 import PropTypes from 'prop-types';
-import { Button, Tooltip } from '@mui/material';
+// import { Tooltip } from '@mui/material';
 import { useSound } from 'use-sound';
 import { selectSound } from '../../../../../../audio';
-import { sxRxModemButton } from './sxRxModemButton';
+// import { sxRxModemButton } from './sxRxModemButton';
 
 export const RxModemButton = ({ modemId, isActive, updateActiveModem }) => {
   const [playSelectSound] = useSound(selectSound);
+  const el = useRef(null)
+  useEffect(()=>{
+    isActive ? el.current.classList.add('isActive') : el.current.classList.remove('isActive')
+  }, [isActive])
+
   return (
-    <Tooltip title={`Receive Modem ${modemId}`}>
-      <Button
-        sx={sxRxModemButton({ isActive })}
+    <RuxTooltip message={`Receive Modem ${modemId}`}>
+      <RuxButton
+        secondary
         onClick={() => {
           playSelectSound();
           updateActiveModem(modemId);
-        }}>
+        }} ref={el}>
         {modemId}
-      </Button>
-    </Tooltip>
+      </RuxButton>
+    </RuxTooltip>
   );
 };
 RxModemButton.propTypes = {

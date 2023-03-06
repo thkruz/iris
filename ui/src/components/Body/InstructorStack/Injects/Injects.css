@@ -12,3 +12,18 @@ label {
   justify-self: end;
   align-self: center;
 }
+
+.instructor_wrapper {
+  flex-grow: 1;
+  display: grid;
+  grid-template-columns: 30px 5fr 3fr 2fr;
+  justify-content: space-between;
+}
+
+.instructor_wrapper rux-container {
+  margin: 16px;
+}
+
+rux-input.instructor_input::part(label), rux-select.instructor_select::part(label) {
+  min-width: var(--spacing-24);
+}

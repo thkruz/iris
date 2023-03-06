@@ -1,3 +1,16 @@
 .antenna_card::part(body) {
     padding: var(--spacing-050);
 }
+
+.loopback_container {
+    display: flex;
+    height: calc(100% + 2rem);
+    width: 160px;
+    margin-top: -1rem;
+}
+
+.loopback_container::part(container) {
+    background: #101923;
+    border: none;
+    display: flex;
+}

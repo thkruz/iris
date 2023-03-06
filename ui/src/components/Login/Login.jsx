@@ -1,4 +1,5 @@
 import React from 'react';
+import { RuxContainer, RuxCard } from '@astrouxds/react'
 import Box from '@mui/material/Box';
 import { Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
@@ -14,26 +15,22 @@ export const Login = () => {
   };
 
   return (
-    <>
-      <Box
-        component='form'
-        onSubmit={handleSubmit}
-        bgcolor='tertiary.light4'
-        sx={{
-          margin: 'auto',
-          borderRadius: '5px',
-          boxShadow: '0px 0px 30px rgba(0, 0, 0, 0.2)',
-          '& > :not(style)': { m: 1 },
-        }}
-        novalidate
-        autocomplete='off'>
-        <Grid container spacing={1} p={2} width={300}>
-          <TeamSelect />
-          <ServerSelect />
-          <JoinButton />
-        </Grid>
-      </Box>
-    </>
+      <RuxContainer style={{ margin: '16px', }}>
+        <RuxCard style={{ width: 'fitContent', margin: 'auto', }}>
+          <Box
+            style={{ display: 'flex', justifyContent: 'center', }}
+            component='form'
+            onSubmit={handleSubmit}
+            novalidate
+            autocomplete='off'>
+            <Grid container spacing={1} p={2} width={300}>
+              <TeamSelect />
+              <ServerSelect />
+              <JoinButton />
+            </Grid>
+          </Box>
+        </RuxCard>
+      </RuxContainer>
   );
 };
 

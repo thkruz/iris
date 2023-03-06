@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactPlayer from 'react-player';
 import PropTypes from 'prop-types';
+import { RuxContainer, RuxButton, RuxPushButton, RuxSelect, RuxOption, RuxInput } from '@astrouxds/react'
 import { Box, Button, Typography } from '@mui/material';
 import './Injects.css';
 import { AstroTheme } from '../../../../themes/AstroTheme';
@@ -19,20 +20,7 @@ export const Injects = () => {
   
   const theme = AstroTheme;
   const [activeModem, setActiveModem] = useState(0);
-  console.log(sewAppCtx.signal)
 
-  // Styles
-  const sxCase = {
-    flexGrow: 1,
-    backgroundColor: theme.palette.tertiary.light2,
-    borderRadius: '10px',
-    boxShadow: '0px 0px 5px rgba(0,0,0,0.5)',
-    border: '1px solid' + AstroTheme.palette.tertiary.light,
-    display: 'grid',
-    gridTemplateColumns: '30px 3fr 5fr 2fr 3fr',
-    justifyContent: 'space-between',
-    fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
-  };
   const sxCaseId = {
     color: 'white',
     margin: '8px',
@@ -46,71 +34,52 @@ export const Injects = () => {
   const sxValues = {
     fontWeight: 'bold',
     textDecoration: 'underline',
-  };
-  const sxInputBox = {
-    backgroundColor: theme.palette.tertiary.light2,
-    margin: '8px',
-    borderRadius: '4px',
-    display: 'grid',
-    flexDirection: 'column',
+    marginLeft: '8px',
   };
   const sxInputRow = {
     display: 'grid',
-    gridTemplateColumns: '80px 180px 180px',
+    gridTemplateColumns: '280px 160px',
     textAlign: 'left',
-    margin: '2px',
-  };
-  const sxInputApply = {
-    backgroundColor: theme.palette.tertiary.light3,
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
-    color: 'black',
     margin: '8px',
-    cursor: 'pointer',
   };
   const sxVideo = {
-    margin: '10px',
-    border: '2px solid grey',
-    backgroundColor: theme.palette.tertiary.light3,
     width: '400px',
     height: '400px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
   };
-  const sxTransmit = {
-    cursor: 'pointer',
-    margin: '8px',
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
-    border: '1px solid red',
-    backgroundColor: sewAppCtx.signal[activeModem]?.operational ? 'red' : theme.palette.tertiary.light3,
-    color: sewAppCtx.signal[activeModem]?.operational ? 'white' : 'black',
-    '&:hover': {
-      backgroundColor: sewAppCtx.signal[activeModem]?.operational
-        ? theme.palette.error.main
-        : theme.palette.critical.main,
-      color: sewAppCtx.signal[activeModem]?.operational ? 'black' : 'white',
-    },
-  };
+  // const sxTransmit = {
+  //   cursor: 'pointer',
+  //   margin: '8px',
+  //   boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
+  //   border: '1px solid red',
+  //   backgroundColor: sewAppCtx.signal[activeModem]?.operational ? 'red' : theme.palette.tertiary.light3,
+  //   color: sewAppCtx.signal[activeModem]?.operational ? 'white' : 'black',
+  //   '&:hover': {
+  //     backgroundColor: sewAppCtx.signal[activeModem]?.operational
+  //       ? theme.palette.error.main
+  //       : theme.palette.critical.main,
+  //     color: sewAppCtx.signal[activeModem]?.operational ? 'black' : 'white',
+  //   },
+  // };
 
   // Modem Case Id
   const sidebar = [];
   ['S', 'I', 'G', 'N', 'A', 'L', 'S'].forEach((x, index) => {
     sidebar.push(
-      <Typography key={index} sx={{ color: 'black' }}>
-        {x}
+      <Typography key={index}>
+              {x}
       </Typography>
     );
   });
   const RxCaseId = () => <Box sx={sxCaseId}>{sidebar}</Box>;
   // Modem selector buttons
   const RxModemButtonBox = () => (
-    <Box sx={sxModemButtonBox}>
+    <RuxContainer sx={sxModemButtonBox}>
       {sewAppCtx.signal
         .sort((a, b) => a.id - b.id)
         .map((x, index) => (
           <RxModemButton key={index} modem={x.id} />
         ))}
-    </Box>
+    </RuxContainer>
   );
   const RxModemButton = ({ modem }) => {
     const timer = useRef();
@@ -173,118 +142,128 @@ export const Injects = () => {
       CRUDdataTable({ method: 'PATCH', path: 'signal', data: tmpData[index] });
     };
 
+    console.log(sewAppCtx.signal)
+
     return (
-      <Box sx={sxInputBox}>
-        <Box sx={sxInputRow}>
-          <label htmlFor='Satellite'>Satellite</label>
-          <select
+      <RuxContainer style={{ marginRight: '0', marginLeft: '0' }}>
+        <Box style={sxInputRow}>
+          <RuxSelect
+            className='instructor_select'
             name='Satellite'
+            label='Satellite'
             value={inputData.target_id}
-            onChange={(e) =>
+            onRuxchange={(e) =>
               handleInputChange({
                 param: 'target_id',
                 val: parseInt(e.target.value),
               })
             }>
             {satellites.map((x, index) => (
-              <option key={index} value={x.id}>
+              <RuxOption key={index} value={x.id} label={x.name}>
                 {x.name}
-              </option>
+              </RuxOption>
             ))}
-          </select>
+          </RuxSelect>
           <Typography sx={sxValues}>{satellites[sewAppCtx.signal[index]]?.name}</Typography>
         </Box>
-        <Box sx={sxInputRow}>
-          <label htmlFor='frequency'>Frequency</label>
-          <input
+        <Box style={sxInputRow}>
+          <RuxInput
+            className='instructor_input'
             name='frequency'
             type='text'
+            label='Frequency'
             value={inputData.frequency}
-            onChange={(e) =>
+            onRuxchange={(e) =>
               handleInputChange({
                 param: 'frequency',
                 val: parseInt(e.target.value) || 0,
               })
-            }></input>
+            }></RuxInput>
           <Typography sx={sxValues}>{sewAppCtx.signal[index].frequency + ' MHz'}</Typography>
         </Box>
-        <Box sx={sxInputRow}>
-          <label htmlFor='bandwidth'>Bandwidth</label>
-          <input
+        <Box style={sxInputRow}>
+          <RuxInput
+            className='instructor_input'
             name='bandwidth'
             type='text'
+            label="Bandwidth"
             value={inputData.bandwidth}
-            onChange={(e) =>
+            onRuxchange={(e) =>
               handleInputChange({
                 param: 'bandwidth',
                 val: parseInt(e.target.value) || 0,
               })
-            }></input>
+            }></RuxInput>
           <Typography sx={sxValues}>{sewAppCtx.signal[index].bandwidth + ' MHz'}</Typography>
         </Box>
-        <Box sx={sxInputRow}>
-          <label htmlFor='modulation'>Modulation</label>
-          <select
+        <Box style={sxInputRow}>
+          <RuxSelect
+            className='instructor_select'
             name='modulation'
             value={inputData.modulation}
-            onChange={(e) => handleInputChange({ param: 'modulation', val: e.target.value || 0 })}>
-            <option value='BPSK'>BPSK</option>
-            <option value='QPSK'>QPSK</option>
-            <option value='8QAM'>8QAM</option>
-            <option value='16QAM'>16QAM</option>
-          </select>
+            label='Modulation'
+            onRuxchange={(e) => handleInputChange({ param: 'modulation', val: e.target.value || 0 })}>
+            <RuxOption value='BPSK' label='BPSK'>BPSK</RuxOption>
+            <RuxOption value='QPSK' label='QPSK'>QPSK</RuxOption>
+            <RuxOption value='8QAM' label='8QAM'>8QAM</RuxOption>
+            <RuxOption value='16QAM' label='16QAM'>16QAM</RuxOption>
+          </RuxSelect>
           <Typography sx={sxValues}>{sewAppCtx.signal[index].modulation}</Typography>
         </Box>
-        <Box sx={sxInputRow}>
-          <label htmlFor='fec'>FEC</label>
-          <select
+        <Box style={sxInputRow}>
+          <RuxSelect
+            className='instructor_select'
             name='fec'
             value={inputData.fec}
-            onChange={(e) => handleInputChange({ param: 'fec', val: e.target.value || 0 })}>
-            <option value='1/2'>1/2</option>
-            <option value='2/3'>2/3</option>
-            <option value='3/4'>3/4</option>
-            <option value='5/6'>5/6</option>
-            <option value='7/8'>7/8</option>
-          </select>
+            label='FEC'
+            onRuxchange={(e) => handleInputChange({ param: 'fec', val: e.target.value || 0 })}>
+            <RuxOption value='1/2' label='1/2'>1/2</RuxOption>
+            <RuxOption value='2/3' label='2/3'>2/3</RuxOption>
+            <RuxOption value='3/4' label='3/4'>3/4</RuxOption>
+            <RuxOption value='5/6' label='5/6'>5/6</RuxOption>
+            <RuxOption value='7/8' label='7/8'>7/8</RuxOption>
+          </RuxSelect>
           <Typography sx={sxValues}>{sewAppCtx.signal[index].fec}</Typography>
         </Box>
-        <Box sx={sxInputRow}>
-          <label htmlFor='feed'>Feed</label>
-          <select
+        <Box style={sxInputRow}>
+          <RuxSelect
+            className='instructor_select'
             name='feed'
+            label='Feed'
             value={inputData.feed}
-            onChange={(e) => handleInputChange({ param: 'feed', val: e.target.value })}>
-            <option value='blue 1.mp4'>Blue 1</option>
-            <option value='blue 2.mp4'>Blue 2</option>
-            <option value='red 1.mp4'>Red 1</option>
-            <option value='red 2.mp4'>Red 2</option>
-            <option value='red 3.mp4'>Red 3</option>
-            <option value='red 4.mp4'>Red 4</option>
-            <option value='red 5.mp4'>Red 5</option>
-            <option value='red 6.mp4'>Red 6</option>
-            <option value='red 7.mp4'>Red 7</option>
-            <option value='red 8.mp4'>Red 8</option>
-            <option value='red 9.mp4'>Red 9</option>
-          </select>
+            onRuxchange={(e) => handleInputChange({ param: 'feed', val: e.target.value })}>
+            <RuxOption value='blue 1.mp4' label='blue 1.mp4'>Blue 1</RuxOption>
+            <RuxOption value='blue 2.mp4' label='blue 2.mp4'>Blue 2</RuxOption>
+            <RuxOption value='red 1.mp4' label='red 1.mp4'>Red 1</RuxOption>
+            <RuxOption value='red 2.mp4' label='red 2.mp4'>Red 2</RuxOption>
+            <RuxOption value='red 3.mp4' label='red 3.mp4'>Red 3</RuxOption>
+            <RuxOption value='red 4.mp4' label='red 4.mp4'>Red 4</RuxOption>
+            <RuxOption value='red 5.mp4' label='red 5.mp4'>Red 5</RuxOption>
+            <RuxOption value='red 6.mp4' label='red 6.mp4'>Red 6</RuxOption>
+            <RuxOption value='red 7.mp4' label='red 7.mp4'>Red 7</RuxOption>
+            <RuxOption value='red 8.mp4' label='red 8.mp4'>Red 8</RuxOption>
+            <RuxOption value='red 9.mp4' label='red 9.mp4'>Red 9</RuxOption>
+          </RuxSelect>
           <Typography sx={sxValues}>{sewAppCtx.signal[activeModem].feed}</Typography>
         </Box>
-        <Box sx={sxInputRow}>
+        <Box style={sxInputRow}>
           <div></div>
-          <Button sx={sxInputApply} onClick={(e) => handleApply(e)}>
+          <div style={{ display: 'flex', }}>
+          <RuxButton style={{ marginRight: '8px', }} onClick={(e) => handleApply(e)}>
             Apply
-          </Button>
-          <Button sx={sxTransmit} onClick={(e) => handleTransmit(e)}>
-            TX
-          </Button>
+          </RuxButton>
+          <RuxPushButton label='TX' onRuxchange={(e) => {handleTransmit(e)}} 
+            checked={ sewAppCtx.signal[index].operational ? true : false}
+          />
+          </div>
         </Box>
-      </Box>
+      </RuxContainer>
     );
   };
 
   const RxVideo = () => {
     return (
-      <Box sx={sxVideo}>
+      <RuxContainer style={sxVideo}>
         <ReactPlayer
           config={{ file: { attributes: { controlsList: 'nodownload' } } }}
           // onContextMenu={(e) => e.preventDefault()}
@@ -297,18 +276,16 @@ export const Injects = () => {
           pip={false}
           muted={true}
         />
-      </Box>
+      </RuxContainer>
     );
   };
 
   return (
-    <>
-      <Box sx={sxCase}>
+    <div className='instructor_wrapper'>
         <RxCaseId />
         <RxModemButtonBox />
         <RxModemInput />
         <RxVideo />
-      </Box>
-    </>
+    </div>
   );
 };

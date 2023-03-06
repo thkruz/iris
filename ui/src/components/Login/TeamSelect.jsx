@@ -1,4 +1,5 @@
 import React from 'react';
+import { RuxSelect, RuxOption } from '@astrouxds/react'
 import { Grid } from '@mui/material';
 import { teams } from '../../constants';
 import { useSewApp } from '../../context/sewAppContext';
@@ -13,21 +14,19 @@ export const TeamSelect = () => {
 
   return (
     <Grid container item xs={12}>
-      <Grid item xs={4}>
-        <label htmlFor='team'>Team</label>
-      </Grid>
-      <Grid item xs={8}>
-        <select
+      <Grid item xs={12}>
+        <RuxSelect
           name='team'
           type='string'
+          label='Team'
           value={teams[sewAppCtx.user.team_id - 1].id}
           onChange={e => handleTeamChange(parseInt(e.target.value))}>
           {teams.map((x, index) => (
-            <option key={index} value={x.id}>
+            <RuxOption key={index} value={x.id} label={x.name}>
               {x.name}
-            </option>
+            </RuxOption>
           ))}
-        </select>
+        </RuxSelect>
       </Grid>
     </Grid>
   );

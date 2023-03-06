@@ -9,6 +9,7 @@ export const Footer = () => (
   <Box
     sx={{
       width: '100%',
+      bottom: '0',
     }}>
     <Toolbar
       sx={{

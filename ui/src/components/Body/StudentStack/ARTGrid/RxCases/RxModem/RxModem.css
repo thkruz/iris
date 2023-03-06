@@ -13,8 +13,28 @@ label {
   align-self: center;
 }
 
-rux-card::part(body) {
-  padding: 0;
+.modemButtonBox{
   display: flex;
-  flex-direction: column;
+  height: calc(100% + 2rem);
+  margin-top: -1rem;
+}
+.modemButtonBox::part(container){
+background: #101923;
+border: none;
+display:flex;
+}
+.modemButtonBox::part(body){
+display:flex;
+flex-direction: column;
+justify-content: space-between;
+align-self: stretch;
+}
+
+rux-button::part(container) {
+  min-width: 42px;
+}
+
+rux-button.isActive::part(container){
+  outline: 1px solid #da9ce7;
+  outline-offset: 1px;
 }

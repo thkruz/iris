@@ -14,7 +14,7 @@ import { LinearProgressWithLabel } from './LinearProgressWithLabel';
 const popupTimeoutTime = 3000;
 let errorResetTimeout;
 
-export const TxModemInput = ({ unitData, activeModem, currentRow }) => {
+export const TxModemInput = ({ unitData, activeModem, currentRow, }) => {
   const [playSelectSound] = useSound(selectSound);
   const [playBreakerSound] = useSound(breakerSound);
   const [playErrorSound] = useSound(errorSound);
@@ -129,7 +129,7 @@ export const TxModemInput = ({ unitData, activeModem, currentRow }) => {
                 label='Freq'
                 size='small'
                 value={inputData.frequency}
-                onRuchange={(e) =>
+                onRuxchange={(e) =>
                   handleInputChange({
                     param: 'frequency',
                     val: parseInt(e.target.value) || 0,
@@ -223,7 +223,8 @@ export const TxModemInput = ({ unitData, activeModem, currentRow }) => {
                 ? 'Enable Transmitter'
                 : 'Disable Transmitter'
             }>
-            <RuxPushButton label='TX' onRuxchange={(e) => handleTransmit(e)} />
+            <RuxPushButton label='TX' onRuxchange={(e) => handleTransmit(e)} checked={
+              unitData.filter((x) => x.modem_number == activeModem)[0].transmitting ? true : false}/>
           </RuxTooltip>
         </Grid>
       </Grid>
