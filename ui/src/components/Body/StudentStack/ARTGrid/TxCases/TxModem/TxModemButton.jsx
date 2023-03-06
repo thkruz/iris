@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Button, Tooltip } from '@mui/material';
+import { RuxTooltip } from '@astrouxds/react'
+import { Button } from '@mui/material';
 import { AstroTheme } from '../../../../../../themes/AstroTheme';
 import { selectSound } from '../../../../../../audio';
 import { useSound } from 'use-sound';
@@ -23,7 +24,7 @@ const sxTxModemButton = (params) => {
 export const TxModemButton = ({ modemId, isTransmitting, isActive, updateActiveModem }) => {
   const [playSelectSound] = useSound(selectSound);
   return (
-    <Tooltip title={'Transmit Modem ' + modemId.toString()}>
+    <RuxTooltip message={'Transmit Modem ' + modemId.toString()}>
       <Button
         sx={sxTxModemButton({ isTransmitting, isActive })}
         onClick={() => {
@@ -32,7 +33,7 @@ export const TxModemButton = ({ modemId, isTransmitting, isActive, updateActiveM
         }}>
         {modemId}
       </Button>
-    </Tooltip>
+    </RuxTooltip>
   );
 };
 

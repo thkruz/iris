@@ -12,3 +12,9 @@ label {
   justify-self: end;
   align-self: center;
 }
+
+rux-card::part(body) {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}

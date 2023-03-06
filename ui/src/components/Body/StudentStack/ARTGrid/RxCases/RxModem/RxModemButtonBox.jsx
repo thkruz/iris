@@ -1,12 +1,13 @@
 import React from 'react';
+import { RuxCard } from '@astrouxds/react'
 import PropTypes from 'prop-types';
-import { Box } from '@mui/material';
-import { sxModemButtonBox } from '../../../../../styles';
+// import { Box } from '@mui/material';
+// import { sxModemButtonBox } from '../../../../../styles';
 import { RxModemButton } from './RxModemButton';
 
 export const RxModemButtonBox = ({ unitData, unit, activeModem, updateActiveModem }) => {
   return (
-    <Box sx={sxModemButtonBox} width={80}>
+    <RuxCard width={80}>
       {unitData
         .sort((a, b) => a.id - b.id)
         .map((x, index) => {
@@ -20,7 +21,7 @@ export const RxModemButtonBox = ({ unitData, unit, activeModem, updateActiveMode
               />
             );
         })}
-    </Box>
+    </RuxCard>
   );
 };
 RxModemButtonBox.propTypes = {

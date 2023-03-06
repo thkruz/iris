@@ -3,21 +3,13 @@ import { RuxButton, RuxPushButton, RuxTooltip, RuxSwitch, RuxNotification, RuxSe
 import PropTypes from 'prop-types';
 import { Typography, Grid, Card } from '@mui/material';
 //import { AstroTheme } from '../../../../../themes/AstroTheme';
+import { outputStyle } from '../../../../styles';
 import { useSewApp } from '../../../../../context/sewAppContext';
 import { antennas, satellites } from '../../../../../constants';
 import { CRUDdataTable } from '../../../../../crud/crud';
 import { breakerSound, errorSound, selectSound } from '../../../../../audio';
 import useSound from 'use-sound';
 import './AntennaCase.css'
-
-const outputStyle = {
-  padding: '4px 8px',
-  border: '1px solid #51555B', 
-  color: '#a4abb6',
-  lineHeight: '20px',
-  fontWeight: 400,
-  backgroundColor: '#101923'
-}
 
 const DELAY_TO_ACQ_LOCK = 5000;
 const popupTimeoutTime = 3000;

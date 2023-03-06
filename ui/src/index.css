@@ -32,3 +32,28 @@ body {
   color: #FFFFFF;
   cursor: pointer;
 }
+
+rux-input::part(form-field) {
+  flex-direction: row;
+  align-items: center;
+}
+
+rux-select {
+  display: flex;
+}
+
+rux-select::part(select) {
+  flex-direction: row;
+  align-items: center;
+}
+
+rux-input::part(label), rux-select::part(label) {
+  margin-right: var(--spacing-2);
+  text-align: right;
+  min-width: var(--spacing-14);
+}
+
+rux-switch {
+  margin-left: var(--spacing-16);
+  margin-top: var(--spacing-1);
+}
