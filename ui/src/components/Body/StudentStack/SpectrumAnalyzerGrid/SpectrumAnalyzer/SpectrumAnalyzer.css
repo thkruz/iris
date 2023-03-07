@@ -6,5 +6,31 @@ canvas {
 }
 
 rux-select.antenna-select::part(label) {
-    min-width: var(--spacing-6);
+  min-width: var(--spacing-6);
+}
+
+.analyzer-config::part(footer) {
+  display: none;
+}
+
+.control-display {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.control-display section {
+  display: flex;
+  padding: 1rem;
+  width: 250px;
+  box-sizing: border-box;
+}
+
+.control-display section div {
+  flex-grow: 1;
+  display: flex;
+  flex-flow: column;
+  gap: 2rem;
+  text-align: center;
 }

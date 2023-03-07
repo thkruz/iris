@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { RuxButton, RuxPushButton } from '@astrouxds/react'
+import { RuxButton, RuxCard, RuxPushButton } from '@astrouxds/react'
 import { Box, Grid } from '@mui/material';
 // import { AstroTheme } from '../../../../../themes/AstroTheme';
 import { PropTypes } from 'prop-types';
@@ -216,46 +216,24 @@ export const AnalyzerControl = (props) => {
 
   return (
     <Box id={'analyzerControlModalOverlay'} onClick={(e) => props.handleBackgroundClick(e)}>
-      <Box>
         <Grid container sx={controlsGridStyle}>
           <Grid item xs={6}>
             <Grid container sx={{ justifyContent: 'space-around' }}>
               <Grid container item xs={10} sx={{ justifyContent: 'space-around' }}>
-                <Box
-                  sx={{
-                    padding: '4px 8px',
-                    border: '1px solid #51555B',
-                    borderRadius: '3px',
-                    color: '#a4abb6',
-                    lineHeight: '20px',
-                    fontWeight: '400',
-                    backgroundColor: '#101923',
-                    width: '100%',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}>
-                  <Grid
-                    container
-                    sx={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
-                    <Grid
-                      item
-                      xs={9}
-                      sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <RuxCard className="control-display">
+                  <section>
+                    <div>
                       <h2>{ghz ? ghz.toString() : '0'}</h2>
                       <h2>{mhz ? mhz.toString() : '0'}</h2>
                       <h2>{khz ? khz.toString() : '0'}</h2>
-                    </Grid>
-                    <Grid
-                      item
-                      xs={3}
-                      sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    </div>
+                    <div>
                       <h2>GHz</h2>
                       <h2>MHz</h2>
                       <h2>KHz</h2>
-                    </Grid>
-                  </Grid>
-                </Box>
+                    </div >
+                  </section>
+                </RuxCard>
               </Grid>
               <Grid container item xs={2} sx={{ padding: '8px', justifyContent: 'space-around', alignItems: 'center' }}>
                 <Grid item xs={12}>
@@ -288,65 +266,43 @@ export const AnalyzerControl = (props) => {
             <Grid container sx={{ justifyContent: 'space-around' }} spacing={2}>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <RuxButton secondary onClick={() => handleNumberClicked(7)}>
-                  7
-                  </RuxButton>
+                  <RuxButton secondary onClick={() => handleNumberClicked(7)}>7</RuxButton>
                 </Grid>
                 <Grid item xs={4}>
-                  <RuxButton secondary onClick={() => handleNumberClicked(8)}>
-                  8
-                  </RuxButton>
+                  <RuxButton secondary onClick={() => handleNumberClicked(8)}>8</RuxButton>
                 </Grid>
                 <Grid item xs={4}>
-                  <RuxButton secondary onClick={() => handleNumberClicked(9)}>
-                  9
-                  </RuxButton>
+                  <RuxButton secondary onClick={() => handleNumberClicked(9)}>9</RuxButton>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <RuxButton secondary onClick={() => handleNumberClicked(4)}>
-                  4
-                  </RuxButton>
+                  <RuxButton secondary onClick={() => handleNumberClicked(4)}>4</RuxButton>
                 </Grid>
                 <Grid item xs={4}>
-                  <RuxButton secondary onClick={() => handleNumberClicked(5)}>
-                  5
-                  </RuxButton>
+                  <RuxButton secondary onClick={() => handleNumberClicked(5)}>5</RuxButton>
                 </Grid>
                 <Grid item xs={4}>
-                  <RuxButton secondary onClick={() => handleNumberClicked(6)}>
-                  6
-                  </RuxButton>
+                  <RuxButton secondary onClick={() => handleNumberClicked(6)}>6</RuxButton>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <RuxButton secondary onClick={() => handleNumberClicked(1)}>
-                  1
-                  </RuxButton>
+                  <RuxButton secondary onClick={() => handleNumberClicked(1)}>1</RuxButton>
                 </Grid>
                 <Grid item xs={4}>
-                  <RuxButton secondary onClick={() => handleNumberClicked(2)}>
-                  2
-                  </RuxButton>
+                  <RuxButton secondary onClick={() => handleNumberClicked(2)}>2</RuxButton>
                 </Grid>
                 <Grid item xs={4}>
-                  <RuxButton secondary onClick={() => handleNumberClicked(3)}>
-                  3
-                  </RuxButton>
+                  <RuxButton secondary onClick={() => handleNumberClicked(3)}>3</RuxButton>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <RuxButton secondary onClick={() => handleNumberClicked('-')}>
-                  -
-                  </RuxButton>
+                  <RuxButton secondary onClick={() => handleNumberClicked('-')}>-</RuxButton>
                 </Grid>
                 <Grid item xs={4}>
-                  <RuxButton secondary onClick={() => handleNumberClicked(0)}>
-                  0
-                  </RuxButton>
+                  <RuxButton secondary onClick={() => handleNumberClicked(0)}>0</RuxButton>
                 </Grid>
                 <Grid item xs={4}>
                   <RuxButton secondary onClick={() => handleNumberClicked('.')}>
@@ -356,22 +312,17 @@ export const AnalyzerControl = (props) => {
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={5}>
-                  <RuxButton secondary onClick={() => handleNumberClicked('bksp')}>
-                  bskp
-                  </RuxButton>
+                  <RuxButton secondary onClick={() => handleNumberClicked('bksp')}>bskp</RuxButton>
                 </Grid>
                 <Grid item xs={3}></Grid>
                 <Grid item xs={4}>
-                  <RuxButton secondary onClick={() => handleNumberClicked('C')}>
-                    C
-                  </RuxButton>
+                  <RuxButton secondary onClick={() => handleNumberClicked('C')}>C</RuxButton>
                 </Grid>
               </Grid>
             </Grid>
           </Grid>
         </Grid>
       </Box>
-    </Box>
   );
 };
 

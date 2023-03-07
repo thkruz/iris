@@ -160,7 +160,7 @@ export const AntennaInput = ({ unit }) => {
               <RuxSwitch
                 label='Auto-Track'
                 checked={!inputData.operational ? false : inputData.track}
-                onRuxchange={(e) => {
+                onRuxchange={() => {
                   if (!inputData.operational) {
                     setErrorActive(true);
                     playErrorSound();
