@@ -28,7 +28,7 @@ rux-select.antenna-select::part(label) {
 }
 
 .control-display section div {
-  flex-grow: 1;
+  width: 50%;
   display: flex;
   flex-flow: column;
   gap: 2rem;

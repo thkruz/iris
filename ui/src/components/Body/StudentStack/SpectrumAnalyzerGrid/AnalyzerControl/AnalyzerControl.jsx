@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { RuxButton, RuxCard, RuxPushButton } from '@astrouxds/react'
-import { Box, Grid } from '@mui/material';
+import {Grid } from '@mui/material';
 // import { AstroTheme } from '../../../../../themes/AstroTheme';
 import { PropTypes } from 'prop-types';
 // import { PhysicalButton } from '../../../PhysicalButton';
@@ -34,7 +34,6 @@ import { selectSound } from '../../../../../audio';
 
 const controlsGridStyle = {
   display: 'flex',
-  backgroundColor: '#1b2d3e',
   padding: '10px',
   justifyContent: 'space-around',
   alignItems: 'center',
@@ -215,9 +214,9 @@ export const AnalyzerControl = (props) => {
   };
 
   return (
-    <Box id={'analyzerControlModalOverlay'} onClick={(e) => props.handleBackgroundClick(e)}>
+    <div id={'analyzerControlModalOverlay'} onClick={(e) => props.handleBackgroundClick(e)}>
         <Grid container sx={controlsGridStyle}>
-          <Grid item xs={6}>
+          <Grid item sm={5} xs={12}>
             <Grid container sx={{ justifyContent: 'space-around' }}>
               <Grid container item xs={10} sx={{ justifyContent: 'space-around' }}>
                 <RuxCard className="control-display">
@@ -236,31 +235,17 @@ export const AnalyzerControl = (props) => {
                 </RuxCard>
               </Grid>
               <Grid container item xs={2} sx={{ padding: '8px', justifyContent: 'space-around', alignItems: 'center' }}>
-                <Grid item xs={12}>
                   <RuxPushButton checked={numberSelection === 'ghz'} onRuxchange={handleGhzSelectClick} label={'<'} />
-                </Grid>
-                <Grid item mt={1} mb={1} xs={12}>
                   <RuxPushButton checked={numberSelection === 'mhz'} onRuxchange={handleMhzSelectClick} label={'<'} />
-                </Grid>
-                <Grid item xs={12}>
                   <RuxPushButton checked={numberSelection === 'khz'} onRuxchange={handleKhzSelectClick} label={'<'} />
-                </Grid>
               </Grid>
             </Grid>
           </Grid>
           <Grid container item sx={{ rowGap: '10px', padding: '20px' }} xs={2}>
-            <Grid item xs={12}>
               <RuxPushButton checked={controlSelection === 'freq'} onRuxchange={handleFreqClick} label={'Freq'} />
-            </Grid>
-            <Grid item xs={12}>
               <RuxPushButton checked={controlSelection === 'span'} onRuxchange={handleSpanClick} label={'Span'} />
-            </Grid>
-            <Grid item xs={12}>
               <RuxPushButton checked={isTraceOn} onRuxchange={handleHoldClick} label={'Trace'} />
-            </Grid>
-            <Grid item xs={12}>
               <RuxPushButton checked={isMarkerOn} onRuxchange={handleMarkerClick} label={'Marker'} />
-            </Grid>
           </Grid>
           <Grid item sx={{ padding: '20px' }} xs={4}>
             <Grid container sx={{ justifyContent: 'space-around' }} spacing={2}>
@@ -322,7 +307,7 @@ export const AnalyzerControl = (props) => {
             </Grid>
           </Grid>
         </Grid>
-      </Box>
+      </div>
   );
 };
 
