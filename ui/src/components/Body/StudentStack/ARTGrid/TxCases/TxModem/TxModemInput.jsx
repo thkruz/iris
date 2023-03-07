@@ -92,7 +92,7 @@ export const TxModemInput = ({ unitData, activeModem, currentRow, }) => {
           <Typography>Power consumption exceeds the budget.</Typography>
         </Box>
       ) : null}
-      <Grid container pb={2} height={'100%'}>
+      <Grid container height={'100%'}>
         <Grid container item xs={12} spacing={0.5}>
           <Grid container item xs={12} pt={0} alignItems='center' justify='center'>
             <Grid item xs={8} pl={2} pr={2}>
@@ -207,6 +207,7 @@ export const TxModemInput = ({ unitData, activeModem, currentRow, }) => {
         <Grid
           item
           xs={12}
+          mt={1}
           textAlign='right'
           alignItems={'flex-end'}
           justifyContent={'flex-end'}

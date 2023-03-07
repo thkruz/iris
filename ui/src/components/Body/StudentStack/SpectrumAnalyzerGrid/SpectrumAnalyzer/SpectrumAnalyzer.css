@@ -4,3 +4,7 @@ rux-card::part(body) {
 canvas {
   background-color: #000;
 }
+
+rux-select.antenna-select::part(label) {
+    min-width: var(--spacing-6);
+}

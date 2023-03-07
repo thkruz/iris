@@ -19,6 +19,17 @@ body {
   -ms-user-select: none;
   user-select: none;
 }
+h2 {
+font-style: normal;
+font-weight: 400;
+font-size: 24px;
+line-height: 28px;
+margin-block: 0;
+}
+
+p{
+  margin-top: 0;
+}
 
 #root {
   /* Full Screen  */
@@ -40,6 +51,7 @@ rux-input::part(form-field) {
 
 rux-select {
   display: flex;
+  align-items: center;
 }
 
 rux-select::part(select) {
@@ -49,8 +61,11 @@ rux-select::part(select) {
 
 rux-input::part(label), rux-select::part(label) {
   margin-right: var(--spacing-2);
-  text-align: right;
   min-width: var(--spacing-14);
+  margin-bottom: 0;
+  display: flex;
+  justify-content: end;
+  align-items: center;
 }
 
 rux-switch {

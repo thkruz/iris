@@ -27,7 +27,7 @@ export const TeamInfo = () => {
   }, []);
 
   return (
-    <RuxContainer>
+    <RuxContainer class="team-info">
       {state?.isAuthenticated ? (
         <>
           <div>

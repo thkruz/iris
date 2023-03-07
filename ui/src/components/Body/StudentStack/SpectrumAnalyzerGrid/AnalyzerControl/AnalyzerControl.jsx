@@ -1,42 +1,40 @@
 import React, { useEffect, useState } from 'react';
+import { RuxButton, RuxPushButton } from '@astrouxds/react'
 import { Box, Grid } from '@mui/material';
-import { AstroTheme } from '../../../../../themes/AstroTheme';
+// import { AstroTheme } from '../../../../../themes/AstroTheme';
 import { PropTypes } from 'prop-types';
-import { PhysicalButton } from '../../../PhysicalButton';
+// import { PhysicalButton } from '../../../PhysicalButton';
 import useSound from 'use-sound';
 import { selectSound } from '../../../../../audio';
 
-const popupStyle = {
-  backgroundColor: '#282a2b',
-  position: 'absolute',
-  minWidth: '60%',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  border: '8px solid transparent',
-  borderImageSource: 'url(./bezel.png)',
-  borderImageSlice: '30 fill',
-  borderImageOutset: 0,
-  zIndex: '9999',
-  color: 'white',
-  textAlign: 'center',
-  borderRadius: '10px',
-  boxShadow: '0px 0px 12px 5px rgba(0, 0, 0, 1)',
-};
+// const popupStyle = {
+//   backgroundColor: '#1b2d3e',
+//   position: 'absolute',
+//   minWidth: '60%',
+//   top: '50%',
+//   left: '50%',
+//   transform: 'translate(-50%, -50%)',
+//   border: '1px solid transparent',
+//   zIndex: '9999',
+//   color: 'white',
+//   textAlign: 'center',
+//   borderRadius: '3px',
+//   boxShadow: '0px 0px 12px 5px rgba(0, 0, 0, 1)',
+// };
 
-const fullscreenFadeStyle = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  zIndex: '9998',
-};
+// const fullscreenFadeStyle = {
+//   position: 'fixed',
+//   top: 0,
+//   left: 0,
+//   width: '100%',
+//   height: '100%',
+//   backgroundColor: 'rgba(0, 0, 0, 0.4)',
+//   zIndex: '9998',
+// };
 
 const controlsGridStyle = {
   display: 'flex',
-  backgroundColor: AstroTheme.palette.tertiary.light2,
+  backgroundColor: '#1b2d3e',
   padding: '10px',
   justifyContent: 'space-around',
   alignItems: 'center',
@@ -217,20 +215,22 @@ export const AnalyzerControl = (props) => {
   };
 
   return (
-    <Box id={'analyzerControlModalOverlay'} style={fullscreenFadeStyle} onClick={(e) => props.handleBackgroundClick(e)}>
-      <Box sx={popupStyle}>
+    <Box id={'analyzerControlModalOverlay'} onClick={(e) => props.handleBackgroundClick(e)}>
+      <Box>
         <Grid container sx={controlsGridStyle}>
-          <Grid item xs={4}>
+          <Grid item xs={6}>
             <Grid container sx={{ justifyContent: 'space-around' }}>
-              <Grid container item xs={8} sx={{ justifyContent: 'space-around' }}>
+              <Grid container item xs={10} sx={{ justifyContent: 'space-around' }}>
                 <Box
                   sx={{
-                    color: 'black',
+                    padding: '4px 8px',
+                    border: '1px solid #51555B',
+                    borderRadius: '3px',
+                    color: '#a4abb6',
+                    lineHeight: '20px',
+                    fontWeight: '400',
+                    backgroundColor: '#101923',
                     width: '100%',
-                    background: 'white',
-                    border: '2px solid',
-                    padding: '8px',
-                    borderColor: AstroTheme.palette.tertiary.dark,
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
@@ -240,7 +240,7 @@ export const AnalyzerControl = (props) => {
                     sx={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
                     <Grid
                       item
-                      xs={6}
+                      xs={9}
                       sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                       <h2>{ghz ? ghz.toString() : '0'}</h2>
                       <h2>{mhz ? mhz.toString() : '0'}</h2>
@@ -248,7 +248,7 @@ export const AnalyzerControl = (props) => {
                     </Grid>
                     <Grid
                       item
-                      xs={6}
+                      xs={3}
                       sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                       <h2>GHz</h2>
                       <h2>MHz</h2>
@@ -257,86 +257,114 @@ export const AnalyzerControl = (props) => {
                   </Grid>
                 </Box>
               </Grid>
-              <Grid container item xs={4} sx={{ padding: '8px', justifyContent: 'space-around', alignItems: 'center' }}>
+              <Grid container item xs={2} sx={{ padding: '8px', justifyContent: 'space-around', alignItems: 'center' }}>
                 <Grid item xs={12}>
-                  <PhysicalButton isEnabled={numberSelection === 'ghz'} onClick={handleGhzSelectClick} text={'<'} />
+                  <RuxPushButton checked={numberSelection === 'ghz'} onRuxchange={handleGhzSelectClick} label={'<'} />
+                </Grid>
+                <Grid item mt={1} mb={1} xs={12}>
+                  <RuxPushButton checked={numberSelection === 'mhz'} onRuxchange={handleMhzSelectClick} label={'<'} />
                 </Grid>
                 <Grid item xs={12}>
-                  <PhysicalButton isEnabled={numberSelection === 'mhz'} onClick={handleMhzSelectClick} text={'<'} />
-                </Grid>
-                <Grid item xs={12}>
-                  <PhysicalButton isEnabled={numberSelection === 'khz'} onClick={handleKhzSelectClick} text={'<'} />
+                  <RuxPushButton checked={numberSelection === 'khz'} onRuxchange={handleKhzSelectClick} label={'<'} />
                 </Grid>
               </Grid>
             </Grid>
           </Grid>
           <Grid container item sx={{ rowGap: '10px', padding: '20px' }} xs={2}>
             <Grid item xs={12}>
-              <PhysicalButton isEnabled={controlSelection === 'freq'} onClick={handleFreqClick} text={'Freq'} />
+              <RuxPushButton checked={controlSelection === 'freq'} onRuxchange={handleFreqClick} label={'Freq'} />
             </Grid>
             <Grid item xs={12}>
-              <PhysicalButton isEnabled={controlSelection === 'span'} onClick={handleSpanClick} text={'Span'} />
+              <RuxPushButton checked={controlSelection === 'span'} onRuxchange={handleSpanClick} label={'Span'} />
             </Grid>
             <Grid item xs={12}>
-              <PhysicalButton isEnabled={isTraceOn} onClick={handleHoldClick} text={'Trace'} />
+              <RuxPushButton checked={isTraceOn} onRuxchange={handleHoldClick} label={'Trace'} />
             </Grid>
             <Grid item xs={12}>
-              <PhysicalButton isEnabled={isMarkerOn} onClick={handleMarkerClick} text={'Marker'} />
+              <RuxPushButton checked={isMarkerOn} onRuxchange={handleMarkerClick} label={'Marker'} />
             </Grid>
           </Grid>
           <Grid item sx={{ padding: '20px' }} xs={4}>
             <Grid container sx={{ justifyContent: 'space-around' }} spacing={2}>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <PhysicalButton onClick={() => handleNumberClicked(7)} text={'7'} />
+                  <RuxButton secondary onClick={() => handleNumberClicked(7)}>
+                  7
+                  </RuxButton>
                 </Grid>
                 <Grid item xs={4}>
-                  <PhysicalButton onClick={() => handleNumberClicked(8)} text={'8'} />
+                  <RuxButton secondary onClick={() => handleNumberClicked(8)}>
+                  8
+                  </RuxButton>
                 </Grid>
                 <Grid item xs={4}>
-                  <PhysicalButton onClick={() => handleNumberClicked(9)} text={'9'} />
-                </Grid>
-              </Grid>
-              <Grid container item xs={12}>
-                <Grid item xs={4}>
-                  <PhysicalButton onClick={() => handleNumberClicked(4)} text={'4'} />
-                </Grid>
-                <Grid item xs={4}>
-                  <PhysicalButton onClick={() => handleNumberClicked(5)} text={'5'} />
-                </Grid>
-                <Grid item xs={4}>
-                  <PhysicalButton onClick={() => handleNumberClicked(6)} text={'6'} />
+                  <RuxButton secondary onClick={() => handleNumberClicked(9)}>
+                  9
+                  </RuxButton>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <PhysicalButton onClick={() => handleNumberClicked(1)} text={'1'} />
+                  <RuxButton secondary onClick={() => handleNumberClicked(4)}>
+                  4
+                  </RuxButton>
                 </Grid>
                 <Grid item xs={4}>
-                  <PhysicalButton onClick={() => handleNumberClicked(2)} text={'2'} />
+                  <RuxButton secondary onClick={() => handleNumberClicked(5)}>
+                  5
+                  </RuxButton>
                 </Grid>
                 <Grid item xs={4}>
-                  <PhysicalButton onClick={() => handleNumberClicked(3)} text={'3'} />
+                  <RuxButton secondary onClick={() => handleNumberClicked(6)}>
+                  6
+                  </RuxButton>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
-                  <PhysicalButton onClick={() => handleNumberClicked('-')} text={'-'} />
+                  <RuxButton secondary onClick={() => handleNumberClicked(1)}>
+                  1
+                  </RuxButton>
                 </Grid>
                 <Grid item xs={4}>
-                  <PhysicalButton onClick={() => handleNumberClicked(0)} text={'0'} />
+                  <RuxButton secondary onClick={() => handleNumberClicked(2)}>
+                  2
+                  </RuxButton>
                 </Grid>
                 <Grid item xs={4}>
-                  <PhysicalButton onClick={() => handleNumberClicked('.')} text={'.'} />
+                  <RuxButton secondary onClick={() => handleNumberClicked(3)}>
+                  3
+                  </RuxButton>
+                </Grid>
+              </Grid>
+              <Grid container item xs={12}>
+                <Grid item xs={4}>
+                  <RuxButton secondary onClick={() => handleNumberClicked('-')}>
+                  -
+                  </RuxButton>
+                </Grid>
+                <Grid item xs={4}>
+                  <RuxButton secondary onClick={() => handleNumberClicked(0)}>
+                  0
+                  </RuxButton>
+                </Grid>
+                <Grid item xs={4}>
+                  <RuxButton secondary onClick={() => handleNumberClicked('.')}>
+                  .
+                  </RuxButton>
                 </Grid>
               </Grid>
               <Grid container item xs={12}>
                 <Grid item xs={5}>
-                  <PhysicalButton onClick={() => handleNumberClicked('bksp')} text={'bskp'} />
+                  <RuxButton secondary onClick={() => handleNumberClicked('bksp')}>
+                  bskp
+                  </RuxButton>
                 </Grid>
                 <Grid item xs={3}></Grid>
                 <Grid item xs={4}>
-                  <PhysicalButton onClick={() => handleNumberClicked('C')} text={'C'} />
+                  <RuxButton secondary onClick={() => handleNumberClicked('C')}>
+                    C
+                  </RuxButton>
                 </Grid>
               </Grid>
             </Grid>

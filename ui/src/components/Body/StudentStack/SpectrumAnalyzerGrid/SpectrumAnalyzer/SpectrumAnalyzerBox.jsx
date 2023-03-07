@@ -1,7 +1,7 @@
 import { Grid, Typography } from '@mui/material';
 import { SpectrumAnalyzer } from '../../../../';
 import React, { useLayoutEffect, useState } from 'react';
-import { RuxContainer, RuxButton, RuxButtonGroup, RuxPushButton, RuxIcon, RuxDialog, RuxTooltip, RuxSelect, RuxOption,  } from '@astrouxds/react'
+import { RuxContainer, RuxButton, RuxButtonGroup, RuxPushButton, RuxIcon, RuxTooltip, RuxSelect, RuxOption, } from '@astrouxds/react'
 //import { AstroTheme } from '../../../../../themes/AstroTheme.js';
 import { useEffect } from 'react';
 import { satellites } from '../../../../../constants';
@@ -219,15 +219,13 @@ export const SpectrumAnalyzerBox = (props) => {
 
   return (
     <>
-      <RuxDialog>
-        <SpecAHelp modalState={isHelpModalActive} setModalState={setIsHelpModalActive} />
-      </RuxDialog>
+      <SpecAHelp modalState={isHelpModalActive} setModalState={setIsHelpModalActive} />
       <RuxContainer>
         <Grid container spacing={0}>
-          <Grid item xs={11} pl={20}>
+          <Grid item xs={11} textAlign={'center'}>
             <Typography>Span: {sewAppCtx.sewApp[`specA${whichSpecA}`]?.bw / 1e6} MHz</Typography>
           </Grid>
-          <Grid item xs={1}>
+          <Grid item xs={1} display='flex'>
             <RuxTooltip message='Spectrum Analyzer Help' placement='top'>
               <RuxIcon
                 icon='help-outline'
@@ -255,53 +253,59 @@ export const SpectrumAnalyzerBox = (props) => {
           <Grid item xs={12}>
             <Typography>CF: {sewAppCtx.sewApp[`specA${whichSpecA}`]?.centerFreq / 1e6} MHz</Typography>
           </Grid>
-            <RuxSelect 
-              label="Ant" 
-              htmlFor='Antenna' 
-              value={sewAppCtx.sewApp[`specA${whichSpecA}`]?.antenna_id} 
-              name='Antenna'
-              onRuxchange={(e) =>
-                updateSpecAwAntennaInfo(parseInt(e.target.value), sewAppCtx.sewApp[`specA${whichSpecA}`], false)
-              }
-              >
-              <RuxOption value={1} label="1">1</RuxOption>
-              <RuxOption value={2} label="2">2</RuxOption>
-            </RuxSelect>
-            <RuxButtonGroup style={{ marginLeft: 'auto', marginTop: 'auto', }} hAlign='right'>
-              <RuxTooltip 
-                placement='top'
-                message='Open Spectrum Analyzer Configuration'>
-                <RuxButton
-                  style={{ marginLeft: '8px', marginRight: '8px', }}
-                  onClick={() => {
-                    playSelectSound();
-                    props.handleConfigClick(
-                      sewAppCtx.sewApp[`specA${whichSpecA}`],
-                      sewAppCtx.sewApp[`specA${whichSpecA}`]
-                    );
-                  }}>
-                  Config
-                </RuxButton>
-              </RuxTooltip>
-              <RuxTooltip
-                placement='top'
-                message={
-                  sewAppCtx.sewApp[`specA${whichSpecA}`]?.isRfMode
-                    ? 'Swith to Intermediate Frequency'
-                    : 'Switch to Radio Frequency'
-                }>
-                <RuxPushButton style={{ marginRight: '8px', }} label={sewAppCtx.sewApp[`specA${whichSpecA}`]?.isRfMode ? 'RF' : 'IF'} onRuxchange={handleRfClicked} />
-              </RuxTooltip>
-              <RuxTooltip
-                placement='top-start'
-                message={
-                  sewAppCtx.sewApp[`specA${whichSpecA}`]?.isPause
-                    ? 'Unpause the Spectrum Analyzer'
-                    : 'Pause the Spectrum Analyzer'
-                }>
-                <RuxPushButton label="Pause" onRuxchange={handlePauseClicked} />
-              </RuxTooltip>
-            </RuxButtonGroup>
+          <Grid container xs={12}>
+            <Grid item xs={3}>
+              <RuxSelect 
+                label="Ant"
+                className='antenna-select'
+                value={sewAppCtx.sewApp[`specA${whichSpecA}`]?.antenna_id} 
+                name='Antenna'
+                onRuxchange={(e) =>
+                  updateSpecAwAntennaInfo(parseInt(e.target.value), sewAppCtx.sewApp[`specA${whichSpecA}`], false)
+                }
+                >
+                <RuxOption value={1} label="1">1</RuxOption>
+                <RuxOption value={2} label="2">2</RuxOption>
+              </RuxSelect>
+            </Grid>
+            <Grid item xs={9}>
+              <RuxButtonGroup style={{ marginLeft: 'auto', marginTop: 'auto', }} hAlign='right'>
+                <RuxTooltip 
+                  placement='top'
+                  message='Open Spectrum Analyzer Configuration'>
+                  <RuxButton
+                    style={{ marginLeft: '8px', marginRight: '8px', }}
+                    onClick={() => {
+                      playSelectSound();
+                      props.handleConfigClick(
+                        sewAppCtx.sewApp[`specA${whichSpecA}`],
+                        sewAppCtx.sewApp[`specA${whichSpecA}`]
+                      );
+                    }}>
+                    Config
+                  </RuxButton>
+                </RuxTooltip>
+                <RuxTooltip
+                  placement='top'
+                  message={
+                    sewAppCtx.sewApp[`specA${whichSpecA}`]?.isRfMode
+                      ? 'Swith to Intermediate Frequency'
+                      : 'Switch to Radio Frequency'
+                  }>
+                  <RuxPushButton style={{ marginRight: '8px', }} label={sewAppCtx.sewApp[`specA${whichSpecA}`]?.isRfMode ? 'RF' : 'IF'} onRuxchange={handleRfClicked} />
+                </RuxTooltip>
+                <RuxTooltip
+                  placement='top-start'
+                  message={
+                    sewAppCtx.sewApp[`specA${whichSpecA}`]?.isPause
+                      ? 'Unpause the Spectrum Analyzer'
+                      : 'Pause the Spectrum Analyzer'
+                  }>
+                  <RuxPushButton label="Pause" onRuxchange={handlePauseClicked} />
+                </RuxTooltip>
+              </RuxButtonGroup>
+            </Grid>
+          </Grid>
         </Grid>
       </RuxContainer>
     </>

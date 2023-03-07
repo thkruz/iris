@@ -1,0 +1,4 @@
+.team-info::part(body){
+    display: flex;
+    justify-content: space-between;
+}

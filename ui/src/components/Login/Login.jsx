@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { ServerSelect } from './ServerSelect';
 import { TeamSelect } from './TeamSelect';
 import { JoinButton } from './JoinButton';
+import "./login.css";
 
 export const Login = () => {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ export const Login = () => {
   };
 
   return (
-      <RuxContainer style={{ margin: '16px', }}>
+      <RuxContainer class="login-container">
         <RuxCard style={{ width: 'fitContent', margin: 'auto', }}>
           <Box
             style={{ display: 'flex', justifyContent: 'center', }}

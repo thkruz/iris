@@ -1,5 +1,6 @@
 import { Grid } from '@mui/material';
 import React, { useState } from 'react';
+import { RuxDialog } from '@astrouxds/react'
 import { SpectrumAnalyzerBox, AnalyzerControl } from '../../../';
 
 export const SpectrumAnalyzerGrid = () => {
@@ -58,7 +59,9 @@ export const SpectrumAnalyzerGrid = () => {
         ))}
       </Grid>
       {isConfigOpen ? (
-        <AnalyzerControl currentSpecAnalyzer={currentSpecAnalyzer} handleBackgroundClick={handleBackgroundClick} />
+        <RuxDialog open={isConfigOpen} click-to-close onRuxdialogclosed={() => setIsConfigOpen(false)} header='Spectrum Analyzer Config'>
+          <AnalyzerControl currentSpecAnalyzer={currentSpecAnalyzer} handleBackgroundClick={handleBackgroundClick} />
+        </RuxDialog>
       ) : null}
     </>
   );

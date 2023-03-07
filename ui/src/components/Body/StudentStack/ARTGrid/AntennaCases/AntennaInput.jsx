@@ -83,10 +83,7 @@ export const AntennaInput = ({ unit }) => {
       <Grid container pl={2} height={'100%'}>
         <Grid container item xs={12} spacing={0.5}>
           <Grid container item xs={12}>
-            {/* <Grid item xs={2}>
-              <Typography textAlign={'right'}>Target</Typography>
-            </Grid> */}
-            <Grid item xs={true}>
+            <Grid item pr={2} xs={7}>
               <RuxSelect 
                 name='Target'
                 size='small'
@@ -102,7 +99,6 @@ export const AntennaInput = ({ unit }) => {
                 })}
                 </RuxSelect>
             </Grid>
-            <Grid item xs={1}></Grid>
             <Grid item xs={true}>
               <Card
                 variant='outlined'
@@ -113,7 +109,7 @@ export const AntennaInput = ({ unit }) => {
             </Grid>
           </Grid>
           <Grid container item xs={12}>
-            <Grid item xs={true}>
+            <Grid item pr={2} xs={7}>
             <RuxSelect 
                 name='band'
                 size='small'
@@ -129,7 +125,6 @@ export const AntennaInput = ({ unit }) => {
                 })}
                 </RuxSelect>
             </Grid>
-            <Grid item xs={1}></Grid>
             <Grid item xs={true}>
               <Card
                 variant='outlined'
@@ -140,7 +135,7 @@ export const AntennaInput = ({ unit }) => {
             </Grid>
           </Grid>
           <Grid container item xs={12}>
-            <Grid item xs={true}>
+            <Grid item pr={2} xs={7}>
               <RuxInput
                 name='offset'
                 size='small'
@@ -151,7 +146,6 @@ export const AntennaInput = ({ unit }) => {
                   handleInputChange({ param: 'offset', val: e.target.value });
                 }}></RuxInput>
             </Grid>
-            <Grid item xs={1}></Grid>
             <Grid item xs={true}>
               <Card
                 variant='outlined'
@@ -165,8 +159,8 @@ export const AntennaInput = ({ unit }) => {
             <Grid item xs={true}>
               <RuxSwitch
                 label='Auto-Track'
-                checked={inputData.track}
-                onRuxchange={() => {
+                checked={!inputData.operational ? false : inputData.track}
+                onRuxchange={(e) => {
                   if (!inputData.operational) {
                     setErrorActive(true);
                     playErrorSound();
@@ -188,7 +182,6 @@ export const AntennaInput = ({ unit }) => {
                   );
                 }}></RuxSwitch>
             </Grid>
-            <Grid item xs={1}></Grid>
             <Grid item xs={true}></Grid>
           </Grid>
         </Grid>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Grid, Tooltip } from '@mui/material';
+import { RuxTooltip } from '@astrouxds/react'
+import { Grid } from '@mui/material';
 import { AntennaController } from '../../../..';
 import { EquipmentCase } from '../EquipmentCase';
 import AntennaHelp from '../../HelpModals/AntennaHelp';
@@ -46,10 +47,10 @@ export const AntennaCase = ({ unit }) => {
         setLockColor(AstroTheme.palette.success.main);
         setLockState('Locked');
       } else if (!antenna.locked && antenna.track) {
-        setLockColor(AstroTheme.palette.caution.main);
+        setLockColor(AstroTheme.palette.standby.main);
         setLockState('Tracking');
       } else if (!antenna.locked && !antenna.track) {
-        setLockColor(AstroTheme.palette.critical.main);
+        setLockColor(AstroTheme.palette.disabled.main);
         setLockState('Unlocked');
       }
     }
@@ -63,12 +64,12 @@ export const AntennaCase = ({ unit }) => {
         unit={unit}
         icon={
           <>
-            <Tooltip title={antState}>
+            <RuxTooltip message={antState}>
               <SettingsInputAntennaIcon sx={{ color: antColor }} />
-            </Tooltip>
-            <Tooltip title={lockState}>
+            </RuxTooltip>
+            <RuxTooltip message={lockState}>
               <LockIcon sx={{ color: lockColor }} />
-            </Tooltip>
+            </RuxTooltip>
           </>
         }>
         <AntennaController unit={unit} />

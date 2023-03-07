@@ -41,7 +41,7 @@ export const RxModemInput = ({ currentRow }) => {
   };
 
   return (
-    <Grid container pb={2} height={'100%'}>
+    <Grid container height={'100%'}>
       <Grid container item ml={2} xs={12} spacing={0.5}>
         <Grid container item xs={12} alignItems='center' justify='center'>
           <Grid item xs={7} pr={2}>
@@ -153,6 +153,7 @@ export const RxModemInput = ({ currentRow }) => {
         <Grid
           item
           xs={12}
+          mt={1}
           textAlign='right'
           alignItems={'flex-end'}
           justifyContent={'flex-end'}

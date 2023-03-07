@@ -1,5 +1,6 @@
 import React from 'react';
-import { Grid, Tooltip } from '@mui/material';
+import { RuxTooltip } from '@astrouxds/react'
+import { Grid } from '@mui/material';
 import { TxModem } from '../../../..';
 import { EquipmentCase } from '../EquipmentCase';
 import PodcastsIcon from '@mui/icons-material/Podcasts';
@@ -28,11 +29,11 @@ export const TxCase = ({ unit }) => {
         helpComponent={TxCaseHelp}
         unit={unit}
         icon={
-          <Tooltip title={isTransmitting ? 'Transmitting' : 'Not Transmitting'}>
+          <RuxTooltip message={isTransmitting ? 'Transmitting' : 'Not Transmitting'}>
             <PodcastsIcon
-              sx={{ color: isTransmitting ? AstroTheme.palette.normal.main : AstroTheme.palette.standby.main }}
+              sx={{ color: isTransmitting ? AstroTheme.palette.normal.main : AstroTheme.palette.disabled.main }}
             />
-          </Tooltip>
+          </RuxTooltip>
         }>
         <TxModem unit={unit} />
       </EquipmentCase>

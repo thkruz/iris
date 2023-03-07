@@ -2,9 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactPlayer from 'react-player';
 import PropTypes from 'prop-types';
 import { RuxContainer, RuxButton, RuxPushButton, RuxSelect, RuxOption, RuxInput } from '@astrouxds/react'
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import './Injects.css';
-import { AstroTheme } from '../../../../themes/AstroTheme';
 import { satellites } from '../../../../constants';
 import { CRUDdataTable } from '../../../../crud/crud';
 import { useSewApp } from '../../../../context/sewAppContext';
@@ -18,18 +17,13 @@ export const Injects = () => {
         .then(res => sewAppCtx.updateSignal(res))
   }, [])
   
-  const theme = AstroTheme;
+ 
   const [activeModem, setActiveModem] = useState(0);
 
   const sxCaseId = {
     color: 'white',
     margin: '8px',
     textAlign: 'center',
-  };
-  const sxModemButtonBox = {
-    backgroundColor: theme.palette.tertiary.light3,
-    borderRadius: '5px',
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.2)',
   };
   const sxValues = {
     fontWeight: 'bold',
@@ -46,20 +40,6 @@ export const Injects = () => {
     width: '400px',
     height: '400px',
   };
-  // const sxTransmit = {
-  //   cursor: 'pointer',
-  //   margin: '8px',
-  //   boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.5)',
-  //   border: '1px solid red',
-  //   backgroundColor: sewAppCtx.signal[activeModem]?.operational ? 'red' : theme.palette.tertiary.light3,
-  //   color: sewAppCtx.signal[activeModem]?.operational ? 'white' : 'black',
-  //   '&:hover': {
-  //     backgroundColor: sewAppCtx.signal[activeModem]?.operational
-  //       ? theme.palette.error.main
-  //       : theme.palette.critical.main,
-  //     color: sewAppCtx.signal[activeModem]?.operational ? 'black' : 'white',
-  //   },
-  // };
 
   // Modem Case Id
   const sidebar = [];
@@ -73,7 +53,7 @@ export const Injects = () => {
   const RxCaseId = () => <Box sx={sxCaseId}>{sidebar}</Box>;
   // Modem selector buttons
   const RxModemButtonBox = () => (
-    <RuxContainer sx={sxModemButtonBox}>
+    <RuxContainer class="modem-button-box">
       {sewAppCtx.signal
         .sort((a, b) => a.id - b.id)
         .map((x, index) => (
@@ -81,7 +61,13 @@ export const Injects = () => {
         ))}
     </RuxContainer>
   );
+
   const RxModemButton = ({ modem }) => {
+    const el = useRef(null)
+      useEffect(()=>{
+        activeModem + 1 === modem ? el.current.classList.add('isActive') : el.current.classList.remove('isActive')
+        sewAppCtx.signal[sewAppCtx.signal.map((x) => x.id).indexOf(modem)].operational ? el.current.classList.add('isTransmitting') : el.current.classList.remove('isTransmitting')
+      }, [activeModem, modem])
     const timer = useRef();
 
     const onClickHandler = (e) => {
@@ -96,24 +82,12 @@ export const Injects = () => {
       }
     };
     return (
-      <Button
-        sx={{
-          backgroundColor: modem - 1 == activeModem ? theme.palette.primary.dark : theme.palette.primary.light2,
-          color: modem - 1 == activeModem ? 'white' : 'black',
-          border: sewAppCtx.signal[sewAppCtx.signal.map((x) => x.id).indexOf(modem)].operational
-            ? '2px solid red'
-            : '2px solid ' + theme.palette.primary.main,
-          margin: '8px',
-          cursor: 'pointer',
-          '&:hover': {
-            backgroundColor: theme.palette.primary.light3,
-          },
-        }}
+      <RuxButton secondary
         onClick={(e) => {
           onClickHandler(e);
-        }}>
+        }} ref={el}>
         {modem}
-      </Button>
+      </RuxButton>
     );
   };
   RxModemButton.propTypes = { modem: PropTypes.number };
@@ -141,8 +115,6 @@ export const Injects = () => {
       sewAppCtx.updateSignal(tmpData);
       CRUDdataTable({ method: 'PATCH', path: 'signal', data: tmpData[index] });
     };
-
-    console.log(sewAppCtx.signal)
 
     return (
       <RuxContainer style={{ marginRight: '0', marginLeft: '0' }}>

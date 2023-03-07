@@ -12,10 +12,9 @@
   text-decoration: none;
 }
 
-.main-help::part(dialog){
+rux-dialog::part(dialog){
   width: 60rem;
   max-width: 100%;
-  padding: var(--spacing-3) var(--spacing-4);
 }
 
 #light-dark-switch{margin-left: var(--spacing-2);}

@@ -1,6 +1,7 @@
 import React from 'react';
+import { RuxTooltip } from '@astrouxds/react'
 import { RxModem } from '../../../..';
-import { Grid, Tooltip } from '@mui/material';
+import { Grid } from '@mui/material';
 import { EquipmentCase } from '../EquipmentCase';
 import SignalCellularAltIcon from '@mui/icons-material/SignalCellularAlt';
 import { AstroTheme } from '../../../../../themes/AstroTheme';
@@ -35,7 +36,7 @@ export const RxCase = ({ unit }) => {
       color = AstroTheme.palette.critical.main;
       description = 'Signal Denied';
     } else {
-      color = AstroTheme.palette.standby.main;
+      color = AstroTheme.palette.disabled.main;
       description = 'Signal Not Found';
     }
     return {
@@ -52,9 +53,9 @@ export const RxCase = ({ unit }) => {
         helpComponent={RxCaseHelp}
         unit={unit}
         icon={
-          <Tooltip title={description}>
+          <RuxTooltip message={description}>
             <SignalCellularAltIcon sx={{ color: color }} />
-          </Tooltip>
+          </RuxTooltip>
         }>
         <RxModem unit={unit} />
       </EquipmentCase>

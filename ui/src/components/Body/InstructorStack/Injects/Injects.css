@@ -21,9 +21,21 @@ label {
 }
 
 .instructor_wrapper rux-container {
-  margin: 16px;
+  margin: 1rem;
+  height: calc(100% - 2rem);
+}
+
+.instructor_wrapper rux-container::part(container){
+  height:100%;
+  box-sizing: border-box;
 }
 
 rux-input.instructor_input::part(label), rux-select.instructor_select::part(label) {
   min-width: var(--spacing-24);
+}
+
+.modem-button-box rux-button{
+  width: 3rem;
+  margin: .25rem;
+
 }

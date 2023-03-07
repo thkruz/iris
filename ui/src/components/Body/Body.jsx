@@ -2,6 +2,7 @@
 
 //import { Paper } from '@mui/material';
 import React from 'react';
+import "./body.css";
 //import { AstroTheme } from '../../themes/AstroTheme';
 //import { RuxContainer } from '@astrouxds/react'
 // Contains the main part of the app
@@ -19,5 +20,5 @@ export const Body = props => {
   //   backgroundColor: theme.palette.tertiary.light3,
   // };
   // return <Paper sx={sxBody}>{props.children}</Paper>;
-  return <div>{props.children}</div>
+  return <div className="body">{props.children}</div>
 };
