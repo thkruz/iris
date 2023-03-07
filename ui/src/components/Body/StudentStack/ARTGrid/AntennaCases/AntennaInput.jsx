@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { RuxButton, RuxPushButton, RuxTooltip, RuxSwitch, RuxNotification, RuxSelect, RuxOption, RuxInput } from '@astrouxds/react'
 import PropTypes from 'prop-types';
-import { Typography, Grid, Card } from '@mui/material';
+import { Grid, Card } from '@mui/material';
 //import { AstroTheme } from '../../../../../themes/AstroTheme';
 import { outputStyle } from '../../../../styles';
 import { useSewApp } from '../../../../../context/sewAppContext';
@@ -77,8 +77,14 @@ export const AntennaInput = ({ unit }) => {
 
   return (
     <>
-      <RuxNotification open={isErrorActive} status='critical' closeAfter={3} hideClose>
-        <Typography>Antenna is currently not operational. Try enabling it first!</Typography>
+      <RuxNotification 
+        open={isErrorActive} 
+        status='critical' 
+        closeAfter={3}
+        hideClose 
+        onRuxclosed={() => { setErrorActive(false) }}
+        >
+        Antenna is currently not operational. Try enabling it first!
       </RuxNotification>
       <Grid container pl={2} height={'100%'}>
         <Grid container item xs={12} spacing={0.5}>
@@ -159,15 +165,15 @@ export const AntennaInput = ({ unit }) => {
             <Grid item xs={true}>
               <RuxSwitch
                 label='Auto-Track'
-                checked={!inputData.operational ? false : inputData.track}
+                checked={inputData.track}
                 onRuxchange={() => {
                   if (!inputData.operational) {
                     setErrorActive(true);
                     playErrorSound();
-                    if (errorResetTimeout) clearTimeout(errorResetTimeout);
-                    errorResetTimeout = setTimeout(() => {
-                      setErrorActive(false);
-                    }, popupTimeoutTime);
+                    // if (errorResetTimeout) clearTimeout(errorResetTimeout);
+                    // errorResetTimeout = setTimeout(() => {
+                    //   setErrorActive(false);
+                    // }, popupTimeoutTime);
                     return;
                   }
                   const newValue = !inputData.track;
