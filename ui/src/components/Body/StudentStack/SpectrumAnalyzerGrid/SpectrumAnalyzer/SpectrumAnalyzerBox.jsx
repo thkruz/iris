@@ -1,4 +1,4 @@
-import { Grid, Typography } from '@mui/material';
+import { Grid} from '@mui/material';
 import { SpectrumAnalyzer } from '../../../../';
 import React, { useLayoutEffect, useState } from 'react';
 import { RuxContainer, RuxButton, RuxButtonGroup, RuxPushButton, RuxIcon, RuxTooltip, RuxSelect, RuxOption, } from '@astrouxds/react'
@@ -223,9 +223,9 @@ export const SpectrumAnalyzerBox = (props) => {
       <RuxContainer>
         <Grid container spacing={0}>
           <Grid item xs={11} textAlign={'center'}>
-            <Typography>Span: {sewAppCtx.sewApp[`specA${whichSpecA}`]?.bw / 1e6} MHz</Typography>
+            <p>Span: {sewAppCtx.sewApp[`specA${whichSpecA}`]?.bw / 1e6} MHz</p>
           </Grid>
-          <Grid item xs={1} display='flex'>
+          <Grid item xs={1} style={{display: 'flex', justifyContent: 'flex-end'}}>
             <RuxTooltip message='Spectrum Analyzer Help' placement='top'>
               <RuxIcon
                 icon='help-outline'
@@ -237,21 +237,15 @@ export const SpectrumAnalyzerBox = (props) => {
               </RuxIcon>
             </RuxTooltip>
           </Grid>
-          <Grid container item sx={{ display: 'flex', alignContent: 'space-between' }} xs={2}>
-            <Grid item xs={12}>
-              <Typography>{sewAppCtx.sewApp[`specA${whichSpecA}`]?.maxDecibels} (dB)</Typography>
-            </Grid>
-            <Grid item xs={12}>
-              <Typography>{sewAppCtx.sewApp[`specA${whichSpecA}`]?.minDecibels} (dB)</Typography>
-            </Grid>
+          <Grid item sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', textAlign: 'right', paddingRight: '4px' }} xs={2}>
+              <p>{sewAppCtx.sewApp[`specA${whichSpecA}`]?.maxDecibels} (dB)</p>
+              <p>{sewAppCtx.sewApp[`specA${whichSpecA}`]?.minDecibels} (dB)</p>
           </Grid>
-          <Grid container sx={canvasContainer} item xs={10}>
-
+          <Grid sx={canvasContainer} item xs={10}>
               <canvas id={props.canvasId} />
-
           </Grid>
-          <Grid item xs={12}>
-            <Typography>CF: {sewAppCtx.sewApp[`specA${whichSpecA}`]?.centerFreq / 1e6} MHz</Typography>
+          <Grid item xs={12} style={{textAlign: 'center'}}>
+            <p>CF: {sewAppCtx.sewApp[`specA${whichSpecA}`]?.centerFreq / 1e6} MHz</p>
           </Grid>
           <Grid container xs={12}>
             <Grid item xs={3}>
