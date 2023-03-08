@@ -4,7 +4,6 @@ import { Grid } from '@mui/material';
 import { TxModem } from '../../../..';
 import { EquipmentCase } from '../EquipmentCase';
 import PodcastsIcon from '@mui/icons-material/Podcasts';
-import { AstroTheme } from '../../../../../themes/AstroTheme';
 import { useSewApp } from '../../../../../context/sewAppContext';
 import { PropTypes } from 'prop-types';
 import TxCaseHelp from './../../HelpModals/TxCaseHelp';
@@ -31,7 +30,7 @@ export const TxCase = ({ unit }) => {
         icon={
           <RuxTooltip message={isTransmitting ? 'Transmitting' : 'Not Transmitting'}>
             <PodcastsIcon
-              sx={{ color: isTransmitting ? AstroTheme.palette.normal.main : AstroTheme.palette.disabled.main }}
+              sx={{ color: isTransmitting ? 'var(--color-status-normal)' : 'var(--color-status-off)' }}
             />
           </RuxTooltip>
         }>

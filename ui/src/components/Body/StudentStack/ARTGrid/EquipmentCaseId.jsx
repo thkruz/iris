@@ -6,7 +6,7 @@ export const EquipmentCaseId = ({ unit, icon }) => {
   return (
     <Box textAlign={'center'}>
       {icon}
-      <Typography sx={{ color: 'white', fontWeight: 700, fontFamily: 'Nasa' }} fontSize={20}>
+      <Typography style={{ color: 'var(--color-text-primary)', fontWeight: 'var(--font-weights-bold)', fontFamily: 'Nasa' }} fontSize={20}>
         {unit.toString()}
       </Typography>
     </Box>

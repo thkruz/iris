@@ -1,36 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { RuxButton, RuxCard, RuxPushButton } from '@astrouxds/react'
-import {Grid } from '@mui/material';
-// import { AstroTheme } from '../../../../../themes/AstroTheme';
+import { Grid } from '@mui/material';
 import { PropTypes } from 'prop-types';
-// import { PhysicalButton } from '../../../PhysicalButton';
 import useSound from 'use-sound';
 import { selectSound } from '../../../../../audio';
-
-// const popupStyle = {
-//   backgroundColor: '#1b2d3e',
-//   position: 'absolute',
-//   minWidth: '60%',
-//   top: '50%',
-//   left: '50%',
-//   transform: 'translate(-50%, -50%)',
-//   border: '1px solid transparent',
-//   zIndex: '9999',
-//   color: 'white',
-//   textAlign: 'center',
-//   borderRadius: '3px',
-//   boxShadow: '0px 0px 12px 5px rgba(0, 0, 0, 1)',
-// };
-
-// const fullscreenFadeStyle = {
-//   position: 'fixed',
-//   top: 0,
-//   left: 0,
-//   width: '100%',
-//   height: '100%',
-//   backgroundColor: 'rgba(0, 0, 0, 0.4)',
-//   zIndex: '9998',
-// };
 
 const controlsGridStyle = {
   display: 'flex',

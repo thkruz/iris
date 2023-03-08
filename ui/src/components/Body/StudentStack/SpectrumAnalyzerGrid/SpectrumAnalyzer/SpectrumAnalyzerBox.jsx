@@ -2,7 +2,6 @@ import { Grid} from '@mui/material';
 import { SpectrumAnalyzer } from '../../../../';
 import React, { useLayoutEffect, useState } from 'react';
 import { RuxContainer, RuxButton, RuxButtonGroup, RuxPushButton, RuxIcon, RuxTooltip, RuxSelect, RuxOption, } from '@astrouxds/react'
-//import { AstroTheme } from '../../../../../themes/AstroTheme.js';
 import { useEffect } from 'react';
 import { satellites } from '../../../../../constants';
 import PropTypes from 'prop-types';
@@ -11,7 +10,6 @@ import { useSewApp } from '../../../../../context/sewAppContext';
 import { githubCheck } from '../../../../../lib/github-check';
 import SpecAHelp from '../../HelpModals/SpecAHelp';
 import './SpectrumAnalyzer.css'
-// import { InstructionsIcon } from './../../HelpModals/InstructionsIcon';
 import useSound from 'use-sound';
 import { selectSound } from '../../../../../audio';
 
@@ -21,14 +19,7 @@ const specADataLocation = !githubCheck() ? `${ApiUrl}/data/spec_a` : './data/spe
 
 const canvasContainer = {
   position: 'relative',
-  // border: '8px solid transparent',
-  // borderImageSource: 'url(./bezel.png)',
-  // borderImageSlice: '30 fill',
-  // borderImageOutset: 0,
    overflow: 'hidden',
-  // boxShadow: '0px 0px 10px rgba(0,0,0,0.5)',
-  // backgroundColor: '#282a2b',
-  // borderRadius: '10px',
 };
 
 export const SpectrumAnalyzerBox = (props) => {

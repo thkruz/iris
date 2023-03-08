@@ -5,16 +5,15 @@ import { AntennaController } from '../../../..';
 import { EquipmentCase } from '../EquipmentCase';
 import AntennaHelp from '../../HelpModals/AntennaHelp';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
-import { AstroTheme } from '../../../../../themes/AstroTheme';
 import { PropTypes } from 'prop-types';
 import { useSewApp } from '../../../../../context/sewAppContext';
 import { useEffect } from 'react';
 import LockIcon from '@mui/icons-material/Lock';
 
 export const AntennaCase = ({ unit }) => {
-  const [antColor, setAntColor] = useState(AstroTheme.palette.standby.main);
+  const [antColor, setAntColor] = useState('var(--color-status-standby)');
   const [antState, setAntState] = useState('standby');
-  const [lockColor, setLockColor] = useState(AstroTheme.palette.standby.main);
+  const [lockColor, setLockColor] = useState('var(--color-status-standby)');
   const [lockState, setLockState] = useState('standby');
   const sewAppCtx = useSewApp();
 
@@ -24,18 +23,18 @@ export const AntennaCase = ({ unit }) => {
       let _color, _state;
 
       if (!antenna.operational) {
-        _color = AstroTheme.palette.disabled.main;
+        _color = 'var(--color-status-off)';
         _state = 'Not Operational';
       } else {
         if (antenna.loopback || (!antenna.loopback && antenna.hpa)) {
-          _color = AstroTheme.palette.success.main;
+          _color = 'var(--color-status-normal)';
           if (antenna.loopback) {
             _state = 'Loopback';
           } else {
             _state = 'Actively Transmitting';
           }
         } else {
-          _color = AstroTheme.palette.critical.main;
+          _color = 'var(--color-status-critical)';
           _state = 'No Power';
         }
       }
@@ -44,13 +43,13 @@ export const AntennaCase = ({ unit }) => {
       setAntState(_state);
 
       if (antenna.locked) {
-        setLockColor(AstroTheme.palette.success.main);
+        setLockColor('var(--color-status-normal)');
         setLockState('Locked');
       } else if (!antenna.locked && antenna.track) {
-        setLockColor(AstroTheme.palette.standby.main);
+        setLockColor('var(--color-status-standby)');
         setLockState('Tracking');
       } else if (!antenna.locked && !antenna.track) {
-        setLockColor(AstroTheme.palette.disabled.main);
+        setLockColor('var(--color-status-off)');
         setLockState('Unlocked');
       }
     }

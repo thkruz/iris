@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@astrouxds/react": "^7.8.0",
+    "@astrouxds/tokens": "^1.5.0",
     "@emotion/react": "^11.9.0",
     "@emotion/styled": "^11.8.1",
     "@material-ui/core": "^4.12.4",

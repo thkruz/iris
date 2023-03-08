@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { RuxButton, RuxPushButton, RuxTooltip, RuxSwitch, RuxNotification, RuxSelect, RuxOption, RuxInput } from '@astrouxds/react'
 import PropTypes from 'prop-types';
 import { Grid, Card } from '@mui/material';
-//import { AstroTheme } from '../../../../../themes/AstroTheme';
 import { outputStyle } from '../../../../styles';
 import { useSewApp } from '../../../../../context/sewAppContext';
 import { antennas, satellites } from '../../../../../constants';

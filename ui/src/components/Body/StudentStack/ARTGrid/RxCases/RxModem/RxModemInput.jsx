@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { RuxButton, RuxTooltip, RuxSelect, RuxOption, RuxInput } from '@astrouxds/react'
 import PropTypes from 'prop-types';
 import { Grid, Card } from '@mui/material';
-import { AstroTheme } from '../../../../../../themes/AstroTheme';
 import { useSewApp } from '../../../../../../context/sewAppContext';
 import { CRUDdataTable } from '../../../../../../crud';
 import { outputStyle } from '../../../../../styles';
@@ -17,14 +16,6 @@ export const RxModemInput = ({ currentRow }) => {
   useEffect(() => {
     setInputData(sewAppCtx.rx[currentRow]);
   }, [currentRow]);
-
-  const sxInputApply = {
-    backgroundColor: AstroTheme.palette.tertiary.light3,
-    boxShadow: '0px 0px 5px 0px rgba(0,0,0,0.75)',
-    color: 'black',
-    cursor: 'pointer',
-    marginTop: '20px',
-  };
 
   const handleInputChange = ({ param, val }) => {
     let tmpData = { ...inputData };
@@ -160,7 +151,7 @@ export const RxModemInput = ({ currentRow }) => {
           flexGrow={true}
           display={'flex'}>
           <RuxTooltip message='Commit Changes'>
-            <RuxButton sx={sxInputApply} onClick={(e) => handleApply(e)}>
+            <RuxButton onClick={(e) => handleApply(e)}>
               Apply
             </RuxButton>
           </RuxTooltip>

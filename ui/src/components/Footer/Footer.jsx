@@ -1,7 +1,7 @@
 import React from 'react';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
-import { AstroTheme } from '../../themes/AstroTheme';
+// import { AstroTheme } from '../../themes/AstroTheme';
 import { Box, Link } from '@mui/material';
 import {Link as RouterLink} from 'react-router-dom';
 
@@ -12,15 +12,15 @@ export const Footer = () => (
       bottom: '0',
     }}>
     <Toolbar
-      sx={{
-        backgroundColor: AstroTheme.palette.tertiary.dark,
-        color: 'white',
+      style={{
+        backgroundColor: 'var(--color-background-base-header)',
+        color: 'var(--color-text-primary)',
         boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.8)',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
       }}>
-      <Typography variant='h6' sx={{ color: 'white' }}>
+      <Typography variant='h6' style={{ color: 'var(--color-text-primary)' }}>
       <Link
           component={RouterLink}
           to="/instructor"
@@ -30,9 +30,9 @@ export const Footer = () => (
         <Link
           href='https://github.com/thkruz/'
           target='_new'
-          sx={{
+          style={{
             textDecoration: 'none',
-            color: '#fff',
+            color: 'var(--color-text-primary)',
           }}>
           Theodore Kruczek
         </Link>
@@ -40,9 +40,9 @@ export const Footer = () => (
         <Link
           href='https://raw.githubusercontent.com/thkruz/iris/dev/LICENSE.md'
           target='_new'
-          sx={{
+          style={{
             textDecoration: 'none',
-            color: '#fff',
+            color: 'var(--color-text-primary)',
           }}>
           AGPLv3
         </Link>

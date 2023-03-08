@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { RuxContainer } from '@astrouxds/react'
 import './TeamInfo.css';
 import { Typography } from '@mui/material';
-//import { AstroTheme } from '../../../../themes/AstroTheme';
 import { teams } from '../../../../constants';
 import { githubCheck } from '../../../../lib/github-check';
 import { useSewApp } from '../../../../context/sewAppContext';

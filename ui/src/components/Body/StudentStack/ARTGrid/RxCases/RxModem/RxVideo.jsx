@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactPlayer from 'react-player';
 import PropTypes from 'prop-types';
-import { Box, Typography } from '@mui/material';
 import { useSewApp } from '../../../../../../context/sewAppContext';
 import { antennas, satellites } from '../../../../../../constants';
 import { sxVideo } from '../../../../../styles';
@@ -124,8 +123,8 @@ export const RxVideo = ({ currentRow }) => {
   }, [sewAppCtx.signal, sewAppCtx.tx, sewAppCtx.rx, sewAppCtx.antenna]);
 
   return (
-    <Box
-      sx={{
+    <div
+      style={{
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -134,7 +133,7 @@ export const RxVideo = ({ currentRow }) => {
         paddingLeft: '0.5rem',
         textAlign: 'center',
       }}>
-      <Box sx={sxVideo}>
+      <div style={sxVideo}>
         {matchFound && !isDenied && isOperational && isLocked ? (
           <ReactPlayer
             config={{ file: { attributes: { controlsList: 'nodownload' } } }}
@@ -149,20 +148,21 @@ export const RxVideo = ({ currentRow }) => {
             muted={true}
           />
         ) : (
-          <Typography
-            variant='h6'
-            sx={{
+          <h3
+            style={{
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
               alignItems: 'center',
               height: '100%',
+              margin: '0',
+              fontWeight: 'normal'
             }}>
             No Signal
-          </Typography>
+          </h3>
         )}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 };
 

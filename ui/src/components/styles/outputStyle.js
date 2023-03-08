@@ -1,9 +1,10 @@
 export const outputStyle = {
-    padding: '4px 8px',
-    border: '1px solid #51555B',
+    padding: 'var(--spacing-1) var(--spacing-2)',
+    border: '1px solid var(--card-color-border)',
     borderRadius: '3px',
-    color: '#a4abb6',
+    color: 'var(--color-text-placeholder)',
     lineHeight: '20px',
-    fontWeight: 400,
-    backgroundColor: '#101923'
+    fontWeight: 'var(--font-weights-regular)',
+    backgroundColor: 'var(--color-background-base-default)',
+    boxShadow: 'none',
   }

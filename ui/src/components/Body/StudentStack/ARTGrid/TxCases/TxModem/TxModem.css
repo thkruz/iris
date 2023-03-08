@@ -5,14 +5,14 @@ rux-card::part(body) {
   }
 
 rux-button.isActive::part(container){
-  outline: 1px solid #da9ce7;
-  outline-offset: 1px;
+  outline: var(--border-width-focus-default) solid var(--color-border-focus-default);
+  outline-offset: var(--spacing-focus-default);
 }
 
 rux-button.isTransmitting::part(container){
-  background: #56f000;
-  box-shadow: #56f000;
-  color: #000;
+  background: var(--color-palette-green-500);
+  box-shadow: var(--color-palette-green-500);
+  color: var(--color-text-black);
 }
 
 .modemButtonBox{
@@ -21,7 +21,7 @@ rux-button.isTransmitting::part(container){
     margin-top: -1rem;
 }
 .modemButtonBox::part(container){
-  background: #101923;
+  background: var(--color-background-base-default);
   border: none;
   display:flex;
 }

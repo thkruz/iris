@@ -2,8 +2,8 @@ select,
 input {
   width: 85%;
   box-sizing: border-box;
-  margin-left: 8px;
-  margin-right: 8px;
+  margin-left: var(--spacing-2);
+  margin-right: var(--spacing-2);
   justify-self: end;
   text-align: center;
 }
@@ -19,9 +19,9 @@ label {
   margin-top: -1rem;
 }
 .modemButtonBox::part(container){
-background: #101923;
+background: var(--color-background-base-default);
 border: none;
-display:flex;
+display: flex;
 }
 .modemButtonBox::part(body){
 display:flex;
@@ -35,6 +35,6 @@ rux-button::part(container) {
 }
 
 rux-button.isActive::part(container){
-  outline: 1px solid #da9ce7;
-  outline-offset: 1px;
+  outline: var(--border-width-focus-default) solid var(--color-border-focus-default);
+  outline-offset: var(--spacing-focus-default);
 }

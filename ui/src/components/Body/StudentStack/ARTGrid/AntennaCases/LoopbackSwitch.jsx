@@ -5,7 +5,6 @@ import { Box, Typography } from '@mui/material';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
 import CellTowerIcon from '@mui/icons-material/CellTower';
 import AlignHorizontalCenterIcon from '@mui/icons-material/AlignHorizontalCenter';
-import { AstroTheme } from '../../../../../themes/AstroTheme';
 import { useSewApp } from '../../../../../context/sewAppContext';
 import { CRUDdataTable } from '../../../../../crud/crud';
 import useSound from 'use-sound';
@@ -23,27 +22,18 @@ export const LoopbackSwitch = ({ unit }) => {
 
   const sxTx = {
     backgroundColor: sewAppCtx.antenna[antennaIdx].loopback
-      ? AstroTheme.palette.tertiary.light2
+      ? 'var(--color-status-off)'
       : sewAppCtx.antenna[antennaIdx].hpa
-      ? '#ff3838'
-      : '#56f000',
+      ? 'var(--color-status-critical)'
+      : 'var(--color-status-normal)',
     color: sewAppCtx.antenna[antennaIdx].loopback
-      ? '#FFFFFF'
+      ? 'var(--color-text-primary)'
       : sewAppCtx.antenna[antennaIdx].hpa
-      ? '#FFFFFF'
-      : '#000000',
-    borderRadius: '100%',
-    padding: '8x',
+      ? 'var(--color-text-primary)'
+      : 'var(--color-text-inverse)',
+    borderRadius: 'var(--radius-circle)',
   };
 
-  // const sxLoopback = {
-  //   width: '140px',
-  //   display: 'flex',
-  //   flexDirection: 'column',
-  //   alignItems: 'center',
-  //   justifyContent: 'center'
-  //   // height: 'calc(100% - 20px)',
-  // };
   const sxLoopbackSwitch = {
     display: 'flex',
     width: '100%',
@@ -98,7 +88,7 @@ export const LoopbackSwitch = ({ unit }) => {
         message={!sewAppCtx.antenna[antennaIdx].hpa ? 'Enable High Powered Amplifier' : 'Disable High Powered Amplifier'}
         style={{ display: 'flex', }}
         >
-        <RuxPushButton label='HPA' onRuxchange={(e) => handleHPA(e)} style={{ display: 'flex', justifyContent: 'center', marginTop: '8px', }} />
+        <RuxPushButton label='HPA' onRuxchange={(e) => handleHPA(e)} style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--spacing-2)', }} />
       </RuxTooltip>
     </RuxContainer>
   );

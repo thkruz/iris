@@ -2,7 +2,7 @@ rux-card::part(body) {
   padding: 0;
 }
 canvas {
-  background-color: #000;
+  background-color: var(--color-palette-neutral-1000);
 }
 
 rux-select.antenna-select::part(label) {

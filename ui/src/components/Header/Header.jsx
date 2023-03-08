@@ -2,15 +2,11 @@ import React, { useEffect, useState }from 'react';
 import { RuxDialog, RuxGlobalStatusBar, RuxTooltip, RuxButton, RuxIcon, RuxSwitch } from '@astrouxds/react'
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-// import GitHubIcon from '@mui/icons-material/GitHub';
-// import { AstroTheme } from '../../themes/AstroTheme';
 import './Header.css';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export const Header = () => {
-  // const [isHelpModalActive, setIsHelpModalActive] = useState(false);
   const { state } = useLocation();
-  //const theme = AstroTheme;
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -18,9 +14,9 @@ export const Header = () => {
   };
 
   const iconStyles = {
-    color: '#FFFFFF',
+    color: 'var(--color-text-primary)',
     cursor: 'pointer',
-    padding: '12px',
+    padding: 'var(--spacing-3)',
   }
 
   const handleClick = () =>{
@@ -112,7 +108,7 @@ export const Header = () => {
             <RuxIcon
               icon='help-outline'
               className='helpIcon'
-              size='24px'
+              size='var(--spacing-6)'
               style={iconStyles}
               onClick={() => {
                 handleClick()
@@ -122,7 +118,7 @@ export const Header = () => {
           </RuxTooltip>
           {state?.isAuthenticated && (
             <RuxTooltip message='Logout' placement='bottom'>
-              <RuxIcon icon='exit-to-app' size='24px' onClick={handleLogout} style={iconStyles}>
+              <RuxIcon icon='exit-to-app' size='var(--spacing-6)' onClick={handleLogout} style={iconStyles}>
               </RuxIcon>
             </RuxTooltip>
           )}

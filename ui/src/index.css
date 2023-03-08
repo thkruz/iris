@@ -1,10 +1,10 @@
 html,
 body {
-  margin: 0;
-  padding: 0;
+  margin: var(--spacing-0);
+  padding: var(--spacing-0);
   height: 100%;
   min-height: 100vh;
-  font-family: 'Roboto', sans-serif !important;
+  font-family: var(--font-display-1-font-family) !important;
 }
 
 body {
@@ -21,13 +21,13 @@ body {
 }
 h2 {
 font-style: normal;
-font-weight: 400;
+font-weight: var(--font-display-2-font-weight);
 font-size: 24px;
 line-height: 28px;
 margin-block: 0;
 }
 
-p{
+p {
   margin-top: 0;
 }
 
@@ -40,7 +40,7 @@ p{
 }
 
 .helpIcon {
-  color: #FFFFFF;
+  color: var(--color-text-primary);
   cursor: pointer;
 }
 
@@ -62,7 +62,7 @@ rux-select::part(select) {
 rux-input::part(label), rux-select::part(label) {
   margin-right: var(--spacing-2);
   min-width: var(--spacing-14);
-  margin-bottom: 0;
+  margin-bottom: var(--spacing-0);
   display: flex;
   justify-content: end;
   align-items: center;

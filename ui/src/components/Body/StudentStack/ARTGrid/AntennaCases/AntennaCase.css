@@ -10,7 +10,7 @@
 }
 
 .loopback_container::part(container) {
-    background: #101923;
+    background: var(--color-background-base-default);
     border: none;
     display: flex;
 }

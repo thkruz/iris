@@ -3,12 +3,10 @@
 //import { Paper } from '@mui/material';
 import React from 'react';
 import "./body.css";
-//import { AstroTheme } from '../../themes/AstroTheme';
 //import { RuxContainer } from '@astrouxds/react'
 // Contains the main part of the app
 
 export const Body = props => {
-  // const theme = AstroTheme;
   // const sxBody = {
   //   margin: '0 auto',
   //   display: 'flex',
