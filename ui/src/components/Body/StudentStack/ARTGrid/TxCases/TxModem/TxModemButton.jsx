@@ -1,5 +1,4 @@
-import React from 'react';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { RuxTooltip, RuxButton } from '@astrouxds/react'
 import { selectSound } from '../../../../../../audio';

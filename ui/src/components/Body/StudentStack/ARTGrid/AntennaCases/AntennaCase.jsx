@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RuxTooltip } from '@astrouxds/react'
 import { Grid } from '@mui/material';
 import { AntennaController } from '../../../..';
@@ -7,7 +7,6 @@ import AntennaHelp from '../../HelpModals/AntennaHelp';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import { PropTypes } from 'prop-types';
 import { useSewApp } from '../../../../../context/sewAppContext';
-import { useEffect } from 'react';
 import LockIcon from '@mui/icons-material/Lock';
 
 export const AntennaCase = ({ unit }) => {

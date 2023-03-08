@@ -1,8 +1,7 @@
 import { Grid} from '@mui/material';
 import { SpectrumAnalyzer } from '../../../../';
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useLayoutEffect, useState, useEffect } from 'react';
 import { RuxContainer, RuxButton, RuxButtonGroup, RuxPushButton, RuxIcon, RuxTooltip, RuxSelect, RuxOption, } from '@astrouxds/react'
-import { useEffect } from 'react';
 import { satellites } from '../../../../../constants';
 import PropTypes from 'prop-types';
 import config from '../../../../../constants/config';

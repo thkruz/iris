@@ -1,11 +1,8 @@
-import React from 'react';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { RuxTooltip, RuxButton } from '@astrouxds/react'
 import PropTypes from 'prop-types';
-// import { Tooltip } from '@mui/material';
 import { useSound } from 'use-sound';
 import { selectSound } from '../../../../../../audio';
-// import { sxRxModemButton } from './sxRxModemButton';
 
 export const RxModemButton = ({ modemId, isActive, updateActiveModem }) => {
   const [playSelectSound] = useSound(selectSound);

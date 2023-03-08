@@ -2,7 +2,6 @@ import './3d-buttons.css';
 import React from 'react';
 import { Button } from '@mui/material';
 import { PropTypes } from 'prop-types';
-import { AstroTheme } from '../../themes/AstroTheme';
 
 export const PhysicalButton = ({ isEnabled, color, onClick, text }) => {
   let sxFront = {};

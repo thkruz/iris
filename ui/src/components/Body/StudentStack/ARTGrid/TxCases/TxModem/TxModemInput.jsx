@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RuxButton, RuxPushButton, RuxTooltip, RuxSelect, RuxOption, RuxInput } from '@astrouxds/react'
 import { Box, Grid, Typography, Card } from '@mui/material';
 import { useSewApp } from '../../../../../../context/sewAppContext';
@@ -7,7 +7,6 @@ import { sxModalError, outputStyle } from '../../../../../styles';
 import { breakerSound, errorSound, selectSound } from '../../../../../../audio';
 import { useSound } from 'use-sound';
 import { PropTypes } from 'prop-types';
-import { useEffect } from 'react';
 import { LinearProgressWithLabel } from './LinearProgressWithLabel';
 
 const popupTimeoutTime = 3000;
