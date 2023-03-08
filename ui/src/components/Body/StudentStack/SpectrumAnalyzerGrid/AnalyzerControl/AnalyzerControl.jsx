@@ -217,7 +217,7 @@ export const AnalyzerControl = (props) => {
     <div id={'analyzerControlModalOverlay'} onClick={(e) => props.handleBackgroundClick(e)}>
         <Grid container sx={controlsGridStyle}>
           <Grid item sm={5} xs={12}>
-            <Grid container sx={{ justifyContent: 'space-around' }}>
+            <Grid container item sx={{ justifyContent: 'space-around' }}>
               <Grid container item xs={10} sx={{ justifyContent: 'space-around' }}>
                 <RuxCard className="control-display">
                   <section>
@@ -248,7 +248,7 @@ export const AnalyzerControl = (props) => {
               <RuxPushButton checked={isMarkerOn} onRuxchange={handleMarkerClick} label={'Marker'} />
           </Grid>
           <Grid item sx={{ padding: '20px' }} xs={4}>
-            <Grid container sx={{ justifyContent: 'space-around' }} spacing={2}>
+            <Grid container item sx={{ justifyContent: 'space-around' }} spacing={2}>
               <Grid container item xs={12}>
                 <Grid item xs={4}>
                   <RuxButton secondary onClick={() => handleNumberClicked(7)}>7</RuxButton>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { RuxButton, RuxPushButton, RuxTooltip, RuxSwitch, RuxNotification, RuxSelect, RuxOption, RuxInput } from '@astrouxds/react'
 import PropTypes from 'prop-types';
 import { Grid, Card } from '@mui/material';
@@ -12,12 +12,13 @@ import useSound from 'use-sound';
 import './AntennaCase.css'
 
 const DELAY_TO_ACQ_LOCK = 5000;
-const popupTimeoutTime = 3000;
-let errorResetTimeout;
+// const popupTimeoutTime = 3000;
+// let errorResetTimeout;
 
 let trackTimeout = null;
 export const AntennaInput = ({ unit }) => {
   const [isErrorActive, setErrorActive] = useState(false);
+  const [isTrackable, setIsTrackable] = useState(false);
   const [playErrorSound] = useSound(errorSound);
   const [playSelectSound] = useSound(selectSound);
   const [playBreakerSound] = useSound(breakerSound);
@@ -28,9 +29,20 @@ export const AntennaInput = ({ unit }) => {
   const antennaIdx = sewAppCtx.antenna.map((x) => x.id).indexOf(unitData[0].id);
   const [inputData, setInputData] = useState(sewAppCtx.antenna[antennaIdx]);
 
+  const el = useRef(null)
+
   useEffect(() => {
     setInputData(sewAppCtx.antenna[antennaIdx]);
   }, [sewAppCtx.antenna]);
+
+  useEffect(() => {
+    el.current.addEventListener('click', () => {
+      if(el.current.disabled){
+        playErrorSound()
+        setErrorActive(true)
+      }
+    })
+  },[])
 
   const handleInputChange = ({ param, val }) => {
     if (param === 'offset') {
@@ -66,14 +78,30 @@ export const AntennaInput = ({ unit }) => {
     playBreakerSound();
     const tmpData = [...sewAppCtx.antenna];
     tmpData[antennaIdx].operational = !tmpData[antennaIdx].operational;
+    setIsTrackable(tmpData[antennaIdx].operational)
     // Cant track if it is off
     if (!tmpData[antennaIdx].operational) {
+      el.current.removeAttribute('checked')
       tmpData[antennaIdx].locked = false;
       tmpData[antennaIdx].track = false;
     }
     sewAppCtx.updateAntenna([...tmpData]);
     CRUDdataTable({ method: 'PATCH', path: 'antenna', data: tmpData[antennaIdx] });
   };
+
+  const checkTrackState = () =>{
+    setIsTrackable(true)
+      const newValue = !inputData.track;
+      playBreakerSound();
+      handleTrackLocked({ param: 'track', val: newValue });
+      if (trackTimeout) clearTimeout(trackTimeout);
+      trackTimeout = setTimeout(
+        () => {
+          handleTrackLocked({ param: 'locked', val: newValue });
+        },
+        newValue ? DELAY_TO_ACQ_LOCK : 0
+      );
+    }
 
   return (
     <>
@@ -164,29 +192,10 @@ export const AntennaInput = ({ unit }) => {
           <Grid container item xs={12}>
             <Grid item xs={true}>
               <RuxSwitch
+                ref={el}
                 label='Auto-Track'
-                checked={inputData.track}
-                onRuxchange={() => {
-                  if (!inputData.operational) {
-                    setErrorActive(true);
-                    playErrorSound();
-                    // if (errorResetTimeout) clearTimeout(errorResetTimeout);
-                    // errorResetTimeout = setTimeout(() => {
-                    //   setErrorActive(false);
-                    // }, popupTimeoutTime);
-                    return;
-                  }
-                  const newValue = !inputData.track;
-                  playBreakerSound();
-                  handleTrackLocked({ param: 'track', val: newValue });
-                  if (trackTimeout) clearTimeout(trackTimeout);
-                  trackTimeout = setTimeout(
-                    () => {
-                      handleTrackLocked({ param: 'locked', val: newValue });
-                    },
-                    newValue ? DELAY_TO_ACQ_LOCK : 0
-                  );
-                }}></RuxSwitch>
+                disabled={!isTrackable}
+                onRuxchange={(e) => checkTrackState(e)}></RuxSwitch>
             </Grid>
             <Grid item xs={true}></Grid>
           </Grid>

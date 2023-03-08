@@ -247,7 +247,7 @@ export const SpectrumAnalyzerBox = (props) => {
           <Grid item xs={12} style={{textAlign: 'center'}}>
             <p>CF: {sewAppCtx.sewApp[`specA${whichSpecA}`]?.centerFreq / 1e6} MHz</p>
           </Grid>
-          <Grid container xs={12}>
+          <Grid container item xs={12}>
             <Grid item xs={3}>
               <RuxSelect 
                 label="Ant"
