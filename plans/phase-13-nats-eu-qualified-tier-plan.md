@@ -680,7 +680,7 @@ from the emitted `newTle` (RAAN +0.3, MA +2.0) and verified with a `verify-only`
 
 ### Phase A - Harness and tooling (before any scenario file)
 
-- [ ] `satellites.ts`: `createMeridianSar1/2/3(tle)` factories (shared transponder configs, fresh `OrbitalSatellite` per call); SAR-3 RF plan constants (video 11760 / beacon 11785 / TT&C 14065 MHz).
+- [x] `satellites.ts`: `createMeridianSar1/2/3(tle)` factories (shared transponder configs, fresh `OrbitalSatellite` per call); SAR-3 RF plan constants (video 11760 / beacon 11785 / TT&C 14065 MHz).
 - [ ] `test/campaigns/nats-eu-phase-c-validation.test.ts` (Phase 2 harness): per-scenario pass flight under real program-track, `linkBudget` worksheet-vs-truth, reachability, the S13 keyhole crater, the S14 ice-vs-heater curves, the S16 GPSDO switch-up recovery and BUC cool-down. Relax the phase-B "window inside the first pass" assertion to "inside some authored pass" for S15.
 - [ ] Live checks (grep-for-UI-callers rule): `antenna-beacon-locked` path on the Ku tracker (S11), which tab hosts the LNB noise readout (S13 `observationTab`), GNSS switch control on the GPS timing tab (S16), BUC mute on SH-02 from the Galway console (S16).
 - [ ] Measure S10's 15 deg peak; fix `expectedCNRDb` (or raise to 18 deg).
@@ -688,13 +688,13 @@ from the emitted `newTle` (RAAN +0.3, MA +2.0) and verified with a `verify-only`
 
 ### Phase B - S9-S12 (next sprint step)
 
-- [ ] Author passes for S9-S12 (table above); pass-timing unit tests.
-- [ ] S9 Morning Constellation (7 objectives / 95 pts).
-- [ ] S10 Priority Tasking (7 / 110).
-- [ ] S11 LEOP: Launch Day (6 / 105) + SAR-3 bird.
-- [ ] S12 LEOP: Commissioning (7 / 125).
-- [ ] Register all four (campaign array + flat `SCENARIOS` + registration test); `missionBriefUrl` set from the first line (`campaign-2/scenario-N`).
-- [ ] `npm run type-check`, `npx vitest run`, `npm run nice-coverage` green.
+- [x] Author passes for S9-S12 (table above); pass-timing unit tests (phase-c harness).
+- [x] S9 Morning Constellation (7 objectives / 95 pts).
+- [x] S10 Priority Tasking (7 / 110). Authored at 18 deg per the RF rule: the 15 deg pass measured 7.18 dB / 61 s over 7 dB; 18 deg measures 8.11 dB / 151 s.
+- [x] S11 LEOP: Launch Day (6 / 105) + SAR-3 bird.
+- [x] S12 LEOP: Commissioning (7 / 125). Measured 10.94 dB vs 10.9 published.
+- [x] Register all four (campaign array + flat `SCENARIOS` + registration test); `missionBriefUrl` set from the first line (`campaign-2/scenario-N`).
+- [x] `npm run type-check`, `npx vitest run`, `npm run nice-coverage` green (4781 tests, 34 nats-eu NICE codes).
 - [ ] Playwright full-completion specs S9-S12 (use `advanceMissionClockToUtc`; final objective asserts the modal, not the checklist row).
 - [ ] Exit: S9-S12 completable live, one at a time (E2E timing note from phase 12).
 
@@ -763,3 +763,9 @@ The seven open questions raised on first draft, with the answers. Author S9-S16 
   Phase B (S9-S12) per sprint step 2C.
 - [2026-09-10] Ted answered all seven open questions; section rewritten as Decisions. No
   scenario content changed as a result: every answer matched the draft's recommendation.
+- [2026-09-10] Phase A (factories, SAR-3, pass authoring) and Phase B S9-S12 authored,
+  registered and validated by `test/campaigns/nats-eu-phase-c-validation.test.ts` (31
+  tests: wiring, reachability, S9 plan solvability, S10/S12 command windows, S11 element
+  sets, real program-track flights, worksheet-vs-expectedCNRDb). S10 moved to the 18 deg
+  pass by the RF rule. Not done from Phase B: Playwright full-completion specs S9-S12 and
+  the live UI checks; S9-S12 mission briefs are Phase D. Phase C (S13-S16) not started.

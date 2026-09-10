@@ -8,6 +8,10 @@ import { natsEuScenario5Data } from './scenario5';
 import { natsEuScenario6Data } from './scenario6';
 import { natsEuScenario7Data } from './scenario7';
 import { natsEuScenario8Data } from './scenario8';
+import { natsEuScenario9Data } from './scenario9';
+import { natsEuScenario10Data } from './scenario10';
+import { natsEuScenario11Data } from './scenario11';
+import { natsEuScenario12Data } from './scenario12';
 
 /**
  * NATS-EU Campaign (Campaign 2): North Atlantic Teleport Services EU
@@ -23,7 +27,7 @@ export const natsEuCampaignData: CampaignData = {
   description: `This campaign follows the North Atlantic Teleport Services EU branch, focusing on Low Earth Orbit (LEO) satellite communications. As a ground station operator, you'll work through a series of scenarios to establish and maintain RF links with various LEO satellites, gaining hands-on experience with tracking fast-moving targets and optimizing communication parameters for reliable data transmission.<br><br>Through these scenarios, you'll develop essential skills in antenna tracking, Doppler shift compensation, and link budget analysis, all while supporting the operational needs of cutting-edge LEO satellite constellations.`,
   imageUrl: 'nats-eu/north-atlantic-teleport-services-eu.png',
   difficulty: 'intermediate',
-  totalDuration: '160-220 min',
+  totalDuration: '270-330 min',
   campaignType: 'LEO Commercial Communications',
   headerIdentity: {
     name: 'ATLANTIC',
@@ -32,7 +36,7 @@ export const natsEuCampaignData: CampaignData = {
   },
   // Same chrome as Campaign 1 on purpose: two facilities of one operator.
   chromeVariant: 'standard',
-  // S1-S8 are content complete and saves are expected to hold, but the campaign
+  // S1-S12 are content complete and saves are expected to hold, but the campaign
   // is still under public test.
   releaseStage: 'beta',
   scenarios: [
@@ -45,6 +49,10 @@ export const natsEuCampaignData: CampaignData = {
     natsEuScenario6Data,
     natsEuScenario7Data,
     natsEuScenario8Data,
+    natsEuScenario9Data,
+    natsEuScenario10Data,
+    natsEuScenario11Data,
+    natsEuScenario12Data,
   ],
   isLocked: false,
   // Gated on the Campaign 1 graduation shift, matching the prerequisite on this
