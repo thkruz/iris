@@ -184,13 +184,32 @@ This project uses `@app/*` path aliases (e.g., `@app/types`, `@app/equipment/...
 
 When you use Plan Mode or create multi-step plans in this repo:
 
-- Store each plan as a Markdown file under `./plans/` in this project.
+- Store each plan as a Markdown file under `src/private/plans/` (the private submodule) in this project.
   - Filename convention: `phase-<n>-<short-topic>-plan.md`
   - Example: `phase-1-auth-refactor-plan.md`
 
 - After completing a phase:
-  - Write a brief retrospective to `./retrospectives/` in this project.
+  - Write a brief retrospective to `src/private/retrospectives/` (the private submodule) in this project.
   - Filename convention: `phase-<n>-<short-topic>-retro.md`
   - Include sections: `What worked`, `What didn’t`, `What to change next time`.
 
 - Never write plans or retrospectives into the home directory; always use project-relative paths.
+
+## Private Content (`src/private` submodule)
+
+`src/private` is the private `thkruz/signal-range-private` submodule. It holds plans, retros,
+sprint docs, the NATS/BOA world bible and working notes. Nothing in the OSS build reads it, and
+contributors without access build and test without it.
+
+- **New plans, retros, sprint notes, content bibles and internal docs are private by default.**
+  Put them under `src/private/`, not in `docs/`, unless Ted says they are there for OSS users.
+  `docs/` is for contributor-facing material only (scenario guide, NICE guide, platform guide, schema).
+- **Two-commit rule.** When committing "all changes", first run `git -C src/private status`. If it
+  is dirty, commit inside the submodule (conventional commits, same as here) and push it, then bump
+  the pointer in this repo with `chore(private): :wrench: update subproject commit reference`.
+  Never commit a pointer to an unpushed submodule commit. Push with
+  `git push --recurse-submodules=on-demand`.
+- The parent `.gitignore` does not reach inside the submodule; add ignore rules to
+  `src/private/.gitignore`.
+- `.gitmodules` uses the SSH URL (CI deploy key). Local checkouts point origin at HTTPS:
+  `git -C src/private remote set-url origin https://github.com/thkruz/signal-range-private.git`.

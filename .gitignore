@@ -43,7 +43,6 @@ supabase/
 
 # Notes
 *.notes.*
-notes
 .archive
 
 # Unused Icons

@@ -3,7 +3,7 @@
  *
  * Grid-searches RAAN x mean-anomaly so a pass lands at the desired time after
  * the scenario start epoch, validating with the same ootk SGP4 propagation the
- * app uses (see retrospectives/phase-1-campaign2-orbital-foundations-retro.md).
+ * app uses (see src/private/retrospectives/phase-1-campaign2-orbital-foundations-retro.md, private submodule).
  *
  * Run from the repo root (node_modules resolution):
  *   node scripts/author-tle.mjs

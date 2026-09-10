@@ -78,6 +78,10 @@ npm run r2:pull
 npm run dev
 ```
 
+> **Note:** `src/private` is an optional, private git submodule (plans, design docs and internal
+> notes). Contributors do not need it and the build never reads it. Clone without
+> `--recurse-submodules`, or ignore the "permission denied" from that one submodule if you do.
+
 The app will be available at `http://localhost:3000` (or the port shown in terminal).
 
 ### Environment Variables

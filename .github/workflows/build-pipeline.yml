@@ -11,6 +11,7 @@ on:
       - '**.md'
       - 'docs/**'
       - 'LICENSE'
+      - 'src/private'
   pull_request:
     branches:
       - main
@@ -19,6 +20,7 @@ on:
       - '**.md'
       - 'docs/**'
       - 'LICENSE'
+      - 'src/private'
 
 permissions:
   contents: read
@@ -43,7 +45,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
 
       - name: Setup Node Project
         uses: ./.github/actions/setup-node-project
@@ -70,7 +72,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
 
       - name: Setup Node Project
         uses: ./.github/actions/setup-node-project
@@ -90,7 +92,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
 
       - name: Setup Node Project
         uses: ./.github/actions/setup-node-project
@@ -142,7 +144,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
 
       - name: Setup Node Project
         uses: ./.github/actions/setup-node-project
@@ -178,7 +180,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
 
       - name: Setup Node Project
         uses: ./.github/actions/setup-node-project
@@ -210,10 +212,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
 
       - name: Setup Node Project
         uses: ./.github/actions/setup-node-project
+
+      - name: Verify src/private is absent (OSS build)
+        run: |
+          if [ -n "$(ls -A src/private 2>/dev/null)" ]; then
+            echo "ERROR: OSS build sees src/private contents"; exit 1
+          fi
 
       - name: Build Application
         run: npm run build

@@ -4,7 +4,7 @@
  * Grid-searches RAAN x mean-anomaly so each SENTRY bird sits at its target
  * GEO longitude slot at the scenario start epoch, validating with the same
  * ootk SGP4/SDP4 propagation the app uses (see scripts/author-tle.mjs and
- * retrospectives/phase-1-campaign2-orbital-foundations-retro.md).
+ * src/private/retrospectives/phase-1-campaign2-orbital-foundations-retro.md, private submodule).
  *
  * Also prototypes the two-satellite TDOA/FDOA forward model against a
  * candidate emitter site so the geolocation geometry is validated BEFORE
