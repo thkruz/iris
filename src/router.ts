@@ -22,12 +22,30 @@ export interface NavigationOptions {
 }
 
 /**
+ * A route contributed from outside the core page set (private edition tools).
+ * `pattern` is tested against `location.pathname`; named capture groups become
+ * the params passed to `show`. `hide` is called whenever any other route wins.
+ */
+export interface ExtraRoute {
+  pattern: RegExp;
+  show: (params: Record<string, string>, path: string) => void;
+  hide?: () => void;
+}
+
+/**
  * Simple Router for 3 pages: login, student, instructor
  */
 export class Router {
   private static instance: Router;
   private currentPath: string = '/';
   private navigationOptions_: NavigationOptions = {};
+  private readonly extraRoutes_: ExtraRoute[] = [];
+  /**
+   * Until the private routes have registered, an unknown path is held rather
+   * than redirected to '/', so a deep link to a private page survives the async
+   * import. Always true in the OSS build, where there is nothing to wait for.
+   */
+  private extraRoutesReady_ = !__IS_PRIVATE__;
 
   private constructor() { }
 
@@ -60,8 +78,35 @@ export class Router {
       }
     });
 
+    // Private edition routes (authoring tools). Dead code in the OSS build:
+    // DefinePlugin folds the flag and webpack never resolves '@private'.
+    if (__IS_PRIVATE__) {
+      import('@private/index')
+        .then((mod) => mod.registerPrivateRoutes(this))
+        .catch((err: unknown) => console.warn('[router] private routes unavailable', err))
+        .finally(() => {
+          this.extraRoutesReady_ = true;
+          this.handleRoute();
+        });
+    }
+
     // Handle initial route
     this.handleRoute();
+  }
+
+  /** Register a route outside the core page set. See ExtraRoute. */
+  addRoute(route: ExtraRoute): void {
+    this.extraRoutes_.push(route);
+  }
+
+  private matchExtraRoute_(path: string): { route: ExtraRoute; params: Record<string, string> } | null {
+    for (const route of this.extraRoutes_) {
+      const match = route.pattern.exec(path);
+      if (match) {
+        return { route, params: { ...(match.groups ?? {}) } };
+      }
+    }
+    return null;
   }
 
   navigate(path: string, options?: NavigationOptions): void {
@@ -81,6 +126,15 @@ export class Router {
 
     // Hide all pages
     this.hideAll();
+
+    // Extra (private) routes take precedence over the core page set
+    const extra = this.matchExtraRoute_(path);
+    if (extra) {
+      SimulationManager.destroy();
+      extra.route.show(extra.params, path);
+      EventBus.getInstance().emit(Events.ROUTE_CHANGED, { path });
+      return;
+    }
 
     // Route pattern matching
     if (path === '/') {
@@ -116,6 +170,10 @@ export class Router {
       this.navigate('/campaigns/nats/scenarios/scenario3', this.navigationOptions_);
       return;
     } else {
+      if (!this.extraRoutesReady_) {
+        // Private routes still loading; re-evaluated once they register
+        return;
+      }
       // Unknown route - redirect to campaign selection
       this.navigate('/');
       return;
@@ -155,6 +213,9 @@ export class Router {
     ScenarioSelectionPage.getInstance().hide();
     SandboxPage.getInstance()?.hide();
     MissionControlPage.getInstance()?.hide();
+    for (const route of this.extraRoutes_) {
+      route.hide?.();
+    }
   }
 
   private showPage(pageName: string, params?: { campaignId?: string; scenarioId?: string }): void {

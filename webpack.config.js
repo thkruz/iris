@@ -4,6 +4,17 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const webpack = require('webpack');
+const fs = require('node:fs');
+
+// Private submodule (src/private, thkruz/signal-range-private). Absent in OSS
+// clones. When its app entry exists the bundle may dynamic-import private
+// modules through the @private alias; when it is absent the guarded imports
+// are dead code and webpack never resolves the path (no stubs needed).
+const PRIVATE_APP_DIR = path.resolve(__dirname, 'src/private/app');
+const IS_PRIVATE = fs.existsSync(path.join(PRIVATE_APP_DIR, 'index.ts'));
+// Authoring tools need the dev-server file endpoints, so they only exist in
+// development builds of the private edition. Never true in a deployed build.
+const IS_AUTHORING = IS_PRIVATE && process.env.NODE_ENV === 'development';
 
 // Get git commit SHA at build time
 const getGitCommitSha = () => {
@@ -38,6 +49,7 @@ module.exports = {
     alias: {
       '@app': path.resolve(__dirname, 'src'),
       '@engine': path.resolve(__dirname, 'src/engine'),
+      '@private': PRIVATE_APP_DIR,
     }
   },
   devtool: 'source-map',
@@ -96,6 +108,8 @@ module.exports = {
       'process.env.PUBLIC_LOG_LEVEL': JSON.stringify(process.env.PUBLIC_LOG_LEVEL || 'LOG'),
       '__APP_VERSION__': JSON.stringify(require('./package.json').version),
       '__GIT_COMMIT_SHA__': JSON.stringify(getGitCommitSha()),
+      '__IS_PRIVATE__': JSON.stringify(IS_PRIVATE),
+      '__AUTHORING__': JSON.stringify(IS_AUTHORING),
     }),
     new CaseSensitivePathsPlugin(),
     new CopyWebpackPlugin({
@@ -139,6 +153,15 @@ module.exports = {
         { from: /./, to: '/index.html' }
       ]
     },
-    liveReload: false
+    liveReload: false,
+    // Private dev endpoints (scenario authoring file access). The module is
+    // part of the private submodule; without it the dev server is unchanged.
+    setupMiddlewares: (middlewares, devServer) => {
+      const privateMiddleware = path.join(PRIVATE_APP_DIR, 'dev-middleware.cjs');
+      if (IS_AUTHORING && fs.existsSync(privateMiddleware)) {
+        require(privateMiddleware).register(devServer.app, { repoRoot: __dirname });
+      }
+      return middlewares;
+    }
   }
 };

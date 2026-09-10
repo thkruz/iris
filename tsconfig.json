@@ -16,6 +16,9 @@
       "@engine/*": [
         "src/engine/*"
       ],
+      "@private/*": [
+        "src/private/app/*"
+      ],
     },
     "moduleResolution": "node",
     "strict": false,

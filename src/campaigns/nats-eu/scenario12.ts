@@ -47,9 +47,15 @@ import {
  * - correct worksheet -> C/N 10.89 dB (expectedCNRDb 10.9, tolerance 1.0)
  * - threshold 6 dB (QPSK 3/4 demod) + 2 dB required margin -> commit near
  *   max elevation, roughly T+9 .. T+12.5
- * The live peak under program-track is to be confirmed by the Phase B harness
- * (test/campaigns/nats-eu-phase-b-validation.test.ts); see the MEASURE note
- * on the linkBudget block.
+ * Decode with the uplink SECURED. With the HPA up, SAR-3's TP-CMD returns
+ * the station's own 14065 MHz carrier at 11810 MHz (co-pol, in the receive
+ * band, about -38 dBm at the antenna); the AGC drops the total RX gain under
+ * the internal-noise floor crossover and the video reads ~3 dB instead of ~11.
+ * Objective 5 therefore requires hpa-disabled before the retune (found by the
+ * S12 Playwright spec; S10 survives the same mechanism with ~2 dB headroom).
+ * Live peak under real program-track, measured by the Phase 2 harness
+ * (test/campaigns/nats-eu-phase-c-validation.test.ts): 10.94 dB at T+10.75,
+ * against the 10.9 dB worksheet.
  *
  * NICE Framework Alignment:
  * Primary Codes:
@@ -178,7 +184,8 @@ export const natsEuScenario12Data: ScenarioData = {
     // M1 - the acceptance prediction. expectedCNRDb is what a CORRECT worksheet
     // yields from the numbers published in objective 2; requiredMarginDb is
     // measured against the live receiver at Commit Link.
-    // MEASURE: harness must confirm the live peak under program-track (plan S12 RF note)
+    // Measured under real program-track (nats-eu-phase-c-validation): peak
+    // 10.94 dB at T+10.75, 240 s at or above 7 dB, 146 s at or above 9 dB.
     linkBudget: {
       label: 'SAR-3 acceptance: video downlink at max elevation',
       expectedCNRDb: 10.9,
@@ -343,10 +350,16 @@ export const natsEuScenario12Data: ScenarioData = {
       id: 'first-video',
       nice: ['T1092', 'T0153', 'S0842'],
       title: 'First Imagery Decode',
-      description: 'The RX modem is still on 1414 MHz from the morning SAR-1 passes. Retune modem 1 to 1340 MHz (11760 MHz RF), lock the test pattern, and hold C/N above 8 dB. Then return to Link Analysis and press Commit Link near maximum elevation (T+10.8) with at least 2 dB of margin over the 6 dB threshold.',
+      description: 'Secure the uplink first: disable the HPA. SAR-3 turns the GW-01 14065 MHz command carrier around through its command transponder at 11810 MHz, inside the receive band, and with the amplifier up that relay drives the AGC down and takes the video with it. Then retune modem 1 from 1414 MHz to 1340 MHz (11760 MHz RF), lock the test pattern, and hold C/N above 8 dB. Return to Link Analysis and press Commit Link near maximum elevation (T+10.8) with at least 2 dB of margin over the 6 dB threshold.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['payload-checkout'],
       conditions: [
+        {
+          type: 'hpa-disabled',
+          description: 'HPA Output Disabled (uplink secured before the decode)',
+          params: { requiresObservation: true, observationTab: 'tx-chain' },
+          mustMaintain: true,
+        },
         {
           type: 'receiver-signal-locked',
           description: 'RX Modem Locked on 1340 MHz Test Pattern',

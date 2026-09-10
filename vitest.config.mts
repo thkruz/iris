@@ -2,6 +2,11 @@ import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 export default defineConfig({
+  // Build-time flags from webpack DefinePlugin. Tests always run as the OSS edition.
+  define: {
+    __IS_PRIVATE__: 'false',
+    __AUTHORING__: 'false',
+  },
   test: {
     globals: true,
     environment: 'jsdom',
@@ -21,6 +26,7 @@ export default defineConfig({
     alias: {
       '@app': path.resolve(__dirname, './src'),
       '@engine': path.resolve(__dirname, './src/engine'),
+      '@private': path.resolve(__dirname, './src/private/app'),
     },
   },
 });

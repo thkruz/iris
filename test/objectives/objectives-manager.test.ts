@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import { EventBus } from '../../src/events/event-bus';
 import { Events, QuizCompletedData, QuizPassedData } from '../../src/events/events';
+import type { Milliseconds } from 'ootk';
 import { Objective, ObjectiveState } from '../../src/objectives/objective-types';
 import { ObjectivesManager } from '../../src/objectives/objectives-manager';
 import { addSkippedTime, resetMissionClock } from '../../src/simulation/mission-clock';
@@ -4034,6 +4035,94 @@ describe('ObjectivesManager', () => {
 
       expect(completedCallback).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('condition telemetry (authoring harness)', () => {
+    const tick = () => eventBus.emit(Events.UPDATE, 16 as Milliseconds);
+
+    it('should emit nothing while telemetry is off', () => {
+      ObjectivesManager.initialize([createTestObjective()]);
+      const listener = vi.fn();
+      eventBus.on(Events.OBJECTIVE_CONDITION_EVALUATED, listener);
+
+      tick();
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('should emit one event per evaluated condition while enabled', () => {
+      const manager = ObjectivesManager.initialize([createTestObjective()]);
+      const listener = vi.fn();
+      eventBus.on(Events.OBJECTIVE_CONDITION_EVALUATED, listener);
+
+      manager.enableConditionTelemetry(true);
+      tick();
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith(expect.objectContaining({
+        objectiveId: 'test-objective-1',
+        conditionIndex: 0,
+        type: 'mission-brief-opened',
+        isSatisfied: expect.any(Boolean),
+      }));
+
+      manager.enableConditionTelemetry(false);
+      tick();
+
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('devCompleteThrough (authoring harness)', () => {
+    const chain = () => [
+      createTestObjective({ id: 'obj-1' }),
+      createTestObjective({ id: 'obj-2', prerequisiteObjectiveIds: ['obj-1'] }),
+      createTestObjective({ id: 'obj-3', prerequisiteObjectiveIds: ['obj-2'] }),
+    ];
+
+    afterEach(() => {
+      window.DEVELOPER_MODE = false;
+    });
+
+    it('should refuse without DEVELOPER_MODE and leave state untouched', () => {
+      window.DEVELOPER_MODE = false;
+      const manager = ObjectivesManager.initialize(chain());
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      expect(manager.devCompleteThrough('obj-3')).toBeNull();
+      expect(manager.getObjectiveState('obj-1')?.isCompleted).toBe(false);
+      expect(manager.getObjectiveState('obj-3')?.isActive).toBe(false);
+      warn.mockRestore();
+    });
+
+    it('should return null for an unknown objective id', () => {
+      window.DEVELOPER_MODE = true;
+      const manager = ObjectivesManager.initialize(chain());
+
+      expect(manager.devCompleteThrough('nope')).toBeNull();
+    });
+
+    it('should complete every transitive prerequisite and activate the target', () => {
+      window.DEVELOPER_MODE = true;
+      const manager = ObjectivesManager.initialize(chain());
+
+      const completed = manager.devCompleteThrough('obj-3');
+
+      expect(completed?.sort()).toEqual(['obj-1', 'obj-2']);
+      expect(manager.getObjectiveState('obj-1')?.isCompleted).toBe(true);
+      expect(manager.getObjectiveState('obj-2')?.isCompleted).toBe(true);
+      expect(manager.getObjectiveState('obj-2')?.conditionStates[0].isSatisfied).toBe(true);
+      expect(manager.getObjectiveState('obj-3')?.isCompleted).toBe(false);
+      expect(manager.getObjectiveState('obj-3')?.isActive).toBe(true);
+    });
+
+    it('should complete nothing when the target has no prerequisites', () => {
+      window.DEVELOPER_MODE = true;
+      const manager = ObjectivesManager.initialize(chain());
+
+      expect(manager.devCompleteThrough('obj-1')).toEqual([]);
+      expect(manager.getObjectiveState('obj-1')?.isActive).toBe(true);
     });
   });
 });

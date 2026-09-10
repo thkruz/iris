@@ -21,7 +21,7 @@ import type {
 import { Milliseconds } from "ootk";
 import { ReceiverModemState } from "@app/equipment/receiver/receiver";
 import { TransmitterModem } from "@app/equipment/transmitter/transmitter";
-import { ConditionState, Objective, ObjectiveState } from "@app/objectives/objective-types";
+import { ConditionState, ConditionType, Objective, ObjectiveState } from "@app/objectives/objective-types";
 import { OpsLogEntry } from "@app/ops-log/ops-log-types";
 import { RfSignal } from "@app/types";
 
@@ -113,6 +113,15 @@ export interface ObjectiveConditionChangedData {
   conditionIndex: number;
   isSatisfied: boolean;
   conditionState: ConditionState;
+}
+
+export interface ObjectiveConditionEvaluatedData {
+  objectiveId: string;
+  conditionIndex: number;
+  type: ConditionType;
+  isSatisfied: boolean;
+  /** The value the check compared against its target (frequency, mode, power...). Undefined for boolean-only checks. */
+  observed: unknown;
 }
 
 export interface ObjectivesAllCompletedData {
@@ -382,6 +391,8 @@ export enum Events {
   OBJECTIVE_ACTIVATED = 'objective:activated',
   OBJECTIVE_COMPLETED = 'objective:completed',
   OBJECTIVE_CONDITION_CHANGED = 'objective:condition:changed',
+  /** Dev/authoring telemetry: one event per condition evaluation while enabled (see ObjectivesManager.enableConditionTelemetry). */
+  OBJECTIVE_CONDITION_EVALUATED = 'objective:condition:evaluated',
   OBJECTIVES_ALL_COMPLETED = 'objectives:all:completed',
   OBJECTIVE_FAILED = 'objective:failed',
   SCENARIO_TIME_EXPIRED = 'scenario:time:expired',
@@ -501,6 +512,7 @@ export interface EventMap {
   [Events.OBJECTIVE_ACTIVATED]: [ObjectiveActivatedData];
   [Events.OBJECTIVE_COMPLETED]: [ObjectiveCompletedData];
   [Events.OBJECTIVE_CONDITION_CHANGED]: [ObjectiveConditionChangedData];
+  [Events.OBJECTIVE_CONDITION_EVALUATED]: [ObjectiveConditionEvaluatedData];
   [Events.OBJECTIVES_ALL_COMPLETED]: [ObjectivesAllCompletedData];
   [Events.OBJECTIVE_FAILED]: [ObjectiveFailedData];
   [Events.SCENARIO_TIME_EXPIRED]: [ScenarioTimeExpiredData];

@@ -1177,6 +1177,7 @@ export class ObjectivesManager {
       }
 
       const wasSatisfied = conditionState.isSatisfied;
+      this.lastObserved_ = undefined;
       let isNowSatisfied = this.evaluateCondition_(conditionState.condition, objectiveState);
 
       // Observation gate: a flagged passive condition does not count from
@@ -1196,6 +1197,16 @@ export class ObjectivesManager {
 
       // Update satisfied state
       conditionState.isSatisfied = isNowSatisfied;
+
+      if (this.isConditionTelemetryEnabled_) {
+        this.eventBus_.emit(Events.OBJECTIVE_CONDITION_EVALUATED, {
+          objectiveId: objectiveState.objective.id,
+          conditionIndex: condIndex,
+          type: conditionState.condition.type,
+          isSatisfied: isNowSatisfied,
+          observed: this.lastObserved_,
+        });
+      }
 
       // Handle condition state changes
       if (isNowSatisfied && !wasSatisfied) {
@@ -1278,6 +1289,76 @@ export class ObjectivesManager {
    * If equipmentIndex is specified, checks only that equipment
    * If equipmentIndex is omitted, checks if ANY equipment satisfies
    */
+  // ── Condition telemetry (authoring / dev harness) ──────────────────────
+  // Off by default. When enabled, every evaluation of every active condition
+  // emits OBJECTIVE_CONDITION_EVALUATED carrying the value the check compared
+  // (frequency, mode, power...) so an author can see why a row is not green.
+  private isConditionTelemetryEnabled_ = false;
+  private lastObserved_: unknown = undefined;
+
+  /** Enable or disable per-evaluation condition telemetry events. */
+  enableConditionTelemetry(enabled: boolean): void {
+    this.isConditionTelemetryEnabled_ = enabled;
+  }
+
+  /** Record the value a condition check compared against its target. No-op when telemetry is off. */
+  private observe_(value: unknown): void {
+    if (this.isConditionTelemetryEnabled_) {
+      this.lastObserved_ = value;
+    }
+  }
+
+  /**
+   * Developer / authoring aid: mark every transitive prerequisite of
+   * `objectiveId` complete (conditions satisfied, maintenance done) so the
+   * scenario resumes at that objective. Equipment state is NOT synthesised;
+   * the author sets it by hand. Refuses unless DEVELOPER_MODE is on.
+   * @returns the objective ids marked complete, or null when refused / unknown id
+   */
+  devCompleteThrough(objectiveId: string): string[] | null {
+    if (!window.DEVELOPER_MODE) {
+      console.warn('[ObjectivesManager] devCompleteThrough requires DEVELOPER_MODE');
+      return null;
+    }
+    const byId = new Map(this.objectiveStates_.map((state) => [state.objective.id, state]));
+    if (!byId.has(objectiveId)) {
+      return null;
+    }
+    const toComplete = new Set<string>();
+    const visit = (id: string): void => {
+      for (const prereq of byId.get(id)?.objective.prerequisiteObjectiveIds ?? []) {
+        if (!toComplete.has(prereq)) {
+          toComplete.add(prereq);
+          visit(prereq);
+        }
+      }
+    };
+    visit(objectiveId);
+
+    const now = Date.now();
+    const saved: ObjectiveState[] = [...toComplete].map((id) => {
+      const state = byId.get(id)!;
+      return {
+        ...state,
+        isActive: false,
+        isCompleted: true,
+        activatedAt: state.activatedAt ?? now,
+        completedAt: now,
+        isFailed: false,
+        isTimerRunning: false,
+        conditionStates: state.conditionStates.map((cs) => ({
+          ...cs,
+          isSatisfied: true,
+          satisfiedAt: now,
+          isMaintenanceComplete: true,
+          observed: true,
+        })),
+      };
+    });
+    this.restoreState(saved);
+    return [...toComplete];
+  }
+
   private evaluateEquipment_<T>(
     equipmentArray: readonly T[],
     params: ConditionParams | undefined,
@@ -1326,6 +1407,7 @@ export class ObjectivesManager {
       case 'antenna-locked': {
         return this.evaluateEquipment_(gs.antennas, condition.params, (antenna) => {
           const state = antenna.state;
+          this.observe_({ isLocked: state.isLocked, azimuth: state.azimuth, elevation: state.elevation });
           if (!state.isLocked) return false;
 
           // If a specific satellite is required, check it
@@ -1387,6 +1469,7 @@ export class ObjectivesManager {
         const maxAccuracy = condition.params?.maxFrequencyAccuracy ?? 5;
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const gpsdoState = rfFrontEnd.gpsdoModule.state;
+          this.observe_({ frequencyAccuracy: gpsdoState.frequencyAccuracy, allanDeviation: gpsdoState.allanDeviation, phaseNoise: gpsdoState.phaseNoise });
           return (
             gpsdoState.isPowered &&
             gpsdoState.isLocked &&
@@ -1432,6 +1515,7 @@ export class ObjectivesManager {
         const maxCurrent = condition.params?.maxCurrentDraw ?? 4.5;
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const bucState = rfFrontEnd.bucModule.state;
+          this.observe_(bucState.currentDraw);
           return bucState.isPowered && bucState.currentDraw <= maxCurrent;
         });
       }
@@ -1439,6 +1523,7 @@ export class ObjectivesManager {
       case 'buc-not-saturated': {
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const bucState = rfFrontEnd.bucModule.state;
+          this.observe_({ outputPower: bucState.outputPower, saturationPower: bucState.saturationPower });
           return (
             bucState.isPowered &&
             bucState.outputPower <= (bucState.saturationPower - 2)
@@ -1464,6 +1549,7 @@ export class ObjectivesManager {
         const maxTemp = condition.params?.maxTemperature ?? 70;
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const bucState = rfFrontEnd.bucModule.state;
+          this.observe_(bucState.temperature);
           return bucState.isPowered && bucState.temperature <= maxTemp;
         });
       }
@@ -1485,6 +1571,7 @@ export class ObjectivesManager {
         const tolerance = condition.params.loFrequencyTolerance ?? 0;
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const lnbState = rfFrontEnd.lnbModule.state;
+          this.observe_(lnbState.loFrequency);
           return (
             lnbState.isPowered &&
             Math.abs(lnbState.loFrequency - targetLoFrequency) <= tolerance
@@ -1498,6 +1585,7 @@ export class ObjectivesManager {
         const tolerance = condition.params.gainTolerance ?? 0;
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const lnbState = rfFrontEnd.lnbModule.state;
+          this.observe_(lnbState.gain);
           return (
             lnbState.isPowered &&
             Math.abs(lnbState.gain - targetGain) <= tolerance
@@ -1522,6 +1610,7 @@ export class ObjectivesManager {
         const maxNoiseTemp = condition.params?.maxNoiseTemperature ?? 100;
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const lnbState = rfFrontEnd.lnbModule.state;
+          this.observe_(lnbState.noiseTemperature);
           return lnbState.isPowered && lnbState.noiseTemperature <= maxNoiseTemp;
         });
       }
@@ -1624,6 +1713,7 @@ export class ObjectivesManager {
           if (condition.params?.minPower !== undefined) {
             const totalGain = specA.rfFrontEnd_.couplerModule.signalPathManager.getTotalGainTo(TapPoint.RX_IF);
             const effectivePower = targetSignal.power + totalGain;
+            this.observe_(effectivePower);
             return effectivePower >= condition.params.minPower;
           }
 
@@ -1649,6 +1739,7 @@ export class ObjectivesManager {
           // Include path gain to get effective power at spectrum analyzer
           const totalGain = specA.rfFrontEnd_.couplerModule.signalPathManager.getTotalGainTo(TapPoint.RX_IF);
           const effectivePower = targetSignal.power + totalGain;
+          this.observe_(effectivePower);
           return effectivePower >= minPower;
         });
       }
@@ -1658,6 +1749,7 @@ export class ObjectivesManager {
         const targetFrequency = condition.params.frequency;
         const tolerance = condition.params.frequencyTolerance || 1e6;
         return this.evaluateEquipment_(gs.spectrumAnalyzers, condition.params, (specA) => {
+          this.observe_(specA.state.centerFrequency);
           const diff = Math.abs(specA.state.centerFrequency - targetFrequency);
           return diff <= tolerance;
         });
@@ -1668,6 +1760,7 @@ export class ObjectivesManager {
         const targetSpan = condition.params.span;
         const tolerance = condition.params.frequencyTolerance || 1e6;
         return this.evaluateEquipment_(gs.spectrumAnalyzers, condition.params, (specA) => {
+          this.observe_(specA.state.span);
           const diff = Math.abs(specA.state.span - targetSpan);
           return diff <= tolerance;
         });
@@ -1678,6 +1771,7 @@ export class ObjectivesManager {
         const targetRbw = condition.params.rbw; // null means "Automatic"
         const tolerance = condition.params.frequencyTolerance || 1e3;
         return this.evaluateEquipment_(gs.spectrumAnalyzers, condition.params, (specA) => {
+          this.observe_(specA.state.rbw);
           // Handle "Automatic" mode (null)
           if (targetRbw === null) {
             return specA.state.rbw === null;
@@ -1694,6 +1788,7 @@ export class ObjectivesManager {
         const targetRefLevel = condition.params.referenceLevel;
         const tolerance = condition.params.referenceLevelTolerance ?? 1;
         return this.evaluateEquipment_(gs.spectrumAnalyzers, condition.params, (specA) => {
+          this.observe_(specA.state.referenceLevel);
           const diff = Math.abs(specA.state.referenceLevel - targetRefLevel);
           return diff <= tolerance;
         });
@@ -1704,6 +1799,7 @@ export class ObjectivesManager {
         const targetCenterFreq = condition.params.centerFrequency;
         const tolerance = condition.params.centerFrequencyTolerance ?? 1e6; // Default 1 MHz
         return this.evaluateEquipment_(gs.spectrumAnalyzers, condition.params, (specA) => {
+          this.observe_(specA.state.centerFrequency);
           const diff = Math.abs(specA.state.centerFrequency - targetCenterFreq);
           return diff <= tolerance;
         });
@@ -1713,6 +1809,7 @@ export class ObjectivesManager {
         const maxSignalStrength = condition.params?.maxSignalStrength ?? -60;
         return this.evaluateEquipment_(gs.spectrumAnalyzers, condition.params, (specA) => {
           const signals = specA.getInputSignals();
+          this.observe_(Math.max(...signals.map((signal) => signal.power)));
           return signals.every((signal) => signal.power < maxSignalStrength);
         });
       }
@@ -1722,6 +1819,7 @@ export class ObjectivesManager {
         const targetMinAmplitude = condition.params.minAmplitude;
         const tolerance = condition.params.minAmplitudeTolerance ?? 5;
         return this.evaluateEquipment_(gs.spectrumAnalyzers, condition.params, (specA) => {
+          this.observe_(specA.state.minAmplitude);
           const diff = Math.abs(specA.state.minAmplitude - targetMinAmplitude);
           return diff <= tolerance;
         });
@@ -1732,6 +1830,7 @@ export class ObjectivesManager {
         const targetMaxAmplitude = condition.params.maxAmplitude;
         const tolerance = condition.params.maxAmplitudeTolerance ?? 5;
         return this.evaluateEquipment_(gs.spectrumAnalyzers, condition.params, (specA) => {
+          this.observe_(specA.state.maxAmplitude);
           const diff = Math.abs(specA.state.maxAmplitude - targetMaxAmplitude);
           return diff <= tolerance;
         });
@@ -1741,6 +1840,7 @@ export class ObjectivesManager {
         if (condition.params?.bandwidthIndex === undefined) return false;
         const targetIndex = condition.params.bandwidthIndex;
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
+          this.observe_(rfFrontEnd.filterModule.state.bandwidthIndex);
           return rfFrontEnd.filterModule.state.bandwidthIndex === targetIndex;
         });
       }
@@ -1800,6 +1900,7 @@ export class ObjectivesManager {
         const targetFrequency = condition.params.beaconFrequency;
         const tolerance = condition.params.frequencyTolerance ?? 1e6; // 1 MHz default
         return this.evaluateEquipment_(gs.antennas, condition.params, (antenna) => {
+          this.observe_(antenna.state.beaconFrequencyHz);
           const diff = Math.abs(antenna.state.beaconFrequencyHz - targetFrequency);
           return diff <= tolerance;
         });
@@ -1809,6 +1910,7 @@ export class ObjectivesManager {
         if (!condition.params?.trackingMode) return false;
         const targetMode = condition.params.trackingMode;
         return this.evaluateEquipment_(gs.antennas, condition.params, (antenna) => {
+          this.observe_({ trackingMode: antenna.state.trackingMode, isStepTrackEnabled: antenna.state.isStepTrackEnabled });
           // Step-track is an optimization layer on top of program-track, not a separate mode
           if (targetMode === 'step-track') {
             return antenna.state.trackingMode === 'program-track' &&
@@ -1822,6 +1924,7 @@ export class ObjectivesManager {
         if (!condition.params?.circularHandedness) return false;
         const targetHandedness = condition.params.circularHandedness;
         return this.evaluateEquipment_(gs.antennas, condition.params, (antenna) => {
+          this.observe_(antenna.state.circularHandedness);
           return antenna.state.circularHandedness === targetHandedness;
         });
       }
@@ -1845,6 +1948,7 @@ export class ObjectivesManager {
 
         return this.evaluateEquipment_(gs.antennas, condition.params, (antenna) => {
           const state = antenna.state;
+          this.observe_({ azimuth: state.azimuth, elevation: state.elevation });
 
           // Check azimuth if specified (handle 360° wraparound)
           if (targetAz !== undefined) {
@@ -1882,6 +1986,7 @@ export class ObjectivesManager {
         const tolerance = condition.params.gainTolerance ?? 0;
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const bucState = rfFrontEnd.bucModule.state;
+          this.observe_(bucState.gain);
           return (
             bucState.isPowered &&
             Math.abs(bucState.gain - targetGain) <= tolerance
@@ -1902,6 +2007,7 @@ export class ObjectivesManager {
         const tolerance = condition.params.backOffTolerance ?? 0.5;
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const hpaState = rfFrontEnd.hpaModule.state;
+          this.observe_(hpaState.backOff);
           return (
             hpaState.isPowered &&
             Math.abs(hpaState.backOff - targetBackOff) <= tolerance
@@ -1924,6 +2030,7 @@ export class ObjectivesManager {
         const minPowerDbm = 10 * Math.log10(minPowerWatts * 1000);
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const hpaState = rfFrontEnd.hpaModule.state;
+          this.observe_(hpaState.outputPower);
           return hpaState.isPowered && hpaState.isHpaEnabled && hpaState.outputPower >= minPowerDbm;
         });
       }
@@ -1966,6 +2073,7 @@ export class ObjectivesManager {
           if (!modem?.isPowered) return false;
 
           const snr = receiver.getSnrForModem(modem);
+          this.observe_(snr);
           return snr !== null && snr >= minCNRatio && snr <= maxCNRatio;
         });
       }
@@ -1994,6 +2102,7 @@ export class ObjectivesManager {
 
           // Modem frequency is in MHz, target is in Hz
           const modemFreqHz = modem.frequency * 1e6;
+          this.observe_(modemFreqHz);
           const diff = Math.abs(modemFreqHz - targetFrequency);
           return diff <= tolerance;
         });
@@ -2010,6 +2119,7 @@ export class ObjectivesManager {
 
           // Modem bandwidth is in MHz, target is in Hz
           const modemBwHz = modem.bandwidth * 1e6;
+          this.observe_(modemBwHz);
           const diff = Math.abs(modemBwHz - targetBandwidth);
           return diff <= tolerance;
         });
@@ -2023,6 +2133,7 @@ export class ObjectivesManager {
           const modem = receiver.state.modems.find(m => m.modemNumber === modemNum);
           if (!modem?.isPowered) return false;
 
+          this.observe_(modem.modulation);
           return modem.modulation === targetModulation;
         });
       }
@@ -2035,6 +2146,7 @@ export class ObjectivesManager {
           const modem = receiver.state.modems.find(m => m.modemNumber === modemNum);
           if (!modem?.isPowered) return false;
 
+          this.observe_(modem.fec);
           return modem.fec === targetFec;
         });
       }
@@ -2048,6 +2160,7 @@ export class ObjectivesManager {
           const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
           if (!modem?.isPowered) return false;
           // Transmitter frequency is in Hz (stored in ifSignal)
+          this.observe_(modem.ifSignal.frequency);
           const diff = Math.abs(modem.ifSignal.frequency - targetFrequency);
           return diff <= tolerance;
         });
@@ -2061,6 +2174,7 @@ export class ObjectivesManager {
           const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
           const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
           if (!modem?.isPowered) return false;
+          this.observe_(modem.ifSignal.power);
           const diff = Math.abs(modem.ifSignal.power - targetPower);
           return diff <= tolerance;
         });
@@ -2074,6 +2188,7 @@ export class ObjectivesManager {
           const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
           const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
           if (!modem?.isPowered) return false;
+          this.observe_(modem.ifSignal.bandwidth);
           const diff = Math.abs(modem.ifSignal.bandwidth - targetBandwidth);
           return diff <= tolerance;
         });
@@ -2086,6 +2201,7 @@ export class ObjectivesManager {
           const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
           const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
           if (!modem?.isPowered) return false;
+          this.observe_(modem.ifSignal.modulation);
           return modem.ifSignal.modulation === targetModulation;
         });
       }
@@ -2101,6 +2217,7 @@ export class ObjectivesManager {
             return false;
           }
           const actualFec = modem.ifSignal.fec;
+          this.observe_(actualFec);
           const result = actualFec === targetFec;
           console.log(`[tx-modem-fec-set] gs=${gs.state.id}, modem=${modemNum}, targetFec=${targetFec}, actualFec=${actualFec}, result=${result}`);
           return result;
@@ -2128,6 +2245,7 @@ export class ObjectivesManager {
         if (condition.params?.modemNumber === undefined) return false;
         const targetModem = condition.params.modemNumber;
         return this.evaluateEquipment_(gs.transmitters, condition.params, (transmitter) => {
+          this.observe_(transmitter.state.activeModem);
           return transmitter.state.activeModem === targetModem;
         });
       }
@@ -2260,6 +2378,7 @@ export class ObjectivesManager {
         if (!targetTab) return false;
 
         const activeTab = TabbedCanvas.getActiveTab();
+        this.observe_(activeTab);
         if (!activeTab) return false;
 
         // Match exact tab ID or prefix (e.g., 'acu-control' matches 'acu-control-0')
@@ -2297,6 +2416,7 @@ export class ObjectivesManager {
           fec: modem.fec,
         });
 
+        this.observe_(metrics.frameSyncLocked);
         return metrics.frameSyncLocked === expectedLocked;
       }
 
@@ -2323,6 +2443,7 @@ export class ObjectivesManager {
           fec: modem.fec,
         });
 
+        this.observe_(metrics.ber);
         if (comparison === 'below') {
           return metrics.ber < threshold;
         } else {
@@ -2350,6 +2471,7 @@ export class ObjectivesManager {
           fec: modem.fec,
         });
 
+        this.observe_(metrics.rsUncorrectableBlocks);
         return metrics.rsUncorrectableBlocks > 0;
       }
 
@@ -2375,6 +2497,7 @@ export class ObjectivesManager {
           fec: modem.fec,
         });
 
+        this.observe_(metrics.channelStatus);
         return metrics.channelStatus === expectedStatus;
       }
 
@@ -2389,6 +2512,7 @@ export class ObjectivesManager {
 
         const crypto = CryptoModule.getInstance();
         const rxState = crypto.getRxState();
+        this.observe_(rxState.decryptionMode);
         return rxState.decryptionMode === expectedMode;
       }
 
@@ -2399,6 +2523,7 @@ export class ObjectivesManager {
 
         const crypto = CryptoModule.getInstance();
         const rxState = crypto.getRxState();
+        this.observe_(rxState.decryptionKeyStatus);
         return rxState.decryptionKeyStatus === expectedStatus;
       }
 
@@ -2409,6 +2534,7 @@ export class ObjectivesManager {
 
         const crypto = CryptoModule.getInstance();
         const txState = crypto.getTxState();
+        this.observe_(txState.encryptionMode);
         return txState.encryptionMode === expectedMode;
       }
 
@@ -2419,6 +2545,7 @@ export class ObjectivesManager {
 
         const crypto = CryptoModule.getInstance();
         const txState = crypto.getTxState();
+        this.observe_(txState.encryptionKeyStatus);
         return txState.encryptionKeyStatus === expectedStatus;
       }
 

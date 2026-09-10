@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import { CampaignManager } from '../src/campaigns/campaign-manager';
 import { EventBus } from '../src/events/event-bus';
+import { Events } from '../src/events/events';
 import { Router } from '../src/router';
 
 // Mock dependencies
@@ -317,6 +318,48 @@ describe('Router', () => {
       const instance2 = Router.getInstance();
 
       expect(instance1).not.toBe(instance2);
+    });
+  });
+
+  describe('extra routes (private edition hook)', () => {
+    it('should show a registered route and pass named params', () => {
+      const show = vi.fn();
+      router.addRoute({ pattern: /^\/author\/(?<campaignId>[^/]+)$/, show });
+
+      router.navigate('/author/nats-eu');
+
+      expect(show).toHaveBeenCalledWith({ campaignId: 'nats-eu' }, '/author/nats-eu');
+      expect(router.getCurrentPath()).toBe('/author/nats-eu');
+      // No redirect: pushState called once for the navigation itself
+      expect(pushStateSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should emit ROUTE_CHANGED for an extra route', () => {
+      const listener = vi.fn();
+      EventBus.getInstance().on(Events.ROUTE_CHANGED, listener);
+      router.addRoute({ pattern: /^\/author$/, show: vi.fn() });
+
+      router.navigate('/author');
+
+      expect(listener).toHaveBeenCalledWith({ path: '/author' });
+    });
+
+    it('should hide an extra route when another route wins', () => {
+      const hide = vi.fn();
+      router.addRoute({ pattern: /^\/author$/, show: vi.fn(), hide });
+
+      router.navigate('/author');
+      router.navigate('/sandbox');
+
+      expect(hide).toHaveBeenCalled();
+    });
+
+    it('should still redirect unknown paths when no extra route matches', () => {
+      router.addRoute({ pattern: /^\/author$/, show: vi.fn() });
+
+      router.navigate('/nowhere');
+
+      expect(router.getCurrentPath()).toBe('/');
     });
   });
 });
