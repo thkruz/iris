@@ -10,7 +10,8 @@ import { Events } from '@app/events/events';
  */
 export const GA4_MEASUREMENT_ID: string = 'G-QNLH2DZXEK';
 
-const PLACEHOLDER_ID = 'G-QNLH2DZXEK';
+/** Sentinel meaning "not configured yet" — must never equal a real ID. */
+const PLACEHOLDER_ID = 'G-PLACEHOLDER';
 
 declare global {
   interface Window {
