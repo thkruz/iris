@@ -25,7 +25,7 @@ Tier contract (from the design plan §3 Phase 2 and the NATS S9-S16 precedent):
    numbers; the operator picks the tab. Use `hidden: true` on tab-gating conditions so
    the checklist does not say where to look.
 3. **3-7 dialog clips per scenario** (nats-campaign-builder cap), text clips with
-   `audioUrl: ''` until the VO pipeline is decided (open question 1).
+   `audioUrl: ''` (decision 1: text only for this tier).
 4. **Every threshold is measured** through the real chain before it is authored
    (Phase A/B rule), via a Phase 2 extension of
    [nats-eu-phase-b-validation.test.ts](../test/campaigns/nats-eu-phase-b-validation.test.ts).
@@ -75,7 +75,7 @@ Tier contract (from the design plan §3 Phase 2 and the NATS S9-S16 precedent):
 
 Clip mechanics: `dialogClips.intro` (text message) plus `dialogClips.objectives[objectiveId]`
 keyed by objective id, exactly as [nats/scenario9.ts](../src/campaigns/nats/scenario9.ts).
-Text clips, `audioUrl: ''` (C3 precedent) until open question 1 is settled.
+Text clips, `audioUrl: ''` (C3 precedent; decision 1, Ted 2026-09-10).
 
 ## Authoring conventions for this tier
 
@@ -711,7 +711,7 @@ from the emitted `newTle` (RAAN +0.3, MA +2.0) and verified with a `verify-only`
 ### Phase D - Briefs, audio decision, metadata
 
 - [ ] Mission-brief MDX `campaign-2/scenario-9..16` in signal-range-docs (`src/content/docs/campaign-2/`, not `docs/`), sidebar entries, `astro check` 0 errors, commit + deploy the docs repo.
-- [ ] Dialog clips: text now; VO per open question 1.
+- [ ] Dialog clips: text only (decision 1); no VO step for this tier.
 - [ ] `natsEuCampaignData.totalDuration` recomputed (S1-S16 ~ 400-500 min); description mentions the qualified tier.
 - [ ] Retro -> `retrospectives/phase-13-nats-eu-qualified-tier-retro.md`; PROJECT_STATE + memory.
 
@@ -737,25 +737,19 @@ Per-station propagation for SH-02 (tracking from Shetland), rain-fade physics fo
 timed BUC/GPSDO faults, TRANSEC and GNSS spoofing (Phase 3), Priya Sharma, VO recording,
 new condition types.
 
-## Open questions for Ted
+## Decisions (Ted, 2026-09-10)
 
-1. **Audio.** Text-only clips (`audioUrl: ''`) for S9-S16 as in C3, or hold scenario
-   merges until a VO pipeline exists for Erik/Anneke/Fiona? This plan assumes text now.
-2. **Keyhole placement.** Folded into S13 as Act 1 (35 min scenario). If you would rather
-   keep S13 to the LNB story, the fallback is a standalone optional scenario after S13
-   with id `nats-eu-scenario13b`; the ids S14-S16 then stay as designed. Recommend the fold.
-3. **S14 fiction.** Sleet/hail rather than rain so the feed heater and the ice model do
-   real work. Acceptable, or is a small engine change (apply `rain` degradation as sky
-   noise) preferred before S14 is authored?
-4. **S15 without a staged mismatch.** The recast makes the rotation tempo the exercise.
-   If a real per-bird key mismatch matters, it needs a `commanding` extension (per-target
-   key state + a scheduled `keyEventAtS`); that is Phase 3 work if at all.
-5. **Difficulty labels.** S13-S16 as `advanced` (first use in C2) or keep the whole
-   campaign `intermediate` as S1-S8 are?
-6. **Docs repo path.** Briefs go to `signal-range-docs/src/content/docs/campaign-2/`
-   (the sprint doc's `docs/campaign-2/` is wrong); confirm the C2 S2-S8 briefs from sprint
-   2B are committed before S9-S16 briefs are added.
-7. **SAR-3 COSPAR id.** `27031A` assumed for a March 2027 launch; any preference?
+The seven open questions raised on first draft, with the answers. Author S9-S16 against these.
+
+| # | Question | Decision |
+| --- | --- | --- |
+| 1 | Audio for S9-S16 | Text-only clips, `audioUrl: ''`. No VO gate on merging scenarios. |
+| 2 | Zenith keyhole placement | Folded into S13 as Act 1. No `nats-eu-scenario13b`; S14-S16 ids unchanged. |
+| 3 | S14 weather fiction | Sleet/hail at GW-01 as specified. No engine change to make `rain` degrade the link. |
+| 4 | S15 without a staged key mismatch | Recast around rotation tempo + post-rotation command proof stands. Per-target key state and a scheduled key event are Phase 3 work, if ever. |
+| 5 | Difficulty labels | S13-S16 are `advanced` (first use in C2). S9-S12 stay `intermediate`. |
+| 6 | Docs repo path | Confirmed `signal-range-docs/src/content/docs/campaign-2/`. C2 S2-S8 briefs committed (da48a77). |
+| 7 | SAR-3 COSPAR id | `27031A` as assumed. |
 
 ## Status log
 
@@ -767,3 +761,5 @@ new condition types.
   `pass-history-reviewed` -> Working Document + live measurement). All S9-S16 NICE codes
   resolve against the 542-code catalog. Not started. Next action: Phase A harness, then
   Phase B (S9-S12) per sprint step 2C.
+- [2026-09-10] Ted answered all seven open questions; section rewritten as Decisions. No
+  scenario content changed as a result: every answer matched the draft's recommendation.
