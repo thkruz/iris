@@ -28,11 +28,13 @@ import {
  * 2. review-pass-schedule  - Pass Schedule tab
  * 3. track-meridian-1      - program-track SAR-1 + beacon observed on RX analysis
  * 4. decode-sar-video      - RX lock + C/N >= 8 dB observed during the window
- * 5. second-contact        - retune 1370 MHz, retarget, lock SAR-2
+ * 5. second-contact        - OPTIONAL (isOptional), deliberately NOT driven
  *
- * second-contact is isOptional, but the completion gate
- * (areAllObjectivesCompleted) still requires every objective, so it is driven
- * here too to reach the Mission Complete modal.
+ * second-contact is isOptional, so the completion gate
+ * (areAllObjectivesCompleted) ignores it: Mission Complete pops as soon as
+ * decode-sar-video finishes. This spec leaves it untouched on purpose and
+ * asserts it is still incomplete when the modal is up, which is the
+ * regression check for optional objectives blocking completion.
  */
 
 /**
@@ -164,38 +166,19 @@ test.describe('nats-eu Scenario 1 Full Completion', () => {
   });
 
   test('[decode-sar-video] holds RX lock with C/N above 8 dB', async () => {
+    // Modem 1 is pre-tuned to 1414 MHz; observing on RX analysis latches
+    // receiver-signal-locked and receiver-snr-threshold. Select the tab BEFORE
+    // jumping the clock: the objective can complete on the very next tick, and
+    // the Mission Complete modal it pops would intercept any later click.
+    await missionControl.selectTab('rx-analysis');
+    await dismissDialogIfPresent(page);
+
     // Move to the high-elevation segment (C/N crosses 8 dB near 25 deg el)
     await advanceSimClock(page, 2.5);
 
-    // Modem 1 is pre-tuned to 1414 MHz; observing on RX analysis latches
-    // receiver-signal-locked and receiver-snr-threshold
-    await missionControl.selectTab('rx-analysis');
-    await dismissDialogIfPresent(page);
-    await waitForObjectiveComplete(missionControl, 'Decode the SAR Imagery Downlink');
-  });
-
-  test('[second-contact] retunes to 1370 MHz and captures SAR-2', async () => {
-    // Retune RX modem 1 to the SAR-2 video IF (1370 MHz) while still on SAR-1
-    await missionControl.selectTab('rx-analysis');
-    const frequencyInput = page.locator('#frequency-input');
-    await expect(frequencyInput).toBeVisible({ timeout: 10000 });
-    await frequencyInput.fill('1370');
-    const applyBtn = page.locator('#apply-btn');
-    await expect(applyBtn).toBeEnabled({ timeout: 5000 });
-    await applyBtn.click();
-
-    // Jump to the SAR-2 pass (AOS T+17.5; retarget + settle) and track it
-    await advanceSimClock(page, 12);
-    await programTrack(page, missionControl, '61702');
-    await advanceSimClock(page, 3.5); // into the SAR-2 max-el window (~T+22, 25 deg)
-    await page.waitForTimeout(4000);
-
-    await missionControl.selectTab('rx-analysis');
-    await dismissDialogIfPresent(page);
-
-    // Second-contact is the final objective; its completion pops the Mission
-    // Complete modal (which freezes the checklist), so wait on the modal itself
-    // rather than the checklist objective-item class.
+    // decode-sar-video is the last REQUIRED objective; its completion pops the
+    // Mission Complete modal (which freezes the checklist), so wait on the
+    // modal itself rather than the checklist objective-item class.
     await expect(page.locator('#level-complete-modal')).toBeVisible({ timeout: 45000 });
   });
 
@@ -210,5 +193,13 @@ test.describe('nats-eu Scenario 1 Full Completion', () => {
     await expect(totalScore).toBeVisible();
     const score = parseInt((await totalScore.textContent()) || '0', 10);
     expect(score).toBeGreaterThan(0);
+  });
+
+  test('optional second-contact objective was never completed', async () => {
+    // The modal is up, so the checklist is frozen in its final state: the
+    // optional objective must still be open, proving it did not gate completion.
+    const secondContact = page.locator('.objective-item', { hasText: 'Capture the Second Contact' });
+    await expect(secondContact).toHaveCount(1);
+    await expect(secondContact).not.toHaveClass(/completed/);
   });
 });

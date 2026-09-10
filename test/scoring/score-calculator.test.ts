@@ -35,6 +35,22 @@ describe('ScoreCalculator', () => {
         expect(result.basePoints).toBe(0);
       });
 
+      it('should not award points for an incomplete (skipped optional) objective', () => {
+        const skippedOptional = createObjectiveState(15);
+        skippedOptional.objective.isOptional = true;
+        skippedOptional.isCompleted = false;
+
+        const result = ScoreCalculator.calculate(
+          [createObjectiveState(100), createObjectiveState(50), skippedOptional],
+          0,
+          0,
+          0
+        );
+
+        expect(result.basePoints).toBe(150);
+        expect(result.objectiveBreakdown).toHaveLength(2);
+      });
+
       it('should sum points from single objective', () => {
         const objectives = [createObjectiveState(100)];
         const result = ScoreCalculator.calculate(objectives, 0, 0, 0);

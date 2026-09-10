@@ -292,10 +292,19 @@ export class ObjectivesManager {
   }
 
   /**
-   * Check if all objectives are completed
+   * Check whether every required objective is completed.
+   *
+   * Objectives flagged `isOptional` do not gate scenario completion: Mission
+   * Complete fires once the required set is done, whether or not the player
+   * also finished the optional ones. A scenario with no required objectives
+   * at all falls back to requiring every objective, so a purely optional list
+   * cannot complete itself on the first tick.
    */
   areAllObjectivesCompleted(): boolean {
-    return this.objectiveStates_.every((state) => state.isCompleted);
+    const required = this.objectiveStates_.filter((state) => !state.objective.isOptional);
+    const gating = required.length > 0 ? required : this.objectiveStates_;
+
+    return gating.every((state) => state.isCompleted);
   }
 
   /**

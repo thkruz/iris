@@ -747,6 +747,50 @@ describe('ObjectivesManager', () => {
 
       expect(manager.areAllObjectivesCompleted()).toBe(true);
     });
+
+    it('should return true when only required objectives are complete and an optional one is not', () => {
+      const objectives = [
+        createTestObjective({ id: 'req-1' }),
+        createTestObjective({ id: 'req-2' }),
+        createTestObjective({ id: 'opt-1', isOptional: true }),
+      ];
+      const manager = ObjectivesManager.initialize(objectives);
+
+      const states = manager.getObjectiveStates();
+      states.find((s) => s.objective.id === 'req-1')!.isCompleted = true;
+      states.find((s) => s.objective.id === 'req-2')!.isCompleted = true;
+
+      expect(manager.areAllObjectivesCompleted()).toBe(true);
+    });
+
+    it('should return false when a required objective is incomplete even if the optional one is done', () => {
+      const objectives = [
+        createTestObjective({ id: 'req-1' }),
+        createTestObjective({ id: 'opt-1', isOptional: true }),
+      ];
+      const manager = ObjectivesManager.initialize(objectives);
+
+      const states = manager.getObjectiveStates();
+      states.find((s) => s.objective.id === 'opt-1')!.isCompleted = true;
+
+      expect(manager.areAllObjectivesCompleted()).toBe(false);
+    });
+
+    it('should fall back to requiring every objective when all of them are optional', () => {
+      const objectives = [
+        createTestObjective({ id: 'opt-1', isOptional: true }),
+        createTestObjective({ id: 'opt-2', isOptional: true }),
+      ];
+      const manager = ObjectivesManager.initialize(objectives);
+
+      expect(manager.areAllObjectivesCompleted()).toBe(false);
+
+      const states = manager.getObjectiveStates();
+      states[0].isCompleted = true;
+      states[1].isCompleted = true;
+
+      expect(manager.areAllObjectivesCompleted()).toBe(true);
+    });
   });
 
   describe('Collapse State Sync', () => {
@@ -1486,6 +1530,44 @@ describe('ObjectivesManager', () => {
           totalTime: expect.any(Number),
         })
       );
+    });
+
+    it('should emit OBJECTIVES_ALL_COMPLETED and stop timers once required objectives are done, ignoring an optional one', () => {
+      const objectives = [
+        createTestObjective({ id: 'req-1' }),
+        createTestObjective({ id: 'req-2' }),
+        createTestObjective({
+          id: 'opt-1',
+          isOptional: true,
+          conditions: [
+            {
+              type: 'mission-brief-opened',
+              description: 'Open a box nobody opens',
+              params: { boxId: 'never-opened' },
+              mustMaintain: false,
+            },
+          ],
+        }),
+      ];
+
+      const allCompletedCallback = vi.fn();
+      eventBus.on(Events.OBJECTIVES_ALL_COMPLETED, allCompletedCallback);
+
+      const manager = ObjectivesManager.initialize(objectives, 300);
+      vi.advanceTimersByTime(10000);
+      expect(manager.getScenarioTimeRemaining()).toBe(290);
+
+      // Complete only the two required objectives
+      ObjectivesManager.registerOpenedBox('mission-brief-1');
+      eventBus.emit(Events.UPDATE, 16);
+      eventBus.emit(Events.UPDATE, 16);
+
+      expect(allCompletedCallback).toHaveBeenCalledTimes(1);
+      expect(manager.getObjectiveState('opt-1')?.isCompleted).toBe(false);
+
+      // Scenario timer is frozen even though the optional objective is still open
+      vi.advanceTimersByTime(10000);
+      expect(manager.getScenarioTimeRemaining()).toBe(290);
     });
 
     it('should stop all timers when all objectives complete', () => {

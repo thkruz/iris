@@ -45,8 +45,13 @@ export class ScoreCalculator {
     timePenalties: number = 0,
     hintPenalties: number = 0
   ): ScoreBreakdown {
+    // Only completed objectives score. Optional objectives no longer gate
+    // Mission Complete, so an unfinished one can be in this list and must not
+    // award its points or count in the breakdown.
+    const completedObjectives = objectives.filter((objState) => objState.isCompleted);
+
     // Sum objective points (default to 0 if undefined)
-    const basePoints = objectives.reduce((sum, objState) => {
+    const basePoints = completedObjectives.reduce((sum, objState) => {
       return sum + (objState.objective.points ?? 0);
     }, 0);
 
@@ -64,7 +69,7 @@ export class ScoreCalculator {
     const totalScore = Math.max(0, basePoints + timeBonus - sanitizedQuizPenalties - sanitizedTimePenalties - sanitizedHintPenalties);
 
     // Build objective breakdown for display
-    const objectiveBreakdown = objectives.map((objState) => ({
+    const objectiveBreakdown = completedObjectives.map((objState) => ({
       points: objState.objective.points ?? 0,
     }));
 
