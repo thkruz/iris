@@ -3,12 +3,20 @@
   "version": "1.1.0",
   "description": "Signal Range: Space Electronic Warfare Lab",
   "main": "dist/index.js",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10"
+  },
+  "volta": {
+    "node": "24.14.0"
+  },
   "scripts": {
     "build": "cross-env NODE_ENV=production webpack --mode production",
     "dev": "cross-env NODE_ENV=development webpack serve --mode development",
-    "deploy": "npm run build && wrangler deploy",
-    "deploy:dry-run": "npm run build && wrangler deploy --dry-run",
-    "deploy:full": "npm run build && npm run r2:sync && wrangler deploy",
+    "deploy": "pnpm run build && wrangler deploy",
+    "deploy:dry-run": "pnpm run build && wrangler deploy --dry-run",
+    "deploy:full": "pnpm run build && pnpm run r2:sync && wrangler deploy",
     "preview": "wrangler dev",
     "r2:sync": "node scripts/sync-r2-assets.js",
     "r2:sync:dry": "node scripts/sync-r2-assets.js --dry-run",
@@ -22,8 +30,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "npx eslint",
-    "lcov": "npx tsx build/open-lcov.ts",
+    "lint": "pnpm exec eslint",
+    "lcov": "pnpm exec tsx build/open-lcov.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
@@ -72,12 +80,21 @@
     "ootk": "^5.1.1",
     "uuid": "^13.0.0"
   },
-  "overrides": {
-    "esbuild": "^0.28.1",
-    "ws": "^8.21.0",
-    "serialize-javascript": "^7.0.5",
-    "sockjs": {
-      "uuid": "^11.1.1"
-    }
+  "pnpm": {
+    "overrides": {
+      "esbuild": "^0.28.1",
+      "ws": "^8.21.0",
+      "serialize-javascript": "^7.0.5",
+      "sockjs>uuid": "^11.1.1"
+    },
+    "ignoredBuiltDependencies": [
+      "core-js",
+      "esbuild",
+      "supabase"
+    ],
+    "onlyBuiltDependencies": [
+      "sharp",
+      "workerd"
+    ]
   }
 }

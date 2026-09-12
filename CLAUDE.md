@@ -153,17 +153,17 @@ new Satellite(
 
 ## TypeScript Type Checking
 
-**Always use the npm script to check for TypeScript errors:**
+**Always use the pnpm script to check for TypeScript errors:**
 
 ```bash
-npm run type-check
+pnpm run type-check
 ```
 
 **Do NOT run tsc directly on individual files:**
 
 ```bash
 # WRONG - will fail with module resolution errors
-npx tsc --noEmit src/campaigns/nats/scenario5.ts
+pnpm exec tsc --noEmit src/campaigns/nats/scenario5.ts
 ```
 
 This project uses `@app/*` path aliases (e.g., `@app/types`, `@app/equipment/...`) that require the full tsconfig.json configuration. Running tsc on individual files bypasses this and produces false "Cannot find module" errors.
