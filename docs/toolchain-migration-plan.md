@@ -1,5 +1,11 @@
 # Toolchain migration plan: align signal-range with keeptrack-space
 
+> **STATUS 2026-09-12: all eight phases are done and committed on `dev`.**
+> Phase 0 needed no work (tree was clean). The only deliberate deferral is the
+> Biome **warning** backlog (Phase 2 step 6), which gates nothing. See the
+> "Outcome" section at the end for what was measured and what differed from
+> this plan.
+
 Written 2026-09-10. Reference repo: `D:\code\keeptrack\keeptrack-space` (v13.10.0).
 keeptrack.space did this same migration in 2026 in this order: pnpm, Biome, CI, tsgo,
 rspack/SWC, hooks. Its commit history is the playbook (see "Prior art" at the end).
@@ -347,3 +353,56 @@ ea6c4002 perf(build): drop babel-loader; let rspack SWC transpile node_modules J
 0a878970 chore(vitest): cap fork concurrency to prevent memory issues
 ad23f8f5 refactor(dev-server): replace npx with pnpm exec for commands
 ```
+
+---
+
+## Outcome (2026-09-12)
+
+| Phase | Commit | Result |
+|---|---|---|
+| 1 pnpm | `8615799` | pnpm 10.33 hoisted, node 24 via volta, CI on pnpm |
+| 2 Biome | `6f71d91`, `45bc98e`, `b36db21`, `951b927` | lint gate exits 0 for the first time |
+| 3 tsgo | `b245595` | typecheck 4.4s -> 0.6s |
+| 4 rspack + SWC | `a01cced` | build 12.9s -> 0.96s (0.20s warm) |
+| 5 hooks | `27d364d` | pre-commit / commit-msg / pre-push all live |
+| 6 vitest | `ec4ada6` | worker cap, real coverage gate |
+| 7 CI parity | `f15dc43` | checkout/setup-node v6 |
+| 8 docs + cleanup | `ce81d2a` | CLAUDE.md rules, jest-era files deleted |
+
+### Where reality differed from the plan
+
+- **`@rspack/dev-server` has no Express `app`.** The plan assumed `devServer.app`
+  stayed an Express instance for the private authoring middleware; it is not, and
+  registering on it crashed the dev server outright. The config now creates its
+  own Express app and mounts it through `setupMiddlewares`. `express` is an
+  explicit devDependency again (webpack-dev-server used to supply it).
+- **tsgo does not auto-include `@types`.** `types: ["node"]` had to be declared
+  explicitly or `process` and the `NodeJS` namespace go unresolved. `tsc` never
+  needed this, so it only shows up once tsgo runs.
+- **`isolatedModules` found five real type re-exports**, in the agc-module and
+  notch-filter-module barrels. These would have broken the Phase 4 SWC bundle,
+  which is exactly why Phase 3 comes first.
+- **Two `CopyRspackPlugin` patterns were already dead.** `public/assets/logo.png`
+  does not exist and `public/assets/characters` holds only `.png` files that the
+  pattern's own ignore list excludes. copy-webpack-plugin stayed silent;
+  CopyRspackPlugin errors. Both kept with `noErrorOnMissing`.
+- **No renormalisation commit was needed.** Biome's Phase 2 format pass had
+  already written every file as LF, so `git add --renormalize .` was a no-op.
+- **`deps.inline` is obsolete.** vitest 4 runs the full suite green without the
+  `uuid`/`ootk` inlining, so it was deleted rather than moved to
+  `server.deps.inline`.
+- **husky is v9, not keeptrack's v8.** The `.husky/_` runtime already in the repo
+  was the v9 layout, so hooks omit the `_/husky.sh` sourcing line that v10 will
+  reject.
+- **`typecheck:test` exists but is not a CI gate.** The 153 test files have never
+  been type-checked and currently produce 660 errors. Turning that into a gate is
+  its own piece of work.
+
+### Still open
+
+- Biome warning backlog: 1346 warnings, none of which gate anything. Largest
+  groups are `useBlockStatements` (622), `useLiteralKeys` (178), the regex `u`
+  flag plugin (110) and `noExplicitAny` (98). Clear by area, as keeptrack did.
+- 660 type errors in `test/**`, gated behind `pnpm run typecheck:test`.
+- CI has not run yet; the `actions/*@v6` bump and the pnpm/Biome/tsgo jobs need a
+  green Build Pipeline to confirm.
