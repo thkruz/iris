@@ -11,6 +11,7 @@ import { hamSdrScenario8Data } from '@app/campaigns/ham-sdr/scenario8';
 import { ccsScenario1Data } from '@app/campaigns/ccs/scenario1';
 import { ccsScenario2Data } from '@app/campaigns/ccs/scenario2';
 import { signalHunterSandboxData } from '@app/campaigns/signal-hunter/sandbox';
+import { signalHunterScenario1Data } from '@app/campaigns/signal-hunter/scenario1';
 import { sandboxData } from './sandbox';
 import { scenario1Data } from './scenario1';
 import { scenario2Data } from './scenario2';
@@ -162,7 +163,7 @@ export const geolocationCampaignData: CampaignData = {
   description: `Someone is jamming allied satellites. As a member of the 22nd Electronic Warfare Squadron, you'll locate the sources of hostile interference using advanced RF geolocation.<br><br>Learn the two-satellite TDOA/FDOA cross-fix technique: an uplink jammer leaks into a neighboring satellite's sidelobes, and correlating the two downlinks lets you draw crossing lines of position over the emitter. Detect, characterize, and geolocate intermittent interference, then hand a fix and error ellipse to the incident response cell.`,
   imageUrl: 'nats/north-atlantic-teleport-services.png',
   difficulty: 'advanced',
-  totalDuration: '200-260 min',
+  totalDuration: '30-40 min',
   campaignType: 'Electronic Warfare',
   headerIdentity: {
     name: 'SIGNAL',
@@ -170,10 +171,11 @@ export const geolocationCampaignData: CampaignData = {
     icon: 'fa-solid fa-crosshairs',
   },
   chromeVariant: 'astro',
-  // Sandbox only so far - the TDOA/FDOA service and console exist, the scenario arc does not.
+  // Sandbox plus scenario 1 (First Fix) so far - the rest of the arc is still being authored.
   releaseStage: 'alpha',
   scenarios: [
     signalHunterSandboxData,
+    signalHunterScenario1Data,
   ],
   isLocked: false,
   isDisabled: false,

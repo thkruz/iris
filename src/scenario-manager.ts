@@ -49,6 +49,7 @@ import { hamSdrScenario6Data } from '@app/campaigns/ham-sdr/scenario6';
 import { hamSdrScenario7Data } from '@app/campaigns/ham-sdr/scenario7';
 import { hamSdrScenario8Data } from '@app/campaigns/ham-sdr/scenario8';
 import { signalHunterSandboxData } from '@app/campaigns/signal-hunter/sandbox';
+import { signalHunterScenario1Data } from '@app/campaigns/signal-hunter/scenario1';
 import { ccsScenario1Data } from '@app/campaigns/ccs/scenario1';
 import { ccsScenario2Data } from '@app/campaigns/ccs/scenario2';
 import { AntennaState } from '@app/equipment/antenna';
@@ -498,6 +499,7 @@ export const SCENARIOS: ScenarioData[] = [
   hamSdrScenario7Data,
   hamSdrScenario8Data,
   signalHunterSandboxData,
+  signalHunterScenario1Data,
   ccsScenario1Data,
   ccsScenario2Data,
 ];
