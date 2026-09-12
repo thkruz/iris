@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 export default defineConfig({
-  // Build-time flags from webpack DefinePlugin. Tests always run as the OSS edition.
+  // Build-time flags from rspack DefinePlugin. Tests always run as the OSS edition.
   define: {
     __IS_PRIVATE__: 'false',
     __AUTHORING__: 'false',

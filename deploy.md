@@ -125,7 +125,7 @@ PUBLIC_USER_API_URL=https://user.keeptrack.space
 PUBLIC_ASSETS_BASE_URL=https://assets.signalrange.space
 ```
 
-**Note**: Environment variables are injected at build time via webpack. Make sure `.env.production` is in your `.gitignore`.
+**Note**: Environment variables are injected at build time via rspack. Make sure `.env.production` is in your `.gitignore`.
 
 ### Getting Supabase Credentials
 
@@ -409,7 +409,7 @@ pnpm run r2:sync -- --verbose  # See detailed output
 - Check R2 bucket region (should be close to users)
 
 **Problem**: Large bundle size
-- Check webpack bundle analyzer
+- Check the rspack bundle analyzer
 - Ensure large assets are in R2, not in bundle
 - Verify tree-shaking is working
 

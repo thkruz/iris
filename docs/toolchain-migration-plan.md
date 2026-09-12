@@ -224,6 +224,22 @@ Steps:
    - Full Playwright suite (it boots the dev server), then a wrangler `deploy --dry-run`.
 6. Record before/after build times in this document.
 
+### Measured results (this machine, 2026-09-12)
+
+| Step | webpack + ts-loader | rspack + SWC | Change |
+|---|---|---|---|
+| Production build, cold | 12.9 s | 0.96 s | 13x faster |
+| Production build, warm (persistent cache) | n/a (no cache) | 0.20 s | 65x vs webpack cold |
+| Dev server first compile | ~11 s | 0.43 s | 25x faster |
+| `typecheck` (tsc -> tsgo) | 4.4 s | 0.6 s | 7x faster |
+
+`dist/` was compared against a webpack build taken before Phase 1. After excluding
+the `.d.ts`/`.d.ts.map` files ts-loader used to emit (753 files of pure build noise
+that never belonged in `dist/`), the two outputs match file for file, with two
+benign differences: the async chunk is renumbered (644 -> 783), and webpack's
+`main.js.LICENSE.txt` sidecar is gone because SWC keeps the `/*! */` license
+banners inline in the bundle instead of extracting them. No attribution is lost.
+
 Gotchas:
 - SWC strips types without checking them. Type safety is now only `pnpm run typecheck`, which
   Phase 5's hooks and the existing CI job enforce. Do Phase 3 before Phase 4.

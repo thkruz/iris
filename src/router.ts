@@ -79,7 +79,7 @@ export class Router {
     });
 
     // Private edition routes (authoring tools). Dead code in the OSS build:
-    // DefinePlugin folds the flag and webpack never resolves '@private'.
+    // DefinePlugin folds the flag and rspack never resolves '@private'.
     if (__IS_PRIVATE__) {
       import('@private/index')
         .then((mod) => mod.registerPrivateRoutes(this))

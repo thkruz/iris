@@ -115,7 +115,7 @@ Assets are downloaded to `public/assets/campaigns/` and `public/assets/character
 
 | Command | Description |
 |---------|-------------|
-| `pnpm run dev` | Start webpack dev server with hot reload |
+| `pnpm run dev` | Start the rspack dev server with hot reload |
 | `pnpm run build` | Production build to `dist/` |
 | `pnpm run preview` | Preview production build with Wrangler |
 | `pnpm run r2:pull` | Download campaign assets from R2 |
@@ -135,7 +135,7 @@ Run `pnpm run r2:pull` to download campaign audio and images.
 Run `pnpm run typecheck` to see detailed type errors.
 
 **Port already in use?**
-The dev server defaults to port 3000. Check for other processes or modify `webpack.config.js`.
+The dev server defaults to port 3000. Check for other processes or modify `rspack.config.mts`.
 
 ## 🌐 Deployment
 
