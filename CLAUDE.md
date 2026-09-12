@@ -156,7 +156,7 @@ new Satellite(
 **Always use the pnpm script to check for TypeScript errors:**
 
 ```bash
-pnpm run type-check
+pnpm run typecheck
 ```
 
 **Do NOT run tsc directly on individual files:**

@@ -78,7 +78,7 @@ jobs:
         uses: ./.github/actions/setup-node-project
 
       - name: TypeScript Type Check
-        run: pnpm run type-check
+        run: pnpm run typecheck
 
       - name: Type Check Summary
         run: |

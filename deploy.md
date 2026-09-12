@@ -331,7 +331,7 @@ If you don't have a custom domain, Cloudflare provides a free subdomain:
 **Problem**: Build fails with TypeScript errors
 ```bash
 # Solution: Run type checking first
-pnpm run type-check
+pnpm run typecheck
 
 # Fix any TypeScript errors before building
 ```
@@ -424,7 +424,7 @@ Before deploying to production:
 - [ ] R2 custom domain configured (if using)
 - [ ] Assets synced to R2 (`pnpm run r2:sync`)
 - [ ] Build succeeds without errors (`pnpm run build`)
-- [ ] Type checking passes (`pnpm run type-check`)
+- [ ] Type checking passes (`pnpm run typecheck`)
 - [ ] Linting passes (`pnpm run lint`)
 - [ ] Tests pass (`pnpm test`)
 - [ ] Wrangler authenticated (`wrangler login`)
