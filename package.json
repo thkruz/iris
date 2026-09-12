@@ -12,6 +12,7 @@
     "node": "24.14.0"
   },
   "scripts": {
+    "prepare": "husky",
     "build": "cross-env NODE_ENV=production rspack build --mode production",
     "dev": "cross-env NODE_ENV=development rspack serve --mode development",
     "deploy": "pnpm run build && wrangler deploy",
@@ -62,6 +63,7 @@
     "cross-env": "^10.1.0",
     "css-loader": "^7.1.4",
     "express": "4.22.2",
+    "husky": "^9.1.7",
     "jsdom": "^28.0.0",
     "style-loader": "^4.0.0",
     "supabase": "^2.67.3",
