@@ -372,7 +372,7 @@ export class Satellite {
     this.phase_ += phaseRate * elapsed;
 
     // Wrap phase to [0, 2*PI]
-    this.phase_ = this.phase_ % (2 * Math.PI);
+    this.phase_ %= 2 * Math.PI;
     if (this.phase_ < 0) this.phase_ += 2 * Math.PI;
 
     // Calculate new position using parametric equations:

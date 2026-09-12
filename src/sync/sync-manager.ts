@@ -273,6 +273,10 @@ export class SyncManager {
     // Sync Objective States if available
     if (state.objectiveStates && state.objectiveStates.length > 0) {
       try {
+        // Lazy require, not a static import: simulation-manager reaches back here via
+        // progress-save-manager -> storage -> sync-manager, so importing it at module
+        // scope would be a circular import.
+        // biome-ignore lint/style/noCommonJs: breaks a real import cycle; see above.
         const { SimulationManager } = require('../simulation/simulation-manager');
         const sim = SimulationManager.getInstance();
         if (sim?.objectivesManager) {

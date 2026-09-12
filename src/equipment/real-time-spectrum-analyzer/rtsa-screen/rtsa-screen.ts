@@ -30,13 +30,13 @@ export abstract class RTSAScreen {
     return this.width_;
   }
 
-  get height(): number {
-    return this.height_;
-  }
-
   set width(value: number) {
     this.width_ = value;
     Logger.warn('RTSAScreen', 'set width', `Width set to ${value}, resizing canvas`);
+  }
+
+  get height(): number {
+    return this.height_;
   }
 
   set height(value: number) {

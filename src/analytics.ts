@@ -45,7 +45,7 @@ export class Analytics {
     // gtag.js requires Arguments objects on the dataLayer, so this must be a
     // plain function using `arguments`, not a rest-args push of an array.
     const gtag = function gtag() {
-      // eslint-disable-next-line prefer-rest-params
+      // biome-ignore lint/complexity/noArguments: gtag.js requires a real Arguments object.
       window.dataLayer!.push(arguments);
     } as (...args: unknown[]) => void;
 

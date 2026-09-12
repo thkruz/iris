@@ -204,7 +204,7 @@ export abstract class LNBModuleCore extends RFFrontEndModule<LNBState> {
     const tempDelta = Math.abs(targetNoiseTemp - this.state.noiseTemperature);
     // Fast response (0.1) for large changes, slow (0.005) for small changes
     const smoothingFactor = tempDelta > 100 ? 0.1 : 0.005;
-    this.state.noiseTemperature = this.state.noiseTemperature + (targetNoiseTemp - this.state.noiseTemperature) * smoothingFactor;
+    this.state.noiseTemperature += (targetNoiseTemp - this.state.noiseTemperature) * smoothingFactor;
   }
 
   /**

@@ -108,14 +108,14 @@ export abstract class GPSDOModuleCore extends RFFrontEndModule<GPSDOState> {
       const coolRateInSeconds = 0.0001; // Per second
       // Convert to ms
       const coolRate = 1 - (1 - coolRateInSeconds) ** (1 / 60);
-      this.state.temperature = this.state.temperature + (ambientTemp - this.state.temperature) * coolRate;
+      this.state.temperature += (ambientTemp - this.state.temperature) * coolRate;
       return;
     }
 
     // OCXO oven-controlled to ~70°C
     const targetTemp = 70;
     const heatRate = 0.00005;
-    this.state.temperature = this.state.temperature + (targetTemp - this.state.temperature) * heatRate;
+    this.state.temperature += (targetTemp - this.state.temperature) * heatRate;
   }
 
   /**

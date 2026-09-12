@@ -193,7 +193,7 @@ export class WaterfallDisplay extends RTSAScreen {
     let norm = (amplitude - minDb) / (maxDb - minDb);
     norm = Math.max(0, Math.min(1, norm));
     // Bias towards darker blue to make signals stand out from noise
-    norm = norm ** 2.5;
+    norm **= 2.5;
 
     // Realistic spectrum analyzer gradient: dark blue -> light blue -> yellow -> orange -> red -> dark red
     if (norm < 0.2) {

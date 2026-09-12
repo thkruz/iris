@@ -953,15 +953,13 @@ export class ACUControlTab extends BaseElement {
           beaconLockEl.textContent = 'SEARCHING';
           beaconLockEl.classList.remove('text-success');
         }
-      } else {
         // Manual/Program-track without step-track: UNLOCKED or LOCKED based on C/N
-        if (state.isBeaconLocked) {
-          beaconLockEl.textContent = 'LOCKED';
-          beaconLockEl.classList.add('text-success');
-        } else {
-          beaconLockEl.textContent = 'UNLOCKED';
-          beaconLockEl.classList.remove('text-success');
-        }
+      } else if (state.isBeaconLocked) {
+        beaconLockEl.textContent = 'LOCKED';
+        beaconLockEl.classList.add('text-success');
+      } else {
+        beaconLockEl.textContent = 'UNLOCKED';
+        beaconLockEl.classList.remove('text-success');
       }
     }
   }

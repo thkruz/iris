@@ -11,6 +11,7 @@ import { ContactScheduleManager } from '@app/contact-schedule/contact-schedule-m
 import { ElectronicAttackManager } from '@app/electronic-attack/electronic-attack-manager';
 import { CryptoModule } from '@app/equipment/crypto';
 import { GeolocationConsoleCore } from '@app/equipment/geolocation-console/geolocation-console-core';
+import { FECSimulator } from '@app/equipment/receiver/fec-simulator';
 import { TapPoint } from '@app/equipment/rf-front-end/coupler-module/tap-points';
 import { EventBus } from '@app/events/event-bus';
 import { Events, QuizCompletedData, QuizPassedData } from '@app/events/events';
@@ -2295,7 +2296,6 @@ export class ObjectivesManager {
         const modem = receiver.activeModem;
 
         // FECSimulator calculates frame sync from signal conditions
-        const { FECSimulator } = require('@app/equipment/receiver/fec-simulator');
         const fecSim = new FECSimulator();
         const metrics = fecSim.calculate({
           cnRatio_dB: signalInfo.cnRatio_dB,
@@ -2322,7 +2322,6 @@ export class ObjectivesManager {
         const signalInfo = receiver.getSignalsInBandwidth();
         const modem = receiver.activeModem;
 
-        const { FECSimulator } = require('@app/equipment/receiver/fec-simulator');
         const fecSim = new FECSimulator();
         const metrics = fecSim.calculate({
           cnRatio_dB: signalInfo.cnRatio_dB,
@@ -2350,7 +2349,6 @@ export class ObjectivesManager {
         const signalInfo = receiver.getSignalsInBandwidth();
         const modem = receiver.activeModem;
 
-        const { FECSimulator } = require('@app/equipment/receiver/fec-simulator');
         const fecSim = new FECSimulator();
         const metrics = fecSim.calculate({
           cnRatio_dB: signalInfo.cnRatio_dB,
@@ -2376,7 +2374,6 @@ export class ObjectivesManager {
         const signalInfo = receiver.getSignalsInBandwidth();
         const modem = receiver.activeModem;
 
-        const { FECSimulator } = require('@app/equipment/receiver/fec-simulator');
         const fecSim = new FECSimulator();
         const metrics = fecSim.calculate({
           cnRatio_dB: signalInfo.cnRatio_dB,

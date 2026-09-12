@@ -464,7 +464,7 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
       // Cooling down gradually toward ambient (25°C)
       const ambientTemp = 25;
       const coolRate = 0.00001; // Slow cooling per update
-      this.state.temperature = this.state.temperature + (ambientTemp - this.state.temperature) * coolRate;
+      this.state.temperature += (ambientTemp - this.state.temperature) * coolRate;
       this.state.currentDraw = 0;
       return;
     }
@@ -477,7 +477,7 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
 
     // Simulate gradual heating (thermal inertia)
     const heatRate = 0.00005; // Slow heating per update
-    this.state.temperature = this.state.temperature + (targetTemp - this.state.temperature) * heatRate;
+    this.state.temperature += (targetTemp - this.state.temperature) * heatRate;
 
     // Current draw trends gradually toward target value
     const idleCurrent = 0.5;
@@ -485,7 +485,7 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
     const outputCurrent = Math.max(0, (this.state.outputPower + 10) / 20) * 1.5;
     const targetCurrent = idleCurrent + powerCurrent + outputCurrent;
     const currentRate = 0.1; // Slow current change per update
-    this.state.currentDraw = this.state.currentDraw + (targetCurrent - this.state.currentDraw) * currentRate;
+    this.state.currentDraw += (targetCurrent - this.state.currentDraw) * currentRate;
   }
 
   // ═══════════════════════════════════════════════════════════════
