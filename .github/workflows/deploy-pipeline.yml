@@ -38,7 +38,7 @@ jobs:
       artifact-name: ${{ steps.artifact.outputs.name }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: false
 
@@ -79,7 +79,7 @@ jobs:
       url: https://app.signalrange.space
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download Build Artifact
         uses: actions/download-artifact@v4
@@ -212,7 +212,7 @@ jobs:
       artifact-name: ${{ steps.artifact.outputs.name }}
     steps:
       - name: Checkout PR Branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ needs.verify-pr-checks.outputs.pr-sha }}
           submodules: false
@@ -257,7 +257,7 @@ jobs:
       url: https://uat.signalrange.space
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: dev
 
