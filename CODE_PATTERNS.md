@@ -425,7 +425,7 @@ describe('RFFrontEnd class', () => {
   let parentElement: HTMLElement;
 
   beforeEach(() => {
-    jest.resetModules();
+    vi.resetModules();
     document.body.innerHTML = '<div id="test-root"></div>';
     parentElement = document.getElementById('test-root')!;
 
@@ -435,7 +435,7 @@ describe('RFFrontEnd class', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     document.body.innerHTML = '';
   });
 
@@ -513,7 +513,7 @@ it('works', () => {});
 
 1. **Arrange-Act-Assert**: Structure tests in three clear sections
 2. **One assertion per concept**: Each test should verify one behavior
-3. **Use spies for side effects**: Verify method calls with jest.spyOn()
+3. **Use spies for side effects**: Verify method calls with vi.spyOn()
 4. **Clean up**: Always restore mocks and clear DOM in afterEach
 5. **Test edge cases**: Include boundary conditions and error states
 6. **Use toBeCloseTo()**: For floating-point comparisons

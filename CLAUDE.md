@@ -8,6 +8,18 @@
 - Branded types (`Hertz`, `dB`, `Degrees`) require explicit casting - check type definitions early
 - State handlers typed as `(state: Partial<T>) => void`, never `Function | null`
 - Don't use bracket notation (`obj['method']()`) to access methods - make them public instead
+- Always use LF line endings, never CRLF (enforced by `.gitattributes` and Biome's `lineEnding: lf`)
+- **Every regex MUST have the `u` flag** (enforced by the custom Biome plugin `biome-plugins/require-unicode-regexp.grit`; the `v` flag is also accepted). This applies everywhere: source code, tests, and e2e specs. It currently reports as a Biome **warning**, so it does not fail the build; the mandate still stands and it is slated to be ratcheted to an error once the existing violations are cleared.
+
+  ```typescript
+  // BAD
+  /[a-z]+/.test(str)
+  name.replace(/\s+/g, '-')
+
+  // GOOD
+  /[a-z]+/u.test(str)
+  name.replace(/\s+/gu, '-')
+  ```
 
 ## CSS/Tabler
 
@@ -167,6 +179,23 @@ pnpm exec tsc --noEmit src/campaigns/nats/scenario5.ts
 ```
 
 This project uses `@app/*` path aliases (e.g., `@app/types`, `@app/equipment/...`) that require the full tsconfig.json configuration. Running tsc on individual files bypasses this and produces false "Cannot find module" errors.
+
+## Build-Time Constants (DefinePlugin)
+
+- rspack `DefinePlugin` in `rspack.config.mts` injects compile-time constants — prefer this over generated files or runtime lookups for any value known at build time
+- Existing constants: `__APP_VERSION__` (from `package.json`), `__GIT_COMMIT_SHA__`, `__IS_PRIVATE__`, `__AUTHORING__`, plus the `process.env.PUBLIC_*` values
+- Always use `JSON.stringify()` when adding values — `DefinePlugin` does textual replacement, so strings must be wrapped as JS string literals
+- To add a new constant, all three must be updated or it breaks in one environment:
+  1. `DefinePlugin` in `rspack.config.mts` (the bundle)
+  2. `define` in `vitest.config.mts` (the tests)
+  3. the ambient declaration in `src/declaration.d.ts` (the type checker)
+
+## Linting and Formatting
+
+- Biome (`biome.json`) is both the linter and the formatter: `pnpm run lint` checks, `pnpm run lint:fix` applies safe fixes, `pnpm run format` formats
+- Only **errors** fail the gate; warnings are a backlog being cleared area by area
+- `src/engine/**` (vendored) and `src/private/**` (submodule) are excluded from linting
+- Biome does not type-check. The unused-code gate is `noUnusedLocals`/`noUnusedParameters` in tsconfig, via `pnpm run typecheck`
 
 ## Git Commits
 
