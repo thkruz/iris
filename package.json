@@ -30,12 +30,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "pnpm exec eslint",
+    "lint": "biome check ./src ./test ./e2e ./build",
     "lcov": "pnpm exec tsx build/open-lcov.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "lint:fix": "biome check --write ./src ./test ./e2e ./build",
+    "format": "biome format --write ./src ./test ./e2e ./build"
   },
   "keywords": [
     "space",
@@ -45,6 +47,7 @@
   "author": "Theodore Kruczek",
   "license": "AGPL-3.0",
   "devDependencies": {
+    "@biomejs/biome": "2.5.4",
     "@playwright/test": "^1.48.0",
     "@types/draggabilly": "^3.0.0",
     "@types/node": "^20.19.24",
@@ -54,8 +57,6 @@
     "copy-webpack-plugin": "^13.0.1",
     "cross-env": "^10.1.0",
     "css-loader": "^6.8.1",
-    "eslint": "^9.39.2",
-    "eslint-plugin-import": "^2.32.0",
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.5.3",
     "jsdom": "^28.0.0",
