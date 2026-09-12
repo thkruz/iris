@@ -121,7 +121,9 @@ Assets are downloaded to `public/assets/campaigns/` and `public/assets/character
 | `pnpm run r2:pull` | Download campaign assets from R2 |
 | `pnpm test` | Run the Vitest suite |
 | `pnpm run type-check` | TypeScript type checking |
-| `pnpm run lint` | Run ESLint |
+| `pnpm run lint` | Lint and format-check with Biome |
+| `pnpm run lint:fix` | Apply Biome's safe fixes |
+| `pnpm run format` | Format with Biome |
 
 ### Troubleshooting
 

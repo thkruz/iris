@@ -50,7 +50,7 @@ jobs:
       - name: Setup Node Project
         uses: ./.github/actions/setup-node-project
 
-      - name: Run ESLint
+      - name: Run Biome
         run: pnpm run lint
 
       - name: YAML Lint
@@ -63,7 +63,7 @@ jobs:
       - name: Lint Summary
         run: |
           echo "### Lint Results" >> $GITHUB_STEP_SUMMARY
-          echo "- ESLint: Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Biome (lint + format): Passed" >> $GITHUB_STEP_SUMMARY
 
   type-check:
     name: Type Check
