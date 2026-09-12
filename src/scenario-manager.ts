@@ -50,6 +50,7 @@ import { hamSdrScenario7Data } from '@app/campaigns/ham-sdr/scenario7';
 import { hamSdrScenario8Data } from '@app/campaigns/ham-sdr/scenario8';
 import { signalHunterSandboxData } from '@app/campaigns/signal-hunter/sandbox';
 import { ccsScenario1Data } from '@app/campaigns/ccs/scenario1';
+import { ccsScenario2Data } from '@app/campaigns/ccs/scenario2';
 import { AntennaState } from '@app/equipment/antenna';
 import { ANTENNA_CONFIG_KEYS } from "@app/equipment/antenna/antenna-config-keys";
 import { defaultSpectrumAnalyzerState } from '@app/equipment/real-time-spectrum-analyzer/defaultSpectrumAnalyzerState';
@@ -498,6 +499,7 @@ export const SCENARIOS: ScenarioData[] = [
   hamSdrScenario8Data,
   signalHunterSandboxData,
   ccsScenario1Data,
+  ccsScenario2Data,
 ];
 
 export function isScenarioLocked(scenario: ScenarioData, completedScenarioIds: string[]): boolean {

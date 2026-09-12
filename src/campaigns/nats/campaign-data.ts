@@ -9,6 +9,7 @@ import { hamSdrScenario6Data } from '@app/campaigns/ham-sdr/scenario6';
 import { hamSdrScenario7Data } from '@app/campaigns/ham-sdr/scenario7';
 import { hamSdrScenario8Data } from '@app/campaigns/ham-sdr/scenario8';
 import { ccsScenario1Data } from '@app/campaigns/ccs/scenario1';
+import { ccsScenario2Data } from '@app/campaigns/ccs/scenario2';
 import { signalHunterSandboxData } from '@app/campaigns/signal-hunter/sandbox';
 import { sandboxData } from './sandbox';
 import { scenario1Data } from './scenario1';
@@ -133,7 +134,7 @@ export const ccsCampaignData: CampaignData = {
   description: `This campaign delves into the realm of electronic warfare and counter communications systems. As a specialist in this field, you'll navigate through a series of scenarios that challenge you to identify, analyze, and disrupt hostile communication signals while ensuring the integrity of friendly communications.<br><br>Through these scenarios, you'll develop expertise in signal intelligence, jamming techniques, and electronic countermeasures, all while operating within the constraints of modern electronic warfare environments.`,
   imageUrl: 'ccs/ccs.png',
   difficulty: 'advanced',
-  totalDuration: '200-260 min',
+  totalDuration: '25-35 min',
   campaignType: 'Electronic Warfare',
   headerIdentity: {
     name: 'COUNTER',
@@ -141,10 +142,11 @@ export const ccsCampaignData: CampaignData = {
     icon: 'fa-solid fa-tower-broadcast',
   },
   chromeVariant: 'astro',
-  // Sandbox only so far - the EA engine and console exist, the scenario arc does not.
+  // Sandbox plus the first scored mission (Failover); the rest of the arc is not authored yet.
   releaseStage: 'alpha',
   scenarios: [
     ccsScenario1Data,
+    ccsScenario2Data,
   ],
   isLocked: false,
   isDisabled: false,
