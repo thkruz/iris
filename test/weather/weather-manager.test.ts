@@ -38,11 +38,11 @@ const createMockAntenna = (uuid: string, isHeaterEnabled = false, iceAccumulatio
   },
   updateIceAccumulation: vi.fn((value: number) => {
     // Update the mock state when called
-    mockAntennas.find(a => a.state.uuid === uuid)!.state.iceAccumulation_dB = value;
+    mockAntennas.find((a) => a.state.uuid === uuid)!.state.iceAccumulation_dB = value;
   }),
   updateSkyNoiseDegradation: vi.fn((value: number) => {
     // Update the mock state when called (sun-transit sky-noise path)
-    mockAntennas.find(a => a.state.uuid === uuid)!.state.skyNoiseDegradation_dB = value;
+    mockAntennas.find((a) => a.state.uuid === uuid)!.state.skyNoiseDegradation_dB = value;
   }),
 });
 
@@ -96,20 +96,14 @@ describe('WeatherManager', () => {
     it('should register UPDATE event listener on creation', () => {
       WeatherManager.getInstance();
 
-      expect(mockEventBusInstance.on).toHaveBeenCalledWith(
-        Events.UPDATE,
-        expect.any(Function)
-      );
+      expect(mockEventBusInstance.on).toHaveBeenCalledWith(Events.UPDATE, expect.any(Function));
     });
 
     it('should unregister UPDATE event listener on destroy', () => {
       WeatherManager.getInstance();
       WeatherManager.destroy();
 
-      expect(mockEventBusInstance.off).toHaveBeenCalledWith(
-        Events.UPDATE,
-        expect.any(Function)
-      );
+      expect(mockEventBusInstance.off).toHaveBeenCalledWith(Events.UPDATE, expect.any(Function));
     });
 
     it('should handle destroy when no instance exists', () => {
@@ -234,10 +228,7 @@ describe('WeatherManager', () => {
       vi.setSystemTime(startTime + 15000);
       updateHandler(1000);
 
-      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(
-        Events.WEATHER_EVENT_STARTED,
-        expect.objectContaining({ id: 'event-1', isActive: true })
-      );
+      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(Events.WEATHER_EVENT_STARTED, expect.objectContaining({ id: 'event-1', isActive: true }));
     });
 
     it('should deactivate event when elapsed time exceeds start + duration', () => {
@@ -265,19 +256,13 @@ describe('WeatherManager', () => {
       vi.setSystemTime(startTime + 8000);
       updateHandler(1000);
 
-      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(
-        Events.WEATHER_EVENT_STARTED,
-        expect.objectContaining({ id: 'event-1' })
-      );
+      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(Events.WEATHER_EVENT_STARTED, expect.objectContaining({ id: 'event-1' }));
 
       // Deactivate the event
       vi.setSystemTime(startTime + 20000); // Past 5 + 10 = 15 seconds
       updateHandler(1000);
 
-      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(
-        Events.WEATHER_EVENT_ENDED,
-        expect.objectContaining({ id: 'event-1', isActive: false })
-      );
+      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(Events.WEATHER_EVENT_ENDED, expect.objectContaining({ id: 'event-1', isActive: false }));
     });
 
     it('should not emit events when state does not change', () => {
@@ -349,28 +334,19 @@ describe('WeatherManager', () => {
       vi.setSystemTime(startTime + 15000);
       updateHandler(1000);
 
-      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(
-        Events.WEATHER_EVENT_STARTED,
-        expect.objectContaining({ id: 'event-1' })
-      );
+      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(Events.WEATHER_EVENT_STARTED, expect.objectContaining({ id: 'event-1' }));
 
       // First event ends, second not started yet
       vi.setSystemTime(startTime + 45000);
       updateHandler(1000);
 
-      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(
-        Events.WEATHER_EVENT_ENDED,
-        expect.objectContaining({ id: 'event-1' })
-      );
+      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(Events.WEATHER_EVENT_ENDED, expect.objectContaining({ id: 'event-1' }));
 
       // Activate second event
       vi.setSystemTime(startTime + 55000);
       updateHandler(1000);
 
-      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(
-        Events.WEATHER_EVENT_STARTED,
-        expect.objectContaining({ id: 'event-2' })
-      );
+      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(Events.WEATHER_EVENT_STARTED, expect.objectContaining({ id: 'event-2' }));
     });
   });
 
@@ -420,9 +396,7 @@ describe('WeatherManager', () => {
       const config = WeatherManager.SEVERITY_CONFIG['moderate'];
       const expectedIce = config.maxDegradation_dB * (1 - Math.exp(-5 / config.timeConstant_s));
 
-      expect(mockAntennas[0].updateIceAccumulation).toHaveBeenCalledWith(
-        expect.closeTo(expectedIce, 4)
-      );
+      expect(mockAntennas[0].updateIceAccumulation).toHaveBeenCalledWith(expect.closeTo(expectedIce, 4));
     });
 
     it('should NOT accumulate ice when heater is ON', () => {
@@ -749,10 +723,7 @@ describe('WeatherManager', () => {
           },
         ];
 
-        mockGroundStations.push(
-          { state: { id: 'gs-1' }, antennas: [] },
-          { state: { id: 'gs-2' }, antennas: [] }
-        );
+        mockGroundStations.push({ state: { id: 'gs-1' }, antennas: [] }, { state: { id: 'gs-2' }, antennas: [] });
 
         const manager = WeatherManager.getInstance();
 
@@ -1035,10 +1006,7 @@ describe('WeatherManager', () => {
       // Add both antennas to mockAntennas so the find() in createMockAntenna works
       mockAntennas = [antenna1, antenna2];
 
-      mockGroundStations.push(
-        { state: { id: 'gs-1' }, antennas: [antenna1] },
-        { state: { id: 'gs-2' }, antennas: [antenna2] }
-      );
+      mockGroundStations.push({ state: { id: 'gs-1' }, antennas: [antenna1] }, { state: { id: 'gs-2' }, antennas: [antenna2] });
 
       WeatherManager.getInstance();
 
@@ -1108,10 +1076,7 @@ describe('WeatherManager', () => {
       vi.setSystemTime(startTime + 10000);
       updateHandler(1000);
 
-      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(
-        Events.WEATHER_EVENT_STARTED,
-        expect.objectContaining({ id: 'event-1' })
-      );
+      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(Events.WEATHER_EVENT_STARTED, expect.objectContaining({ id: 'event-1' }));
     });
 
     it('should handle event at exactly end time boundary', () => {
@@ -1143,10 +1108,7 @@ describe('WeatherManager', () => {
       vi.setSystemTime(startTime + 10000);
       updateHandler(5000);
 
-      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(
-        Events.WEATHER_EVENT_ENDED,
-        expect.objectContaining({ id: 'event-1' })
-      );
+      expect(mockEventBusInstance.emit).toHaveBeenCalledWith(Events.WEATHER_EVENT_ENDED, expect.objectContaining({ id: 'event-1' }));
     });
 
     it('should handle zero duration event', () => {
@@ -1175,10 +1137,7 @@ describe('WeatherManager', () => {
       updateHandler(5000);
 
       // Should not emit started event
-      expect(mockEventBusInstance.emit).not.toHaveBeenCalledWith(
-        Events.WEATHER_EVENT_STARTED,
-        expect.anything()
-      );
+      expect(mockEventBusInstance.emit).not.toHaveBeenCalledWith(Events.WEATHER_EVENT_STARTED, expect.anything());
     });
   });
 

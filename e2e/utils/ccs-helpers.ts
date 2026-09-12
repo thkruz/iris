@@ -25,7 +25,10 @@ import { waitForQuizToAppear } from './simulation-helpers';
 
 /** Click via DOM dispatch, immune to overlapping draggable boxes. */
 export async function domClick(page: Page, selector: string): Promise<void> {
-  await page.locator(selector).first().evaluate((el) => (el as HTMLElement).click());
+  await page
+    .locator(selector)
+    .first()
+    .evaluate((el) => (el as HTMLElement).click());
 }
 
 /** Answer a Character.SYSTEM status-check quiz and dismiss its feedback panel. */
@@ -60,12 +63,7 @@ export async function missionElapsedS(page: Page, wallStartMs: number): Promise<
  * No-op if already past it. Used to bring a scheduled hardwareFaultEvent
  * forward; the fault fires on the next UPDATE tick.
  */
-export async function advanceMissionClockToElapsed(
-  page: Page,
-  wallStartMs: number,
-  targetS: number,
-  marginS = 10,
-): Promise<void> {
+export async function advanceMissionClockToElapsed(page: Page, wallStartMs: number, targetS: number, marginS = 10): Promise<void> {
   await page.waitForFunction(() => typeof (window as any).advanceMissionClock === 'function');
   const elapsed = await missionElapsedS(page, wallStartMs);
   const deltaS = targetS + marginS - elapsed;
@@ -80,13 +78,7 @@ export async function advanceMissionClockToElapsed(
  * step buttons to stage the delta, then APPLY. Resolves once the staged
  * change is applied - the pedestal keeps slewing at maxRate_deg_s after that.
  */
-export async function slewAntenna(
-  page: Page,
-  missionControl: MissionControlPage,
-  antennaIndex: number,
-  deltaAzDeg: number,
-  deltaElDeg: number,
-): Promise<void> {
+export async function slewAntenna(page: Page, missionControl: MissionControlPage, antennaIndex: number, deltaAzDeg: number, deltaElDeg: number): Promise<void> {
   await missionControl.selectTab(`acu-control-${antennaIndex}`);
   await page.waitForTimeout(500);
 

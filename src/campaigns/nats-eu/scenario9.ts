@@ -167,7 +167,7 @@ export const natsEuScenario9Data: ScenarioData = {
       id: 'galway-health',
       nice: ['T0431', 'K0741'],
       title: 'Galway Health Check',
-      description: 'Confirm GW-01\'s reference and RF chain are nominal before the first window: GPSDO locked and out of holdover, LNB thermally stable, HPA not overdriven.',
+      description: "Confirm GW-01's reference and RF chain are nominal before the first window: GPSDO locked and out of holdover, LNB thermally stable, HPA not overdriven.",
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [
@@ -240,7 +240,8 @@ export const natsEuScenario9Data: ScenarioData = {
       id: 'build-the-day-plan',
       nice: ['K0689', 'T0129'],
       title: 'Build the Day Plan',
-      description: 'Allocate the morning\'s contacts across GW-01 and SH-02 with no site double-booked; leave the P3 second-orbit contacts to your judgment. The plan must read VALID.',
+      description:
+        "Allocate the morning's contacts across GW-01 and SH-02 with no site double-booked; leave the P3 second-orbit contacts to your judgment. The plan must read VALID.",
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [
@@ -340,7 +341,8 @@ export const natsEuScenario9Data: ScenarioData = {
               'The collect was captured, but the SAR-2 windows were dropped because both sites were busy.',
             ],
             correctIndex: 0,
-            explanation: 'Correct. Report what was captured, what is committed, and what is best-effort. Erik does not need the C/N numbers; he needs to know what he can count on.',
+            explanation:
+              'Correct. Report what was captured, what is committed, and what is best-effort. Erik does not need the C/N numbers; he needs to know what he can count on.',
             pointPenalty: 5,
           },
           mustMaintain: false,

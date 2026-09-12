@@ -1,4 +1,6 @@
 import type { CampaignData } from '@app/campaigns/campaign-types';
+import { ccsScenario1Data } from '@app/campaigns/ccs/scenario1';
+import { ccsScenario2Data } from '@app/campaigns/ccs/scenario2';
 import { hamSdrSandboxData } from '@app/campaigns/ham-sdr/sandbox';
 import { hamSdrScenario1Data } from '@app/campaigns/ham-sdr/scenario1';
 import { hamSdrScenario2Data } from '@app/campaigns/ham-sdr/scenario2';
@@ -8,8 +10,6 @@ import { hamSdrScenario5Data } from '@app/campaigns/ham-sdr/scenario5';
 import { hamSdrScenario6Data } from '@app/campaigns/ham-sdr/scenario6';
 import { hamSdrScenario7Data } from '@app/campaigns/ham-sdr/scenario7';
 import { hamSdrScenario8Data } from '@app/campaigns/ham-sdr/scenario8';
-import { ccsScenario1Data } from '@app/campaigns/ccs/scenario1';
-import { ccsScenario2Data } from '@app/campaigns/ccs/scenario2';
 import { signalHunterSandboxData } from '@app/campaigns/signal-hunter/sandbox';
 import { signalHunterScenario1Data } from '@app/campaigns/signal-hunter/scenario1';
 import { sandboxData } from './sandbox';
@@ -145,10 +145,7 @@ export const ccsCampaignData: CampaignData = {
   chromeVariant: 'astro',
   // Sandbox plus the first scored mission (Failover); the rest of the arc is not authored yet.
   releaseStage: 'alpha',
-  scenarios: [
-    ccsScenario1Data,
-    ccsScenario2Data,
-  ],
+  scenarios: [ccsScenario1Data, ccsScenario2Data],
   isLocked: false,
   isDisabled: false,
 };
@@ -173,12 +170,7 @@ export const geolocationCampaignData: CampaignData = {
   chromeVariant: 'astro',
   // Sandbox plus scenario 1 (First Fix) so far - the rest of the arc is still being authored.
   releaseStage: 'alpha',
-  scenarios: [
-    signalHunterSandboxData,
-    signalHunterScenario1Data,
-  ],
+  scenarios: [signalHunterSandboxData, signalHunterScenario1Data],
   isLocked: false,
   isDisabled: false,
 };
-
-

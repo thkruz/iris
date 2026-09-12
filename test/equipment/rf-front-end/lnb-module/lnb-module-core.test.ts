@@ -244,7 +244,7 @@ describe('LNBModuleCore', () => {
 
       const alarms = lnbModule.getAlarms();
 
-      expect(alarms.some(a => a.includes('noise temperature high'))).toBe(true);
+      expect(alarms.some((a) => a.includes('noise temperature high'))).toBe(true);
     });
 
     it('should alarm when noise figure is degraded', () => {
@@ -253,7 +253,7 @@ describe('LNBModuleCore', () => {
 
       const alarms = lnbModule.getAlarms();
 
-      expect(alarms.some(a => a.includes('noise figure degraded'))).toBe(true);
+      expect(alarms.some((a) => a.includes('noise figure degraded'))).toBe(true);
     });
 
     it('should not alarm when all parameters are normal', () => {
@@ -347,7 +347,7 @@ describe('LNBModuleCore', () => {
         frequency: 10e6 as any,
         power: -10,
         isWarmedUp: true,
-        isEnabled: true
+        isEnabled: true,
       });
       vi.spyOn(lnbModule, 'isExtRefPresent').mockReturnValue(true);
 
@@ -381,7 +381,7 @@ describe('LNBModuleCore', () => {
     it('should sync state from external source', () => {
       const newState: Partial<LNBState> = {
         gain: 60 as dB,
-        loFrequency: 5500 as MHz
+        loFrequency: 5500 as MHz,
       };
 
       lnbModule.sync(newState);

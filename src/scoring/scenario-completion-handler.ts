@@ -204,9 +204,7 @@ export class ScenarioCompletionHandler {
    * Aggregate time penalties across all objectives
    */
   private aggregateTimePenalties_(objectives: readonly ReturnType<ObjectivesManager['getObjectiveStates']>[number][]): number {
-    return objectives.reduce((total, objState) => {
-      return total + (objState.timePenaltyPoints ?? 0);
-    }, 0);
+    return objectives.reduce((total, objState) => total + (objState.timePenaltyPoints ?? 0), 0);
   }
 
   /**
@@ -215,9 +213,7 @@ export class ScenarioCompletionHandler {
    */
   private aggregateHintPenalties_(objectives: readonly ReturnType<ObjectivesManager['getObjectiveStates']>[number][]): number {
     const hintManager = HintManager.getInstance();
-    return objectives.reduce((total, objState) => {
-      return total + hintManager.getHintPenalty(objState.objective.id);
-    }, 0);
+    return objectives.reduce((total, objState) => total + hintManager.getHintPenalty(objState.objective.id), 0);
   }
 
   /**

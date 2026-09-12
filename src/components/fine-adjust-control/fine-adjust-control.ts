@@ -1,5 +1,5 @@
-import { html } from "@app/engine/utils/development/formatter";
-import { qs, qsa } from "@app/engine/utils/query-selector";
+import { html } from '@app/engine/utils/development/formatter';
+import { qs, qsa } from '@app/engine/utils/query-selector';
 import './fine-adjust-control.css';
 
 /**
@@ -41,14 +41,7 @@ export class FineAdjustControl {
    * @param steps Step configurations (default: [10, 1, 0.01])
    * @param decimals Number of decimal places to display
    */
-  constructor(
-    uniqueId: string,
-    label: string,
-    initialValue: number = 0,
-    unit: string = '°',
-    steps: number[] = [10, 1, 0.01],
-    decimals: number = 2
-  ) {
+  constructor(uniqueId: string, label: string, initialValue: number = 0, unit: string = '°', steps: number[] = [10, 1, 0.01], decimals: number = 2) {
     this.uniqueId = uniqueId;
     this.label = label;
     this.unit = unit;
@@ -58,7 +51,7 @@ export class FineAdjustControl {
     // Build step configs with labels
     this.steps = steps.map((value, index) => ({
       value,
-      label: '<'.repeat(steps.length - index)
+      label: '<'.repeat(steps.length - index),
     }));
 
     this.html_ = this.buildHtml_();
@@ -66,14 +59,18 @@ export class FineAdjustControl {
 
   private buildHtml_(): string {
     // Generate decrease buttons (largest step first)
-    const decreaseButtons = this.steps.map(step =>
-      `<button type="button" class="btn-fine btn-fine-decrease" data-delta="-${step.value}" title="-${step.value}${this.unit}">${step.label}</button>`
-    ).join('');
+    const decreaseButtons = this.steps
+      .map((step) => `<button type="button" class="btn-fine btn-fine-decrease" data-delta="-${step.value}" title="-${step.value}${this.unit}">${step.label}</button>`)
+      .join('');
 
     // Generate increase buttons (smallest step first)
-    const increaseButtons = this.steps.slice().reverse().map(step =>
-      `<button type="button" class="btn-fine btn-fine-increase" data-delta="${step.value}" title="+${step.value}${this.unit}">${step.label.replace(/</g, '>')}</button>`
-    ).join('');
+    const increaseButtons = this.steps
+      .slice()
+      .reverse()
+      .map(
+        (step) => `<button type="button" class="btn-fine btn-fine-increase" data-delta="${step.value}" title="+${step.value}${this.unit}">${step.label.replace(/</g, '>')}</button>`
+      )
+      .join('');
 
     return html`
       <div class="fine-adjust-control" id="${this.uniqueId}">
@@ -98,14 +95,7 @@ export class FineAdjustControl {
     return `${value.toFixed(this.decimals)}${this.unit}`;
   }
 
-  static create(
-    uniqueId: string,
-    label: string,
-    initialValue: number = 0,
-    unit: string = '°',
-    steps: number[] = [10, 1, 0.01],
-    decimals: number = 2
-  ): FineAdjustControl {
+  static create(uniqueId: string, label: string, initialValue: number = 0, unit: string = '°', steps: number[] = [10, 1, 0.01], decimals: number = 2): FineAdjustControl {
     return new FineAdjustControl(uniqueId, label, initialValue, unit, steps, decimals);
   }
 
@@ -135,7 +125,7 @@ export class FineAdjustControl {
   addEventListeners(callback: (delta: number) => void): void {
     this.callback_ = callback;
     const buttons = qsa('.btn-fine', this.dom);
-    buttons.forEach(btn => {
+    buttons.forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const delta = parseFloat((e.target as HTMLElement).dataset.delta!);
         // No sound - operator is remote from antenna
@@ -173,7 +163,7 @@ export class FineAdjustControl {
    */
   setEnabled(enabled: boolean): void {
     const buttons = qsa('.btn-fine', this.dom);
-    buttons.forEach(btn => {
+    buttons.forEach((btn) => {
       (btn as HTMLButtonElement).disabled = !enabled;
     });
     this.dom.classList.toggle('disabled', !enabled);

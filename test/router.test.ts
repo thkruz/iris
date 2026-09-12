@@ -206,8 +206,8 @@ describe('Router', () => {
 
       router.navigate('/sandbox');
 
-      expect([...document.body.classList].some(c => c.startsWith('campaign-'))).toBe(false);
-      expect([...document.body.classList].some(c => c.startsWith('chrome-'))).toBe(false);
+      expect([...document.body.classList].some((c) => c.startsWith('campaign-'))).toBe(false);
+      expect([...document.body.classList].some((c) => c.startsWith('chrome-'))).toBe(false);
     });
   });
 

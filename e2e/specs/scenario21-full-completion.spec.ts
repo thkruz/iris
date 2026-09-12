@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  answerQuizByText,
-  dismissDialogIfPresent,
-  waitForQuizToAppear,
-  waitForSimulationReady,
-} from '../utils/simulation-helpers';
+import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
  * Scenario 21 - "Hostile RF": Suspected Intentional Interference.
@@ -21,13 +16,7 @@ import {
  * crypto checks (ACTIVE/Valid by default), the notch filter, and a
  * post-notch receiver-lock check (the carrier is ~15 dB above the jammer).
  */
-type ObjectiveType =
-  | 'quiz'
-  | 'select-station'
-  | 'click-tab'
-  | 'configure-speca'
-  | 'configure-notch'
-  | 'auto';
+type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'configure-speca' | 'configure-notch' | 'auto';
 
 interface Scenario21Objective {
   id: string;
@@ -88,7 +77,7 @@ const SCENARIO_21_OBJECTIVES: Scenario21Objective[] = [
     title: 'Signature vs the Database',
     type: 'quiz',
     correctAnswer:
-      'It matches nothing in the coordination database: cross-pol leakage would mirror a known neighbor\'s carrier, an errant uplink would look like a modulated carrier at a coordinated slot - broadband noise shaped to our carrier inside our passband fits neither',
+      "It matches nothing in the coordination database: cross-pol leakage would mirror a known neighbor's carrier, an errant uplink would look like a modulated carrier at a coordinated slot - broadband noise shaped to our carrier inside our passband fits neither",
   },
 
   // PHASE 2: DENIAL VS INTRUSION
@@ -169,10 +158,7 @@ const SCENARIO_21_OBJECTIVES: Scenario21Objective[] = [
 // Helper Functions
 // ============================================================
 
-async function configureSpeca(
-  page: import('@playwright/test').Page,
-  config: { centerFrequencyMhz: number; spanMhz: number }
-): Promise<void> {
+async function configureSpeca(page: import('@playwright/test').Page, config: { centerFrequencyMhz: number; spanMhz: number }): Promise<void> {
   const centerFreqInput = page.locator('#sa-center-freq');
   await expect(centerFreqInput).toBeVisible({ timeout: 5000 });
   await centerFreqInput.fill(config.centerFrequencyMhz.toString());
@@ -237,11 +223,7 @@ async function configureNotchFilter(
   await page.waitForTimeout(500);
 }
 
-async function executeObjective(
-  page: import('@playwright/test').Page,
-  missionControlPage: MissionControlPage,
-  objective: Scenario21Objective
-): Promise<void> {
+async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario21Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);

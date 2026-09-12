@@ -148,18 +148,13 @@ export class ElectronicAttackManager {
     jamOutputs: JamOutput[],
     antenna: JamAntennaState | null,
     target: { azimuthDeg: number; elevationDeg: number } | null,
-    config: ElectronicAttackConfig,
+    config: ElectronicAttackConfig
   ): EaAssessment {
     const floor = ElectronicAttackManager.RADIATING_FLOOR_DBM;
-    const inBand = jamOutputs.filter(
-      (s) => s.power > floor && overlapsBand(s.frequency, s.bandwidth, config.targetUplinkLowHz, config.targetUplinkHighHz),
-    );
+    const inBand = jamOutputs.filter((s) => s.power > floor && overlapsBand(s.frequency, s.bandwidth, config.targetUplinkLowHz, config.targetUplinkHighHz));
 
     // Strongest in-band jam waveform drives the effect
-    const strongest = inBand.reduce<JamOutput | null>(
-      (best, s) => (best === null || s.power > best.power ? s : best),
-      null,
-    );
+    const strongest = inBand.reduce<JamOutput | null>((best, s) => (best === null || s.power > best.power ? s : best), null);
     const isRadiatingInBand = strongest !== null;
     const jamPowerDbm = strongest !== null ? strongest.power + config.jamPathGainDb : null;
 
@@ -173,8 +168,7 @@ export class ElectronicAttackManager {
     }
 
     const jToSDb = jamPowerDbm !== null ? jamPowerDbm - config.victimCarrierPowerDbm : null;
-    const isEffective =
-      isRadiatingInBand && isOnTarget && jToSDb !== null && jToSDb >= (config.effectiveJtoSDb ?? 6);
+    const isEffective = isRadiatingInBand && isOnTarget && jToSDb !== null && jToSDb >= (config.effectiveJtoSDb ?? 6);
 
     return {
       isRadiatingInBand,
@@ -219,9 +213,7 @@ export class ElectronicAttackManager {
           elevationDeg: antenna.state.elevation as unknown as number,
         }
       : null;
-    const targetPointing = target
-      ? { azimuthDeg: target.az as unknown as number, elevationDeg: target.el as unknown as number }
-      : null;
+    const targetPointing = target ? { azimuthDeg: target.az as unknown as number, elevationDeg: target.el as unknown as number } : null;
 
     const assessment = ElectronicAttackManager.assess(jamOutputs, antennaState, targetPointing, config);
     this.assessment_ = assessment;

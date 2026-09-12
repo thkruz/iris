@@ -1,12 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  advanceSimClock,
-  answerRileyQuiz,
-  domClick,
-  rideUntilObjectiveComplete,
-  waitForObjectiveComplete,
-} from '../utils/ham-sdr-helpers';
+import { advanceSimClock, answerRileyQuiz, domClick, rideUntilObjectiveComplete, waitForObjectiveComplete } from '../utils/ham-sdr-helpers';
 import { waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
@@ -92,21 +86,25 @@ test.describe('ham-sdr Scenario 1 Full Completion', () => {
     // the console and swallow real pointer clicks (S2 lesson).
     await page.locator('#sdr-display-stack').evaluate((el) => {
       const rect = el.getBoundingClientRect();
-      el.dispatchEvent(new MouseEvent('click', {
-        clientX: rect.left + rect.width / 2,
-        clientY: rect.top + rect.height / 2,
-        bubbles: true,
-      }));
+      el.dispatchEvent(
+        new MouseEvent('click', {
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+          bubbles: true,
+        })
+      );
     });
 
     // Fallback: if display padding skewed the click outside +/-5 kHz, the
     // WXSAT-19 bookmark tunes exactly
     const tuned = await page
-      .waitForFunction(() => {
-        const item = [...document.querySelectorAll('.objective-item')]
-          .find((el) => el.textContent?.includes('Put the VFO on the Bird'));
-        return item?.classList.contains('completed') ?? false;
-      }, { timeout: 10000 })
+      .waitForFunction(
+        () => {
+          const item = [...document.querySelectorAll('.objective-item')].find((el) => el.textContent?.includes('Put the VFO on the Bird'));
+          return item?.classList.contains('completed') ?? false;
+        },
+        { timeout: 10000 }
+      )
       .then(() => true)
       .catch(() => false);
 
@@ -131,12 +129,7 @@ test.describe('ham-sdr Scenario 1 Full Completion', () => {
     await missionControl.dismissDialogIfPresent();
 
     // Real-time maintain window - no sim jumps, no corrections, hands off
-    const everLocked = await rideUntilObjectiveComplete(
-      page,
-      missionControl,
-      "Don't Touch What's Working",
-      { maxMs: 120_000, correct: false },
-    );
+    const everLocked = await rideUntilObjectiveComplete(page, missionControl, "Don't Touch What's Working", { maxMs: 120_000, correct: false });
     expect(everLocked).toBe(true);
   });
 

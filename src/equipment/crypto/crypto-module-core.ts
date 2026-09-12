@@ -9,13 +9,7 @@
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { missionNowMs } from '@app/simulation/mission-clock';
-import type {
-  CryptoAlgorithm,
-  CryptoMode,
-  CryptoState,
-  RxCryptoState,
-  TxCryptoState,
-} from './crypto-types';
+import type { CryptoAlgorithm, CryptoMode, CryptoState, RxCryptoState, TxCryptoState } from './crypto-types';
 
 /**
  * CryptoModule - Unified crypto state management for TX/RX chains
@@ -433,10 +427,7 @@ export class CryptoModule {
         timestamp: Date.now(),
       });
       this.emitStateChanged_();
-    } else if (
-      this.state_.keyExpiresInDays <= CryptoModule.KEY_EXPIRY_WARNING_DAYS &&
-      this.state_.keyStatus === 'Valid'
-    ) {
+    } else if (this.state_.keyExpiresInDays <= CryptoModule.KEY_EXPIRY_WARNING_DAYS && this.state_.keyStatus === 'Valid') {
       this.state_.keyStatus = 'Pending Rotation';
       this.emitStateChanged_();
     } else if (previousDays !== this.state_.keyExpiresInDays) {

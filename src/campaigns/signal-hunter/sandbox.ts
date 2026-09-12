@@ -1,5 +1,5 @@
-import type { ScenarioData } from '@app/ScenarioData';
 import { Character } from '@app/modal/character-enum';
+import type { ScenarioData } from '@app/ScenarioData';
 import type { dBm } from '@app/types';
 import { petersonGroundStation } from './ground-stations';
 import { sentry7Satellite, sentry9Satellite } from './satellites';
@@ -33,12 +33,7 @@ export const signalHunterSandboxData: ScenarioData = {
   missionType: 'Sandbox',
   description: `An allied SENTRY satellite is being jammed by an intermittent uplink carrier. Your dish at Peterson Annex is already tracking the victim bird and its neighbor SENTRY-9.
   <br/><br/>Detect the hostile carrier on the spectrum analyzer, characterize its duty cycle, then use the Geolocation console to cross-fix the emitter: tune the correlator to the interferer's uplink, capture TDOA/FDOA measurements while it is transmitting, and compute a position fix. Your job is to put an error ellipse over the jammer.`,
-  equipment: [
-    '9-meter C-band Antenna (program-track)',
-    'C-band RF Front End (5150 MHz LNB LO)',
-    'Spectrum Analyzer',
-    'Two-Satellite Geolocation Console',
-  ],
+  equipment: ['9-meter C-band Antenna (program-track)', 'C-band RF Front End (5150 MHz LNB LO)', 'Spectrum Analyzer', 'Two-Satellite Geolocation Console'],
   settings: {
     isSync: true,
     groundStations: [petersonGroundStation],
@@ -60,8 +55,8 @@ export const signalHunterSandboxData: ScenarioData = {
         onSeconds: 60,
         // Hidden ground truth: a clandestine site in West Texas
         emitter: {
-          latitude: 31.30,
-          longitude: -103.50,
+          latitude: 31.3,
+          longitude: -103.5,
           altitudeKm: 0.8,
         },
       },
@@ -79,7 +74,8 @@ export const signalHunterSandboxData: ScenarioData = {
     {
       id: 'detect-interference',
       title: 'Detect the Hostile Carrier',
-      description: 'Watch the RX Analysis spectrum. An intermittent carrier appears a few MHz from the SENTRY-7 service carrier - the max-hold trace will catch it between duty cycles.',
+      description:
+        'Watch the RX Analysis spectrum. An intermittent carrier appears a few MHz from the SENTRY-7 service carrier - the max-hold trace will catch it between duty cycles.',
       groundStation: 'PA-22',
       nice: ['K0926'],
       conditions: [
@@ -146,7 +142,8 @@ export const signalHunterSandboxData: ScenarioData = {
     {
       id: 'collect-measurements',
       title: 'Capture Correlation Measurements',
-      description: 'Tune the correlator to the interferer uplink (6013 MHz, ~5 MHz bandwidth), select SENTRY-9 as the adjacent collector, and CAPTURE at least three times while the jammer is transmitting.',
+      description:
+        'Tune the correlator to the interferer uplink (6013 MHz, ~5 MHz bandwidth), select SENTRY-9 as the adjacent collector, and CAPTURE at least three times while the jammer is transmitting.',
       groundStation: 'PA-22',
       prerequisiteObjectiveIds: ['open-geolocation-console'],
       nice: ['K0926', 'K1032'],
@@ -164,7 +161,8 @@ export const signalHunterSandboxData: ScenarioData = {
     {
       id: 'compute-fix',
       title: 'Fix the Emitter',
-      description: 'Run COMPUTE FIX and refine until the fix falls within 40 km of the true emitter. Spreading captures across several duty cycles gives the satellites time to move, which tightens the error ellipse and resolves the geometry.',
+      description:
+        'Run COMPUTE FIX and refine until the fix falls within 40 km of the true emitter. Spreading captures across several duty cycles gives the satellites time to move, which tightens the error ellipse and resolves the geometry.',
       groundStation: 'PA-22',
       prerequisiteObjectiveIds: ['collect-measurements'],
       nice: ['K1032'],
@@ -191,12 +189,7 @@ export const signalHunterSandboxData: ScenarioData = {
           description: 'Emitter Region',
           params: {
             question: 'Your fix places the jammer near 31°N, 103.5°W. Which region does that correspond to?',
-            options: [
-              'West Texas',
-              'Central Colorado',
-              'Baja California',
-              'The Gulf of Mexico',
-            ],
+            options: ['West Texas', 'Central Colorado', 'Baja California', 'The Gulf of Mexico'],
             correctIndex: 0,
             explanation: 'The cross-fix localizes the emitter to West Texas - hand the coordinates and error ellipse to the incident response cell.',
             character: Character.CHARLIE_BROOKS,

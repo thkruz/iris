@@ -1,3 +1,4 @@
+import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import type { AntennaState } from '@app/equipment/antenna';
 import { ANTENNA_CONFIG_KEYS } from '@app/equipment/antenna/antenna-config-keys';
 import { Character, Emotion } from '@app/modal/character-enum';
@@ -6,7 +7,6 @@ import type { ScenarioData } from '@app/ScenarioData';
 import type { dB, dBm, Hertz, IfFrequency, MHz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
-import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { vermontGroundStation } from './ground-stations';
 import { ses10Satellite, tidemark1Satellite, tidemark2Satellite } from './satellites';
 
@@ -65,7 +65,7 @@ const vt01Ice = (): number => {
       };
     };
   };
-  const gs = w.signalRange?.simulationManager?.groundStations?.find(g => g.state?.id === 'VT-01');
+  const gs = w.signalRange?.simulationManager?.groundStations?.find((g) => g.state?.id === 'VT-01');
   return gs?.antennas?.[0]?.state?.iceAccumulation_dB ?? 99;
 };
 
@@ -81,13 +81,7 @@ export const scenario20Data: ScenarioData = {
   difficulty: 'advanced',
   missionType: 'Incident Response',
   description: `Two boards lit at once. Vermont is in the front edge of a winter storm and the feed is icing - the heater that should have been running since last night is off, and the RX margin is bleeding toward the demod floor. Maine just threw an HPA overdrive with an over-temperature alarm stacked on top: the back-off walked all the way down to 1 dB.<br><br>Unrelated problems. Same shift. One operator. Dana is forty minutes out on bad roads, and James Okafor is already asking whether two stations failing at once is something worse than bad luck.<br><br>Triage them: the slow recovery you can start costs nothing to start first; the dangerous fault gets your full attention immediately after; and the question James asked deserves an answer built from evidence.`,
-  equipment: [
-    '9-meter C-band Antennas (both sites)',
-    'RF Front Ends (both sites)',
-    'Spectrum Analyzers',
-    'RX/TX Modems',
-    'Weather radar feed',
-  ],
+  equipment: ['9-meter C-band Antennas (both sites)', 'RF Front Ends (both sites)', 'Spectrum Analyzers', 'RX/TX Modems', 'Weather radar feed'],
   timeLimitSeconds: 45 * 60,
   settings: {
     isSync: true,
@@ -302,7 +296,8 @@ export const scenario20Data: ScenarioData = {
               'The LNB has failed in the cold',
             ],
             correctIndex: 0,
-            explanation: 'Weather is not a fault; being unprepared for forecast weather is. The S3/S14 discipline - heater before the front - was missed on the previous shift, and now the recovery costs minutes instead of nothing.',
+            explanation:
+              'Weather is not a fault; being unprepared for forecast weather is. The S3/S14 discipline - heater before the front - was missed on the previous shift, and now the recovery costs minutes instead of nothing.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -345,7 +340,7 @@ export const scenario20Data: ScenarioData = {
       id: 'select-maine-station',
       nice: ['S0421'],
       title: 'Open ME-02',
-      description: 'Vermont\'s recovery is running. Now the dangerous one.',
+      description: "Vermont's recovery is running. Now the dangerous one.",
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['vt-enable-heater'],
       timeLimitSeconds: 1 * 60,
@@ -391,7 +386,7 @@ export const scenario20Data: ScenarioData = {
               'Sensor error - an amplifier cannot be hot and overdriven at once',
             ],
             correctIndex: 0,
-            explanation: 'S13\'s lesson in an HPA jacket: trace symptoms to the single input that explains them all. Back-off is the input; heat and IMD are the outputs.',
+            explanation: "S13's lesson in an HPA jacket: trace symptoms to the single input that explains them all. Back-off is the input; heat and IMD are the outputs.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -423,7 +418,8 @@ export const scenario20Data: ScenarioData = {
               'It cannot be answered at the operator level',
             ],
             correctIndex: 0,
-            explanation: 'Simultaneity is what coordinated interference would look like - and what a Friday in January looks like. The discipline is neither paranoia nor dismissal: keep the question open exactly as long as the evidence takes.',
+            explanation:
+              'Simultaneity is what coordinated interference would look like - and what a Friday in January looks like. The discipline is neither paranoia nor dismissal: keep the question open exactly as long as the evidence takes.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -436,7 +432,7 @@ export const scenario20Data: ScenarioData = {
       id: 'triage-order-quiz',
       nice: ['S0807', 'S0671'],
       title: 'Defend the Order',
-      description: 'You started Vermont\'s heater before coming here. Make the triage logic explicit.',
+      description: "You started Vermont's heater before coming here. Make the triage logic explicit.",
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['coincidence-quiz'],
       timeLimitSeconds: 2 * 60,
@@ -449,13 +445,14 @@ export const scenario20Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Why was "flip VT\'s heater, then work ME\'s HPA end-to-end" the right order?',
             options: [
-              'VT\'s recovery is slow but starts with one switch - starting it first costs ME nothing. ME\'s fault is actively dangerous (spectrum pollution + amplifier stress) and deterministic to fix, so it gets full attention immediately after',
+              "VT's recovery is slow but starts with one switch - starting it first costs ME nothing. ME's fault is actively dangerous (spectrum pollution + amplifier stress) and deterministic to fix, so it gets full attention immediately after",
               'Vermont is the primary station and always comes first',
               'Alphabetical order by station identifier',
               'The HPA fault could have waited - the order was arbitrary',
             ],
             correctIndex: 0,
-            explanation: 'Triage is about clock management: start what runs unattended, then serialize your attention on what needs it. Ten seconds at VT bought minutes of parallel recovery.',
+            explanation:
+              'Triage is about clock management: start what runs unattended, then serialize your attention on what needs it. Ten seconds at VT bought minutes of parallel recovery.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -574,7 +571,8 @@ export const scenario20Data: ScenarioData = {
               'It stays on as a 24-hour cooldown precaution',
             ],
             correctIndex: 0,
-            explanation: 'Confirmation that the diagnosis was right: one input (back-off), two symptoms, both gone. If the thermal alarm had stayed up, the single-fault story would be wrong - and you would start looking for the second fault.',
+            explanation:
+              'Confirmation that the diagnosis was right: one input (back-off), two symptoms, both gone. If the thermal alarm had stayed up, the single-fault story would be wrong - and you would start looking for the second fault.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -669,7 +667,8 @@ export const scenario20Data: ScenarioData = {
               'Raising LNB gain to compensate for the storm',
             ],
             correctIndex: 0,
-            explanation: 'The S14 lesson holds: with the right protections running, weather is something you monitor, not something you fight. The failure this morning was a cold heater, not a strong storm.',
+            explanation:
+              'The S14 lesson holds: with the right protections running, weather is something you monitor, not something you fight. The failure this morning was a cold heater, not a strong storm.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -705,7 +704,8 @@ export const scenario20Data: ScenarioData = {
               'Still investigating, will update within 24 hours.',
             ],
             correctIndex: 0,
-            explanation: 'Cause, action, status for each site - then the answer to the question he actually asked, with the reasoning shown. "Here is why we are confident" is what makes "coincidence" a finding instead of a hope.',
+            explanation:
+              'Cause, action, status for each site - then the answer to the question he actually asked, with the reasoning shown. "Here is why we are confident" is what makes "coincidence" a finding instead of a hope.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -737,7 +737,8 @@ export const scenario20Data: ScenarioData = {
               'The question cannot be closed without a federal investigation',
             ],
             correctIndex: 0,
-            explanation: 'Each cause independently explains its own site, the fixes behaved as predicted, and the spectra are clean. Document it every time it IS coincidence - that record is what makes you credible the day it is not.',
+            explanation:
+              'Each cause independently explains its own site, the fixes behaved as predicted, and the spectra are clean. Document it every time it IS coincidence - that record is what makes you credible the day it is not.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -769,7 +770,8 @@ export const scenario20Data: ScenarioData = {
               'Dual outage resolved - details available on request.',
             ],
             correctIndex: 0,
-            explanation: 'Timeline, both causes, both fixes, the rule-out, and the process fix (heater on the shift-change checklist) so the inherited failure stops being inheritable.',
+            explanation:
+              'Timeline, both causes, both fixes, the rule-out, and the process fix (heater on the shift-change checklist) so the inherited failure stops being inheritable.',
             pointPenalty: 5,
           },
           mustMaintain: false,

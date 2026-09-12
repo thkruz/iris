@@ -1,14 +1,14 @@
-import { BaseElement } from "@app/components/base-element";
-import { html } from "@app/engine/utils/development/formatter";
-import { qs } from "@app/engine/utils/query-selector";
-import { OrbitalSatellite } from "@app/equipment/satellite/orbital-satellite";
-import { EventBus } from "@app/events/event-bus";
-import { Events, SimulatedTimeTickData } from "@app/events/events";
-import { ScenarioManager } from "@app/scenario-manager";
-import { PassPlannerService, SatellitePass, scenarioMinElevation } from "@app/services/pass-planner-service";
-import { SpaceEventManager } from "@app/space-events/space-event-manager";
-import { getSimulatedNowMs } from "@app/simulation/sim-time";
-import { SimulationManager } from "@app/simulation/simulation-manager";
+import { BaseElement } from '@app/components/base-element';
+import { html } from '@app/engine/utils/development/formatter';
+import { qs } from '@app/engine/utils/query-selector';
+import { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
+import { EventBus } from '@app/events/event-bus';
+import { Events, SimulatedTimeTickData } from '@app/events/events';
+import { ScenarioManager } from '@app/scenario-manager';
+import { PassPlannerService, SatellitePass, scenarioMinElevation } from '@app/services/pass-planner-service';
+import { getSimulatedNowMs } from '@app/simulation/sim-time';
+import { SimulationManager } from '@app/simulation/simulation-manager';
+import { SpaceEventManager } from '@app/space-events/space-event-manager';
 import './pass-schedule-tab.css';
 
 /**
@@ -33,9 +33,7 @@ export class PassScheduleTab extends BaseElement {
    * hobbyist copy - TLEs and rotators, not ephemeris and program-track.
    * Professional campaigns keep the original strings byte-identical.
    */
-  private readonly isBackyard_ =
-    ScenarioManager.getInstance().settings.groundStations?.some(
-      (gs) => gs.stationClass === 'backyard') ?? false;
+  private readonly isBackyard_ = ScenarioManager.getInstance().settings.groundStations?.some((gs) => gs.stationClass === 'backyard') ?? false;
   private readonly boundTimeTickHandler_: (data: SimulatedTimeTickData) => void;
   private readonly boundUpdateHandler_: () => void;
 
@@ -45,8 +43,7 @@ export class PassScheduleTab extends BaseElement {
 
   constructor(containerId: string) {
     super();
-    this.satellites_ = SimulationManager.getInstance().satellites
-      .filter((sat): sat is OrbitalSatellite => sat instanceof OrbitalSatellite);
+    this.satellites_ = SimulationManager.getInstance().satellites.filter((sat): sat is OrbitalSatellite => sat instanceof OrbitalSatellite);
     this.init_(containerId, 'replace');
     this.dom_ = qs('.pass-schedule-tab');
 
@@ -164,20 +161,22 @@ export class PassScheduleTab extends BaseElement {
     }
 
     const manager = SpaceEventManager.getInstance();
-    const rows = manager.getEvents().map((event) => {
-      const phase = manager.getPhase(event.id);
-      const satellite = this.satellites_.find((sat) => sat.noradId === event.satelliteNoradId);
-      const name = satellite?.name ?? `NORAD ${event.satelliteNoradId}`;
-      const label = event.label ?? 'On-orbit maneuver';
+    const rows = manager
+      .getEvents()
+      .map((event) => {
+        const phase = manager.getPhase(event.id);
+        const satellite = this.satellites_.find((sat) => sat.noradId === event.satelliteNoradId);
+        const name = satellite?.name ?? `NORAD ${event.satelliteNoradId}`;
+        const label = event.label ?? 'On-orbit maneuver';
 
-      if (phase === 'stale') {
-        const staleBadge = this.isBackyard_ ? 'TLE SUSPECT' : 'EPHEMERIS STALE';
-        const staleDetail = this.isBackyard_
-          ? `${label} — predictions and rotator tracking are running on your saved TLE, and the sky disagrees with it.`
-          : `${label} — pass predictions and program-track are computed from a pre-maneuver element set.`;
-        const buttonText = this.isBackyard_ ? 'Fetch Fresh Elements' : 'Load Updated Ephemeris';
+        if (phase === 'stale') {
+          const staleBadge = this.isBackyard_ ? 'TLE SUSPECT' : 'EPHEMERIS STALE';
+          const staleDetail = this.isBackyard_
+            ? `${label} — predictions and rotator tracking are running on your saved TLE, and the sky disagrees with it.`
+            : `${label} — pass predictions and program-track are computed from a pre-maneuver element set.`;
+          const buttonText = this.isBackyard_ ? 'Fetch Fresh Elements' : 'Load Updated Ephemeris';
 
-        return html`
+          return html`
           <div class="ephemeris-row ephemeris-stale">
             <div>
               <span class="ephemeris-badge ephemeris-badge-stale">${staleBadge}</span>
@@ -187,17 +186,16 @@ export class PassScheduleTab extends BaseElement {
             <button class="btn btn-sm btn-ephemeris" data-ephemeris-event="${event.id}">${buttonText}</button>
           </div>
         `;
-      }
+        }
 
-      const badge = phase === 'updated'
-        ? html`<span class="ephemeris-badge ephemeris-badge-updated">UPDATED</span>`
-        : html`<span class="ephemeris-badge ephemeris-badge-nominal">NOMINAL</span>`;
-      const updatedDetail = this.isBackyard_
-        ? 'Fresh elements loaded from the network. Predictions are current.'
-        : 'Post-maneuver element set loaded. Predictions are current.';
-      const nominalDetail = this.isBackyard_ ? 'Elements current.' : 'Element set current.';
+        const badge =
+          phase === 'updated'
+            ? html`<span class="ephemeris-badge ephemeris-badge-updated">UPDATED</span>`
+            : html`<span class="ephemeris-badge ephemeris-badge-nominal">NOMINAL</span>`;
+        const updatedDetail = this.isBackyard_ ? 'Fresh elements loaded from the network. Predictions are current.' : 'Post-maneuver element set loaded. Predictions are current.';
+        const nominalDetail = this.isBackyard_ ? 'Elements current.' : 'Element set current.';
 
-      return html`
+        return html`
         <div class="ephemeris-row">
           <div>
             ${badge}
@@ -206,7 +204,8 @@ export class PassScheduleTab extends BaseElement {
           </div>
         </div>
       `;
-    }).join('');
+      })
+      .join('');
 
     panel.innerHTML = html`
       <div class="card">
@@ -221,9 +220,11 @@ export class PassScheduleTab extends BaseElement {
     // Include a pass that is already in progress by searching from 20 min ago
     // Same elevation mask the contact timeline deck uses, so the two surfaces
     // never show different AOS/LOS for the same pass.
-    this.passes_ = this.passPlanner_.getContactSchedule(this.satellites_, nowMs - 20 * 60 * 1000, {
-      minElevation: scenarioMinElevation(ScenarioManager.getInstance().settings),
-    }).filter((pass) => pass.losMs > nowMs);
+    this.passes_ = this.passPlanner_
+      .getContactSchedule(this.satellites_, nowMs - 20 * 60 * 1000, {
+        minElevation: scenarioMinElevation(ScenarioManager.getInstance().settings),
+      })
+      .filter((pass) => pass.losMs > nowMs);
   }
 
   private renderRows_(nowMs: number): void {

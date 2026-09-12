@@ -4,7 +4,7 @@ import { qs } from '@app/engine/utils/query-selector';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { ScenarioManager } from '@app/scenario-manager';
-import { SecurityConsoleCore, type AccountStatus, type AuditSeverity } from '@app/security-console/security-console-core';
+import { type AccountStatus, type AuditSeverity, SecurityConsoleCore } from '@app/security-console/security-console-core';
 import { TransecManager, type TransecMode } from '@app/transec/transec-manager';
 import './security-console-tab.css';
 
@@ -102,13 +102,13 @@ export class SecurityConsoleTab extends BaseElement {
 
   private accessControlCardHtml_(): string {
     const core = SecurityConsoleCore.getInstance();
-    const rows = core.getConfig().accounts.map((account) => {
-      const current = core.getAccountStatus(account.id) ?? account.status;
-      const options = ACCOUNT_STATUSES
-        .map((s) => `<option value="${s}" ${s === current ? 'selected' : ''}>${s}</option>`)
-        .join('');
+    const rows = core
+      .getConfig()
+      .accounts.map((account) => {
+        const current = core.getAccountStatus(account.id) ?? account.status;
+        const options = ACCOUNT_STATUSES.map((s) => `<option value="${s}" ${s === current ? 'selected' : ''}>${s}</option>`).join('');
 
-      return html`
+        return html`
         <tr>
           <td>
             <span class="fw-bold">${account.name}</span>
@@ -121,7 +121,8 @@ export class SecurityConsoleTab extends BaseElement {
           </td>
         </tr>
       `;
-    }).join('');
+      })
+      .join('');
 
     return html`
       <div class="col-lg-4">
@@ -140,9 +141,7 @@ export class SecurityConsoleTab extends BaseElement {
 
   private transecCardHtml_(): string {
     const config = TransecManager.getInstance().getConfig();
-    const hopList = (config.hopChannelsHz ?? [])
-      .map((hz) => (hz / 1e6).toFixed(1))
-      .join(' / ');
+    const hopList = (config.hopChannelsHz ?? []).map((hz) => (hz / 1e6).toFixed(1)).join(' / ');
 
     return html`
       <div class="col-lg-4">
@@ -166,12 +165,16 @@ export class SecurityConsoleTab extends BaseElement {
               <span class="text-muted small">Hop sync:</span>
               <span id="sec-transec-sync-badge" class="sec-badge sec-badge-muted">NO SYNC</span>
             </div>
-            ${hopList ? html`
+            ${
+              hopList
+                ? html`
               <div class="d-flex justify-content-between align-items-center">
                 <span class="text-muted small">Hop channels:</span>
                 <span class="font-monospace small">${hopList} MHz</span>
               </div>
-            ` : ''}
+            `
+                : ''
+            }
           </div>
         </div>
       </div>
@@ -235,8 +238,7 @@ export class SecurityConsoleTab extends BaseElement {
 
     // Time-scheduled audit entries can surface mid-mission; only rebuild the
     // rows when a new one appears so flag buttons aren't churned under a click.
-    if (this.hasSecurity_ &&
-      SecurityConsoleCore.getInstance().getVisibleLog().length !== this.lastVisibleLogCount_) {
+    if (this.hasSecurity_ && SecurityConsoleCore.getInstance().getVisibleLog().length !== this.lastVisibleLogCount_) {
       this.renderAuditLog_();
     }
     this.syncDomWithState_();
@@ -261,13 +263,14 @@ export class SecurityConsoleTab extends BaseElement {
       return;
     }
 
-    body.innerHTML = visible.map((entry) => {
-      const flagged = core.isEventAcknowledged(entry.id);
-      const flagCell = flagged
-        ? '<span class="sec-badge sec-badge-bad">FLAGGED</span>'
-        : `<button class="btn btn-sm btn-outline-secondary" data-event-id="${entry.id}">Flag</button>`;
+    body.innerHTML = visible
+      .map((entry) => {
+        const flagged = core.isEventAcknowledged(entry.id);
+        const flagCell = flagged
+          ? '<span class="sec-badge sec-badge-bad">FLAGGED</span>'
+          : `<button class="btn btn-sm btn-outline-secondary" data-event-id="${entry.id}">Flag</button>`;
 
-      return html`
+        return html`
         <tr>
           <td class="font-monospace small">${entry.timestampLabel ?? '—'}</td>
           <td class="font-monospace small">${entry.actor}</td>
@@ -277,7 +280,8 @@ export class SecurityConsoleTab extends BaseElement {
           <td class="text-end">${flagCell}</td>
         </tr>
       `;
-    }).join('');
+      })
+      .join('');
   }
 
   private syncDomWithState_(): void {

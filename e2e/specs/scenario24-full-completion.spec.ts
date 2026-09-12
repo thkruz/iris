@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  answerQuizByText,
-  dismissDialogIfPresent,
-  waitForQuizToAppear,
-  waitForSimulationReady,
-} from '../utils/simulation-helpers';
+import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
  * Scenario 24 - "Constellation Crisis": Campaign Capstone.
@@ -15,16 +10,7 @@ import {
  * board comms. The Working Document is the incident-command log. No new
  * mechanics - this validates the orchestration of everything prior.
  */
-type ObjectiveType =
-  | 'quiz'
-  | 'select-station'
-  | 'click-tab'
-  | 'toggle-switch'
-  | 'configure-buc-gain'
-  | 'repoint-program-track'
-  | 'set-step-track'
-  | 'verify-working-doc'
-  | 'auto';
+type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'toggle-switch' | 'configure-buc-gain' | 'repoint-program-track' | 'set-step-track' | 'verify-working-doc' | 'auto';
 
 interface Scenario24Objective {
   id: string;
@@ -178,7 +164,7 @@ const SCENARIO_24_OBJECTIVES: Scenario24Objective[] = [
     title: 'Review the Command Log',
     type: 'quiz',
     correctAnswer:
-      'It shows the ordered board, the sequence and why, each track\'s action and outcome, the customer and board comms, and the residual risk - someone could pick up your shift cold and know exactly what happened and what is still open',
+      "It shows the ordered board, the sequence and why, each track's action and outcome, the customer and board comms, and the residual risk - someone could pick up your shift cold and know exactly what happened and what is still open",
   },
   {
     id: 'log-crisis-closed',
@@ -193,11 +179,7 @@ const SCENARIO_24_OBJECTIVES: Scenario24Objective[] = [
 // Helper Functions
 // ============================================================
 
-async function toggleSwitch(
-  page: import('@playwright/test').Page,
-  switchId: string,
-  desiredState: boolean
-): Promise<void> {
+async function toggleSwitch(page: import('@playwright/test').Page, switchId: string, desiredState: boolean): Promise<void> {
   let switchEl = page.locator(`#${switchId}`);
   if ((await switchEl.count()) === 0) {
     switchEl = page.locator(`[id$="${switchId}"]`);
@@ -216,10 +198,7 @@ async function toggleSwitch(
   await page.waitForTimeout(300);
 }
 
-async function configureBucGain(
-  page: import('@playwright/test').Page,
-  gain: number
-): Promise<void> {
+async function configureBucGain(page: import('@playwright/test').Page, gain: number): Promise<void> {
   const gainInput = page.locator('#buc-gain');
   await expect(gainInput).toBeVisible({ timeout: 5000 });
   await gainInput.fill(gain.toString());
@@ -232,10 +211,7 @@ async function configureBucGain(
   await page.waitForTimeout(400);
 }
 
-async function repointProgramTrack(
-  page: import('@playwright/test').Page,
-  satelliteNoradId: string
-): Promise<void> {
+async function repointProgramTrack(page: import('@playwright/test').Page, satelliteNoradId: string): Promise<void> {
   const modeButton = page.locator('.btn-tracking[data-mode="program-track"]');
   await expect(modeButton).toBeVisible({ timeout: 5000 });
   await modeButton.click();
@@ -262,7 +238,7 @@ async function repointProgramTrack(
           };
         };
       };
-      const gs = w.signalRange?.simulationManager?.groundStations?.find(g => g.state?.id === 'VT-01');
+      const gs = w.signalRange?.simulationManager?.groundStations?.find((g) => g.state?.id === 'VT-01');
       const antennaState = gs?.antennas?.[0]?.state;
       return antennaState ? antennaState.slewing === false && antennaState.isLocked === true : false;
     },
@@ -303,11 +279,7 @@ async function verifyWorkingDocument(page: import('@playwright/test').Page): Pro
   }
 }
 
-async function executeObjective(
-  page: import('@playwright/test').Page,
-  missionControlPage: MissionControlPage,
-  objective: Scenario24Objective
-): Promise<void> {
+async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario24Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);

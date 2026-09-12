@@ -61,9 +61,15 @@ class TestableTxAntenna extends AntennaCore {
     super(configId, initialState, 1, 1);
   }
 
-  protected override addListeners_(): void { /* headless */ }
-  syncDomWithState(): void { /* headless */ }
-  draw(): void { /* headless */ }
+  protected override addListeners_(): void {
+    /* headless */
+  }
+  syncDomWithState(): void {
+    /* headless */
+  }
+  draw(): void {
+    /* headless */
+  }
 
   override get txSignalsOut(): RfSignal[] {
     return this.txFeed;
@@ -121,7 +127,7 @@ describe('E2: fixed-gain uplink link budget', () => {
     });
     yagi.txFeed = [makeTxSignal()];
     // 20 deg off boresight in azimuth: outside any 2 deg box, inside the 40 deg HPBW
-    const offAxisSat = makeSat(90 + 20 / Math.cos(30 * Math.PI / 180), 30, 1000);
+    const offAxisSat = makeSat(90 + 20 / Math.cos((30 * Math.PI) / 180), 30, 1000);
     // Far outside the beam entirely
     const outOfBeamSat = { ...makeSat(270, 30, 1000), noradId: 63099 };
     mockSats.push(offAxisSat, outOfBeamSat);
@@ -219,18 +225,29 @@ describe('E2: fixed-gain uplink link budget', () => {
 
 describe('E2: config-driven HPA max output power', () => {
   class TestableHPA extends HPAModuleCore {
-    initializeDom(): HTMLElement { return document.createElement('div'); }
-    protected addListeners_(): void { /* headless */ }
-    syncDomWithState_(): void { /* headless */ }
-    syncDomWithState(): void { /* headless */ }
-    draw(): void { /* headless */ }
+    initializeDom(): HTMLElement {
+      return document.createElement('div');
+    }
+    protected addListeners_(): void {
+      /* headless */
+    }
+    syncDomWithState_(): void {
+      /* headless */
+    }
+    syncDomWithState(): void {
+      /* headless */
+    }
+    draw(): void {
+      /* headless */
+    }
   }
 
   const drive: RfSignal = makeTxSignal({ power: -20 as dBm });
-  const makeFrontEnd = () => ({
-    bucModule: { state: { isLoopback: false, isPowered: true, isMuted: false }, outputSignals: [drive] },
-    state: { buc: { isPowered: true } },
-  }) as any;
+  const makeFrontEnd = () =>
+    ({
+      bucModule: { state: { isLoopback: false, isPowered: true, isMuted: false }, outputSignals: [drive] },
+      state: { buc: { isPowered: true } },
+    }) as any;
 
   const baseState = (over: Partial<HPAState>): HPAState => ({
     ...HPAModuleCore.getDefaultState(),
@@ -264,13 +281,15 @@ describe('E2: config-driven HPA max output power', () => {
 describe('E2: CUBEHOP V/U transponder', () => {
   it('relays a 435.905 RHCP uplink to 435.295 with +132 dB gain, preserving handedness', () => {
     const sat = makeCubehop1Satellite();
-    sat.rxSignal.push(makeTxSignal({
-      frequency: 435.905e6 as RfFrequency,
-      power: -105 as dBm,
-      polarization: 'RHCP',
-      bandwidth: 12e3 as Hertz,
-      origin: SignalOrigin.ANTENNA_TX,
-    }));
+    sat.rxSignal.push(
+      makeTxSignal({
+        frequency: 435.905e6 as RfFrequency,
+        power: -105 as dBm,
+        polarization: 'RHCP',
+        bandwidth: 12e3 as Hertz,
+        origin: SignalOrigin.ANTENNA_TX,
+      })
+    );
 
     const out: RfSignal[] = (sat as any).processSignals();
     const relayed = out.find((s) => s.signalId === 'tx-1');
@@ -290,8 +309,8 @@ describe('E2: CUBEHOP V/U transponder', () => {
   it('ignores uplinks outside the 30 kHz passband or with the wrong handedness', () => {
     const sat = makeCubehop1Satellite();
     sat.rxSignal.push(
-      makeTxSignal({ signalId: 'off-freq', frequency: 435.80e6 as RfFrequency, power: -105 as dBm, polarization: 'RHCP' }),
-      makeTxSignal({ signalId: 'wrong-hand', frequency: 435.90e6 as RfFrequency, power: -105 as dBm, polarization: 'LHCP' }),
+      makeTxSignal({ signalId: 'off-freq', frequency: 435.8e6 as RfFrequency, power: -105 as dBm, polarization: 'RHCP' }),
+      makeTxSignal({ signalId: 'wrong-hand', frequency: 435.9e6 as RfFrequency, power: -105 as dBm, polarization: 'LHCP' })
     );
 
     const out: RfSignal[] = (sat as any).processSignals();
@@ -305,12 +324,14 @@ describe('E2: CUBEHOP V/U transponder', () => {
     // The FM-DL transponder passband around 145.9 MHz, polarization RHCP - so
     // build a synthetic linear case against the same processSignals code path
     // via a signal the VU transponder accepts with null polarization
-    sat.rxSignal.push(makeTxSignal({
-      signalId: 'null-pol',
-      frequency: 435.90e6 as RfFrequency,
-      power: -105 as dBm,
-      polarization: null as any,
-    }));
+    sat.rxSignal.push(
+      makeTxSignal({
+        signalId: 'null-pol',
+        frequency: 435.9e6 as RfFrequency,
+        power: -105 as dBm,
+        polarization: null as any,
+      })
+    );
 
     const out: RfSignal[] = (sat as any).processSignals();
     // null matches any transponder; it is not 'H'/'V', so it passes through unchanged

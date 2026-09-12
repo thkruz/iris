@@ -67,7 +67,7 @@ export class WorkingDocumentManager {
 
   private handleQuizPassed_(data: QuizPassedData): void {
     const scenario = ScenarioManager.getInstance().data;
-    const objective = scenario.objectives?.find(o => o.id === data.objectiveId);
+    const objective = scenario.objectives?.find((o) => o.id === data.objectiveId);
     const condition = objective?.conditions?.[data.conditionIndex];
     const line = condition?.params?.documentLine;
     if (!line) return;
@@ -75,7 +75,7 @@ export class WorkingDocumentManager {
     const section = condition?.params?.documentSection ?? DEFAULT_SECTION;
 
     // Idempotence: a re-fired event for the same line must not duplicate it
-    if (this.entries_.some(e => e.line === line && e.section === section)) return;
+    if (this.entries_.some((e) => e.line === line && e.section === section)) return;
 
     const isFirstEntry = this.entries_.length === 0;
     this.entries_.push({ section, line });
@@ -108,14 +108,18 @@ export class WorkingDocumentManager {
       sections.set(entry.section, lines);
     }
 
-    const sectionsHtml = [...sections.entries()].map(([section, lines]) => `
+    const sectionsHtml = [...sections.entries()]
+      .map(
+        ([section, lines]) => `
       <div class="working-doc-section mb-2">
         <div class="fw-bold text-uppercase small" style="opacity:0.7;letter-spacing:0.05em;">${section}</div>
         <ul class="list-unstyled mb-0 font-monospace small" style="line-height:1.6;">
-          ${lines.map(l => `<li>&#x2713; ${l}</li>`).join('')}
+          ${lines.map((l) => `<li>&#x2713; ${l}</li>`).join('')}
         </ul>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
 
     const emptyHtml = `
       <p class="small font-monospace" style="opacity:0.6;">

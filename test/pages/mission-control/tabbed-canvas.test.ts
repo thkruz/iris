@@ -14,7 +14,9 @@ const ORBITAL_SAT = new OrbitalSatellite('TEST-LEO', 61701, [], [], {
 
 // Create mock tab factory
 const createMockTab = () => ({
-  get dom() { return global.document.createElement('div'); },
+  get dom() {
+    return global.document.createElement('div');
+  },
   activate: vi.fn(),
   deactivate: vi.fn(),
   dispose: vi.fn(),
@@ -59,34 +61,49 @@ vi.mock('../../../src/simulation/simulation-manager', () => ({
       get satellites() {
         return mockSatellites;
       },
-      getSatByNoradId: vi.fn((id: number) =>
-        (mockSatellites as Array<{ noradId: number }>).find((sat) => sat.noradId === id) ?? null),
+      getSatByNoradId: vi.fn((id: number) => (mockSatellites as Array<{ noradId: number }>).find((sat) => sat.noradId === id) ?? null),
     })),
   },
 }));
 vi.mock('../../../src/pages/mission-control/tabs/acu-control-tab', () => ({
-  ACUControlTab: vi.fn(function () { return createMockTab(); }),
+  ACUControlTab: vi.fn(function () {
+    return createMockTab();
+  }),
 }));
 vi.mock('../../../src/pages/mission-control/tabs/dashboard-tab', () => ({
-  DashboardTab: vi.fn(function () { return createMockTab(); }),
+  DashboardTab: vi.fn(function () {
+    return createMockTab();
+  }),
 }));
 vi.mock('../../../src/pages/mission-control/tabs/gps-timing-tab', () => ({
-  GPSTimingTab: vi.fn(function () { return createMockTab(); }),
+  GPSTimingTab: vi.fn(function () {
+    return createMockTab();
+  }),
 }));
 vi.mock('../../../src/pages/mission-control/tabs/ground-track-tab', () => ({
-  GroundTrackTab: vi.fn(function () { return createMockTab(); }),
+  GroundTrackTab: vi.fn(function () {
+    return createMockTab();
+  }),
 }));
 vi.mock('../../../src/pages/mission-control/tabs/mission-overview-tab', () => ({
-  MissionOverviewTab: vi.fn(function () { return createMockTab(); }),
+  MissionOverviewTab: vi.fn(function () {
+    return createMockTab();
+  }),
 }));
 vi.mock('../../../src/pages/mission-control/tabs/rx-analysis-tab', () => ({
-  RxAnalysisTab: vi.fn(function () { return createMockTab(); }),
+  RxAnalysisTab: vi.fn(function () {
+    return createMockTab();
+  }),
 }));
 vi.mock('../../../src/pages/mission-control/tabs/satellite-dashboard-tab', () => ({
-  SatelliteDashboardTab: vi.fn(function () { return createMockTab(); }),
+  SatelliteDashboardTab: vi.fn(function () {
+    return createMockTab();
+  }),
 }));
 vi.mock('../../../src/pages/mission-control/tabs/tx-chain-tab', () => ({
-  TxChainTab: vi.fn(function () { return createMockTab(); }),
+  TxChainTab: vi.fn(function () {
+    return createMockTab();
+  }),
 }));
 vi.mock('../../../src/engine/utils/query-selector', () => ({
   qs: vi.fn((selector: string, parent?: Element) => {
@@ -105,6 +122,7 @@ import { SatelliteDashboardTab } from '../../../src/pages/mission-control/tabs/s
 import { TxChainTab } from '../../../src/pages/mission-control/tabs/tx-chain-tab';
 import { ScenarioManager, type SimulationSettings } from '../../../src/scenario-manager';
 import { SimulationManager } from '../../../src/simulation/simulation-manager';
+
 describe('TabbedCanvas', () => {
   let containerEl: HTMLElement;
   let tabbedCanvas: TabbedCanvas;
@@ -172,32 +190,21 @@ describe('TabbedCanvas', () => {
 
   describe('event listeners', () => {
     it('should register for ASSET_SELECTED events', () => {
-      expect(mockEventBus.on).toHaveBeenCalledWith(
-        Events.ASSET_SELECTED,
-        expect.any(Function)
-      );
+      expect(mockEventBus.on).toHaveBeenCalledWith(Events.ASSET_SELECTED, expect.any(Function));
     });
 
     it('should register for SWITCH_TAB events', () => {
-      expect(mockEventBus.on).toHaveBeenCalledWith(
-        Events.SWITCH_TAB,
-        expect.any(Function)
-      );
+      expect(mockEventBus.on).toHaveBeenCalledWith(Events.SWITCH_TAB, expect.any(Function));
     });
 
     it('should register for MISSION_OVERVIEW_SELECTED events', () => {
-      expect(mockEventBus.on).toHaveBeenCalledWith(
-        Events.MISSION_OVERVIEW_SELECTED,
-        expect.any(Function)
-      );
+      expect(mockEventBus.on).toHaveBeenCalledWith(Events.MISSION_OVERVIEW_SELECTED, expect.any(Function));
     });
   });
 
   describe('ground station selection', () => {
     it('should render ground station tabs when GS selected', () => {
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
 
@@ -206,9 +213,7 @@ describe('TabbedCanvas', () => {
     });
 
     it('should render ACU Control tab', () => {
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
 
@@ -217,9 +222,7 @@ describe('TabbedCanvas', () => {
     });
 
     it('should render RX Analysis tab', () => {
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
 
@@ -228,9 +231,7 @@ describe('TabbedCanvas', () => {
     });
 
     it('should render TX Chain tab', () => {
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
 
@@ -239,9 +240,7 @@ describe('TabbedCanvas', () => {
     });
 
     it('should render GPS Timing tab', () => {
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
 
@@ -250,9 +249,7 @@ describe('TabbedCanvas', () => {
     });
 
     it('should switch to dashboard tab by default for ground station', () => {
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
 
@@ -262,9 +259,7 @@ describe('TabbedCanvas', () => {
 
   describe('satellite selection', () => {
     it('should render satellite dashboard when satellite selected', () => {
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'satellite', id: 'sat-12345' });
 
@@ -272,9 +267,7 @@ describe('TabbedCanvas', () => {
     });
 
     it('should render Dashboard tab for satellite', () => {
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'satellite', id: 'sat-12345' });
 
@@ -283,9 +276,7 @@ describe('TabbedCanvas', () => {
     });
 
     it('should show error for unknown satellite', () => {
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'satellite', id: 'sat-99999' });
 
@@ -301,17 +292,13 @@ describe('TabbedCanvas', () => {
    */
   describe('ground track tab gating', () => {
     const selectSatellite = (id: string): void => {
-      const handler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const handler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       handler?.({ type: 'satellite', id });
     };
 
     const selectOverview = (): void => {
-      const handler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.MISSION_OVERVIEW_SELECTED
-      )?.[1];
+      const handler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.MISSION_OVERVIEW_SELECTED)?.[1];
 
       handler?.();
     };
@@ -337,9 +324,7 @@ describe('TabbedCanvas', () => {
       mockSatellites = [ORBITAL_SAT];
       selectSatellite(`sat-${ORBITAL_SAT.noradId}`);
 
-      const switchHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.SWITCH_TAB
-      )?.[1];
+      const switchHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.SWITCH_TAB)?.[1];
 
       switchHandler?.({ tabId: 'ground-track' });
 
@@ -367,43 +352,34 @@ describe('TabbedCanvas', () => {
       selectSatellite(`sat-${ORBITAL_SAT.noradId}`);
       selectOverview();
 
-      expect(document.querySelector('.nav-link.active')?.getAttribute('data-tab-id'))
-        .toBe('mission-overview');
+      expect(document.querySelector('.nav-link.active')?.getAttribute('data-tab-id')).toBe('mission-overview');
     });
 
     it('reopens the overview on the World Map when it was left there', () => {
       mockSatellites = [ORBITAL_SAT];
       selectOverview();
 
-      const switchHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.SWITCH_TAB
-      )?.[1];
+      const switchHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.SWITCH_TAB)?.[1];
 
       switchHandler?.({ tabId: 'ground-track' });
       selectSatellite(`sat-${ORBITAL_SAT.noradId}`);
       selectOverview();
 
-      expect(document.querySelector('.nav-link.active')?.getAttribute('data-tab-id'))
-        .toBe('ground-track');
+      expect(document.querySelector('.nav-link.active')?.getAttribute('data-tab-id')).toBe('ground-track');
     });
   });
 
   describe('mission overview selection', () => {
     it('should return to mission overview when MISSION_OVERVIEW_SELECTED', () => {
       // First select a ground station
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
 
       // Then select mission overview
-      const overviewHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.MISSION_OVERVIEW_SELECTED
-      )?.[1];
+      const overviewHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.MISSION_OVERVIEW_SELECTED)?.[1];
 
       overviewHandler?.();
-
 
       // MissionOverviewTab should be called (once in constructor, once after overview selected)
       expect(MissionOverviewTab).toHaveBeenCalled();
@@ -411,16 +387,12 @@ describe('TabbedCanvas', () => {
 
     it('should clear tab bar when returning to mission overview', () => {
       // First select a ground station
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
 
       // Then select mission overview
-      const overviewHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.MISSION_OVERVIEW_SELECTED
-      )?.[1];
+      const overviewHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.MISSION_OVERVIEW_SELECTED)?.[1];
 
       overviewHandler?.();
 
@@ -432,17 +404,13 @@ describe('TabbedCanvas', () => {
   describe('tab switching', () => {
     beforeEach(() => {
       // Select a ground station first
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
     });
 
     it('should switch tabs on SWITCH_TAB event', () => {
-      const switchTabHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.SWITCH_TAB
-      )?.[1];
+      const switchTabHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.SWITCH_TAB)?.[1];
 
       switchTabHandler?.({ tabId: 'acu-control-0' });
 
@@ -450,9 +418,7 @@ describe('TabbedCanvas', () => {
     });
 
     it('should update active class on tab switch', () => {
-      const switchTabHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.SWITCH_TAB
-      )?.[1];
+      const switchTabHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.SWITCH_TAB)?.[1];
 
       switchTabHandler?.({ tabId: 'rx-analysis' });
 
@@ -464,14 +430,11 @@ describe('TabbedCanvas', () => {
       const acuTab = document.querySelector('[data-tab-id="acu-control-0"]') as HTMLElement;
       acuTab?.click();
 
-
       expect(ACUControlTab).toHaveBeenCalled();
     });
 
     it('should create RxAnalysisTab when switching to rx-analysis', () => {
-      const switchTabHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.SWITCH_TAB
-      )?.[1];
+      const switchTabHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.SWITCH_TAB)?.[1];
 
       switchTabHandler?.({ tabId: 'rx-analysis' });
 
@@ -479,9 +442,7 @@ describe('TabbedCanvas', () => {
     });
 
     it('should create TxChainTab when switching to tx-chain', () => {
-      const switchTabHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.SWITCH_TAB
-      )?.[1];
+      const switchTabHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.SWITCH_TAB)?.[1];
 
       switchTabHandler?.({ tabId: 'tx-chain' });
 
@@ -489,9 +450,7 @@ describe('TabbedCanvas', () => {
     });
 
     it('should create GPSTimingTab when switching to gps-timing', () => {
-      const switchTabHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.SWITCH_TAB
-      )?.[1];
+      const switchTabHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.SWITCH_TAB)?.[1];
 
       switchTabHandler?.({ tabId: 'gps-timing' });
 
@@ -499,9 +458,7 @@ describe('TabbedCanvas', () => {
     });
 
     it('should show unknown tab message for undefined tab', () => {
-      const switchTabHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.SWITCH_TAB
-      )?.[1];
+      const switchTabHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.SWITCH_TAB)?.[1];
 
       switchTabHandler?.({ tabId: 'unknown-tab' });
 
@@ -517,23 +474,18 @@ describe('TabbedCanvas', () => {
    */
   describe('active tab across asset switches', () => {
     const selectAsset = (type: 'ground-station' | 'satellite', id: string): void => {
-      const handler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const handler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       handler?.({ type, id });
     };
 
     const switchTab = (tabId: string): void => {
-      const handler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.SWITCH_TAB
-      )?.[1];
+      const handler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.SWITCH_TAB)?.[1];
 
       handler?.({ tabId });
     };
 
-    const activeTabId = (): string | null | undefined =>
-      document.querySelector('.nav-link.active')?.getAttribute('data-tab-id');
+    const activeTabId = (): string | null | undefined => document.querySelector('.nav-link.active')?.getAttribute('data-tab-id');
 
     it('marks a tab active after switching from a ground station to a satellite', () => {
       selectAsset('ground-station', 'GS-001');
@@ -587,28 +539,21 @@ describe('TabbedCanvas', () => {
   describe('tab management', () => {
     it('should create DashboardTab when switching to dashboard', () => {
       // Select ground station
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
-
 
       expect(DashboardTab).toHaveBeenCalled();
     });
 
     it('should create ACUControlTab when switching to ACU Control', () => {
       // Select ground station first
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
 
       // Switch to ACU control tab
-      const switchTabHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.SWITCH_TAB
-      )?.[1];
+      const switchTabHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.SWITCH_TAB)?.[1];
 
       switchTabHandler?.({ tabId: 'acu-control-0' });
 
@@ -617,9 +562,7 @@ describe('TabbedCanvas', () => {
 
     it('should clear old tabs when selecting new asset', () => {
       // Select first ground station
-      const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-        (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-      )?.[1];
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
       assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
 
@@ -629,8 +572,7 @@ describe('TabbedCanvas', () => {
   });
 
   describe('destroy', () => {
-    const registeredHandler = (event: Events): Function | undefined =>
-      mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === event)?.[1];
+    const registeredHandler = (event: Events): Function | undefined => mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === event)?.[1];
 
     it('should dispose all tab instances', () => {
       // Select ground station to create tabs
@@ -648,21 +590,14 @@ describe('TabbedCanvas', () => {
     it('should unregister from EventBus', () => {
       tabbedCanvas.destroy();
 
-      expect(mockEventBus.off).toHaveBeenCalledWith(
-        Events.ASSET_SELECTED,
-        expect.any(Function)
-      );
+      expect(mockEventBus.off).toHaveBeenCalledWith(Events.ASSET_SELECTED, expect.any(Function));
     });
 
     /**
      * EventBus.off() matches by function identity, so unsubscribing anything
      * other than the exact callback that was registered is a silent no-op.
      */
-    it.each([
-      Events.ASSET_SELECTED,
-      Events.SWITCH_TAB,
-      Events.MISSION_OVERVIEW_SELECTED,
-    ])('unsubscribes the exact handler it registered for %s', (event) => {
+    it.each([Events.ASSET_SELECTED, Events.SWITCH_TAB, Events.MISSION_OVERVIEW_SELECTED])('unsubscribes the exact handler it registered for %s', (event) => {
       const handler = registeredHandler(event);
 
       expect(handler).toBeDefined();
@@ -747,9 +682,7 @@ describe('TabbedCanvas with non-operational ground station', () => {
   });
 
   it('should disable equipment tabs when ground station not operational', () => {
-    const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-      (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-    )?.[1];
+    const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
     assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
 
@@ -758,9 +691,7 @@ describe('TabbedCanvas with non-operational ground station', () => {
   });
 
   it('should not disable dashboard tab when ground station not operational', () => {
-    const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-      (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-    )?.[1];
+    const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
     assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
 
@@ -769,12 +700,8 @@ describe('TabbedCanvas with non-operational ground station', () => {
   });
 
   it('does not reopen a remembered tab that is now disabled', () => {
-    const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-      (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-    )?.[1];
-    const switchTabHandler = mockEventBus.on.mock.calls.find(
-      (call: [string, Function]) => call[0] === Events.SWITCH_TAB
-    )?.[1];
+    const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
+    const switchTabHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.SWITCH_TAB)?.[1];
 
     assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
     switchTabHandler?.({ tabId: 'rx-analysis' });
@@ -782,8 +709,7 @@ describe('TabbedCanvas with non-operational ground station', () => {
     // Reselecting must not drop the operator back into a disabled console.
     assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
 
-    expect(document.querySelector('.nav-link.active')?.getAttribute('data-tab-id'))
-      .toBe('dashboard');
+    expect(document.querySelector('.nav-link.active')?.getAttribute('data-tab-id')).toBe('dashboard');
   });
 });
 
@@ -795,9 +721,7 @@ describe('TabbedCanvas nats-eu console tab gating', () => {
   let savedSettings: SimulationSettings;
 
   const selectGroundStation = (): void => {
-    const assetSelectedHandler = mockEventBus.on.mock.calls.find(
-      (call: [string, Function]) => call[0] === Events.ASSET_SELECTED
-    )?.[1];
+    const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 
     assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
   };

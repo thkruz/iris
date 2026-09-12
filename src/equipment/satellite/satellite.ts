@@ -1,9 +1,9 @@
-import { EventBus } from "@app/events/event-bus";
-import { Events } from "@app/events/events";
-import { SignalOrigin } from "@app/signal-origin";
-import { PerlinNoise } from "@app/simulation/perlin-noise";
-import { dBi, dBm, Hertz, RfFrequency, RfSignal } from "@app/types";
-import { Degrees } from "ootk";
+import { EventBus } from '@app/events/event-bus';
+import { Events } from '@app/events/events';
+import { SignalOrigin } from '@app/signal-origin';
+import { PerlinNoise } from '@app/simulation/perlin-noise';
+import { dBi, dBm, Hertz, RfFrequency, RfSignal } from '@app/types';
+import { Degrees } from 'ootk';
 
 /**
  * Configuration for explicitly defining a satellite transponder.
@@ -172,7 +172,7 @@ export class Satellite {
 
   el: Degrees;
   az: Degrees;
-  rotation: Degrees = ((Math.random() * 90) - 45) as Degrees;
+  rotation: Degrees = (Math.random() * 90 - 45) as Degrees;
   name: string;
 
   /** Ephemeris error in azimuth (degrees) - simulates TLE inaccuracy */
@@ -211,13 +211,7 @@ export class Satellite {
   /** Rate of position change: 0.1 degrees per 30 seconds (peak velocity) */
   private static readonly POSITION_RATE_DEG_PER_MS = 0.1 / 30000;
 
-  constructor(
-    name: string,
-    norad: number,
-    rxSignal: RfSignal[] = [],
-    beaconSignal: RfSignal[] = [],
-    satelliteState: SatelliteState = Satellite.getDefaultState_(),
-  ) {
+  constructor(name: string, norad: number, rxSignal: RfSignal[] = [], beaconSignal: RfSignal[] = [], satelliteState: SatelliteState = Satellite.getDefaultState_()) {
     this.noradId = norad;
     this.externalSignal = rxSignal;
     this.rxSignal = [];
@@ -241,7 +235,7 @@ export class Satellite {
       powerVariationRange: 1.0 as dBm,
       interference: false,
       interferencePower: -110 as dBm,
-      ...satelliteState.degradationConfig
+      ...satelliteState.degradationConfig,
     };
 
     // Initialize orbit type and configuration
@@ -465,9 +459,7 @@ export class Satellite {
         // Reverse linear polarization for downlink; circular polarization is
         // set by the transponder's own antenna and passes through unchanged
         // (an RHCP uplink must not come back as 'H' - Campaign 3 S8)
-        polarization: signal.polarization === 'H' ? 'V'
-          : signal.polarization === 'V' ? 'H'
-            : signal.polarization,
+        polarization: signal.polarization === 'H' ? 'V' : signal.polarization === 'V' ? 'H' : signal.polarization,
       };
 
       // Apply degradation effects
@@ -504,11 +496,8 @@ export class Satellite {
    * 1. Signal frequency falling within transponder's passband (uplinkLowEdge to uplinkHighEdge)
    * 2. Signal polarization matching transponder's polarization
    */
-  private findTransponderByUplinkFrequency(
-    frequency: RfFrequency,
-    polarization: 'H' | 'V' | 'LHCP' | 'RHCP' | null
-  ): Transponder | undefined {
-    return this.transponders.find(tp => {
+  private findTransponderByUplinkFrequency(frequency: RfFrequency, polarization: 'H' | 'V' | 'LHCP' | 'RHCP' | null): Transponder | undefined {
+    return this.transponders.find((tp) => {
       // Check if frequency falls within passband
       const inPassband = frequency >= tp.uplinkLowEdge && frequency <= tp.uplinkHighEdge;
       if (!inPassband) return false;
@@ -528,7 +517,7 @@ export class Satellite {
     }
 
     // Soft saturation curve (AM/PM conversion effects)
-    const excessPower = inputPower - saturationPower as dBm;
+    const excessPower = (inputPower - saturationPower) as dBm;
     const compressionFactor = 1 / (1 + excessPower / 10);
 
     return Math.min(saturationPower + excessPower * compressionFactor, maxPower) as dBm;
@@ -546,15 +535,15 @@ export class Satellite {
 
     const k = 1.38e-23;
     const T = 290; // Kelvin
-    const noisePowerWatts = k * T * bandwidth * Math.pow(10, noiseFigure / 10);
+    const noisePowerWatts = k * T * bandwidth * 10 ** (noiseFigure / 10);
     const noisePowerDbm = 10 * Math.log10(noisePowerWatts * 1000);
 
     // Combine signal and noise power (in linear scale)
-    const signalLinear = Math.pow(10, signalPower / 10);
-    const noiseLinear = Math.pow(10, noisePowerDbm / 10);
+    const signalLinear = 10 ** (signalPower / 10);
+    const noiseLinear = 10 ** (noisePowerDbm / 10);
     const totalLinear = signalLinear + noiseLinear;
 
-    return 10 * Math.log10(totalLinear) as dBm;
+    return (10 * Math.log10(totalLinear)) as dBm;
   }
 
   /**
@@ -563,10 +552,7 @@ export class Satellite {
    */
   private applyDegradationEffects(signal: RfSignal): RfSignal {
     // Early exit if all degradation effects are disabled
-    if (!this.degradationConfig.powerVariation &&
-      !this.degradationConfig.atmosphericEffects &&
-      !this.degradationConfig.interference &&
-      this.health >= 1.0) {
+    if (!this.degradationConfig.powerVariation && !this.degradationConfig.atmosphericEffects && !this.degradationConfig.interference && this.health >= 1.0) {
       return signal;
     }
 
@@ -590,7 +576,7 @@ export class Satellite {
 
     // Health degradation
     const healthLossDeb = (1 - this.health) * 10;
-    power = power - healthLossDeb as dBm;
+    power = (power - healthLossDeb) as dBm;
     if (this.health < 0.9 || degradedSignal.isDegraded) {
       degradedSignal.isDegraded = true;
     }
@@ -655,8 +641,8 @@ export class Satellite {
    */
   private applyInterference_inPlace(currentPower: dBm): dBm {
     // Calculate C/I (Carrier-to-Interference ratio)
-    const carrierPowerLinear = Math.pow(10, currentPower / 10);
-    const interferencePowerLinear = Math.pow(10, this.degradationConfig.interferencePower / 10);
+    const carrierPowerLinear = 10 ** (currentPower / 10);
+    const interferencePowerLinear = 10 ** (this.degradationConfig.interferencePower / 10);
     const totalPowerLinear = carrierPowerLinear + interferencePowerLinear;
 
     return (10 * Math.log10(totalPowerLinear)) as dBm;
@@ -741,7 +727,7 @@ export class Satellite {
    * Set transponder active state.
    */
   setTransponderActive(transponderId: string, active: boolean): void {
-    const transponder = this.transponders.find(tp => tp.id === transponderId);
+    const transponder = this.transponders.find((tp) => tp.id === transponderId);
     if (transponder) {
       transponder.isActive = active;
     }
@@ -753,7 +739,7 @@ export class Satellite {
   configureDegradation(config: Partial<SignalDegradationConfig>): void {
     this.degradationConfig = {
       ...this.degradationConfig,
-      ...config
+      ...config,
     };
   }
 
@@ -761,10 +747,10 @@ export class Satellite {
    * Get carrier-to-noise ratio for a specific signal.
    */
   getCarrierToNoiseRatio(signalId: string): number | null {
-    const signal = this.txSignal.find(s => s.signalId === signalId);
+    const signal = this.txSignal.find((s) => s.signalId === signalId);
     if (!signal) return null;
 
-    const transponderIndex = this.rxSignal.findIndex(s => s.signalId === signalId);
+    const transponderIndex = this.rxSignal.findIndex((s) => s.signalId === signalId);
     if (transponderIndex < 0) return null;
 
     const transponder = this.transponders[transponderIndex];
@@ -772,7 +758,7 @@ export class Satellite {
     // Calculate noise power
     const k = 1.38e-23;
     const T = 290;
-    const noisePowerWatts = k * T * signal.bandwidth * Math.pow(10, transponder.noiseFigure / 10);
+    const noisePowerWatts = k * T * signal.bandwidth * 10 ** (transponder.noiseFigure / 10);
     const noisePowerDbm = 10 * Math.log10(noisePowerWatts * 1000);
 
     return signal.power - noisePowerDbm;

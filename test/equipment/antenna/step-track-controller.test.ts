@@ -14,7 +14,7 @@ vi.mock('../../../src/simulation/simulation-manager', () => ({
       getSatByNoradId: vi.fn((id: number) => ({
         noradId: id,
         ephemerisErrorAz: 0.15 as Degrees,
-        ephemerisErrorEl: 0.10 as Degrees,
+        ephemerisErrorEl: 0.1 as Degrees,
       })),
       getSatsByAzEl: () => [],
       satellites: [],
@@ -41,16 +41,13 @@ vi.mock('../../../src/events/event-bus', () => ({
 class MockAntennaCore extends AntennaCore {
   private mockRfFrontEnd_: any = null;
 
-  constructor(
-    configId: ANTENNA_CONFIG_KEYS = ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK,
-    initialState: Partial<AntennaState> = {}
-  ) {
+  constructor(configId: ANTENNA_CONFIG_KEYS = ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK, initialState: Partial<AntennaState> = {}) {
     super(configId, initialState, 1, 1);
   }
 
-  protected override addListeners_(): void { }
-  syncDomWithState(): void { }
-  draw(): void { }
+  protected override addListeners_(): void {}
+  syncDomWithState(): void {}
+  draw(): void {}
 
   // Override rfFrontEnd getter to return mock
   override get rfFrontEnd() {
@@ -106,7 +103,7 @@ describe('StepTrackController', () => {
       const state = controller.getState();
       // Target should be negative of ephemeris error
       expect(state.targetAzOffset).toBe(-0.15);
-      expect(state.targetElOffset).toBe(-0.10);
+      expect(state.targetElOffset).toBe(-0.1);
     });
 
     it('should reset convergence state on start', () => {
@@ -311,7 +308,7 @@ describe('StepTrackController', () => {
 
         // Should have reached target offsets
         expect(antenna.state.stepTrackAzOffset).toBeCloseTo(-0.15, 2);
-        expect(antenna.state.stepTrackElOffset).toBeCloseTo(-0.10, 2);
+        expect(antenna.state.stepTrackElOffset).toBeCloseTo(-0.1, 2);
       } finally {
         Date.now = originalDateNow;
       }

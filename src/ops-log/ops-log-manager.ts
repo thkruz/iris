@@ -40,11 +40,7 @@ export class OpsLogManager {
   /** Last whole second value for detecting second boundary crossings */
   private lastWholeSecond_: number = 0;
 
-  private constructor(
-    startWallTime: string = '12:00:00',
-    startDate: string = '2026-01-01',
-    previousShiftLogs: PreviousShiftLogEntry[] = []
-  ) {
+  private constructor(startWallTime: string = '12:00:00', startDate: string = '2026-01-01', previousShiftLogs: PreviousShiftLogEntry[] = []) {
     this.eventBus_ = EventBus.getInstance();
 
     // Parse date and time into a timestamp
@@ -96,11 +92,7 @@ export class OpsLogManager {
    * @param startDate Fictional start date in "YYYY-MM-DD" format (default "2025-01-01")
    * @param previousShiftLogs Array of previous shift log entries from scenario
    */
-  static initialize(
-    startWallTime?: string,
-    startDate?: string,
-    previousShiftLogs?: PreviousShiftLogEntry[]
-  ): OpsLogManager {
+  static initialize(startWallTime?: string, startDate?: string, previousShiftLogs?: PreviousShiftLogEntry[]): OpsLogManager {
     if (OpsLogManager.instance_) {
       console.warn('OpsLogManager already initialized. Destroying previous instance.');
       OpsLogManager.destroy();
@@ -131,10 +123,7 @@ export class OpsLogManager {
    */
   static destroy(): void {
     if (OpsLogManager.instance_) {
-      OpsLogManager.instance_.eventBus_.off(
-        Events.UPDATE,
-        OpsLogManager.instance_.boundUpdateHandler_
-      );
+      OpsLogManager.instance_.eventBus_.off(Events.UPDATE, OpsLogManager.instance_.boundUpdateHandler_);
       const devHooks = window as unknown as SimClockDevHooks;
 
       delete devHooks.advanceSimClock;

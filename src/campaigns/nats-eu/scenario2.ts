@@ -51,12 +51,7 @@ export const natsEuScenario2Data: ScenarioData = {
   duration: '20-25 min',
   missionType: 'Commissioning',
   description: `GW-01 is not accepted yet. Yesterday you worked a pass; today you have to prove the station performs to the number on the contract, and sign a test card saying so.<br><br>The acceptance test is simple to state and unforgiving to fake: predict the carrier-to-noise ratio for the next MERIDIAN-SAR-1 pass from the link budget, then measure it during the pass and show the two agree with margin over the demodulator threshold.<br><br>Charlie has left the site survey numbers on the console. Do the arithmetic before AOS - the pass is seven minutes long and the useful part is shorter than that.`,
-  equipment: [
-    '4m Ku-Band LEO Tracking Antenna',
-    'Ku-Band RF Front End (13100 MHz LNB LO)',
-    'Link Analysis Console',
-    'QPSK 3/4 Receiver',
-  ],
+  equipment: ['4m Ku-Band LEO Tracking Antenna', 'Ku-Band RF Front End (13100 MHz LNB LO)', 'Link Analysis Console', 'QPSK 3/4 Receiver'],
   settings: {
     isSync: true,
     groundStations: [galwayGroundStation],
@@ -143,7 +138,8 @@ export const natsEuScenario2Data: ScenarioData = {
       id: 'compute-link-budget',
       nice: ['T0080', 'S0015', 'K0740'],
       title: 'Predict the Downlink C/N',
-      description: 'Fill the worksheet for MERIDIAN-SAR-1 at maximum elevation and press Compute. Survey numbers: satellite EIRP 28 dBm; slant range at max elevation 761 km (free-space path loss 171.4 dB at 11686 MHz); GW-01 receive gain 51.8 dBi; system noise temperature 88 K; occupied bandwidth 36 MHz; miscellaneous losses 1 dB.',
+      description:
+        'Fill the worksheet for MERIDIAN-SAR-1 at maximum elevation and press Compute. Survey numbers: satellite EIRP 28 dBm; slant range at max elevation 761 km (free-space path loss 171.4 dB at 11686 MHz); GW-01 receive gain 51.8 dBi; system noise temperature 88 K; occupied bandwidth 36 MHz; miscellaneous losses 1 dB.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['open-link-analysis'],
       conditions: [
@@ -190,7 +186,8 @@ export const natsEuScenario2Data: ScenarioData = {
       id: 'commit-the-link',
       nice: ['T0080', 'K0740', 'S0015'],
       title: 'Measure and Commit the Link',
-      description: 'With the receiver locked on the 1414 MHz downlink, return to Link Analysis and press Commit Link near maximum elevation (T+5 to T+8 min). Acceptance needs at least 2 dB of margin over the 6 dB demodulator threshold.',
+      description:
+        'With the receiver locked on the 1414 MHz downlink, return to Link Analysis and press Commit Link near maximum elevation (T+5 to T+8 min). Acceptance needs at least 2 dB of margin over the 6 dB demodulator threshold.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['track-for-acceptance'],
       conditions: [
@@ -230,7 +227,7 @@ export const natsEuScenario2Data: ScenarioData = {
               'Because the customer contract specifies a calculation, not a test.',
             ],
             correctIndex: 0,
-            explanation: 'Exactly. Agreement between model and measurement is what lets you predict tomorrow\'s pass, and every pass after it. GW-01 is accepted.',
+            explanation: "Exactly. Agreement between model and measurement is what lets you predict tomorrow's pass, and every pass after it. GW-01 is accepted.",
             pointPenalty: 5,
           },
           mustMaintain: false,

@@ -1,18 +1,18 @@
-import { EventBus } from "@app/events/event-bus";
-import { SignalOrigin } from "@app/signal-origin";
-import { Degrees } from "ootk";
-import { Events } from "@app/events/events";
-import { SimulationManager } from "@app/simulation/simulation-manager";
-import { dB, dBm, Hertz, RfSignal } from "@app/types";
 import { AlarmStatus, BaseEquipment } from '@app/equipment/base-equipment';
-import { TapPoint } from "@app/equipment/rf-front-end/coupler-module/tap-points";
-import { RFFrontEndCore } from "@app/equipment/rf-front-end/rf-front-end-core";
-import { Satellite } from "@app/equipment/satellite/satellite";
-import { InterferenceManager } from "@app/interference/interference-manager";
-import { Transmitter } from "@app/equipment/transmitter/transmitter";
-import { ANTENNA_CONFIG_KEYS } from "./antenna-config-keys";
-import { ANTENNA_CONFIGS, AntennaConfig } from "./antenna-configs";
-import { StepTrackController } from "./step-track-controller";
+import { TapPoint } from '@app/equipment/rf-front-end/coupler-module/tap-points';
+import { RFFrontEndCore } from '@app/equipment/rf-front-end/rf-front-end-core';
+import { Satellite } from '@app/equipment/satellite/satellite';
+import { Transmitter } from '@app/equipment/transmitter/transmitter';
+import { EventBus } from '@app/events/event-bus';
+import { Events } from '@app/events/events';
+import { InterferenceManager } from '@app/interference/interference-manager';
+import { SignalOrigin } from '@app/signal-origin';
+import { SimulationManager } from '@app/simulation/simulation-manager';
+import { dB, dBm, Hertz, RfSignal } from '@app/types';
+import { Degrees } from 'ootk';
+import { ANTENNA_CONFIG_KEYS } from './antenna-config-keys';
+import { ANTENNA_CONFIGS, AntennaConfig } from './antenna-configs';
+import { StepTrackController } from './step-track-controller';
 
 /**
  * RF Propagation constants for GEO satellite communications
@@ -215,12 +215,7 @@ export abstract class AntennaCore extends BaseEquipment {
   /** C/N threshold to acquire beacon lock */
   private readonly beaconLockAcquireCN_: number = 6.5;
 
-  constructor(
-    configId: ANTENNA_CONFIG_KEYS = ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK,
-    initialState: Partial<AntennaState> = {},
-    teamId: number = 1,
-    serverId: number = 1,
-  ) {
+  constructor(configId: ANTENNA_CONFIG_KEYS = ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK, initialState: Partial<AntennaState> = {}, teamId: number = 1, serverId: number = 1) {
     super(teamId);
 
     // Set antenna configuration
@@ -360,11 +355,7 @@ export abstract class AntennaCore extends BaseEquipment {
 
     // Update program-track position continuously when tracking a satellite
     // This is the base tracking - always follows ephemeris
-    if (automationAvailable &&
-        this.state.trackingMode === 'program-track' &&
-        this.state.targetSatelliteId !== null &&
-        this.state.isPowered &&
-        this.state.isOperational) {
+    if (automationAvailable && this.state.trackingMode === 'program-track' && this.state.targetSatelliteId !== null && this.state.isPowered && this.state.isOperational) {
       this.updateProgramTrackPosition_();
     }
 
@@ -377,10 +368,7 @@ export abstract class AntennaCore extends BaseEquipment {
     this.updateSlew_();
 
     // Check for program-track lock when antenna arrives near target
-    if (automationAvailable &&
-        this.state.trackingMode === 'program-track' &&
-        this.state.targetSatelliteId !== null &&
-        !this.state.isSlewing) {
+    if (automationAvailable && this.state.trackingMode === 'program-track' && this.state.targetSatelliteId !== null && !this.state.isSlewing) {
       this.checkProgramTrackLock_();
     }
 
@@ -456,8 +444,7 @@ export abstract class AntennaCore extends BaseEquipment {
 
     const azDiff = Math.abs(this.state.azimuth - sat.az);
     const elDiff = Math.abs(this.state.elevation - sat.el);
-    const withinTolerance = azDiff <= AntennaCore.LOCK_TOLERANCE_DEG &&
-      elDiff <= AntennaCore.LOCK_TOLERANCE_DEG;
+    const withinTolerance = azDiff <= AntennaCore.LOCK_TOLERANCE_DEG && elDiff <= AntennaCore.LOCK_TOLERANCE_DEG;
 
     if (withinTolerance && !this.state.isLocked) {
       this.state.isLocked = true;
@@ -495,10 +482,7 @@ export abstract class AntennaCore extends BaseEquipment {
     targetEl = Math.max(0, Math.min(90, targetEl));
 
     // Use shortest path calculation for azimuth to avoid long slews
-    this.state.targetAzimuth = this.calculateShortestPathTarget_(
-      this.state.azimuth,
-      targetAz as Degrees
-    );
+    this.state.targetAzimuth = this.calculateShortestPathTarget_(this.state.azimuth, targetAz as Degrees);
     this.state.targetElevation = targetEl as Degrees;
   }
 
@@ -589,9 +573,7 @@ export abstract class AntennaCore extends BaseEquipment {
     this.state.isAutoTrackSwitchUp = isSwitchUp;
     this.state.isAutoTrackEnabled = isSwitchUp;
     const sats = SimulationManager.getInstance().getSatsByAzEl(this.normalizedAzimuth, this.state.elevation);
-    const strongestSignal = sats
-      .flatMap(sat => sat.txSignal)
-      .reduce((prev, curr) => (prev.power > curr.power ? prev : curr), { power: -Infinity } as RfSignal);
+    const strongestSignal = sats.flatMap((sat) => sat.txSignal).reduce((prev, curr) => (prev.power > curr.power ? prev : curr), { power: -Infinity } as RfSignal);
 
     // hardcoded threshold for lock acquisition - TODO: make configurable
     const LOCK_THRESHOLD_DBM = -100;
@@ -836,8 +818,7 @@ export abstract class AntennaCore extends BaseEquipment {
       if (this.smoothedBeaconCN_ === null) {
         this.smoothedBeaconCN_ = cn;
       } else {
-        this.smoothedBeaconCN_ = this.beaconCNSmoothingAlpha_ * cn +
-          (1 - this.beaconCNSmoothingAlpha_) * this.smoothedBeaconCN_;
+        this.smoothedBeaconCN_ = this.beaconCNSmoothingAlpha_ * cn + (1 - this.beaconCNSmoothingAlpha_) * this.smoothedBeaconCN_;
       }
       this.state.beaconCN = this.smoothedBeaconCN_;
 
@@ -878,7 +859,7 @@ export abstract class AntennaCore extends BaseEquipment {
     const searchBw = this.state.beaconSearchBwHz;
 
     // Find signals within beacon search bandwidth (use AGC output for consistency with spectrum analyzer)
-    const beaconSignals = this.rfFrontEnd_.agcModule.outputSignals.filter(sig => {
+    const beaconSignals = this.rfFrontEnd_.agcModule.outputSignals.filter((sig) => {
       const freqDiff = Math.abs((sig.frequency as number) - beaconFreq);
       return freqDiff <= searchBw / 2;
     });
@@ -888,10 +869,7 @@ export abstract class AntennaCore extends BaseEquipment {
     }
 
     // Get strongest signal power in beacon range (includes full RX chain gain)
-    const strongestPower = beaconSignals.reduce(
-      (max, sig) => Math.max(max, sig.power as number),
-      -Infinity
-    );
+    const strongestPower = beaconSignals.reduce((max, sig) => Math.max(max, sig.power as number), -Infinity);
 
     if (strongestPower === -Infinity) {
       return { power: null, cn: null };
@@ -899,16 +877,10 @@ export abstract class AntennaCore extends BaseEquipment {
 
     // Get noise floor using TRACKING bandwidth (narrow beacon receiver)
     const trackingBw = this.state.beaconTrackingBwHz;
-    const { noiseFloorNoGain, shouldApplyGain } =
-      this.rfFrontEnd_.couplerModule.signalPathManager.getNoiseFloorAt(
-        TapPoint.RX_IF,
-        trackingBw as Hertz
-      );
+    const { noiseFloorNoGain, shouldApplyGain } = this.rfFrontEnd_.couplerModule.signalPathManager.getNoiseFloorAt(TapPoint.RX_IF, trackingBw as Hertz);
 
     // Apply gain to noise floor to match signal reference frame
-    const noiseFloor = shouldApplyGain
-      ? noiseFloorNoGain + this.rfFrontEnd_.couplerModule.signalPathManager.getTotalRxGain()
-      : noiseFloorNoGain;
+    const noiseFloor = shouldApplyGain ? noiseFloorNoGain + this.rfFrontEnd_.couplerModule.signalPathManager.getTotalRxGain() : noiseFloorNoGain;
 
     // C/N = Signal Power - Noise Floor (both with full RX chain gain applied)
     const cn = strongestPower - noiseFloor;
@@ -1273,9 +1245,7 @@ export abstract class AntennaCore extends BaseEquipment {
   private calculateShortestPathTarget_(currentAz: Degrees, satAz: Degrees): Degrees {
     const signedDiff = satAz - currentAz;
     // Normalize difference to [-180, 180] for shortest path
-    const shortestDiff = signedDiff > 180 ? signedDiff - 360 :
-      signedDiff < -180 ? signedDiff + 360 :
-        signedDiff;
+    const shortestDiff = signedDiff > 180 ? signedDiff - 360 : signedDiff < -180 ? signedDiff + 360 : signedDiff;
     return (currentAz + shortestDiff) as Degrees;
   }
 
@@ -1285,7 +1255,7 @@ export abstract class AntennaCore extends BaseEquipment {
 
   get normalizedAzimuth(): Degrees {
     // Normalize azimuth between 0 and 359.9999 degrees
-    return ((this.state.azimuth % 360) + 360) % 360 as Degrees;
+    return (((this.state.azimuth % 360) + 360) % 360) as Degrees;
   }
 
   get txSignalsIn(): RfSignal[] {
@@ -1304,7 +1274,7 @@ export abstract class AntennaCore extends BaseEquipment {
       const polLoss = this.polMismatchLoss_dB_(
         sig.polarization as 'H' | 'V' | 'RHCP' | 'LHCP',
         this.config.polType ?? 'linear',
-        Math.abs((sig.rotation ?? 0) - this.state.polarization) as Degrees,
+        Math.abs((sig.rotation ?? 0) - this.state.polarization) as Degrees
       );
 
       // Frequency-dependent feed loss + ice accumulation on feed horn
@@ -1324,15 +1294,11 @@ export abstract class AntennaCore extends BaseEquipment {
   }
 
   get rxSignals(): {
-    sat: Satellite,
-    signal: RfSignal,
+    sat: Satellite;
+    signal: RfSignal;
   }[] {
-
     const satellites = SimulationManager.getInstance().satellites.filter((sat) => {
-      if (
-        Math.abs(sat.az - this.normalizedAzimuth) <= 1 &&
-        Math.abs(sat.el - this.state.elevation) <= 1
-      ) {
+      if (Math.abs(sat.az - this.normalizedAzimuth) <= 1 && Math.abs(sat.el - this.state.elevation) <= 1) {
         return true;
       }
 
@@ -1349,12 +1315,12 @@ export abstract class AntennaCore extends BaseEquipment {
       return false;
     });
 
-    return satellites.flatMap((sat) => {
-      return sat.txSignal.map((signal) => ({
+    return satellites.flatMap((sat) =>
+      sat.txSignal.map((signal) => ({
         sat,
         signal,
-      }));
-    });
+      }))
+    );
   }
 
   attachRfFrontEnd(rfFrontEnd: RFFrontEndCore): void {
@@ -1463,7 +1429,7 @@ export abstract class AntennaCore extends BaseEquipment {
     if (this.state.isLocked && !this.state.isLoopback) {
       const strongestSignal = SimulationManager.getInstance()
         .getSatsByAzEl(this.normalizedAzimuth, this.state.elevation)
-        .flatMap(sat => sat.txSignal)
+        .flatMap((sat) => sat.txSignal)
         .reduce((prev, curr) => (prev.power > curr.power ? prev : curr), { power: -Infinity } as RfSignal).noradId;
 
       alarms.push({ severity: 'success', message: `LOCKED ON SATELLITE ${SimulationManager.getInstance().isDeveloperMode ? strongestSignal : ''}`.trimEnd() });
@@ -1504,9 +1470,7 @@ export abstract class AntennaCore extends BaseEquipment {
     // then add any terrestrial emitters this antenna can hear (E1). Both go
     // through the same C/I blocking/degradation pass below, so a strong
     // ground emitter degrades wanted downlinks exactly like any interferer.
-    let receivedSignals = this.rxSignals
-      .map(({ sat, signal }) => this.applyPropagationEffects_(sat, signal))
-      .concat(this.terrestrialRxSignals_());
+    let receivedSignals = this.rxSignals.map(({ sat, signal }) => this.applyPropagationEffects_(sat, signal)).concat(this.terrestrialRxSignals_());
 
     // Apply interference and adjacency logic
     receivedSignals = receivedSignals.filter((signal) => {
@@ -1534,8 +1498,8 @@ export abstract class AntennaCore extends BaseEquipment {
         if (overlapPercent === 0) continue;
 
         // Calculate carrier-to-interference ratio
-        const signalPowerLinear = Math.pow(10, signal.power / 10);
-        const interferencePowerLinear = Math.pow(10, other.power / 10);
+        const signalPowerLinear = 10 ** (signal.power / 10);
+        const interferencePowerLinear = 10 ** (other.power / 10);
         const ci_ratio = 10 * Math.log10(signalPowerLinear / interferencePowerLinear);
 
         // If C/I is less than 10 dB and overlap is significant, signal is degraded or blocked
@@ -1585,26 +1549,16 @@ export abstract class AntennaCore extends BaseEquipment {
     // not meaningfully receive a 137 MHz fake beacon (S8 runs both stations
     // in one yard), and modeling it would also spam the out-of-range warning
     // in the gain model every frame.
-    const inBand = emissions.filter((emission) =>
-      emission.frequencyHz >= this.config.minRxFrequency &&
-      emission.frequencyHz <= this.config.maxRxFrequency);
+    const inBand = emissions.filter((emission) => emission.frequencyHz >= this.config.minRxFrequency && emission.frequencyHz <= this.config.maxRxFrequency);
 
     return inBand.map((emission) => {
-      const { bearingDeg, distanceKm } = AntennaCore.groundPath_(
-        latitude, longitude, emission.emitter.latitude, emission.emitter.longitude,
-      );
+      const { bearingDeg, distanceKm } = AntennaCore.groundPath_(latitude, longitude, emission.emitter.latitude, emission.emitter.longitude);
 
       const f_Hz = emission.frequencyHz;
-      const offAxis_deg = this.config.gainModel === 'fixed'
-        ? this.angularSeparationDeg_(bearingDeg, 0)
-        : Math.hypot(bearingDeg - this.normalizedAzimuth, this.state.elevation);
+      const offAxis_deg = this.config.gainModel === 'fixed' ? this.angularSeparationDeg_(bearingDeg, 0) : Math.hypot(bearingDeg - this.normalizedAzimuth, this.state.elevation);
 
       const fspl = this.calculateFreeSpacePathLoss_(f_Hz, Math.max(0.01, distanceKm));
-      const polarizationLoss = this.polMismatchLoss_dB_(
-        emission.polarization,
-        this.config.polType ?? 'linear',
-        Math.abs(this.state.polarization) as Degrees,
-      );
+      const polarizationLoss = this.polMismatchLoss_dB_(emission.polarization, this.config.polType ?? 'linear', Math.abs(this.state.polarization) as Degrees);
       const Grx_dBi = this.patternGain_dBi_(offAxis_deg, f_Hz);
       const feedLoss = this.feedLossAt_(f_Hz) + this.state.iceAccumulation_dB;
 
@@ -1630,9 +1584,7 @@ export abstract class AntennaCore extends BaseEquipment {
   }
 
   /** Great-circle initial bearing (deg true) and distance (km) between two WGS-84 points */
-  private static groundPath_(
-    lat1Deg: number, lon1Deg: number, lat2Deg: number, lon2Deg: number,
-  ): { bearingDeg: number; distanceKm: number } {
+  private static groundPath_(lat1Deg: number, lon1Deg: number, lat2Deg: number, lon2Deg: number): { bearingDeg: number; distanceKm: number } {
     const d2r = Math.PI / 180;
     const lat1 = lat1Deg * d2r;
     const lat2 = lat2Deg * d2r;
@@ -1640,7 +1592,7 @@ export abstract class AntennaCore extends BaseEquipment {
 
     const y = Math.sin(dLon) * Math.cos(lat2);
     const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-    const bearingDeg = ((Math.atan2(y, x) / d2r) + 360) % 360;
+    const bearingDeg = (Math.atan2(y, x) / d2r + 360) % 360;
 
     const dLat = (lat2Deg - lat1Deg) * d2r;
     const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
@@ -1709,9 +1661,7 @@ export abstract class AntennaCore extends BaseEquipment {
       }
 
       // Replace this antenna's previous contribution, keep everything else
-      sat.rxSignal = prevIds
-        ? sat.rxSignal.filter((s) => !prevIds.has(s.signalId))
-        : sat.rxSignal;
+      sat.rxSignal = prevIds ? sat.rxSignal.filter((s) => !prevIds.has(s.signalId)) : sat.rxSignal;
       const pushedIds = new Set<string>();
 
       for (const sig of txSignals) {
@@ -1726,9 +1676,7 @@ export abstract class AntennaCore extends BaseEquipment {
         sat.rxSignal.push({
           ...sig,
           power: (sig.power - fspl - atmosphericLoss - offAxisDrop) as dBm,
-          polarization: this.config.polType === 'circular'
-            ? (this.state.circularHandedness ?? sig.polarization)
-            : sig.polarization,
+          polarization: this.config.polType === 'circular' ? (this.state.circularHandedness ?? sig.polarization) : sig.polarization,
           origin: SignalOrigin.ANTENNA_TX,
         });
         pushedIds.add(sig.signalId);
@@ -1823,8 +1771,7 @@ export abstract class AntennaCore extends BaseEquipment {
     }
 
     // Polarization loss due to skew (linear polarizations only)
-    if ((txPolarization === 'H' || txPolarization === 'V') &&
-      (rxPolarization === 'H' || rxPolarization === 'V')) {
+    if ((txPolarization === 'H' || txPolarization === 'V') && (rxPolarization === 'H' || rxPolarization === 'V')) {
       const polarizationRad = (Math.abs(polarizationAngle) * Math.PI) / 180;
       const polarizationLoss = -20 * Math.log10(Math.cos(polarizationRad));
       return polarizationLoss;
@@ -1839,9 +1786,8 @@ export abstract class AntennaCore extends BaseEquipment {
    */
   private computeRfMetrics_(): void {
     // Use first signal frequency if available, otherwise use midband Rx frequency
-    const frequency = this.state.rxSignalsIn.length > 0
-      ? (this.state.rxSignalsIn[0].frequency as Hertz)
-      : ((this.config.minRxFrequency + this.config.maxRxFrequency) / 2) as Hertz;
+    const frequency =
+      this.state.rxSignalsIn.length > 0 ? (this.state.rxSignalsIn[0].frequency as Hertz) : (((this.config.minRxFrequency + this.config.maxRxFrequency) / 2) as Hertz);
 
     const elevation = 45 as Degrees; // Standard elevation for GEO
 
@@ -1861,7 +1807,7 @@ export abstract class AntennaCore extends BaseEquipment {
       polLoss_dB: this.polMismatchLoss_dB_(
         'H', // Assume H-pol for display
         this.config.polType ?? 'linear',
-        this.state.polarization,
+        this.state.polarization
       ),
       atmosLoss_dB: this.calculateAtmosphericLoss_(frequency, elevation),
       skyTemp_K: this.skyTempK_(elevation),
@@ -1918,11 +1864,11 @@ export abstract class AntennaCore extends BaseEquipment {
 
     // Ruze: η_surface = exp(-(4πσ/λ)²)
     const sigma = this.config.surfaceRms_m ?? 0;
-    const eta_surface = Math.exp(-Math.pow((4 * Math.PI * sigma) / lambda, 2));
+    const eta_surface = Math.exp(-(((4 * Math.PI * sigma) / lambda) ** 2));
 
     // Blockage: simple (1 - ε)² approximation
     const eps = Math.max(0, Math.min(0.3, this.config.blockageFraction ?? 0));
-    const eta_block = Math.pow(1 - eps, 2);
+    const eta_block = (1 - eps) ** 2;
 
     return base * eta_surface * eta_block;
   }
@@ -1947,7 +1893,7 @@ export abstract class AntennaCore extends BaseEquipment {
    */
   private pointingLoss_dB_(offAxis_deg: number, f_Hz: number): number {
     const bw = this.beamwidth3dB_deg_(f_Hz);
-    return Math.max(0, 12 * Math.pow(offAxis_deg / bw, 2));
+    return Math.max(0, 12 * (offAxis_deg / bw) ** 2);
   }
 
   /**
@@ -1962,13 +1908,13 @@ export abstract class AntennaCore extends BaseEquipment {
     // front-to-back ratio — the diameter-based sidelobe envelope below is
     // meaningless for a yagi/QFH/patch.
     if (this.config.gainModel === 'fixed') {
-      const drop = 12 * Math.pow(theta_deg / bw, 2);
+      const drop = 12 * (theta_deg / bw) ** 2;
       return Gmax - Math.min(drop, this.config.fixedFrontToBack_dB ?? 20);
     }
 
     // Main lobe approximation (within ~1.2 beamwidths)
     if (theta_deg <= 1.2 * bw) {
-      const drop = 12 * Math.pow(theta_deg / bw, 2);
+      const drop = 12 * (theta_deg / bw) ** 2;
       return Gmax - drop;
     }
 
@@ -1984,17 +1930,10 @@ export abstract class AntennaCore extends BaseEquipment {
    * Polarization mismatch loss (dB) for linear pol & skew angle
    * Combines feed XPD floor and skew-dependent loss
    */
-  private polMismatchLoss_dB_(
-    signalPol: 'H' | 'V' | 'RHCP' | 'LHCP',
-    _rxPol: 'linear' | 'circular',
-    polarizationMismatch: Degrees
-  ): dB {
+  private polMismatchLoss_dB_(signalPol: 'H' | 'V' | 'RHCP' | 'LHCP', _rxPol: 'linear' | 'circular', polarizationMismatch: Degrees): dB {
     if (this.config.polType === 'circular' || signalPol === 'RHCP' || signalPol === 'LHCP') {
       // Circular discrimination
-      if (
-        (signalPol === 'RHCP' && this.config.polType === 'circular') ||
-        (signalPol === 'LHCP' && this.config.polType === 'circular')
-      ) {
+      if ((signalPol === 'RHCP' && this.config.polType === 'circular') || (signalPol === 'LHCP' && this.config.polType === 'circular')) {
         // Switchable-feed antennas (circularHandedness set) discriminate by
         // handedness; wrong-handed reception costs the configured cross-pol
         // loss. Legacy circular antennas (handedness unset) keep the old
@@ -2010,7 +1949,7 @@ export abstract class AntennaCore extends BaseEquipment {
 
     // Linear: loss ≈ 20*log10|cos(skew)| limited by XPD floor
     const xpd = this.config.xpd_dB ?? 30;
-    const cosTerm = Math.abs(Math.cos(polarizationMismatch * Math.PI / 180));
+    const cosTerm = Math.abs(Math.cos((polarizationMismatch * Math.PI) / 180));
     const ideal = -20 * Math.log10(Math.max(1e-6, cosTerm)); // dB penalty
     return Math.min(xpd, ideal) as dB;
   }
@@ -2021,7 +1960,7 @@ export abstract class AntennaCore extends BaseEquipment {
    */
   private skyTempK_(elev_deg: number): number {
     // sec(z) factor for atmospheric path length
-    const secz = 1 / Math.max(0.1, Math.sin(elev_deg * Math.PI / 180));
+    const secz = 1 / Math.max(0.1, Math.sin((elev_deg * Math.PI) / 180));
     return 8 + 4 * (secz - 1); // Tune as needed
   }
 
@@ -2030,27 +1969,27 @@ export abstract class AntennaCore extends BaseEquipment {
    * T_equiv = T_phys * (L - 1) where L is linear loss factor
    */
   private noiseFromLossK_(L_dB: number, physK: number = 290): number {
-    const L = Math.pow(10, L_dB / 10);
+    const L = 10 ** (L_dB / 10);
     return physK * (L - 1);
   }
 
   /**
- * Thermal noise floor at the antenna output (referred to LNA input) for a
- * given frequency and noise bandwidth.
- *
- * Uses system noise temperature (sky + atmosphere + feed + LNA) and kTB.
- *
- * NOTE:
- * - Returns total noise power in dBm **over noiseBandwidth_Hz**.
- * - If you want noise density, call it with noiseBandwidth_Hz = 1.
- */
+   * Thermal noise floor at the antenna output (referred to LNA input) for a
+   * given frequency and noise bandwidth.
+   *
+   * Uses system noise temperature (sky + atmosphere + feed + LNA) and kTB.
+   *
+   * NOTE:
+   * - Returns total noise power in dBm **over noiseBandwidth_Hz**.
+   * - If you want noise density, call it with noiseBandwidth_Hz = 1.
+   */
   antennaNoiseFloor(frequency: Hertz, noiseBandwidth: Hertz): dBm {
     // Use the actual current pointing elevation
     const elevation = this.state.elevation;
     const Tsys_K = this.systemTempK_(frequency, elevation);
 
     // Guard against degenerate values
-    const T = Math.max(Tsys_K, 1);            // K (avoid log of 0)
+    const T = Math.max(Tsys_K, 1); // K (avoid log of 0)
     const B = Math.max(noiseBandwidth, 1); // Hz (at least 1 Hz)
 
     // Thermal noise density at 290 K ~ -174 dBm/Hz
@@ -2085,11 +2024,11 @@ export abstract class AntennaCore extends BaseEquipment {
 
     // LNA noise
     const NF = this.config.lnaNF_dB ?? 1.0;
-    const Tlna = 290 * (Math.pow(10, NF / 10) - 1);
+    const Tlna = 290 * (10 ** (NF / 10) - 1);
 
     // Friis cascade for noise temps with preceding losses
-    const L_atm_linear = Math.pow(10, Latm / 10);
-    const L_feed_linear = Math.pow(10, LfeedTotal / 10);
+    const L_atm_linear = 10 ** (Latm / 10);
+    const L_feed_linear = 10 ** (LfeedTotal / 10);
     const L_total = L_atm_linear * L_feed_linear;
 
     return Tant * L_total + Tfeed * L_atm_linear + Tlna;
@@ -2127,9 +2066,7 @@ export abstract class AntennaCore extends BaseEquipment {
     // Parabolic antennas keep the legacy planar math bit-identically.
     const deltaAz = satellite.az - this.normalizedAzimuth;
     const deltaEl = satellite.el - this.state.elevation;
-    const offAxis_deg = this.config.gainModel === 'fixed'
-      ? this.angularSeparationDeg_(satellite.az, satellite.el)
-      : Math.hypot(deltaAz, deltaEl);
+    const offAxis_deg = this.config.gainModel === 'fixed' ? this.angularSeparationDeg_(satellite.az, satellite.el) : Math.hypot(deltaAz, deltaEl);
 
     // Calculate free-space path loss (downlink from satellite to ground).
     // Orbital satellites report true slant range; legacy fixed-telemetry
@@ -2143,7 +2080,7 @@ export abstract class AntennaCore extends BaseEquipment {
     const polarizationLoss = this.polMismatchLoss_dB_(
       signal.polarization as 'H' | 'V' | 'RHCP' | 'LHCP',
       this.config.polType ?? 'linear',
-      Math.abs((signal.rotation ?? 0) - this.state.polarization) as Degrees,
+      Math.abs((signal.rotation ?? 0) - this.state.polarization) as Degrees
     );
 
     // Use pattern gain (accounts for off-axis angle) instead of just peak gain
@@ -2151,20 +2088,13 @@ export abstract class AntennaCore extends BaseEquipment {
 
     // Feed loss (frequency-dependent) + ice accumulation on feed horn +
     // elevated sky noise (sun transit) as equivalent RX loss
-    const feedLoss = this.feedLossAt_(f_Hz) + this.state.iceAccumulation_dB +
-      this.state.skyNoiseDegradation_dB;
+    const feedLoss = this.feedLossAt_(f_Hz) + this.state.iceAccumulation_dB + this.state.skyNoiseDegradation_dB;
 
     // Pointing loss (if any off-axis error from wind/jitter)
     const pointingLoss = this.pointingLoss_dB_(offAxis_deg, f_Hz);
 
     // Apply all losses to signal power
-    let receivedPower = signal.power
-      - fspl
-      - atmosphericLoss
-      - polarizationLoss
-      - feedLoss
-      - pointingLoss
-      + Grx_dBi;
+    const receivedPower = signal.power - fspl - atmosphericLoss - polarizationLoss - feedLoss - pointingLoss + Grx_dBi;
 
     return {
       ...signal,
@@ -2189,13 +2119,15 @@ export abstract class AntennaCore extends BaseEquipment {
     const f_Hz = frequencyHz as number;
 
     // Check if frequency is within antenna's operating range
-    if ((frequencyHz < this.config.minRxFrequency || frequencyHz > this.config.maxRxFrequency) &&
-      (frequencyHz < this.config.minTxFrequency || frequencyHz > this.config.maxTxFrequency)) {
+    if (
+      (frequencyHz < this.config.minRxFrequency || frequencyHz > this.config.maxRxFrequency) &&
+      (frequencyHz < this.config.minTxFrequency || frequencyHz > this.config.maxTxFrequency)
+    ) {
       console.warn(
         `Warning: Frequency ${f_Hz / 1e9} GHz is outside antenna operating range ` +
-        `(${this.config.minRxFrequency / 1e9} - ${this.config.maxRxFrequency / 1e9} GHz for Rx, ` +
-        `${this.config.minTxFrequency / 1e9} - ${this.config.maxTxFrequency / 1e9} GHz for Tx). ` +
-        `Gain calculation may be inaccurate.`
+          `(${this.config.minRxFrequency / 1e9} - ${this.config.maxRxFrequency / 1e9} GHz for Rx, ` +
+          `${this.config.minTxFrequency / 1e9} - ${this.config.maxTxFrequency / 1e9} GHz for Tx). ` +
+          `Gain calculation may be inaccurate.`
       );
     }
 

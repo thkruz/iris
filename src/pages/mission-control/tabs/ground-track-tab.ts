@@ -1,11 +1,11 @@
 import { BaseElement } from '@app/components/base-element';
-import { GeoMap, type GeoFootprint, type GeoMapLayers, type GeoMarker, type GeoTrack } from '@app/components/geo-map/geo-map';
+import { type GeoFootprint, GeoMap, type GeoMapLayers, type GeoMarker, type GeoTrack } from '@app/components/geo-map/geo-map';
 import { html } from '@app/engine/utils/development/formatter';
 import { qs } from '@app/engine/utils/query-selector';
 import { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
-import { groundTrack, visibilityRadiusDeg, type GroundPoint } from '@app/services/ground-track-math';
+import { type GroundPoint, groundTrack, visibilityRadiusDeg } from '@app/services/ground-track-math';
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
 import { SimulationManager } from '@app/simulation/simulation-manager';
 import type { Degrees } from 'ootk';
@@ -113,12 +113,16 @@ export class GroundTrackTab extends BaseElement {
                     <input class="form-check-input" type="checkbox" id="gt-toggle-footprints" checked />
                     <span class="form-check-label small">Sat coverage</span>
                   </label>
-                  ${this.focusNoradId_ === null ? '' : html`
+                  ${
+                    this.focusNoradId_ === null
+                      ? ''
+                      : html`
                     <label class="form-check form-switch mb-0">
                       <input class="form-check-input" type="checkbox" id="gt-toggle-access" />
                       <span class="form-check-label small">Station access</span>
                     </label>
-                  `}
+                  `
+                  }
                   <label class="form-check form-switch mb-0">
                     <input class="form-check-input" type="checkbox" id="gt-toggle-terminator" checked />
                     <span class="form-check-label small">Day/night</span>
@@ -219,9 +223,7 @@ export class GroundTrackTab extends BaseElement {
   }
 
   private orbitalSatellites_(): OrbitalSatellite[] {
-    return SimulationManager.getInstance().satellites.filter(
-      (sat): sat is OrbitalSatellite => sat instanceof OrbitalSatellite,
-    );
+    return SimulationManager.getInstance().satellites.filter((sat): sat is OrbitalSatellite => sat instanceof OrbitalSatellite);
   }
 
   /**
@@ -345,21 +347,22 @@ export class GroundTrackTab extends BaseElement {
 
     const satellites = this.orbitalSatellites_();
 
-    rows.innerHTML = satellites.map((sat, index) => {
-      const lla = sat.lla;
-      const color = TRACK_COLORS[index % TRACK_COLORS.length];
-      const isFocus = sat.noradId === this.focusNoradId_;
+    rows.innerHTML = satellites
+      .map((sat, index) => {
+        const lla = sat.lla;
+        const color = TRACK_COLORS[index % TRACK_COLORS.length];
+        const isFocus = sat.noradId === this.focusNoradId_;
 
-      if (!lla) {
-        return html`
+        if (!lla) {
+          return html`
           <tr class="${isFocus ? 'gt-row-focus' : ''}">
             <td><span class="gt-swatch" style="background:${color}"></span>${sat.name}</td>
             <td class="text-end text-muted" colspan="3">No solution</td>
           </tr>
         `;
-      }
+        }
 
-      return html`
+        return html`
         <tr class="${isFocus ? 'gt-row-focus' : ''}">
           <td><span class="gt-swatch" style="background:${color}"></span>${sat.name}</td>
           <td class="text-end">${lla.lat.toFixed(2)}°</td>
@@ -367,7 +370,8 @@ export class GroundTrackTab extends BaseElement {
           <td class="text-end">${lla.alt.toFixed(0)} km</td>
         </tr>
       `;
-    }).join('');
+      })
+      .join('');
   }
 
   public activate(): void {

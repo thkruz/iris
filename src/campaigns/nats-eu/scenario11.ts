@@ -3,13 +3,7 @@ import type { ScenarioData } from '@app/ScenarioData';
 import type { dBm } from '@app/types';
 import type { Degrees, TleLine1, TleLine2 } from 'ootk';
 import { galwayGroundStation } from './ground-stations';
-import {
-  createMeridianSar1,
-  createMeridianSar2,
-  createMeridianSar3,
-  MERIDIAN_SAR3_BEACON_RF_HZ,
-  type MeridianTle,
-} from './satellites';
+import { createMeridianSar1, createMeridianSar2, createMeridianSar3, MERIDIAN_SAR3_BEACON_RF_HZ, type MeridianTle } from './satellites';
 
 /**
  * nats-eu Scenario 11 - "LEOP: Launch Day" / SAR-3 First Acquisition (arc 1/2)
@@ -166,7 +160,7 @@ export const natsEuScenario11Data: ScenarioData = {
       id: 'review-mission-brief',
       nice: ['K0645', 'K1032'],
       title: 'Read the LEOP Card',
-      description: 'Open the LEOP card. It has the SAR-3 frequency plan, the injection set\'s stated uncertainty, and the flight rules for this pass.',
+      description: "Open the LEOP card. It has the SAR-3 frequency plan, the injection set's stated uncertainty, and the flight rules for this pass.",
       groundStation: 'GW-01',
       freezesScenarioTimer: true,
       prerequisiteObjectiveIds: [],
@@ -189,7 +183,8 @@ export const natsEuScenario11Data: ScenarioData = {
               'The beacon frequency is uncertain by the same amount, so widen the receiver bandwidth.',
             ],
             correctIndex: 0,
-            explanation: 'Correct. A LEO bird moves about 7.5 km every second; 20 s along-track at 700 km range is several beamwidths of pointing error. Either the elements get better before AOS, or the search does. LEOP clock started.',
+            explanation:
+              'Correct. A LEO bird moves about 7.5 km every second; 20 s along-track at 700 km range is several beamwidths of pointing error. Either the elements get better before AOS, or the search does. LEOP clock started.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -202,7 +197,8 @@ export const natsEuScenario11Data: ScenarioData = {
       id: 'test-readiness',
       nice: ['S0630', 'T0513'],
       title: 'Test Readiness Review',
-      description: 'Confirm the station is configured for a bird it has never seen: set the ACU beacon frequency to SAR-3\'s telemetry beacon (11785 MHz), then close the TRR checklist.',
+      description:
+        "Confirm the station is configured for a bird it has never seen: set the ACU beacon frequency to SAR-3's telemetry beacon (11785 MHz), then close the TRR checklist.",
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [
@@ -239,7 +235,7 @@ export const natsEuScenario11Data: ScenarioData = {
       id: 'load-refined-elements',
       nice: ['T1138', 'K1032'],
       title: 'Load the Refined Elements',
-      description: 'Rotterdam\'s ranging solution replaces the injection estimate. When the ephemeris panel flags SAR-3, load the refined set before AOS.',
+      description: "Rotterdam's ranging solution replaces the injection estimate. When the ephemeris panel flags SAR-3, load the refined set before AOS.",
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['test-readiness'],
       conditions: [
@@ -315,7 +311,8 @@ export const natsEuScenario11Data: ScenarioData = {
               'Inconclusive until video is decoded; recommend holding commissioning.',
             ],
             correctIndex: 0,
-            explanation: 'Correct. A CW beacon on frequency with the right Doppler curve tells you the transmitter, the reference, and the orbit are all as expected. If the elements had been loaded after AOS the call would carry a qualifier, because the first minute of track was on a set you knew was stale.',
+            explanation:
+              'Correct. A CW beacon on frequency with the right Doppler curve tells you the transmitter, the reference, and the orbit are all as expected. If the elements had been loaded after AOS the call would carry a qualifier, because the first minute of track was on a set you knew was stale.',
             pointPenalty: 5,
             documentSection: 'State of Health',
             documentLine: 'SOH: beacon acquired, orbit matches refined set, proceed to commissioning',
@@ -346,7 +343,8 @@ export const natsEuScenario11Data: ScenarioData = {
               'Because the pass is too short. On a longer pass it would be fine.',
             ],
             correctIndex: 0,
-            explanation: 'Correct. On a new spacecraft every first is evidence. If a command fails before tracking and SOH are on record, nobody can say whether the bird, the link, or the station was the cause. Commissioning is next pass.',
+            explanation:
+              'Correct. On a new spacecraft every first is evidence. If a command fails before tracking and SOH are on record, nobody can say whether the bird, the link, or the station was the cause. Commissioning is next pass.',
             pointPenalty: 5,
           },
           mustMaintain: false,

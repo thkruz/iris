@@ -49,11 +49,7 @@ export const hamSdrScenario8Data: ScenarioData = {
   duration: '25-30 min',
   missionType: 'Backyard Session',
   description: `Seven scenarios of listening. Tonight you talk back.<br><br>First the exam - Riley does not hand anyone a microphone who cannot recite the band plan and the control-operator rule in their sleep. Then a lesson nobody planned: somebody unlicensed is already on the bird, and the transponder relays them just as faithfully as it will relay you. RF is unauthenticated; a license is a promise, not a password.<br><br>Then the evening pass: five watts into the crossed yagi, up 435.900, down 435.290, and the strangest signal you will ever chase - your own voice coming back from orbit. Keep the receiver on it through LOS.<br><br>And afterwards, one last visitor proves why everything in this campaign mattered.`,
-  equipment: [
-    'DIY 70cm Crossed Yagi on TV Rotator + 5W Brick Amplifier',
-    'SDR Transceiver (TRANSMIT unlocked)',
-    'QFH Weather Rig (137 MHz)',
-  ],
+  equipment: ['DIY 70cm Crossed Yagi on TV Rotator + 5W Brick Amplifier', 'SDR Transceiver (TRANSMIT unlocked)', 'QFH Weather Rig (137 MHz)'],
   settings: {
     isSync: true,
     groundStations: [backyardTxStation, backyardQfhStation],
@@ -105,7 +101,8 @@ export const hamSdrScenario8Data: ScenarioData = {
       id: 'review-mission-brief',
       nice: ['K0645'],
       title: "Read Riley's Note",
-      description: 'The note covers the 70cm band plan, the uplink/downlink pair CUBEHOP-1 listens on, and the one rule Riley will not bend: nobody transmits without passing her exam first.',
+      description:
+        'The note covers the 70cm band plan, the uplink/downlink pair CUBEHOP-1 listens on, and the one rule Riley will not bend: nobody transmits without passing her exam first.',
       groundStation: 'BKYD-YAGI',
       freezesScenarioTimer: true,
       prerequisiteObjectiveIds: [],
@@ -124,7 +121,7 @@ export const hamSdrScenario8Data: ScenarioData = {
       id: 'exam-bands',
       nice: ['K0645', 'S0421'],
       title: 'Exam, Part One: The Band Plan',
-      description: 'Riley\'s exam, question one. The amateur bands are shared by agreement, not enforcement - know where you are allowed to put five watts before you own a key.',
+      description: "Riley's exam, question one. The amateur bands are shared by agreement, not enforcement - know where you are allowed to put five watts before you own a key.",
       groundStation: 'BKYD-YAGI',
       freezesScenarioTimer: true,
       prerequisiteObjectiveIds: ['review-mission-brief'],
@@ -141,7 +138,8 @@ export const hamSdrScenario8Data: ScenarioData = {
               'Because the receiver can already hear the satellite there.',
             ],
             correctIndex: 0,
-            explanation: 'Band, license, and the bird\'s own published plan - legality is the overlap of all three. Nothing about your radio enforces any of them. That is the whole point of tonight.',
+            explanation:
+              "Band, license, and the bird's own published plan - legality is the overlap of all three. Nothing about your radio enforces any of them. That is the whole point of tonight.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -171,7 +169,8 @@ export const hamSdrScenario8Data: ScenarioData = {
               'Encryption is impossible below 1 GHz.',
             ],
             correctIndex: 0,
-            explanation: 'The bands stay usable because everyone can hear everyone. No secrecy means every operator is a sensor - remember that when you meet tonight\'s uninvited guest.',
+            explanation:
+              "The bands stay usable because everyone can hear everyone. No secrecy means every operator is a sensor - remember that when you meet tonight's uninvited guest.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -184,7 +183,8 @@ export const hamSdrScenario8Data: ScenarioData = {
       id: 'hear-the-pirate',
       nice: ['S0648', 'T0153'],
       title: 'Somebody Is Already on the Bird',
-      description: 'Track CUBEHOP-1 through the afternoon pass and look 45 kHz above the beacon: a second carrier, coming down through the transponder at 435.295 - louder than the bird\'s own beacon. That is an uplink. It is not yours, and it is not licensed.',
+      description:
+        "Track CUBEHOP-1 through the afternoon pass and look 45 kHz above the beacon: a second carrier, coming down through the transponder at 435.295 - louder than the bird's own beacon. That is an uplink. It is not yours, and it is not licensed.",
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['exam-rules'],
       conditions: [
@@ -216,14 +216,15 @@ export const hamSdrScenario8Data: ScenarioData = {
           description: 'Authorization Understood',
           params: {
             character: Character.RILEY_BROOKS,
-            question: 'What stopped the transponder from relaying the pirate\'s carrier?',
+            question: "What stopped the transponder from relaying the pirate's carrier?",
             options: [
               'Nothing. A bent-pipe transponder amplifies whatever lands in its passband with the right polarization - authorization lives in licenses and listeners on the ground, not in the RF.',
               'The satellite checked the callsign and let it through by mistake.',
               'The pirate found a secret command frequency.',
             ],
             correctIndex: 0,
-            explanation: 'RF is unauthenticated. The bird cannot tell you from a pirate from a fake - every defense you have learned lives on the ground: band plans, physics, and operators paying attention.',
+            explanation:
+              'RF is unauthenticated. The bird cannot tell you from a pirate from a fake - every defense you have learned lives on the ground: band plans, physics, and operators paying attention.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -236,7 +237,8 @@ export const hamSdrScenario8Data: ScenarioData = {
       id: 'set-uplink',
       nice: ['S0421'],
       title: 'Dial In the Uplink',
-      description: 'Your turn. In the TRANSMIT section, set the TX frequency to 435.900 MHz - the center of CUBEHOP-1\'s uplink passband. The transponder is 30 kHz wide; sloppy tuning falls right off its edge.',
+      description:
+        "Your turn. In the TRANSMIT section, set the TX frequency to 435.900 MHz - the center of CUBEHOP-1's uplink passband. The transponder is 30 kHz wide; sloppy tuning falls right off its edge.",
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['pirate-ethics'],
       conditions: [
@@ -245,7 +247,7 @@ export const hamSdrScenario8Data: ScenarioData = {
           description: 'TX on 435.900 MHz (+/-5 kHz)',
           params: {
             modemNumber: 1,
-            frequency: 435.90e6,
+            frequency: 435.9e6,
             frequencyTolerance: 5e3,
           },
           mustMaintain: false,
@@ -258,7 +260,8 @@ export const hamSdrScenario8Data: ScenarioData = {
       id: 'first-contact',
       nice: ['S0421', 'K0740'],
       title: 'Work Yourself Through the Bird',
-      description: 'Evening pass. TRACK CUBEHOP-1, key the transmitter, then tune the RECEIVER to 435.290 and catch your own signal coming back down. Five watts, up and over Vermont. AFC is allowed - the downlink still Dopplers even though your uplink holds still.',
+      description:
+        'Evening pass. TRACK CUBEHOP-1, key the transmitter, then tune the RECEIVER to 435.290 and catch your own signal coming back down. Five watts, up and over Vermont. AFC is allowed - the downlink still Dopplers even though your uplink holds still.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['set-uplink'],
       conditions: [
@@ -292,7 +295,7 @@ export const hamSdrScenario8Data: ScenarioData = {
       id: 'clear-the-channel',
       nice: ['S0421'],
       title: 'Clear the Channel',
-      description: 'LOS is coming. Unkey the transmitter - the transponder is a shared resource, and dead carriers are how tonight\'s other operator got his reputation.',
+      description: "LOS is coming. Unkey the transmitter - the transponder is a shared resource, and dead carriers are how tonight's other operator got his reputation.",
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['first-contact'],
       conditions: [
@@ -310,7 +313,8 @@ export const hamSdrScenario8Data: ScenarioData = {
       id: 'unmask-the-beacon',
       nice: ['S0648', 'T0153'],
       title: 'The Last Visitor',
-      description: 'Switch to the weather rig. There is a "WXSAT-19 beacon" sitting on 137.100 - and the Observations list says the real bird does not rise again until 23:46, and then only two degrees above the trees. Look at everything this signal is not doing.',
+      description:
+        'Switch to the weather rig. There is a "WXSAT-19 beacon" sitting on 137.100 - and the Observations list says the real bird does not rise again until 23:46, and then only two degrees above the trees. Look at everything this signal is not doing.',
       groundStation: 'BKYD-QFH',
       prerequisiteObjectiveIds: ['clear-the-channel'],
       conditions: [
@@ -332,12 +336,13 @@ export const hamSdrScenario8Data: ScenarioData = {
             character: Character.RILEY_BROOKS,
             question: 'Which signal is the real WXSAT-19, and how do you know?',
             options: [
-              'Neither - the real bird is below the horizon. The carrier has zero Doppler, no rise or set, never decodes, and is far too strong: ground truth wearing a satellite\'s frequency.',
+              "Neither - the real bird is below the horizon. The carrier has zero Doppler, no rise or set, never decodes, and is far too strong: ground truth wearing a satellite's frequency.",
               'The 137.100 carrier - it is on the published beacon frequency.',
               'Impossible to tell without decrypting it.',
             ],
             correctIndex: 0,
-            explanation: 'Frequency is the ONE thing an impostor gets right for free. Doppler, schedule, decode, and power all have to agree with orbital mechanics - and orbital mechanics does not lie. Physics is your authentication. Class dismissed.',
+            explanation:
+              'Frequency is the ONE thing an impostor gets right for free. Doppler, schedule, decode, and power all have to agree with orbital mechanics - and orbital mechanics does not lie. Physics is your authentication. Class dismissed.',
             pointPenalty: 5,
           },
           mustMaintain: false,

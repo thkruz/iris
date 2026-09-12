@@ -1,3 +1,4 @@
+import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import type { AntennaState } from '@app/equipment/antenna';
 import { Character, Emotion } from '@app/modal/character-enum';
 import type { Objective } from '@app/objectives/objective-types';
@@ -5,7 +6,6 @@ import type { ScenarioData } from '@app/ScenarioData';
 import type { dBm, FECType, Hertz, IfFrequency, MHz, ModulationType } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
-import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { vermontGroundStation } from './ground-stations';
 import { ses10Satellite, tidemark1Satellite, tidemark2Satellite, tidemark3Satellite } from './satellites';
 
@@ -71,13 +71,7 @@ export const scenario15Data: ScenarioData = {
   difficulty: 'intermediate',
   missionType: 'Spectrum Coordination',
   description: `A coordination notice from RedSky Teleport hit your inbox at 09:08. Their next scheduled uplink sits just 2 MHz from the edge of the SeaLink carrier currently riding TIDEMARK-3 TP-1. They want acknowledgment that our spectrum won't bleed into their slot when they light up in 25 minutes.<br><br>Standard inter-operator etiquette: verify the guard band, check that our transmit chain isn't producing IMD products that would land in the neighbor's passband, document, and confirm back. If our skirts are dirty, clean them up before they go on the air.<br><br>This isn't combat. It's good neighbor work.`,
-  equipment: [
-    '9-meter C-band Antenna',
-    'RF Front End (TX active)',
-    'Spectrum Analyzer',
-    'TX Modem (carrying SeaLink traffic on TIDEMARK-3)',
-    'HPA (online)',
-  ],
+  equipment: ['9-meter C-band Antenna', 'RF Front End (TX active)', 'Spectrum Analyzer', 'TX Modem (carrying SeaLink traffic on TIDEMARK-3)', 'HPA (online)'],
   timeLimitSeconds: 30 * 60,
   settings: {
     isSync: true,
@@ -162,12 +156,7 @@ export const scenario15Data: ScenarioData = {
         ],
       },
     ],
-    satellites: [
-      tidemark3Satellite,
-      tidemark1Satellite,
-      tidemark2Satellite,
-      ses10Satellite,
-    ],
+    satellites: [tidemark3Satellite, tidemark1Satellite, tidemark2Satellite, ses10Satellite],
     missionBriefUrl: 'https://docs.signalrange.space/campaign-1/scenario-15?content-only=true&dark=true',
     isExtraSatellitesVisible: true,
   },
@@ -246,13 +235,8 @@ export const scenario15Data: ScenarioData = {
           description: 'Partner Band',
           params: {
             character: Character.SYSTEM,
-            question: 'RedSky\'s notice: center 5961 MHz, bandwidth 8 MHz, V-pol on the TIDEMARK-3 cross-pol slot. What RF range will they occupy?',
-            options: [
-              '5957 - 5965 MHz',
-              '5961 - 5969 MHz',
-              '5953 - 5969 MHz',
-              '5957 - 5961 MHz',
-            ],
+            question: "RedSky's notice: center 5961 MHz, bandwidth 8 MHz, V-pol on the TIDEMARK-3 cross-pol slot. What RF range will they occupy?",
+            options: ['5957 - 5965 MHz', '5961 - 5969 MHz', '5953 - 5969 MHz', '5957 - 5961 MHz'],
             correctIndex: 0,
             explanation: 'Center plus or minus half-bandwidth: 5961 plus or minus 4 MHz equals 5957 to 5965 MHz. Their upper edge is 5965.',
             pointPenalty: 5,
@@ -279,12 +263,7 @@ export const scenario15Data: ScenarioData = {
           params: {
             character: Character.SYSTEM,
             question: 'Our SeaLink carrier on TIDEMARK-3 TP-1 is center 5985 MHz, 36 MHz BW, H-pol. What RF range are we occupying?',
-            options: [
-              '5967 - 6003 MHz',
-              '5949 - 6021 MHz',
-              '5985 - 6021 MHz',
-              '5967 - 5985 MHz',
-            ],
+            options: ['5967 - 6003 MHz', '5949 - 6021 MHz', '5985 - 6021 MHz', '5967 - 5985 MHz'],
             correctIndex: 0,
             explanation: '5985 plus or minus 18 MHz equals 5967 to 6003 MHz. Our lower edge is 5967.',
             pointPenalty: 5,
@@ -299,7 +278,7 @@ export const scenario15Data: ScenarioData = {
       id: 'compute-guard-band',
       nice: ['K0737', 'S0648'],
       title: 'Compute Guard Band',
-      description: 'Determine the edge-to-edge guard band between RedSky\'s upper edge and our lower edge.',
+      description: "Determine the edge-to-edge guard band between RedSky's upper edge and our lower edge.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['identify-our-band'],
       timeLimitSeconds: 2 * 60,
@@ -311,12 +290,7 @@ export const scenario15Data: ScenarioData = {
           params: {
             character: Character.SYSTEM,
             question: 'RedSky upper edge: 5965 MHz. Our lower edge: 5967 MHz. What is the edge-to-edge guard band?',
-            options: [
-              '2 MHz',
-              '4 MHz',
-              '24 MHz',
-              '0 MHz - we overlap',
-            ],
+            options: ['2 MHz', '4 MHz', '24 MHz', '0 MHz - we overlap'],
             correctIndex: 0,
             explanation: '5967 minus 5965 equals 2 MHz. Cross-pol isolation buys us additional margin, but the frequency gap is tight.',
             pointPenalty: 5,
@@ -344,9 +318,9 @@ export const scenario15Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'A 2 MHz edge-to-edge guard with about 28 dB cross-pol isolation. What is the right next step?',
             options: [
-              'Verify our TX chain is producing clean spectrum - no spurs or IMD landing in RedSky\'s band',
+              "Verify our TX chain is producing clean spectrum - no spurs or IMD landing in RedSky's band",
               'Demand RedSky retune their carrier',
-              'Increase our TX power so RedSky\'s carrier is irrelevant to us',
+              "Increase our TX power so RedSky's carrier is irrelevant to us",
               'Take no action - 2 MHz guard plus cross-pol isolation is always sufficient',
             ],
             correctIndex: 0,
@@ -472,7 +446,8 @@ export const scenario15Data: ScenarioData = {
               'Backoff has no bearing on adjacent-channel emissions',
             ],
             correctIndex: 0,
-            explanation: '5 dB is a marginal backoff for a modulated carrier. Third-order IMD scales aggressively as the HPA approaches compression - spectral skirts widen and adjacent-channel power rises.',
+            explanation:
+              '5 dB is a marginal backoff for a modulated carrier. Third-order IMD scales aggressively as the HPA approaches compression - spectral skirts widen and adjacent-channel power rises.',
             pointPenalty: 5,
             preserveOptionOrder: true,
           },
@@ -505,7 +480,8 @@ export const scenario15Data: ScenarioData = {
               'The antenna feed re-radiates energy into adjacent passbands',
             ],
             correctIndex: 0,
-            explanation: 'Near saturation, the HPA stops behaving linearly. Spectral components mix and produce IMD - the dominant third-order products fall just outside the carrier edges and drop with frequency offset.',
+            explanation:
+              'Near saturation, the HPA stops behaving linearly. Spectral components mix and produce IMD - the dominant third-order products fall just outside the carrier edges and drop with frequency offset.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -541,7 +517,8 @@ export const scenario15Data: ScenarioData = {
               'Engage a notch filter on the RX side at 5961 MHz - protects our receiver',
             ],
             correctIndex: 0,
-            explanation: 'Backoff is the correct lever: it linearizes the amplifier, suppresses IMD, and is reversible. Cutting power kills the customer. Retuning needs SLA renegotiation. An RX notch does nothing for the neighbor.',
+            explanation:
+              'Backoff is the correct lever: it linearizes the amplifier, suppresses IMD, and is reversible. Cutting power kills the customer. Retuning needs SLA renegotiation. An RX notch does nothing for the neighbor.',
             pointPenalty: 5,
             preserveOptionOrder: true,
           },
@@ -652,7 +629,8 @@ export const scenario15Data: ScenarioData = {
       id: 'tune-speca-to-downlink',
       nice: ['K0737', 'S0421'],
       title: 'Tune Spectrum to TIDEMARK-3 Downlink',
-      description: 'Reconfigure the spectrum analyzer to view the TIDEMARK-3 downlink IF region (1490 MHz with VT-01 LNB LO at 5250 and downlink RF 3760). Use a wide span so RedSky\'s adjacent slot is visible too.',
+      description:
+        "Reconfigure the spectrum analyzer to view the TIDEMARK-3 downlink IF region (1490 MHz with VT-01 LNB LO at 5250 and downlink RF 3760). Use a wide span so RedSky's adjacent slot is visible too.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['open-rx-analysis'],
       timeLimitSeconds: 3 * 60,
@@ -772,7 +750,7 @@ export const scenario15Data: ScenarioData = {
       id: 'confirm-spectrum-clean-for-partner',
       nice: ['S0648', 'K0792'],
       title: 'Draft Confirmation to RedSky',
-      description: 'Decide what to send back to RedSky\'s coordinator.',
+      description: "Decide what to send back to RedSky's coordinator.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['verify-receiver-locked'],
       timeLimitSeconds: 2 * 60,
@@ -791,7 +769,8 @@ export const scenario15Data: ScenarioData = {
               'Confirmed clear, but we will be retuning to 5950 MHz to give wider margin.',
             ],
             correctIndex: 0,
-            explanation: 'Factual coordination response: state your occupied band, confirm adjacent-channel emissions are below the neighbor\'s threshold, and clear them to proceed.',
+            explanation:
+              "Factual coordination response: state your occupied band, confirm adjacent-channel emissions are below the neighbor's threshold, and clear them to proceed.",
             pointPenalty: 5,
             preserveOptionOrder: true,
           },
@@ -824,11 +803,11 @@ export const scenario15Data: ScenarioData = {
             options: [
               '0937 - RedSky coordination notice received and confirmed. TIDEMARK-3 TP-1 HPA backoff raised from 5 to 10 dB to suppress adjacent-channel IMD. Cleared RedSky for 5961 MHz V-pol uplink. SeaLink carrier remains nominal.',
               '0937 - RedSky coordination request denied. Recommended they relocate to a different orbital slot.',
-              '0937 - No action taken. RedSky\'s uplink does not affect us.',
+              "0937 - No action taken. RedSky's uplink does not affect us.",
               '0937 - TIDEMARK-3 SeaLink customer traffic dropped to accommodate RedSky.',
             ],
             correctIndex: 0,
-            explanation: 'The log captures what we did, why, and what we cleared. Next shift picks up with full context if RedSky\'s uplink behaves unexpectedly.',
+            explanation: "The log captures what we did, why, and what we cleared. Next shift picks up with full context if RedSky's uplink behaves unexpectedly.",
             pointPenalty: 5,
             preserveOptionOrder: true,
           },

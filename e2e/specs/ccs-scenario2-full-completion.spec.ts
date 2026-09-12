@@ -97,10 +97,13 @@ test.describe('ccs Scenario 2 Full Completion', () => {
 
     // 3 m pedestal slews at 3 deg/s: ~30 s to close 85 deg of azimuth
     await expect
-      .poll(async () => {
-        const pos = await readAntennaPosition(page, 1);
-        return Math.abs(pos.az - 175) <= 2 && Math.abs(pos.el - 50) <= 2;
-      }, { timeout: 90000, intervals: [1000] })
+      .poll(
+        async () => {
+          const pos = await readAntennaPosition(page, 1);
+          return Math.abs(pos.az - 175) <= 2 && Math.abs(pos.el - 50) <= 2;
+        },
+        { timeout: 90000, intervals: [1000] }
+      )
       .toBe(true);
 
     await missionControl.dismissDialogIfPresent();

@@ -1,9 +1,9 @@
+import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { Character, Emotion } from '@app/modal/character-enum';
 import type { Objective } from '@app/objectives/objective-types';
 import type { ScenarioData } from '@app/ScenarioData';
 import type { dB, dBm, MHz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
-import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { maineGroundStation, vermontGroundStation } from './ground-stations';
 import { tidemark1Satellite, tidemark2Satellite } from './satellites';
 
@@ -69,13 +69,7 @@ export const scenario16Data: ScenarioData = {
   difficulty: 'advanced',
   missionType: 'Incident Response',
   description: `Two minutes into your shift and the alarm board is lit up. BUC over-temperature, LNB reference unlocked, HPA overdriven - all on VT-01, all at once. The TIDEMARK-1 customer link is degraded and James Okafor from SeaLink is on the line.<br><br>None of these faults are related. You have to triage them in the right order: protect the equipment and the spectrum first, restore customer impact next, then methodically clear each fault.<br><br>Dana is in the admin office. She trusts you with this one.`,
-  equipment: [
-    '9-meter C-band Antenna',
-    'RF Front End',
-    'Spectrum Analyzer',
-    'RX/TX Modems',
-    'ME-02: Operational (TIDEMARK-2)',
-  ],
+  equipment: ['9-meter C-band Antenna', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'ME-02: Operational (TIDEMARK-2)'],
   timeLimitSeconds: 45 * 60, // 45 minutes
   settings: {
     isSync: true,
@@ -224,7 +218,8 @@ export const scenario16Data: ScenarioData = {
               'GPSDO holdover and modem fault on TX Modem 1',
             ],
             correctIndex: 0,
-            explanation: 'Three concurrent, unrelated alarms. The BUC and HPA conditions threaten the equipment and the uplink spectrum; the LNB condition is degrading the customer receive.',
+            explanation:
+              'Three concurrent, unrelated alarms. The BUC and HPA conditions threaten the equipment and the uplink spectrum; the LNB condition is degrading the customer receive.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -256,7 +251,8 @@ export const scenario16Data: ScenarioData = {
               'Whichever one is easiest to clear to reduce the alarm count',
             ],
             correctIndex: 0,
-            explanation: 'An overdriven HPA is putting a dirty signal on the spectrum and risking the amplifier. Disable the HPA output, mute the BUC for cooldown, fix the backoff, then turn to the LNB to restore the customer downlink.',
+            explanation:
+              'An overdriven HPA is putting a dirty signal on the spectrum and risking the amplifier. Disable the HPA output, mute the BUC for cooldown, fix the backoff, then turn to the LNB to restore the customer downlink.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -294,7 +290,8 @@ export const scenario16Data: ScenarioData = {
       id: 'disable-hpa-for-safety',
       nice: ['S0593', 'S0677'],
       title: 'Disable the HPA Output',
-      description: 'Disable the HPA output to take the overdriven signal off the antenna. Amplifier comes down before its drive does - same sequencing rule as a planned power-down.',
+      description:
+        'Disable the HPA output to take the overdriven signal off the antenna. Amplifier comes down before its drive does - same sequencing rule as a planned power-down.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['navigate-tx-chain'],
       timeLimitSeconds: 2 * 60,
@@ -325,7 +322,8 @@ export const scenario16Data: ScenarioData = {
               'Order does not matter as long as both end up off',
             ],
             correctIndex: 0,
-            explanation: 'Same rule as every planned power-down: amplifier off before drive off. Killing the HPA stops the overdriven signal AND keeps the chain safe for the BUC mute that comes next. Mute the BUC first and the enabled HPA amplifies noise into the feed.',
+            explanation:
+              'Same rule as every planned power-down: amplifier off before drive off. Killing the HPA stops the overdriven signal AND keeps the chain safe for the BUC mute that comes next. Mute the BUC first and the enabled HPA amplifies noise into the feed.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -383,7 +381,8 @@ export const scenario16Data: ScenarioData = {
               'Output is muted automatically by the HPA controller',
             ],
             correctIndex: 0,
-            explanation: 'Below 3 dB back-off, the HPA is overdriven. IMD products spill into adjacent transponders and the amplifier wears prematurely. Restore back-off to the standard 10 dB margin.',
+            explanation:
+              'Below 3 dB back-off, the HPA is overdriven. IMD products spill into adjacent transponders and the amplifier wears prematurely. Restore back-off to the standard 10 dB margin.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -824,7 +823,8 @@ export const scenario16Data: ScenarioData = {
               'Customer reported issue - no fault found at ground station.',
             ],
             correctIndex: 0,
-            explanation: 'Concurrent unrelated faults must be logged separately with the order and rationale of recovery. The next operator inherits the trend data and the customer follow-up.',
+            explanation:
+              'Concurrent unrelated faults must be logged separately with the order and rationale of recovery. The next operator inherits the trend data and the customer follow-up.',
             pointPenalty: 5,
           },
           mustMaintain: false,

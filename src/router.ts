@@ -1,16 +1,16 @@
-import { CampaignManager } from "@app/campaigns/campaign-manager";
-import { ccsCampaignData, geolocationCampaignData, hamSdrCampaignData, natsCampaignData } from "@app/campaigns/nats/campaign-data";
-import { natsEuCampaignData } from "@app/campaigns/nats-eu/campaign-data";
-import { EventBus } from "@app/events/event-bus";
-import { Events } from "@app/events/events";
-import { CampaignSelectionPage } from "@app/pages/campaign-selection";
-import { Footer } from "@app/pages/layout/footer/footer";
-import { Header } from "@app/pages/layout/header/header";
-import { MissionControlPage } from "@app/pages/mission-control/mission-control-page";
-import { SandboxPage } from "@app/pages/sandbox-page";
-import { ScenarioSelectionPage } from "@app/pages/scenario-selection";
-import { ScenarioManager } from "./scenario-manager";
-import { SimulationManager } from "@app/simulation/simulation-manager";
+import { CampaignManager } from '@app/campaigns/campaign-manager';
+import { ccsCampaignData, geolocationCampaignData, hamSdrCampaignData, natsCampaignData } from '@app/campaigns/nats/campaign-data';
+import { natsEuCampaignData } from '@app/campaigns/nats-eu/campaign-data';
+import { EventBus } from '@app/events/event-bus';
+import { Events } from '@app/events/events';
+import { CampaignSelectionPage } from '@app/pages/campaign-selection';
+import { Footer } from '@app/pages/layout/footer/footer';
+import { Header } from '@app/pages/layout/header/header';
+import { MissionControlPage } from '@app/pages/mission-control/mission-control-page';
+import { SandboxPage } from '@app/pages/sandbox-page';
+import { ScenarioSelectionPage } from '@app/pages/scenario-selection';
+import { SimulationManager } from '@app/simulation/simulation-manager';
+import { ScenarioManager } from './scenario-manager';
 
 /**
  * Navigation options for router
@@ -47,7 +47,7 @@ export class Router {
    */
   private extraRoutesReady_ = !__IS_PRIVATE__;
 
-  private constructor() { }
+  private constructor() {}
 
   static getInstance(): Router {
     if (!Router.instance) {

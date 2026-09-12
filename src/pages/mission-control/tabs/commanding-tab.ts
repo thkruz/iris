@@ -1,5 +1,5 @@
-import { BaseElement } from '@app/components/base-element';
 import { CommandingManager, type CommandRejectReason } from '@app/commanding/commanding-manager';
+import { BaseElement } from '@app/components/base-element';
 import { html } from '@app/engine/utils/development/formatter';
 import { qs } from '@app/engine/utils/query-selector';
 import { EventBus } from '@app/events/event-bus';
@@ -56,16 +56,19 @@ export class CommandingTab extends BaseElement {
 
   protected get html_(): string {
     const config = CommandingManager.getInstance().getConfig();
-    const target = [
-      config.groundStationId ? `Station ${config.groundStationId}` : null,
-      config.targetNoradId !== undefined ? `NORAD ${config.targetNoradId}` : null,
-    ].filter(Boolean).join(' → ') || 'Command uplink';
+    const target =
+      [config.groundStationId ? `Station ${config.groundStationId}` : null, config.targetNoradId !== undefined ? `NORAD ${config.targetNoradId}` : null]
+        .filter(Boolean)
+        .join(' → ') || 'Command uplink';
 
-    const windowLabel = config.windowStartS !== undefined || config.windowEndS !== undefined
-      ? `${CommandingTab.formatElapsed_(config.windowStartS ?? 0)} – ${config.windowEndS !== undefined ? CommandingTab.formatElapsed_(config.windowEndS) : 'end of mission'}`
-      : 'Unrestricted';
+    const windowLabel =
+      config.windowStartS !== undefined || config.windowEndS !== undefined
+        ? `${CommandingTab.formatElapsed_(config.windowStartS ?? 0)} – ${config.windowEndS !== undefined ? CommandingTab.formatElapsed_(config.windowEndS) : 'end of mission'}`
+        : 'Unrestricted';
 
-    const stackRows = (config.commands ?? []).map((cmd) => html`
+    const stackRows = (config.commands ?? [])
+      .map(
+        (cmd) => html`
       <div class="cmd-stack-row d-flex align-items-center justify-content-between">
         <div>
           <span class="font-monospace fw-bold">${cmd.id}</span>
@@ -73,7 +76,9 @@ export class CommandingTab extends BaseElement {
         </div>
         <button class="btn btn-sm btn-outline-secondary" data-command-id="${cmd.id}">XMIT</button>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
 
     return html`
       <div class="commanding-tab">
@@ -249,7 +254,7 @@ export class CommandingTab extends BaseElement {
     if (keyBadge) {
       const status = mgr.state.keyStatus;
       keyBadge.textContent = status.toUpperCase();
-      const cls = status === 'Valid' ? 'cmd-badge-good' : (status === 'Pending Rotation' ? 'cmd-badge-warn' : 'cmd-badge-bad');
+      const cls = status === 'Valid' ? 'cmd-badge-good' : status === 'Pending Rotation' ? 'cmd-badge-warn' : 'cmd-badge-bad';
       keyBadge.className = `cmd-badge ${cls}`;
     }
 
@@ -287,16 +292,17 @@ export class CommandingTab extends BaseElement {
       .slice(-CommandingTab.MAX_LOG_ROWS)
       .reverse();
 
-    body.innerHTML = rows.map(({ cmd, seq }) => {
-      const display = STATUS_DISPLAY[cmd.status] ?? STATUS_DISPLAY.pending;
-      let detail = '';
-      if (cmd.reason) {
-        detail = REJECT_REASON_LABELS[cmd.reason];
-      } else if (cmd.status === 'acked') {
-        detail = 'ACK received';
-      }
+    body.innerHTML = rows
+      .map(({ cmd, seq }) => {
+        const display = STATUS_DISPLAY[cmd.status] ?? STATUS_DISPLAY.pending;
+        let detail = '';
+        if (cmd.reason) {
+          detail = REJECT_REASON_LABELS[cmd.reason];
+        } else if (cmd.status === 'acked') {
+          detail = 'ACK received';
+        }
 
-      return html`
+        return html`
         <tr>
           <td class="text-muted">${seq}</td>
           <td>${cmd.id}</td>
@@ -304,7 +310,8 @@ export class CommandingTab extends BaseElement {
           <td class="text-muted">${detail}</td>
         </tr>
       `;
-    }).join('');
+      })
+      .join('');
   }
 
   private static formatElapsed_(seconds: number): string {

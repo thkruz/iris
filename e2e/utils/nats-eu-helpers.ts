@@ -39,10 +39,7 @@ export async function answerSystemQuiz(page: Page, answerText: string): Promise<
  * matches. For objectives with several status-check conditions the quiz
  * manager presents them in its own order, not the declared one.
  */
-export async function answerPendingQuizFrom(
-  page: Page,
-  answers: Array<{ questionHint: string; answerText: string }>,
-): Promise<string> {
+export async function answerPendingQuizFrom(page: Page, answers: Array<{ questionHint: string; answerText: string }>): Promise<string> {
   await waitForQuizToAppear(page);
 
   const questionText = (await page.locator('#quiz-modal, .quiz-box').first().innerText()) ?? '';
@@ -117,11 +114,7 @@ export interface LinkBudgetWorksheet {
 }
 
 /** Fill the Link Analysis worksheet, press Compute, and expect IN FAMILY. */
-export async function computeLinkBudget(
-  page: Page,
-  missionControl: MissionControlPage,
-  worksheet: LinkBudgetWorksheet,
-): Promise<void> {
+export async function computeLinkBudget(page: Page, missionControl: MissionControlPage, worksheet: LinkBudgetWorksheet): Promise<void> {
   await missionControl.selectTab('link-budget');
   await expect(page.locator('#lb-compute')).toBeVisible({ timeout: 10000 });
 
@@ -146,12 +139,7 @@ export async function readLiveCnr(page: Page): Promise<number> {
  * Press Accept Link on the Link Analysis tab once the live C/N clears the
  * margin the objective asks for, and expect the LINK GO badge.
  */
-export async function commitLinkWithMargin(
-  page: Page,
-  missionControl: MissionControlPage,
-  minLiveCnrDb: number,
-  timeoutMs = 60000,
-): Promise<void> {
+export async function commitLinkWithMargin(page: Page, missionControl: MissionControlPage, minLiveCnrDb: number, timeoutMs = 60000): Promise<void> {
   await missionControl.selectTab('link-budget');
   await expect(page.locator('#lb-commit')).toBeVisible({ timeout: 10000 });
 
@@ -230,11 +218,7 @@ export async function enableDopplerComp(page: Page, missionControl: MissionContr
 }
 
 /** Transmit a canned command and wait for its ACK row in the command log. */
-export async function sendCommandAndExpectAck(
-  page: Page,
-  missionControl: MissionControlPage,
-  commandId: string,
-): Promise<void> {
+export async function sendCommandAndExpectAck(page: Page, missionControl: MissionControlPage, commandId: string): Promise<void> {
   await missionControl.selectTab('commanding');
   await expect(page.locator('#cmd-window-badge')).toHaveText('OPEN', { timeout: 10000 });
   await domClick(page, `#cmd-send-panel button[data-command-id="${commandId}"]`);

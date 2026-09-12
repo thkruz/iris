@@ -39,6 +39,7 @@ vi.mock('../../../../src/assets/icons/satellite.png', () => ({ default: 'satelli
 import { ScenarioManager } from '../../../../src/scenario-manager';
 import { SimulationManager } from '../../../../src/simulation/simulation-manager';
 import { TrafficControlManager } from '../../../../src/traffic/traffic-control-manager';
+
 describe('SatelliteDashboardTab', () => {
   let mockSatellite: Mocked<Satellite>;
   let containerEl: HTMLElement;
@@ -92,10 +93,7 @@ describe('SatelliteDashboardTab', () => {
     });
 
     it('should register for UPDATE events', () => {
-      expect(mockEventBus.on).toHaveBeenCalledWith(
-        Events.UPDATE,
-        expect.any(Function)
-      );
+      expect(mockEventBus.on).toHaveBeenCalledWith(Events.UPDATE, expect.any(Function));
     });
   });
 
@@ -255,10 +253,7 @@ describe('SatelliteDashboardTab', () => {
   describe('dispose', () => {
     it('should unregister from UPDATE events', () => {
       tab.dispose();
-      expect(mockEventBus.off).toHaveBeenCalledWith(
-        Events.UPDATE,
-        expect.any(Function)
-      );
+      expect(mockEventBus.off).toHaveBeenCalledWith(Events.UPDATE, expect.any(Function));
     });
 
     it('should remove DOM element', () => {
@@ -288,9 +283,7 @@ describe('SatelliteDashboardTab', () => {
       mockSatellite.az = 270.3;
 
       // Get the update handler and call it
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
       expect(updateHandler).toBeDefined();
       updateHandler();
 
@@ -301,9 +294,7 @@ describe('SatelliteDashboardTab', () => {
     it('should update elevation when UPDATE event fires', () => {
       mockSatellite.el = 80.5;
 
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
       updateHandler();
 
       const elEl = document.querySelector('#sat-elevation');
@@ -313,9 +304,7 @@ describe('SatelliteDashboardTab', () => {
     it('should update rotation when UPDATE event fires', () => {
       mockSatellite.rotation = 45.7;
 
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
       updateHandler();
 
       const rotEl = document.querySelector('#sat-rotation');
@@ -325,9 +314,7 @@ describe('SatelliteDashboardTab', () => {
     it('should update health badge when UPDATE event fires', () => {
       mockSatellite.health = 0.6;
 
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
       updateHandler();
 
       const healthEl = document.querySelector('#sat-health-badge');
@@ -338,9 +325,7 @@ describe('SatelliteDashboardTab', () => {
     it('should update active transponder count when UPDATE event fires', () => {
       mockSatellite.transponders[1].isActive = true;
 
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
       updateHandler();
 
       const activeEl = document.querySelector('#sat-active-transponders');
@@ -385,18 +370,13 @@ describe('SatelliteDashboardTab with Traffic Control', () => {
     // Setup mock ScenarioManager with traffic ownership
     ScenarioManager.getInstance.mockReturnValue({
       settings: {
-        trafficOwnership: [
-          { satelliteNoradId: 12345, owningGroundStationId: 'GS-001' },
-        ],
+        trafficOwnership: [{ satelliteNoradId: 12345, owningGroundStationId: 'GS-001' }],
       },
     });
 
     // Setup mock SimulationManager with ground stations
     SimulationManager.getInstance.mockReturnValue({
-      groundStations: [
-        { state: { id: 'GS-001', name: 'Station 1' } },
-        { state: { id: 'GS-002', name: 'Station 2' } },
-      ],
+      groundStations: [{ state: { id: 'GS-001', name: 'Station 1' } }, { state: { id: 'GS-002', name: 'Station 2' } }],
     });
 
     // Setup mock Satellite
@@ -407,9 +387,7 @@ describe('SatelliteDashboardTab with Traffic Control', () => {
       el: 45.2,
       rotation: 0,
       health: 0.95,
-      transponders: [
-        { id: 'TP-1', uplinkFrequency: 14e9, downlinkFrequency: 12e9, isActive: true },
-      ],
+      transponders: [{ id: 'TP-1', uplinkFrequency: 14e9, downlinkFrequency: 12e9, isActive: true }],
       rxSignal: [],
       externalSignal: [],
       txSignal: [],
@@ -516,9 +494,7 @@ describe('SatelliteDashboardTab with Traffic Control', () => {
       });
 
       // Trigger update handler with sufficient time elapsed for throttle
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
 
       // Force past throttle by manipulating time
       vi.spyOn(Date, 'now').mockReturnValue(2000);
@@ -542,9 +518,7 @@ describe('SatelliteDashboardTab with Traffic Control', () => {
         cnRatio_dB: 12.5,
       });
 
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
 
       vi.spyOn(Date, 'now').mockReturnValue(2000);
       updateHandler();
@@ -568,9 +542,7 @@ describe('SatelliteDashboardTab with Traffic Control', () => {
         cnRatio_dB: 5.0,
       });
 
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
 
       vi.spyOn(Date, 'now').mockReturnValue(2000);
       updateHandler();
@@ -592,9 +564,7 @@ describe('SatelliteDashboardTab with Traffic Control', () => {
         cnRatio_dB: 12.5,
       });
 
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
 
       vi.spyOn(Date, 'now').mockReturnValue(2000);
       updateHandler();
@@ -615,9 +585,7 @@ describe('SatelliteDashboardTab with Traffic Control', () => {
         cnRatio_dB: null,
       });
 
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
 
       vi.spyOn(Date, 'now').mockReturnValue(2000);
       updateHandler();
@@ -632,9 +600,7 @@ describe('SatelliteDashboardTab with Traffic Control', () => {
         isHandoverInProgress: false,
       });
 
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
 
       vi.spyOn(Date, 'now').mockReturnValue(2000);
       updateHandler();
@@ -658,9 +624,7 @@ describe('SatelliteDashboardTab with Traffic Control', () => {
         cnRatio_dB: 12.5,
       });
 
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
 
       vi.spyOn(Date, 'now').mockReturnValue(2000);
       updateHandler();
@@ -675,9 +639,7 @@ describe('SatelliteDashboardTab with Traffic Control', () => {
         isHandoverInProgress: false,
       });
 
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
 
       vi.spyOn(Date, 'now').mockReturnValue(2000);
       updateHandler();
@@ -689,9 +651,7 @@ describe('SatelliteDashboardTab with Traffic Control', () => {
     it('should show -- for owner when ownership state is null', () => {
       mockTrafficControlManager.getOwnershipState.mockReturnValue(null);
 
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
 
       vi.spyOn(Date, 'now').mockReturnValue(2000);
       updateHandler();
@@ -708,9 +668,7 @@ describe('SatelliteDashboardTab with Traffic Control', () => {
         isHandoverInProgress: false,
       });
 
-      const updateHandler = mockEventBus.on.mock.calls.find(
-        (call: unknown[]) => call[0] === Events.UPDATE
-      )?.[1];
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
 
       // First call at time 1000 (past initial throttle)
       vi.spyOn(Date, 'now').mockReturnValue(1000);

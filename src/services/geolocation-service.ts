@@ -153,12 +153,7 @@ export class GeolocationService {
   /** Spare Gaussian deviate from the last Box-Muller draw */
   private spareGaussian_: number | null = null;
 
-  constructor(
-    primary: OrbitalSatellite,
-    adjacent: OrbitalSatellite,
-    station: GeoPoint,
-    options: { rng?: () => number } = {},
-  ) {
+  constructor(primary: OrbitalSatellite, adjacent: OrbitalSatellite, station: GeoPoint, options: { rng?: () => number } = {}) {
     this.primary_ = primary;
     this.adjacent_ = adjacent;
     this.stationEcef_ = llaToEcef(station);
@@ -187,14 +182,7 @@ export class GeolocationService {
    * Synthesize a noisy measurement from the hidden truth position. Called by
    * the geolocation console when a capture integrates successfully.
    */
-  synthesizeMeasurement(
-    truth: GeoPoint,
-    timestampMs: number,
-    carrierHz: number,
-    tdoaSigmaS: number,
-    fdoaSigmaHz: number,
-    id: number,
-  ): GeolocationMeasurement {
+  synthesizeMeasurement(truth: GeoPoint, timestampMs: number, carrierHz: number, tdoaSigmaS: number, fdoaSigmaHz: number, id: number): GeolocationMeasurement {
     return {
       id,
       timestampMs,
@@ -339,11 +327,7 @@ export class GeolocationService {
     return cost;
   }
 
-  private gridMinimum_(
-    measurements: GeolocationMeasurement[],
-    aoi: AreaOfInterest,
-    gridSize: number,
-  ): { lat: number; lon: number } {
+  private gridMinimum_(measurements: GeolocationMeasurement[], aoi: AreaOfInterest, gridSize: number): { lat: number; lon: number } {
     let bestLat = (aoi.latMin + aoi.latMax) / 2;
     let bestLon = (aoi.lonMin + aoi.lonMax) / 2;
     let bestCost = Infinity;
@@ -370,11 +354,7 @@ export class GeolocationService {
    * [n11, n12, n22] used for the covariance/ellipse, or null when the
    * geometry is too degenerate to invert.
    */
-  private gaussNewtonStep_(
-    measurements: GeolocationMeasurement[],
-    lat: number,
-    lon: number,
-  ): { dLatDeg: number; dLonDeg: number; normal: [number, number, number] } | null {
+  private gaussNewtonStep_(measurements: GeolocationMeasurement[], lat: number, lon: number): { dLatDeg: number; dLonDeg: number; normal: [number, number, number] } | null {
     const kmPerDegLon = KM_PER_DEG_LAT * Math.cos(lat * DEG2RAD);
     if (kmPerDegLon < 1) {
       return null; // polar degeneracy - not a supported AOI
@@ -453,7 +433,7 @@ export class GeolocationService {
     // Eigen-decomposition of the symmetric 2x2 covariance
     const trace = c11 + c22;
     const diff = c11 - c22;
-    const discriminant = Math.sqrt(diff * diff / 4 + c12 * c12);
+    const discriminant = Math.sqrt((diff * diff) / 4 + c12 * c12);
     const eigenMajor = trace / 2 + discriminant;
     const eigenMinor = trace / 2 - discriminant;
     if (eigenMajor <= 0) {
@@ -466,7 +446,7 @@ export class GeolocationService {
     return {
       semiMajorKm: CONFIDENCE_95_SCALE * Math.sqrt(eigenMajor),
       semiMinorKm: CONFIDENCE_95_SCALE * Math.sqrt(Math.max(0, eigenMinor)),
-      orientationDeg: ((angleRad * RAD2DEG) % 180 + 180) % 180,
+      orientationDeg: (((angleRad * RAD2DEG) % 180) + 180) % 180,
     };
   }
 

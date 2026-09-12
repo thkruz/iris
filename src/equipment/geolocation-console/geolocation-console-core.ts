@@ -14,15 +14,9 @@
 import { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
-import { InterferenceManager, type InterferenceEventConfig } from '@app/interference/interference-manager';
+import { type InterferenceEventConfig, InterferenceManager } from '@app/interference/interference-manager';
 import { ScenarioManager, type SimulationSettings } from '@app/scenario-manager';
-import {
-  GeolocationService,
-  greatCircleKm,
-  type AreaOfInterest,
-  type GeolocationFix,
-  type GeolocationMeasurement,
-} from '@app/services/geolocation-service';
+import { type AreaOfInterest, type GeolocationFix, type GeolocationMeasurement, GeolocationService, greatCircleKm } from '@app/services/geolocation-service';
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
 import { SimulationManager } from '@app/simulation/simulation-manager';
 
@@ -108,18 +102,16 @@ export class GeolocationConsoleCore {
 
     const sim = SimulationManager.getInstance();
     this.primary_ = GeolocationConsoleCore.findOrbital_(sim, this.config_.primaryNoradId);
-    this.adjacents_ = this.config_.adjacentNoradIds
-      .map((noradId) => GeolocationConsoleCore.findOrbital_(sim, noradId))
-      .filter((sat): sat is OrbitalSatellite => sat !== null);
+    this.adjacents_ = this.config_.adjacentNoradIds.map((noradId) => GeolocationConsoleCore.findOrbital_(sim, noradId)).filter((sat): sat is OrbitalSatellite => sat !== null);
     this.selectedAdjacentNoradId_ = this.adjacents_[0]?.noradId ?? 0;
 
     const stationConfig = settings.groundStations[0];
     this.stationLocation_ = stationConfig
       ? {
-        lat: stationConfig.location.latitude,
-        lon: stationConfig.location.longitude,
-        altKm: (stationConfig.location.elevation ?? 0) / 1000,
-      }
+          lat: stationConfig.location.latitude,
+          lon: stationConfig.location.longitude,
+          altKm: (stationConfig.location.elevation ?? 0) / 1000,
+        }
       : null;
 
     this.boundUpdateHandler_ = this.update_.bind(this);
@@ -262,16 +254,16 @@ export class GeolocationConsoleCore {
     }
 
     const pair = this.pairMeasurements;
-    this.fix_ = service.solve(pair.map((m) => m.measurement), this.config_.areaOfInterest);
+    this.fix_ = service.solve(
+      pair.map((m) => m.measurement),
+      this.config_.areaOfInterest
+    );
     this.fixErrorKm_ = null;
 
     if (this.fix_ && pair.length > 0) {
       const event = InterferenceManager.getInstance().getEvent(pair[pair.length - 1].interferenceEventId);
       if (event?.emitter) {
-        this.fixErrorKm_ = greatCircleKm(
-          { lat: this.fix_.lat, lon: this.fix_.lon },
-          { lat: event.emitter.latitude, lon: event.emitter.longitude },
-        );
+        this.fixErrorKm_ = greatCircleKm({ lat: this.fix_.lat, lon: this.fix_.lon }, { lat: event.emitter.latitude, lon: event.emitter.longitude });
       }
     }
   }
@@ -348,7 +340,7 @@ export class GeolocationConsoleCore {
       event.frequency,
       this.config_.tdoaSigmaS,
       this.config_.fdoaSigmaHz,
-      this.measurements_.length + 1,
+      this.measurements_.length + 1
     );
 
     this.measurements_.push({
@@ -358,9 +350,7 @@ export class GeolocationConsoleCore {
     });
 
     this.captureStatus_ = 'success';
-    this.lastCaptureMessage_ =
-      `CAPTURE ${measurement.id}: TDOA ${(measurement.tdoaS * 1e6).toFixed(2)} us / ` +
-      `FDOA ${measurement.fdoaHz.toFixed(1)} Hz`;
+    this.lastCaptureMessage_ = `CAPTURE ${measurement.id}: TDOA ${(measurement.tdoaS * 1e6).toFixed(2)} us / ` + `FDOA ${measurement.fdoaHz.toFixed(1)} Hz`;
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

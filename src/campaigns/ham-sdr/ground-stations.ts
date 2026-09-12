@@ -86,13 +86,13 @@ const makeSdrFrontEnd = (filterBandwidthIndex: number, filterBandwidthMhz: numbe
   lnb: {
     isPowered: true,
     isDirectSampling: true, // SDR dongle: RF frequency = IF frequency
-    loFrequency: 0 as MHz,  // unused in direct-sampling mode
+    loFrequency: 0 as MHz, // unused in direct-sampling mode
     // LNA + SDR front-end gain, driven by the console's RF GAIN slider. With
     // the AGC bypassed this sets the ADC input level directly: 79 dB puts a
     // mid-pass bird at the ~-30 dBm sweet spot; crank it and the ADC clips,
     // starve it and quantization noise eats the C/N (real RTL-SDR behavior).
     gain: 79 as dB,
-    lnaNoiseFigure: 1.0,    // budget hardware (right at the alarm threshold)
+    lnaNoiseFigure: 1.0, // budget hardware (right at the alarm threshold)
     mixerNoiseFigure: 16.0,
     noiseTemperature: 110,
     noiseTemperatureStabilizationTime: 0,
@@ -209,18 +209,22 @@ export const backyardQfhStation = {
     },
   ],
   transmitters: [{}], // single idle default transmitter; nothing in the yard transmits
-  receivers: [{
-    activeModem: 1,
-    modems: [{
-      modemNumber: 1,
-      isPowered: true,
-      frequency: 137.1 as MHz, // direct sampling: IF = RF
-      bandwidth: 0.05 as MHz,
-      modulation: 'BPSK',
-      fec: '1/2',
-      antenna_id: 1,
-    }],
-  }],
+  receivers: [
+    {
+      activeModem: 1,
+      modems: [
+        {
+          modemNumber: 1,
+          isPowered: true,
+          frequency: 137.1 as MHz, // direct sampling: IF = RF
+          bandwidth: 0.05 as MHz,
+          modulation: 'BPSK',
+          fec: '1/2',
+          antenna_id: 1,
+        },
+      ],
+    },
+  ],
 } as GroundStationConfig;
 
 /** Crossed yagi on a TV rotator: the 70cm bird chaser with the handedness switch */
@@ -275,18 +279,22 @@ export const backyardYagiStation = {
     },
   ],
   transmitters: [{}],
-  receivers: [{
-    activeModem: 1,
-    modems: [{
-      modemNumber: 1,
-      isPowered: true,
-      frequency: 435.25 as MHz,
-      bandwidth: 0.03 as MHz, // +/-10 kHz Doppler slides outside +/-15 kHz: chase it or use AFC
-      modulation: 'QPSK',
-      fec: '1/2',
-      antenna_id: 1,
-    }],
-  }],
+  receivers: [
+    {
+      activeModem: 1,
+      modems: [
+        {
+          modemNumber: 1,
+          isPowered: true,
+          frequency: 435.25 as MHz,
+          bandwidth: 0.03 as MHz, // +/-10 kHz Doppler slides outside +/-15 kHz: chase it or use AFC
+          modulation: 'QPSK',
+          fec: '1/2',
+          antenna_id: 1,
+        },
+      ],
+    },
+  ],
 } as GroundStationConfig;
 
 /**
@@ -320,23 +328,27 @@ export const backyardTxStation = {
   ...backyardYagiStation,
   name: 'Yagi Rig (70cm + TX)',
   rfFrontEnds: [makeTxFrontEnd()],
-  transmitters: [{
-    activeModem: 1,
-    modems: [{
-      modem_number: 1,
-      isPowered: true,
-      isTransmitting: false,
-      ifSignal: {
-        frequency: 435.800e6, // parked off the transponder; S8 has you set 435.900
-        power: -20 as dBm,    // drive level; the brick amp does the rest
-        bandwidth: 15e3,      // SSTV-ish channel, fits the 30 kHz transponder
-        modulation: 'QPSK',
-        fec: '1/2',
-        feed: 'blue-2.mp4',   // your own SSTV frame, seen again on the downlink
-        polarization: null,
-      },
-    }],
-  }],
+  transmitters: [
+    {
+      activeModem: 1,
+      modems: [
+        {
+          modem_number: 1,
+          isPowered: true,
+          isTransmitting: false,
+          ifSignal: {
+            frequency: 435.8e6, // parked off the transponder; S8 has you set 435.900
+            power: -20 as dBm, // drive level; the brick amp does the rest
+            bandwidth: 15e3, // SSTV-ish channel, fits the 30 kHz transponder
+            modulation: 'QPSK',
+            fec: '1/2',
+            feed: 'blue-2.mp4', // your own SSTV frame, seen again on the downlink
+            polarization: null,
+          },
+        },
+      ],
+    },
+  ],
 } as GroundStationConfig;
 
 /** GPS patch on a paint-stick mast: L1 detection experiment */
@@ -391,18 +403,22 @@ export const backyardGpsStation = {
     },
   ],
   transmitters: [{}],
-  receivers: [{
-    activeModem: 1,
-    modems: [{
-      modemNumber: 1,
-      isPowered: true,
-      frequency: 1575.42 as MHz,
-      bandwidth: 2.5 as MHz,
-      // Deliberately mismatched to the spread-spectrum signal: GPS is detected
-      // as a carrier/energy rise but can never "lock" like a comms downlink
-      modulation: 'BPSK',
-      fec: '1/2',
-      antenna_id: 1,
-    }],
-  }],
+  receivers: [
+    {
+      activeModem: 1,
+      modems: [
+        {
+          modemNumber: 1,
+          isPowered: true,
+          frequency: 1575.42 as MHz,
+          bandwidth: 2.5 as MHz,
+          // Deliberately mismatched to the spread-spectrum signal: GPS is detected
+          // as a carrier/energy rise but can never "lock" like a comms downlink
+          modulation: 'BPSK',
+          fec: '1/2',
+          antenna_id: 1,
+        },
+      ],
+    },
+  ],
 } as GroundStationConfig;

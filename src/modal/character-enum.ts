@@ -1,4 +1,4 @@
-import { getAssetUrl } from "@app/utils/asset-url";
+import { getAssetUrl } from '@app/utils/asset-url';
 
 export enum Character {
   /** Mid-level ground station operator and guide. British immigrant with a rough tone. */
@@ -11,7 +11,7 @@ export enum Character {
   FRANCIS_MARTIN = 'francis_martin',
   /** Satellite Operations Engineer from Halifax. Canadian with subtle Canadian-isms. */
   MARCUS_CHEN = 'marcus_chen',
-  DANA_TORRES = "dana_torres",
+  DANA_TORRES = 'dana_torres',
   /** Charlie's teenage niece. Licensed ham (KD2RLY), SatNOGS contributor, teaches backyard satellite tracking with infectious enthusiasm. */
   RILEY_BROOKS = 'riley_brooks',
   /** SH-02 Shetland operator; the player's cross-station peer in Campaign 2. Shetlander; practical, weather-obsessed, understated humor. */

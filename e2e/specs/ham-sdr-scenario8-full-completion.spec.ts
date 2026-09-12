@@ -1,13 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  advanceMissionClockToUtc,
-  answerRileyQuiz,
-  domClick,
-  engageTrack,
-  rideUntilObjectiveComplete,
-  waitForObjectiveComplete,
-} from '../utils/ham-sdr-helpers';
+import { advanceMissionClockToUtc, answerRileyQuiz, domClick, engageTrack, rideUntilObjectiveComplete, waitForObjectiveComplete } from '../utils/ham-sdr-helpers';
 import { waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
@@ -123,12 +116,7 @@ test.describe('ham-sdr Scenario 8 Full Completion', () => {
     // The objective's receiver-signal-locked condition IS the lock proof;
     // the ride loop's own lock-indicator poll (every 4 s) can miss a fast
     // lock entirely, so assert the checklist rather than the side-channel
-    await rideUntilObjectiveComplete(
-      page,
-      missionControl,
-      'Work Yourself Through the Bird',
-      { maxMs: 300_000, correct: true },
-    );
+    await rideUntilObjectiveComplete(page, missionControl, 'Work Yourself Through the Bird', { maxMs: 300_000, correct: true });
     await waitForObjectiveComplete(missionControl, 'Work Yourself Through the Bird', 10000);
 
     // And the E2 chain's physical readout: the brick amp is putting out real watts

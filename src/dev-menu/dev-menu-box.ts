@@ -117,7 +117,9 @@ export class DevMenuBox extends DraggableBox {
 
     const parentDom = document.getElementsByTagName('body')[0];
 
-    parentDom.insertAdjacentHTML('beforeend', html`
+    parentDom.insertAdjacentHTML(
+      'beforeend',
+      html`
       <div id="${this.boxId}" class="draggable-box" style="pointer-events:auto; display:none;">
         <div class="draggable-box__title-bar">
           <div class="draggable-box__title">
@@ -129,7 +131,8 @@ export class DevMenuBox extends DraggableBox {
           ${this.getBoxContentHtml()}
         </div>
       </div>
-    `);
+    `
+    );
 
     this.domCreated_ = true;
     this.onOpen();

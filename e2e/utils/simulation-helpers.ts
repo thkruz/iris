@@ -1,4 +1,4 @@
-import { Page, expect } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
 
 /**
  * Wait for the simulation to initialize and stabilize.
@@ -20,12 +20,7 @@ export async function waitForSimulationReady(page: Page): Promise<void> {
  * Wait for a specific DOM state in the simulation.
  * Useful for waiting on equipment state changes.
  */
-export async function waitForDomState(
-  page: Page,
-  selector: string,
-  expectedText: string,
-  timeout = 30000
-): Promise<void> {
+export async function waitForDomState(page: Page, selector: string, expectedText: string, timeout = 30000): Promise<void> {
   await page.waitForFunction(
     ({ sel, text }) => {
       const element = document.querySelector(sel);
@@ -61,8 +56,7 @@ export async function waitForObjectiveCompleted(page: Page, objectiveId: string)
       // guard a missing objective resolved as `undefined !== null` -> true,
       // so a typo'd id or an unrendered checklist passed instantly.
       if (!objective) return false;
-      return objective.classList.contains('completed') ||
-        objective.querySelector('.completed') !== null;
+      return objective.classList.contains('completed') || objective.querySelector('.completed') !== null;
     },
     objectiveId,
     { timeout: 30000 }
@@ -250,18 +244,14 @@ export async function answerQuizByText(page: Page, answerText: string): Promise<
 
   if (bestScore !== Number.POSITIVE_INFINITY && bestScore < 0.45) {
     const available = optionTexts.map((t) => `- ${t.trim()}`).join('\n');
-    throw new Error(
-      `Could not match quiz answer.\nAnswer: ${answerText}\nOptions:\n${available}`
-    );
+    throw new Error(`Could not match quiz answer.\nAnswer: ${answerText}\nOptions:\n${available}`);
   }
 
   await optionButtons.nth(bestIndex).click();
 
   // Wait for the continue button to appear and click it
   // Exclude quiz option buttons that might contain text matching "Continue" (e.g., "continues")
-  const continueButton = quizModal.locator(
-    '#quiz-continue-btn, .quiz-continue-btn, .quiz-submit-btn, button:has-text("Continue"):not(.quiz-option-btn)'
-  );
+  const continueButton = quizModal.locator('#quiz-continue-btn, .quiz-continue-btn, .quiz-submit-btn, button:has-text("Continue"):not(.quiz-option-btn)');
   await expect(continueButton.first()).toBeVisible({ timeout: 5000 });
   await continueButton.first().click();
 

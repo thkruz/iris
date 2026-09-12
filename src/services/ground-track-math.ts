@@ -61,8 +61,7 @@ export function subsolarPoint(date: Date): LonLat {
 
 /** True when the point is on the night side (sun below the geometric horizon). */
 export function isNight(point: LonLat, subsolar: LonLat): boolean {
-  const cosC = Math.sin(point.lat * DEG) * Math.sin(subsolar.lat * DEG)
-    + Math.cos(point.lat * DEG) * Math.cos(subsolar.lat * DEG) * Math.cos((point.lon - subsolar.lon) * DEG);
+  const cosC = Math.sin(point.lat * DEG) * Math.sin(subsolar.lat * DEG) + Math.cos(point.lat * DEG) * Math.cos(subsolar.lat * DEG) * Math.cos((point.lon - subsolar.lon) * DEG);
 
   return cosC < 0;
 }
@@ -196,12 +195,7 @@ export function interpolateGroundPoint(points: GroundPoint[], timeMs: number): L
  * own ootk record — the same path `OrbitalSatellite` uses for its live position,
  * so the map can never disagree with the physics.
  */
-export function groundTrack(
-  satellite: OrbitalSatellite,
-  startMs: number,
-  endMs: number,
-  stepS = 30,
-): GroundPoint[] {
+export function groundTrack(satellite: OrbitalSatellite, startMs: number, endMs: number, stepS = 30): GroundPoint[] {
   const points: GroundPoint[] = [];
   const stepMs = Math.max(1, stepS) * 1000;
 
@@ -260,10 +254,7 @@ export function visibilityCircle(center: LonLat, radiusDeg: number, stepDeg = 5)
   for (let bearing = 0; bearing <= 360; bearing += stepDeg) {
     const b = bearing * DEG;
     const lat = Math.asin(sinLat0 * cosR + cosLat0 * sinR * Math.cos(b));
-    const lon = lon0 + Math.atan2(
-      Math.sin(b) * sinR * cosLat0,
-      cosR - sinLat0 * Math.sin(lat),
-    );
+    const lon = lon0 + Math.atan2(Math.sin(b) * sinR * cosLat0, cosR - sinLat0 * Math.sin(lat));
 
     ring.push({ lat: lat / DEG, lon: normLon(lon / DEG) });
   }
@@ -319,19 +310,13 @@ export interface LightingSpan {
  * `stepS` and merging is far cheaper than root-finding each terminator crossing,
  * and the deck draws at ~1 px per sample anyway.
  */
-export function lightingSpans(
-  satellite: OrbitalSatellite,
-  startMs: number,
-  endMs: number,
-  stepS = 60,
-): LightingSpan[] {
+export function lightingSpans(satellite: OrbitalSatellite, startMs: number, endMs: number, stepS = 60): LightingSpan[] {
   const spans: LightingSpan[] = [];
   const stepMs = Math.max(1, stepS) * 1000;
 
   for (let t = startMs; t <= endMs; t += stepMs) {
     const date = new Date(t);
-    const eci = satellite.ootkSatellite.eci(date)?.position as
-      { x: Kilometers; y: Kilometers; z: Kilometers } | undefined;
+    const eci = satellite.ootkSatellite.eci(date)?.position as { x: Kilometers; y: Kilometers; z: Kilometers } | undefined;
 
     if (!eci) {
       continue;

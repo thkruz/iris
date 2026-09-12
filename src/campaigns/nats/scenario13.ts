@@ -1,9 +1,9 @@
+import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { Character, Emotion } from '@app/modal/character-enum';
 import type { Objective } from '@app/objectives/objective-types';
 import type { ScenarioData } from '@app/ScenarioData';
 import type { dB, dBm, MHz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
-import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { maineGroundStation, vermontGroundStation } from './ground-stations';
 import { tidemark1Satellite, tidemark2Satellite } from './satellites';
 
@@ -48,13 +48,7 @@ export const scenario13Data: ScenarioData = {
   difficulty: 'intermediate',
   missionType: 'Trend Assessment',
   description: `Mid-shift on VT-01. TIDEMARK-1 carrying normal customer traffic. The trend display flagged something fifteen minutes ago: BUC temperature has been climbing roughly a third of a degree per minute - 57°C up to 62°C, no alarm yet, but the slope is unambiguous.<br><br>Nothing else has moved. GPSDO locked, RX beacon clean, HPA in backoff. The question is whether to act now, schedule a swap and keep going, switch to backup, or hold and monitor.<br><br>The right answer is judgment, not a checklist. Read the trend, pick a course of action, and execute it without putting the customer in the dark.`,
-  equipment: [
-    '9-meter C-band Antenna',
-    'RF Front End',
-    'Spectrum Analyzer',
-    'RX/TX Modems',
-    'ME-02: Operational',
-  ],
+  equipment: ['9-meter C-band Antenna', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'ME-02: Operational'],
   timeLimitSeconds: 30 * 60,
   settings: {
     isSync: true,
@@ -405,7 +399,8 @@ export const scenario13Data: ScenarioData = {
             ],
             correctIndex: 0,
             preserveOptionOrder: true,
-            explanation: 'De-rating addresses the cause (excess dissipation) without taking the customer down. Swap-now is over-spend; mute-and-switch is over-reaction; hold-and-monitor ignores a trend that has not flattened in 15 minutes.',
+            explanation:
+              'De-rating addresses the cause (excess dissipation) without taking the customer down. Swap-now is over-spend; mute-and-switch is over-reaction; hold-and-monitor ignores a trend that has not flattened in 15 minutes.',
             pointPenalty: 10,
           },
           mustMaintain: false,

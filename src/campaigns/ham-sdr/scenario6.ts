@@ -89,7 +89,8 @@ export const hamSdrScenario6Data: ScenarioData = {
       id: 'review-mission-brief',
       nice: ['K0645', 'K0820'],
       title: 'Read the Observation Requests',
-      description: "The network's request sheet: two passes, two birds, exact windows. Note the CUBEHOP window - 16:59, fifty-seven degrees - and remember where your own predictions come from.",
+      description:
+        "The network's request sheet: two passes, two birds, exact windows. Note the CUBEHOP window - 16:59, fifty-seven degrees - and remember where your own predictions come from.",
       groundStation: 'BKYD-QFH',
       freezesScenarioTimer: true,
       prerequisiteObjectiveIds: [],
@@ -112,7 +113,8 @@ export const hamSdrScenario6Data: ScenarioData = {
               'The rotator measures it during the first pass.',
             ],
             correctIndex: 0,
-            explanation: "Element sets are just files. Someone tracks the bird, someone publishes numbers, mirrors copy mirrors. It works because everyone is honest. 'Because everyone is honest' is not a security model.",
+            explanation:
+              "Element sets are just files. Someone tracks the bird, someone publishes numbers, mirrors copy mirrors. It works because everyone is honest. 'Because everyone is honest' is not a security model.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -154,7 +156,8 @@ export const hamSdrScenario6Data: ScenarioData = {
       id: 'spot-the-discrepancy',
       nice: ['T0153', 'K0820'],
       title: 'Two Sources, One Sky',
-      description: 'Open Observations and find the 16:59 CUBEHOP-1 window the network promised. Take your time. It is not there - no CUBEHOP pass all afternoon. Decide who you believe.',
+      description:
+        'Open Observations and find the 16:59 CUBEHOP-1 window the network promised. Take your time. It is not there - no CUBEHOP pass all afternoon. Decide who you believe.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['catch-wxsat'],
       conditions: [
@@ -176,7 +179,8 @@ export const hamSdrScenario6Data: ScenarioData = {
               'The Observations list only works for weather satellites.',
             ],
             correctIndex: 0,
-            explanation: 'The sky has one truth and you hold two descriptions of it. The network cross-checks elements against actual observations from dozens of stations; your copy came from one unsigned mirror. Bet on the network - and verify with the pass.',
+            explanation:
+              'The sky has one truth and you hold two descriptions of it. The network cross-checks elements against actual observations from dozens of stations; your copy came from one unsigned mirror. Bet on the network - and verify with the pass.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -189,7 +193,8 @@ export const hamSdrScenario6Data: ScenarioData = {
       id: 'fetch-elements',
       nice: ['S0421', 'K0820'],
       title: 'Fetch Fresh Elements',
-      description: 'The Observations tab has flagged the CUBEHOP element set - the network cross-check agrees with your suspicion. Fetch the fresh elements and watch the 16:59 window appear in the list.',
+      description:
+        'The Observations tab has flagged the CUBEHOP element set - the network cross-check agrees with your suspicion. Fetch the fresh elements and watch the 16:59 window appear in the list.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['spot-the-discrepancy'],
       conditions: [
@@ -207,7 +212,8 @@ export const hamSdrScenario6Data: ScenarioData = {
       id: 'catch-cubehop',
       nice: ['S0421', 'K1032', 'T0153'],
       title: 'Network Request #2: CUBEHOP-1',
-      description: 'The prediction is back and it matches the request sheet: 16:59, fifty-seven degrees. Skip ahead if you like the button, wait if you like the suspense - then track, tune, and lock. AFC is yours now.',
+      description:
+        'The prediction is back and it matches the request sheet: 16:59, fifty-seven degrees. Skip ahead if you like the button, wait if you like the suspense - then track, tune, and lock. AFC is yours now.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['fetch-elements'],
       conditions: [
@@ -258,7 +264,8 @@ export const hamSdrScenario6Data: ScenarioData = {
               'The rotator refused to point at invalid elements.',
             ],
             correctIndex: 0,
-            explanation: 'Cross-checking is the whole defense. Elements, timestamps, frequencies - any input someone hands you is a claim. Two independent claims that agree are evidence. One claim alone is a vibe.',
+            explanation:
+              'Cross-checking is the whole defense. Elements, timestamps, frequencies - any input someone hands you is a claim. Two independent claims that agree are evidence. One claim alone is a vibe.',
             pointPenalty: 5,
           },
           mustMaintain: false,

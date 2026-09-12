@@ -244,7 +244,7 @@ export class TrafficControlManager {
    */
   checkStationReadiness(groundStationId: string, _satelliteId: number): HandoverReadiness {
     const sim = SimulationManager.getInstance();
-    const gs = sim.groundStations.find(g => g.state.id === groundStationId);
+    const gs = sim.groundStations.find((g) => g.state.id === groundStationId);
 
     if (!gs) {
       return {
@@ -268,7 +268,7 @@ export class TrafficControlManager {
       };
     }
 
-    const activeModem = receiver.state.modems.find(m => m.modemNumber === receiver.state.activeModem);
+    const activeModem = receiver.state.modems.find((m) => m.modemNumber === receiver.state.activeModem);
     if (!activeModem) {
       return {
         groundStationId,
@@ -332,7 +332,7 @@ export class TrafficControlManager {
 
     // Check each tracked satellite
     for (const satId of this.trafficOwnership_.keys()) {
-      const satellite = sim.satellites.find(s => s.noradId === satId);
+      const satellite = sim.satellites.find((s) => s.noradId === satId);
       if (!satellite) continue;
 
       // Find all ground stations transmitting to this satellite
@@ -366,7 +366,7 @@ export class TrafficControlManager {
    */
   private disableTransmission_(groundStationId: string): void {
     const sim = SimulationManager.getInstance();
-    const gs = sim.groundStations.find(g => g.state.id === groundStationId);
+    const gs = sim.groundStations.find((g) => g.state.id === groundStationId);
     if (!gs) return;
 
     const rfFrontEnd = gs.rfFrontEnds[0];
@@ -389,7 +389,7 @@ export class TrafficControlManager {
    */
   private enableTransmission_(groundStationId: string): void {
     const sim = SimulationManager.getInstance();
-    const gs = sim.groundStations.find(g => g.state.id === groundStationId);
+    const gs = sim.groundStations.find((g) => g.state.id === groundStationId);
     if (!gs) return;
 
     const rfFrontEnd = gs.rfFrontEnds[0];
@@ -418,10 +418,7 @@ export class TrafficControlManager {
       if (!ownership.handoverTargetStationId) continue;
 
       // Auto-update target station readiness based on link quality
-      const targetReadiness = this.checkStationReadiness(
-        ownership.handoverTargetStationId,
-        satId
-      );
+      const targetReadiness = this.checkStationReadiness(ownership.handoverTargetStationId, satId);
 
       // Update readiness state
       if (targetReadiness.isReady !== ownership.targetStationReady) {

@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  answerQuizByText,
-  dismissDialogIfPresent,
-  waitForQuizToAppear,
-  waitForSimulationReady,
-} from '../utils/simulation-helpers';
+import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
  * Scenario 17 - "Solar Event": Sun Transit Outage.
@@ -21,12 +16,7 @@ import {
  *    (skyNoiseDegradation_dB on VT-01's antenna) instead of sleeping.
  *  - Total wall-clock is dominated by the transit timeline (~11 min).
  */
-type ObjectiveType =
-  | 'quiz'
-  | 'select-station'
-  | 'click-tab'
-  | 'auto'
-  | 'wait-sky-noise';
+type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'auto' | 'wait-sky-noise';
 
 interface Scenario17Objective {
   id: string;
@@ -85,8 +75,7 @@ const SCENARIO_17_OBJECTIVES: Scenario17Objective[] = [
     id: 'transit-predictability-quiz',
     title: 'Why It Is Predictable',
     type: 'quiz',
-    correctAnswer:
-      'Twice a year near the equinoxes - a few minutes a day for several consecutive days, at a time computable years in advance from the station/satellite geometry',
+    correctAnswer: 'Twice a year near the equinoxes - a few minutes a day for several consecutive days, at a time computable years in advance from the station/satellite geometry',
   },
   {
     id: 'baseline-rx-tab',
@@ -121,8 +110,7 @@ const SCENARIO_17_OBJECTIVES: Scenario17Objective[] = [
     id: 'observe-onset-quiz',
     title: 'Confirm Predicted Onset (quiz)',
     type: 'quiz',
-    correctAnswer:
-      'Confidence this is the predicted transit and not a coincidental fault - the alarm tracking the prediction sheet IS the diagnosis',
+    correctAnswer: 'Confidence this is the predicted transit and not a coincidental fault - the alarm tracking the prediction sheet IS the diagnosis',
   },
   {
     id: 'observe-onset-wait',
@@ -168,22 +156,19 @@ const SCENARIO_17_OBJECTIVES: Scenario17Objective[] = [
     id: 'post-event-sweep',
     title: 'Post-Event Alarm Sweep',
     type: 'quiz',
-    correctAnswer:
-      'Any alarm that survived the window - the transit excuses exactly five minutes of sky noise and nothing else',
+    correctAnswer: 'Any alarm that survived the window - the transit excuses exactly five minutes of sky noise and nothing else',
   },
   {
     id: 'marcus-confirm',
     title: 'Spacecraft-Side Confirmation',
     type: 'quiz',
-    correctAnswer:
-      'Nothing abnormal on the spacecraft - our uplink steady throughout, vehicle telemetry nominal; the event existed only at our antenna',
+    correctAnswer: 'Nothing abnormal on the spacecraft - our uplink steady throughout, vehicle telemetry nominal; the event existed only at our antenna',
   },
   {
     id: 'document-impact',
     title: 'Impact Documentation',
     type: 'quiz',
-    correctAnswer:
-      'Predicted vs actual window times, peak degradation observed, carrier lock-loss duration, notification timestamp (pre-window), and customer impact statement',
+    correctAnswer: 'Predicted vs actual window times, peak degradation observed, carrier lock-loss duration, notification timestamp (pre-window), and customer impact statement',
   },
   {
     id: 'log-shift-summary',
@@ -199,11 +184,7 @@ const SCENARIO_17_OBJECTIVES: Scenario17Objective[] = [
 // ============================================================
 
 /** Poll VT-01's antenna sky-noise state until the threshold is met. */
-async function waitForSkyNoise(
-  page: import('@playwright/test').Page,
-  condition: { above?: number; below?: number },
-  timeoutSeconds: number
-): Promise<void> {
+async function waitForSkyNoise(page: import('@playwright/test').Page, condition: { above?: number; below?: number }, timeoutSeconds: number): Promise<void> {
   await page.waitForFunction(
     (cond) => {
       const w = window as unknown as {
@@ -216,7 +197,7 @@ async function waitForSkyNoise(
           };
         };
       };
-      const gs = w.signalRange?.simulationManager?.groundStations?.find(g => g.state?.id === 'VT-01');
+      const gs = w.signalRange?.simulationManager?.groundStations?.find((g) => g.state?.id === 'VT-01');
       const sky = gs?.antennas?.[0]?.state?.skyNoiseDegradation_dB ?? 0;
       if (cond.above !== undefined && sky <= cond.above) return false;
       if (cond.below !== undefined && sky >= cond.below) return false;
@@ -229,11 +210,7 @@ async function waitForSkyNoise(
   await page.waitForTimeout(2500);
 }
 
-async function executeObjective(
-  page: import('@playwright/test').Page,
-  missionControlPage: MissionControlPage,
-  objective: Scenario17Objective
-): Promise<void> {
+async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario17Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);

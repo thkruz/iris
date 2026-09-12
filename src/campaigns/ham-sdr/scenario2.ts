@@ -39,11 +39,7 @@ export const hamSdrScenario2Data: ScenarioData = {
   duration: '20-25 min',
   missionType: 'Backyard Session',
   description: `The crossed yagi is bolted to the rotator and the rotator mostly obeys. Tonight's target is CUBEHOP-1, an amateur FM cubesat on 435.25 MHz - and at 435 MHz, Doppler stops being polite.<br><br>The downlink will slide ten kilohertz high to ten kilohertz low across the pass, and the channel is only fifteen wide. Nobody is going to chase it for you: Riley has taped over the AFC checkbox. Track the bird with the rotator, ride the VFO with the tune buttons, and hold the lock from horizon to horizon.<br><br>Every operator does this by hand once. Tonight is your once.`,
-  equipment: [
-    'DIY 70cm Crossed Yagi on TV Rotator',
-    'RTL-SDR Receiver (Direct Sampling)',
-    'SkyWatcher SDR Console',
-  ],
+  equipment: ['DIY 70cm Crossed Yagi on TV Rotator', 'RTL-SDR Receiver (Direct Sampling)', 'SkyWatcher SDR Console'],
   settings: {
     isSync: true,
     groundStations: [backyardYagiStation],
@@ -94,7 +90,8 @@ export const hamSdrScenario2Data: ScenarioData = {
       id: 'track-cubehop',
       nice: ['S0421', 'K1032'],
       title: 'Put the Yagi on the Bird',
-      description: 'In the SDR Console rotator panel, select CUBEHOP-1 and engage TRACK so the yagi follows the pass. The beam is 40 degrees wide - the rotator does not have to be perfect, it has to be pointing the right general way.',
+      description:
+        'In the SDR Console rotator panel, select CUBEHOP-1 and engage TRACK so the yagi follows the pass. The beam is 40 degrees wide - the rotator does not have to be perfect, it has to be pointing the right general way.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [
@@ -123,7 +120,8 @@ export const hamSdrScenario2Data: ScenarioData = {
       id: 'chase-by-hand',
       nice: ['S0421', 'K0740', 'T0153'],
       title: 'Ride the VFO',
-      description: 'Lock the FM downlink and HOLD it for two minutes of the drift - by hand. Watch the carrier walk across the waterfall and keep the VFO on it with the +/-1 kHz and +/-10 kHz tune buttons. The AFC checkbox stays OFF; if it goes on, the objective resets.',
+      description:
+        'Lock the FM downlink and HOLD it for two minutes of the drift - by hand. Watch the carrier walk across the waterfall and keep the VFO on it with the +/-1 kHz and +/-10 kHz tune buttons. The AFC checkbox stays OFF; if it goes on, the objective resets.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['track-cubehop'],
       conditions: [
@@ -164,7 +162,8 @@ export const hamSdrScenario2Data: ScenarioData = {
               'The rotator caught up with the bird and cancelled the drift.',
             ],
             correctIndex: 0,
-            explanation: 'Doppler comes from motion TOWARD or AWAY from you. Overhead, all the motion is sideways for a moment - the frequency stands still, then the slide resumes. That pause is closest approach, every pass.',
+            explanation:
+              'Doppler comes from motion TOWARD or AWAY from you. Overhead, all the motion is sideways for a moment - the frequency stands still, then the slide resumes. That pause is closest approach, every pass.',
             pointPenalty: 5,
           },
           mustMaintain: false,

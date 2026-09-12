@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test';
+import { expect, Page, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
 import { dismissDialogIfPresent, waitForSimulationReady } from '../utils/simulation-helpers';
 
@@ -40,7 +40,12 @@ async function captureUntil(page: Page, target: number): Promise<number> {
     // Wait for this capture to resolve (message updates to a terminal state)
     for (let poll = 0; poll < 30; poll++) {
       await page.waitForTimeout(500);
-      const msg = (await page.locator('#geo-capture-msg').textContent().catch(() => '') ?? '').trim();
+      const msg = (
+        (await page
+          .locator('#geo-capture-msg')
+          .textContent()
+          .catch(() => '')) ?? ''
+      ).trim();
       if (/^(CAPTURE|NO CORRELATION|CORRELATOR)/.test(msg)) {
         break;
       }
@@ -67,8 +72,7 @@ test.describe('Signal Hunter geolocation console', () => {
 
     // 1. Black-ops theme is applied via the per-campaign body class
     await expect(page.locator('body')).toHaveClass(/campaign-signal-hunter/);
-    const accent = await page.evaluate(() =>
-      getComputedStyle(document.body).getPropertyValue('--mc-accent-red').trim());
+    const accent = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--mc-accent-red').trim());
     expect(accent.toLowerCase()).toBe('#8f6f46'); // coyote brown
 
     // 2. Select the ground station and open the Geolocation tab
@@ -95,7 +99,7 @@ test.describe('Signal Hunter geolocation console', () => {
     // 6. Compute the fix - the summary shows a coordinate and error ellipse
     await page.locator('#geo-compute-btn').click();
     await page.waitForTimeout(1000);
-    const summary = (await page.locator('#geo-fix-summary').textContent() ?? '').trim();
+    const summary = ((await page.locator('#geo-fix-summary').textContent()) ?? '').trim();
     expect(summary).toMatch(/-?\d+\.\d+°,\s*-?\d+\.\d+°/);
   });
 });

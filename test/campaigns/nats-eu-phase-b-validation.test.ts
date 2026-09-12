@@ -45,8 +45,7 @@ vi.mock('@app/simulation/simulation-manager', () => ({
   SimulationManager: {
     getInstance: () => ({
       satellites: simSatellites,
-      getSatsByAzEl: (az: number, el: number) =>
-        simSatellites.filter((sat) => Math.abs(sat.az - az) <= 1 && Math.abs(sat.el - el) <= 1),
+      getSatsByAzEl: (az: number, el: number) => simSatellites.filter((sat) => Math.abs(sat.az - az) <= 1 && Math.abs(sat.el - el) <= 1),
       getSatByNoradId: (noradId: number) => simSatellites.find((s) => s.noradId === noradId) ?? null,
       isDeveloperMode: false,
       update: () => undefined,
@@ -66,36 +65,25 @@ import { natsEuScenario5Data } from '@app/campaigns/nats-eu/scenario5';
 import { natsEuScenario6Data } from '@app/campaigns/nats-eu/scenario6';
 import { natsEuScenario7Data } from '@app/campaigns/nats-eu/scenario7';
 import { natsEuScenario8Data } from '@app/campaigns/nats-eu/scenario8';
-import type { AntennaCore } from '@app/equipment/antenna/antenna-core';
 import { ANTENNA_CONFIG_KEYS } from '@app/equipment/antenna/antenna-config-keys';
+import type { AntennaCore } from '@app/equipment/antenna/antenna-core';
 import { AntennaUIHeadless } from '@app/equipment/antenna/antenna-ui-headless';
-import type { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
 import { Receiver } from '@app/equipment/receiver/receiver';
 import type { RFFrontEndCore } from '@app/equipment/rf-front-end/rf-front-end-core';
 import { createRFFrontEnd } from '@app/equipment/rf-front-end/rf-front-end-factory';
+import type { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
 import { EventBus } from '@app/events/event-bus';
 import { LinkBudgetManager } from '@app/link-budget/link-budget-manager';
 import type { ScenarioData } from '@app/ScenarioData';
 import { PassPlannerService } from '@app/services/pass-planner-service';
 
-const PHASE_B: ScenarioData[] = [
-  natsEuScenario2Data,
-  natsEuScenario3Data,
-  natsEuScenario4Data,
-  natsEuScenario5Data,
-  natsEuScenario6Data,
-  natsEuScenario7Data,
-  natsEuScenario8Data,
-];
+const PHASE_B: ScenarioData[] = [natsEuScenario2Data, natsEuScenario3Data, natsEuScenario4Data, natsEuScenario5Data, natsEuScenario6Data, natsEuScenario7Data, natsEuScenario8Data];
 
 describe('nats-eu Phase B: scenario wiring', () => {
   it('registers scenarios 2-8 with unique ids, urls and a prerequisite chain', () => {
     const ids = PHASE_B.map((s) => s.id);
 
-    expect(ids).toEqual([
-      'nats-eu-scenario2', 'nats-eu-scenario3', 'nats-eu-scenario4',
-      'nats-eu-scenario5', 'nats-eu-scenario6', 'nats-eu-scenario7', 'nats-eu-scenario8',
-    ]);
+    expect(ids).toEqual(['nats-eu-scenario2', 'nats-eu-scenario3', 'nats-eu-scenario4', 'nats-eu-scenario5', 'nats-eu-scenario6', 'nats-eu-scenario7', 'nats-eu-scenario8']);
     expect(new Set(ids).size).toBe(ids.length);
 
     // Each scenario is gated on the previous one, S2 on the existing S1.
@@ -129,8 +117,7 @@ describe('nats-eu Phase B: scenario wiring', () => {
 
   it('only uses mission-brief-opened where a brief URL exists to open', () => {
     for (const scenario of PHASE_B) {
-      const usesBrief = scenario.objectives.some((o) =>
-        o.conditions.some((c) => c.type === 'mission-brief-opened'));
+      const usesBrief = scenario.objectives.some((o) => o.conditions.some((c) => c.type === 'mission-brief-opened'));
 
       if (usesBrief) {
         expect((scenario.settings as { missionBriefUrl?: string }).missionBriefUrl, scenario.id).toBeTruthy();
@@ -182,7 +169,11 @@ describe('nats-eu Phase B: every condition is reachable', () => {
     'access-control-set': 'security',
   };
   const blockOf = {
-    linkBudget: 0, commanding: 0, contactSchedule: 0, spaceEvents: 0, security: 0,
+    linkBudget: 0,
+    commanding: 0,
+    contactSchedule: 0,
+    spaceEvents: 0,
+    security: 0,
   };
 
   it.each(PHASE_B.map((s) => [s.id, s] as const))('%s enables every mechanic it grades', (_id, scenario) => {
@@ -193,8 +184,7 @@ describe('nats-eu Phase B: every condition is reachable', () => {
         const required = REQUIRES_BLOCK[condition.type];
 
         if (required) {
-          expect(settings[required], `${scenario.id}/${objective.id}: ${condition.type} needs settings.${required}`)
-            .toBeDefined();
+          expect(settings[required], `${scenario.id}/${objective.id}: ${condition.type} needs settings.${required}`).toBeDefined();
         }
       }
     }
@@ -217,22 +207,37 @@ describe('nats-eu Phase B: every condition is reachable', () => {
         const params = (condition.params ?? {}) as Record<string, string>;
 
         if (params.contactId) {
-          expect(settings.contactSchedule?.contacts.map((c) => c.id), where).toContain(params.contactId);
+          expect(
+            settings.contactSchedule?.contacts.map((c) => c.id),
+            where
+          ).toContain(params.contactId);
         }
         if (params.groundStationId) {
           expect(stationIds.has(params.groundStationId), `${where}: unknown station ${params.groundStationId}`).toBe(true);
         }
         if (params.accountId) {
-          expect(settings.security?.accounts.map((a) => a.id), where).toContain(params.accountId);
+          expect(
+            settings.security?.accounts.map((a) => a.id),
+            where
+          ).toContain(params.accountId);
         }
         if (params.eventId && condition.type === 'security-event-acknowledged') {
-          expect(settings.security?.events.map((e) => e.id), where).toContain(params.eventId);
+          expect(
+            settings.security?.events.map((e) => e.id),
+            where
+          ).toContain(params.eventId);
         }
         if (params.eventId && condition.type === 'ephemeris-updated') {
-          expect(settings.spaceEvents?.map((e) => e.id), where).toContain(params.eventId);
+          expect(
+            settings.spaceEvents?.map((e) => e.id),
+            where
+          ).toContain(params.eventId);
         }
         if (params.commandId) {
-          expect(settings.commanding?.commands?.map((c) => c.id), where).toContain(params.commandId);
+          expect(
+            settings.commanding?.commands?.map((c) => c.id),
+            where
+          ).toContain(params.commandId);
         }
       }
     }
@@ -240,19 +245,18 @@ describe('nats-eu Phase B: every condition is reachable', () => {
 
   it('S5 and S8 contact plans are solvable: every overlapping pair can be split', () => {
     for (const scenario of [natsEuScenario5Data, natsEuScenario8Data]) {
-      const schedule = (scenario.settings as {
-        contactSchedule: { contacts: Array<{ id: string; windowStartS: number; windowEndS: number; priority: number }>; stationIds: string[] };
-      }).contactSchedule;
+      const schedule = (
+        scenario.settings as {
+          contactSchedule: { contacts: Array<{ id: string; windowStartS: number; windowEndS: number; priority: number }>; stationIds: string[] };
+        }
+      ).contactSchedule;
 
       // Count mutually-overlapping contacts. With N stations, no more than N
       // contacts may overlap at any instant or the plan cannot be made valid.
       for (const a of schedule.contacts) {
-        const overlapping = schedule.contacts.filter(
-          (b) => b.id !== a.id && b.windowStartS < a.windowEndS && a.windowStartS < b.windowEndS,
-        );
+        const overlapping = schedule.contacts.filter((b) => b.id !== a.id && b.windowStartS < a.windowEndS && a.windowStartS < b.windowEndS);
 
-        expect(overlapping.length + 1, `${scenario.id}: ${a.id} overlaps ${overlapping.length} others`)
-          .toBeLessThanOrEqual(schedule.stationIds.length);
+        expect(overlapping.length + 1, `${scenario.id}: ${a.id} overlaps ${overlapping.length} others`).toBeLessThanOrEqual(schedule.stationIds.length);
       }
     }
   });
@@ -292,9 +296,7 @@ describe('nats-eu Phase B: link budgets are correct and achievable', () => {
     simSatellites = [meridianSar1Satellite, meridianSar2Satellite];
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     document.body.innerHTML = '<div id="pb-fe"></div><div id="pb-rx"></div>';
-    antenna = new AntennaUIHeadless(
-      'pb-ant', ANTENNA_CONFIG_KEYS.KU_BAND_4M_LEO_TRACKER, galwayGroundStation.antennasState![0], 1,
-    );
+    antenna = new AntennaUIHeadless('pb-ant', ANTENNA_CONFIG_KEYS.KU_BAND_4M_LEO_TRACKER, galwayGroundStation.antennasState![0], 1);
     frontEnd = createRFFrontEnd('pb-fe', galwayGroundStation.rfFrontEnds[0], 'standard');
     frontEnd.connectAntenna(antenna);
     antenna.attachRfFrontEnd(frontEnd);
@@ -353,45 +355,39 @@ describe('nats-eu Phase B: link budgets are correct and achievable', () => {
     },
   ];
 
-  it.each(WORKSHEETS.map((w) => [w.scenario.id, w] as const))(
-    '%s: the published worksheet numbers produce expectedCNRDb',
-    (_id, { scenario, inputs }) => {
-      const config = (scenario.settings as {
+  it.each(WORKSHEETS.map((w) => [w.scenario.id, w] as const))('%s: the published worksheet numbers produce expectedCNRDb', (_id, { scenario, inputs }) => {
+    const config = (
+      scenario.settings as {
         linkBudget: { expectedCNRDb: number; toleranceDb?: number };
-      }).linkBudget;
-      const computed = LinkBudgetManager.computeCNRDb(inputs);
+      }
+    ).linkBudget;
+    const computed = LinkBudgetManager.computeCNRDb(inputs);
 
-      // A player entering the briefed numbers must be graded correct.
-      expect(
-        Math.abs(computed - config.expectedCNRDb),
-        `${scenario.id}: worksheet gives ${computed.toFixed(2)} dB, scenario expects ${config.expectedCNRDb}`,
-      ).toBeLessThanOrEqual(config.toleranceDb ?? 1.0);
-    },
-  );
+    // A player entering the briefed numbers must be graded correct.
+    expect(Math.abs(computed - config.expectedCNRDb), `${scenario.id}: worksheet gives ${computed.toFixed(2)} dB, scenario expects ${config.expectedCNRDb}`).toBeLessThanOrEqual(
+      config.toleranceDb ?? 1.0
+    );
+  });
 
-  it.each(WORKSHEETS.map((w) => [w.scenario.id, w] as const))(
-    '%s: the live chain actually delivers the required margin',
-    (_id, { scenario, start }) => {
-      const config = (scenario.settings as {
+  it.each(WORKSHEETS.map((w) => [w.scenario.id, w] as const))('%s: the live chain actually delivers the required margin', (_id, { scenario, start }) => {
+    const config = (
+      scenario.settings as {
         linkBudget: { thresholdCNRDb: number; requiredMarginDb?: number; expectedCNRDb: number };
-      }).linkBudget;
-      const needed = config.thresholdCNRDb + (config.requiredMarginDb ?? 3);
+      }
+    ).linkBudget;
+    const needed = config.thresholdCNRDb + (config.requiredMarginDb ?? 3);
 
-      const samples = flyPass(meridianSar1Satellite, start + 1 * MINUTE_MS, start + 12 * MINUTE_MS);
-      const peak = samples.reduce((a, b) => (b.cn > a.cn ? b : a));
-      const window = samples.filter((s) => s.cn >= needed);
+    const samples = flyPass(meridianSar1Satellite, start + 1 * MINUTE_MS, start + 12 * MINUTE_MS);
+    const peak = samples.reduce((a, b) => (b.cn > a.cn ? b : a));
+    const window = samples.filter((s) => s.cn >= needed);
 
-      // Peak must clear the requirement...
-      expect(peak.cn, `${scenario.id}: peak ${peak.cn.toFixed(2)} dB < required ${needed} dB`)
-        .toBeGreaterThan(needed);
-      // ...for long enough that a human can press Commit Link.
-      expect(window.length, `${scenario.id}: only ${window.length}s above ${needed} dB`)
-        .toBeGreaterThanOrEqual(60);
-      // ...and the measurement must agree with what the operator predicted.
-      expect(Math.abs(peak.cn - config.expectedCNRDb), `${scenario.id}: prediction vs measurement`)
-        .toBeLessThan(1.5);
-    },
-  );
+    // Peak must clear the requirement...
+    expect(peak.cn, `${scenario.id}: peak ${peak.cn.toFixed(2)} dB < required ${needed} dB`).toBeGreaterThan(needed);
+    // ...for long enough that a human can press Commit Link.
+    expect(window.length, `${scenario.id}: only ${window.length}s above ${needed} dB`).toBeGreaterThanOrEqual(60);
+    // ...and the measurement must agree with what the operator predicted.
+    expect(Math.abs(peak.cn - config.expectedCNRDb), `${scenario.id}: prediction vs measurement`).toBeLessThan(1.5);
+  });
 
   it('S8 night pass is the stronger geometry it claims to be', () => {
     const day = flyPass(meridianSar1Satellite, DAY_START_MS + 1 * MINUTE_MS, DAY_START_MS + 12 * MINUTE_MS);

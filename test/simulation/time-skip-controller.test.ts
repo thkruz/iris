@@ -134,8 +134,7 @@ describe('TimeSkipController', () => {
     it('should block while a satellite is in view', () => {
       vi.spyOn(meridianSar1Satellite, 'isAboveHorizon', 'get').mockReturnValue(true);
 
-      expect(TimeSkipController.getInstance().getBlockedReason())
-        .toBe('MERIDIAN-SAR-1 is in view - work the pass');
+      expect(TimeSkipController.getInstance().getBlockedReason()).toBe('MERIDIAN-SAR-1 is in view - work the pass');
     });
 
     it('should block while the scenario clock is paused', () => {

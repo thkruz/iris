@@ -45,11 +45,7 @@ export const hamSdrScenario5Data: ScenarioData = {
   duration: '20-25 min',
   missionType: 'Backyard Session',
   description: `Riley's newest experiment is a GPS patch antenna hose-clamped to a paint stick. Tonight's first job is humble: find GPS at all. The signal is so weak it lives <em>below</em> the noise floor - what you can see is a gentle two-megahertz bump of extra noise at 1575.42. You can detect it. You can never lock it. That asymmetry is the whole lesson.<br><br>The second job nobody planned. Somewhere in the neighborhood, something starts transmitting on L1 - strong, clean, and wrong. Your clock offset starts walking while the satellite count stays perfect. Riley has been waiting years to show somebody this.<br><br>RF is unauthenticated. Physics is your authentication.`,
-  equipment: [
-    'GPS Patch on a Paint-Stick Mast (fixed skyward)',
-    'RTL-SDR Receiver (Direct Sampling)',
-    'SkyWatcher SDR Console (GPS-disciplined reference)',
-  ],
+  equipment: ['GPS Patch on a Paint-Stick Mast (fixed skyward)', 'RTL-SDR Receiver (Direct Sampling)', 'SkyWatcher SDR Console (GPS-disciplined reference)'],
   settings: {
     isSync: true,
     groundStations: [backyardGpsStation],
@@ -88,7 +84,7 @@ export const hamSdrScenario5Data: ScenarioData = {
       id: 'review-mission-brief',
       nice: ['K0645'],
       title: "Read Riley's Note",
-      description: 'The note explains why tonight\'s signal is different: GPS reaches you weaker than the noise in your own receiver, on purpose, and works anyway.',
+      description: "The note explains why tonight's signal is different: GPS reaches you weaker than the noise in your own receiver, on purpose, and works anyway.",
       groundStation: 'BKYD-GPS',
       freezesScenarioTimer: true,
       prerequisiteObjectiveIds: [],
@@ -111,7 +107,8 @@ export const hamSdrScenario5Data: ScenarioData = {
               'The receiver cools itself to reduce the noise floor below the signal.',
             ],
             correctIndex: 0,
-            explanation: 'Spreading buys processing gain: correlate 2 MHz of "noise" against the right code and a 43-dB gain appears. On a waterfall, all you ever see is a gentle bump of extra noise.',
+            explanation:
+              'Spreading buys processing gain: correlate 2 MHz of "noise" against the right code and a 43-dB gain appears. On a waterfall, all you ever see is a gentle bump of extra noise.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -124,7 +121,8 @@ export const hamSdrScenario5Data: ScenarioData = {
       id: 'find-the-hump',
       nice: ['S0421', 'K1032'],
       title: 'Find the Noise Bump',
-      description: 'Watch the waterfall at 1575.42 MHz. NAVSTAR-77 is nearly overhead right now - look for a two-megahertz-wide swelling of the noise floor. That swelling is every GPS fix in the neighborhood.',
+      description:
+        'Watch the waterfall at 1575.42 MHz. NAVSTAR-77 is nearly overhead right now - look for a two-megahertz-wide swelling of the noise floor. That swelling is every GPS fix in the neighborhood.',
       groundStation: 'BKYD-GPS',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [
@@ -151,7 +149,8 @@ export const hamSdrScenario5Data: ScenarioData = {
               'The patch antenna has the wrong handedness.',
             ],
             correctIndex: 0,
-            explanation: 'Right. You can prove energy exists without being able to read it. Remember that direction: it also means something can TRANSMIT energy you cannot vet. Hold that thought.',
+            explanation:
+              'Right. You can prove energy exists without being able to read it. Remember that direction: it also means something can TRANSMIT energy you cannot vet. Hold that thought.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -164,7 +163,8 @@ export const hamSdrScenario5Data: ScenarioData = {
       id: 'spot-the-spoofer',
       nice: ['T0153', 'S0648'],
       title: 'Something New on L1',
-      description: 'A new signal has appeared inside the GPS band - narrow, strong, and clean. Real L1 is a whisper spread over megahertz. This is a shout. Get it on the waterfall.',
+      description:
+        'A new signal has appeared inside the GPS band - narrow, strong, and clean. Real L1 is a whisper spread over megahertz. This is a shout. Get it on the waterfall.',
       groundStation: 'BKYD-GPS',
       prerequisiteObjectiveIds: ['find-the-hump'],
       conditions: [
@@ -203,7 +203,8 @@ export const hamSdrScenario5Data: ScenarioData = {
               'The satellite count display is broken.',
             ],
             correctIndex: 0,
-            explanation: 'That is the signature. Jamming is loud and obvious - you lose everything. Spoofing is polite: full bars, wrong time. The stronger, cleaner "GPS" your receiver found is the one on a roof three blocks away.',
+            explanation:
+              'That is the signature. Jamming is loud and obvious - you lose everything. Spoofing is polite: full bars, wrong time. The stronger, cleaner "GPS" your receiver found is the one on a roof three blocks away.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -216,7 +217,8 @@ export const hamSdrScenario5Data: ScenarioData = {
       id: 'go-holdover',
       nice: ['S0421', 'K0752'],
       title: 'Stop Trusting GPS',
-      description: 'Flip the REF control in the SOURCE panel to HOLDOVER. The disciplined oscillator free-runs on its own inertia - it drifts nanoseconds per hour instead of microseconds per second of lies.',
+      description:
+        'Flip the REF control in the SOURCE panel to HOLDOVER. The disciplined oscillator free-runs on its own inertia - it drifts nanoseconds per hour instead of microseconds per second of lies.',
       groundStation: 'BKYD-GPS',
       prerequisiteObjectiveIds: ['read-the-tell'],
       conditions: [
@@ -235,7 +237,8 @@ export const hamSdrScenario5Data: ScenarioData = {
       id: 'all-clear',
       nice: ['S0421', 'T0153'],
       title: 'Ride It Out, Then Come Back',
-      description: 'Stay on holdover until the intruder leaves the band - you will see the carrier vanish from the waterfall and the Î”T freeze. Then, and only then, put the reference back on GPS and let it re-acquire.',
+      description:
+        'Stay on holdover until the intruder leaves the band - you will see the carrier vanish from the waterfall and the Î”T freeze. Then, and only then, put the reference back on GPS and let it re-acquire.',
       groundStation: 'BKYD-GPS',
       prerequisiteObjectiveIds: ['go-holdover'],
       conditions: [
@@ -292,7 +295,8 @@ export const hamSdrScenario5Data: ScenarioData = {
               'It transmitted its own callsign.',
             ],
             correctIndex: 0,
-            explanation: 'RF is unauthenticated; physics is your authentication. A real bird is weak, spread, and moving. Anything else is a claim, not a satellite. The rest of this campaign is that sentence, over and over.',
+            explanation:
+              'RF is unauthenticated; physics is your authentication. A real bird is weak, spread, and moving. Anything else is a claim, not a satellite. The rest of this campaign is that sentence, over and over.',
             pointPenalty: 5,
           },
           mustMaintain: false,

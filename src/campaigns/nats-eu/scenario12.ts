@@ -4,13 +4,7 @@ import type { ScenarioData } from '@app/ScenarioData';
 import type { dBm, Hertz, IfFrequency } from '@app/types';
 import type { Degrees, TleLine1, TleLine2 } from 'ootk';
 import { galwayGroundStation } from './ground-stations';
-import {
-  MERIDIAN_SAR3_BEACON_RF_HZ,
-  createMeridianSar1,
-  createMeridianSar2,
-  createMeridianSar3,
-  type MeridianTle,
-} from './satellites';
+import { createMeridianSar1, createMeridianSar2, createMeridianSar3, MERIDIAN_SAR3_BEACON_RF_HZ, type MeridianTle } from './satellites';
 
 /**
  * nats-eu Scenario 12 - "LEOP: Commissioning" / SAR-3 Acceptance Tests (arc 2/2)
@@ -248,7 +242,8 @@ export const natsEuScenario12Data: ScenarioData = {
               'It does not matter, as long as every step is finished before LOS.',
             ],
             correctIndex: 0,
-            explanation: 'Right. A command ACK proves the spacecraft received the command, not that the command did anything. The decode is what proves PLD-ON worked, and the card is only as good as the order it was filled in.',
+            explanation:
+              'Right. A command ACK proves the spacecraft received the command, not that the command did anything. The decode is what proves PLD-ON worked, and the card is only as good as the order it was filled in.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -261,7 +256,8 @@ export const natsEuScenario12Data: ScenarioData = {
       id: 'predict-acceptance',
       nice: ['T0080', 'S0015'],
       title: 'Predict the Acceptance C/N',
-      description: 'Fill the Link Analysis worksheet for MERIDIAN-SAR-3 at maximum elevation and press Compute. Survey numbers: satellite EIRP 28 dBm; slant range at max elevation 764 km (free-space path loss 171.5 dB at 11760 MHz); GW-01 receive gain 51.8 dBi; system noise temperature 88 K; occupied bandwidth 36 MHz; miscellaneous losses 1 dB. The card will quote this number back at you.',
+      description:
+        'Fill the Link Analysis worksheet for MERIDIAN-SAR-3 at maximum elevation and press Compute. Survey numbers: satellite EIRP 28 dBm; slant range at max elevation 764 km (free-space path loss 171.5 dB at 11760 MHz); GW-01 receive gain 51.8 dBi; system noise temperature 88 K; occupied bandwidth 36 MHz; miscellaneous losses 1 dB. The card will quote this number back at you.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [
@@ -279,7 +275,8 @@ export const natsEuScenario12Data: ScenarioData = {
       id: 'acquire-sar3',
       nice: ['S0421', 'K1032'],
       title: 'Acquire SAR-3',
-      description: 'AOS T+6 min at azimuth 140. Program-track MERIDIAN-SAR-3, confirm the 11785 MHz beacon (IF 1315 MHz) on the analyzer, and engage uplink Doppler compensation before the command window opens at T+6:22.',
+      description:
+        'AOS T+6 min at azimuth 140. Program-track MERIDIAN-SAR-3, confirm the 11785 MHz beacon (IF 1315 MHz) on the analyzer, and engage uplink Doppler compensation before the command window opens at T+6:22.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['predict-acceptance'],
       conditions: [
@@ -314,7 +311,8 @@ export const natsEuScenario12Data: ScenarioData = {
       id: 'payload-checkout',
       nice: ['T1092', 'T1567', 'K0773'],
       title: 'Payload Command Checkout',
-      description: 'Bring the uplink up in order: modem on air FIRST, then the HPA. Then send PLD-ON and, once it is acknowledged, PLD-TEST-PATTERN. Both must ACK inside the window (T+6:22 to T+15:08). The console does not enforce the command order; the card does.',
+      description:
+        'Bring the uplink up in order: modem on air FIRST, then the HPA. Then send PLD-ON and, once it is acknowledged, PLD-TEST-PATTERN. Both must ACK inside the window (T+6:22 to T+15:08). The console does not enforce the command order; the card does.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['acquire-sar3'],
       conditions: [
@@ -350,7 +348,8 @@ export const natsEuScenario12Data: ScenarioData = {
       id: 'first-video',
       nice: ['T1092', 'T0153', 'S0842'],
       title: 'First Imagery Decode',
-      description: 'Secure the uplink first: disable the HPA. SAR-3 turns the GW-01 14065 MHz command carrier around through its command transponder at 11810 MHz, inside the receive band, and with the amplifier up that relay drives the AGC down and takes the video with it. Then retune modem 1 from 1414 MHz to 1340 MHz (11760 MHz RF), lock the test pattern, and hold C/N above 8 dB. Return to Link Analysis and press Commit Link near maximum elevation (T+10.8) with at least 2 dB of margin over the 6 dB threshold.',
+      description:
+        'Secure the uplink first: disable the HPA. SAR-3 turns the GW-01 14065 MHz command carrier around through its command transponder at 11810 MHz, inside the receive band, and with the amplifier up that relay drives the AGC down and takes the video with it. Then retune modem 1 from 1414 MHz to 1340 MHz (11760 MHz RF), lock the test pattern, and hold C/N above 8 dB. Return to Link Analysis and press Commit Link near maximum elevation (T+10.8) with at least 2 dB of margin over the 6 dB threshold.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['payload-checkout'],
       conditions: [
@@ -386,7 +385,8 @@ export const natsEuScenario12Data: ScenarioData = {
       id: 'record-results',
       nice: ['T1611', 'T1506', 'S0842'],
       title: 'Record the Test Results',
-      description: 'Three entries on the card: the command checkout result, the measured C/N against the prediction, and the acceptance verdict with its residual risk. Each answer is written to the test card.',
+      description:
+        'Three entries on the card: the command checkout result, the measured C/N against the prediction, and the acceptance verdict with its residual risk. Each answer is written to the test card.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['first-video'],
       conditions: [
@@ -395,16 +395,19 @@ export const natsEuScenario12Data: ScenarioData = {
           description: 'Command Checkout Recorded',
           params: {
             character: Character.SYSTEM,
-            question: 'Command checkout entry. PLD-ON and PLD-TEST-PATTERN were both acknowledged inside the window. What does the card record as the checkout result, and what does the ACK pair actually prove?',
+            question:
+              'Command checkout entry. PLD-ON and PLD-TEST-PATTERN were both acknowledged inside the window. What does the card record as the checkout result, and what does the ACK pair actually prove?',
             options: [
               'PLD-ON then PLD-TEST-PATTERN, both ACKed with Doppler comp and a valid key. The ACKs prove the spacecraft received both commands in order; the decode that follows is what proves they worked.',
               'Two ACKs, so the payload is verified. The decode is a customer courtesy, not part of the checkout.',
               'Command checkout passed on the pattern ACK alone; PLD-ON is implied by the pattern.',
             ],
             correctIndex: 0,
-            explanation: 'Correct. An acknowledgement is receipt, not effect. A pattern commanded to an unpowered payload ACKs just the same, which is why the checkout result is only complete once the decode is on the card.',
+            explanation:
+              'Correct. An acknowledgement is receipt, not effect. A pattern commanded to an unpowered payload ACKs just the same, which is why the checkout result is only complete once the decode is on the card.',
             pointPenalty: 5,
-            documentLine: 'Command checkout: PLD-ON then PLD-TEST-PATTERN, both ACKed inside the T+6:22 .. T+15:08 window with uplink Doppler comp and a valid key. ACK = receipt, not effect; effect proven by the decode.',
+            documentLine:
+              'Command checkout: PLD-ON then PLD-TEST-PATTERN, both ACKed inside the T+6:22 .. T+15:08 window with uplink Doppler comp and a valid key. ACK = receipt, not effect; effect proven by the decode.',
             documentSection: 'Command',
           },
           mustMaintain: false,
@@ -414,16 +417,19 @@ export const natsEuScenario12Data: ScenarioData = {
           description: 'Measured C/N Recorded',
           params: {
             character: Character.SYSTEM,
-            question: 'Payload entry. You predicted 10.9 dB at maximum elevation, the modem locked the pattern on 1340 MHz, and the link committed with at least 2 dB of margin. What goes on the card?',
+            question:
+              'Payload entry. You predicted 10.9 dB at maximum elevation, the modem locked the pattern on 1340 MHz, and the link committed with at least 2 dB of margin. What goes on the card?',
             options: [
               'The measured C/N alongside the 10.9 dB prediction and the difference. Agreement within a decibel is the acceptance evidence; the margin alone says the link worked today, not that the payload performs as designed.',
               'PASS. The margin cleared the threshold, so the number itself does not matter.',
               'The peak C/N only. The prediction was a planning aid and has no place on a test record.',
             ],
             correctIndex: 0,
-            explanation: 'Right. A measurement that matches the model is what lets Rotterdam and the customer predict every pass after this one. A measurement with no prediction beside it is a good day, not an acceptance.',
+            explanation:
+              'Right. A measurement that matches the model is what lets Rotterdam and the customer predict every pass after this one. A measurement with no prediction beside it is a good day, not an acceptance.',
             pointPenalty: 5,
-            documentLine: 'Payload: test pattern locked on IF 1340 MHz (11760 MHz RF). Predicted C/N 10.9 dB at max el (764 km, FSPL 171.5 dB at 11760 MHz); measured within 1 dB of prediction; committed with >= 2 dB margin over the 6 dB QPSK 3/4 threshold.',
+            documentLine:
+              'Payload: test pattern locked on IF 1340 MHz (11760 MHz RF). Predicted C/N 10.9 dB at max el (764 km, FSPL 171.5 dB at 11760 MHz); measured within 1 dB of prediction; committed with >= 2 dB margin over the 6 dB QPSK 3/4 threshold.',
             documentSection: 'Payload',
           },
           mustMaintain: false,
@@ -433,16 +439,19 @@ export const natsEuScenario12Data: ScenarioData = {
           description: 'Verdict Recorded',
           params: {
             character: Character.SYSTEM,
-            question: 'Verdict entry. Command checkout complete, first imagery decoded at the predicted performance. What is the verdict, and what residual risk does the card carry?',
+            question:
+              'Verdict entry. Command checkout complete, first imagery decoded at the predicted performance. What is the verdict, and what residual risk does the card carry?',
             options: [
               'ACCEPTED at the tested performance. Residual risk stated: one pass, 28 deg maximum elevation, one site. Low-elevation passes and Shetland are unproven, and PLD-SAFE has not been exercised.',
               'ACCEPTED with no residual risk. The payload works; the rest is routine operations.',
               'PROVISIONAL until Shetland repeats the same test on its own pass.',
             ],
             correctIndex: 0,
-            explanation: 'Correct. Acceptance is a statement about what was tested, no more. Writing down what was not tested is what makes the card usable when the first low pass comes in under budget.',
+            explanation:
+              'Correct. Acceptance is a statement about what was tested, no more. Writing down what was not tested is what makes the card usable when the first low pass comes in under budget.',
             pointPenalty: 5,
-            documentLine: 'Verdict: SAR-3 payload ACCEPTED at tested performance (one pass, 27.9 deg max el, GW-01 only). Residual risk: low-elevation and SH-02 performance not measured; PLD-SAFE not exercised.',
+            documentLine:
+              'Verdict: SAR-3 payload ACCEPTED at tested performance (one pass, 27.9 deg max el, GW-01 only). Residual risk: low-elevation and SH-02 performance not measured; PLD-SAFE not exercised.',
             documentSection: 'Verdict',
           },
           mustMaintain: false,
@@ -471,7 +480,8 @@ export const natsEuScenario12Data: ScenarioData = {
               'Unlimited tasking. Acceptance means the payload is proven under every condition.',
             ],
             correctIndex: 0,
-            explanation: 'Exactly. The tested performance is now the contract number. Erik can task from the next pass, and the first time a pass comes in under it, the card is what turns a complaint into a ticket with a number on it.',
+            explanation:
+              'Exactly. The tested performance is now the contract number. Erik can task from the next pass, and the first time a pass comes in under it, the card is what turns a complaint into a ticket with a number on it.',
             pointPenalty: 5,
           },
           mustMaintain: false,

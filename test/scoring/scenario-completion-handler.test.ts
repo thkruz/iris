@@ -160,10 +160,7 @@ describe('ScenarioCompletionHandler', () => {
       const handler = ScenarioCompletionHandler.getInstance();
       handler.initialize();
 
-      expect(mockEventBus.on).toHaveBeenCalledWith(
-        Events.OBJECTIVES_ALL_COMPLETED,
-        expect.any(Function)
-      );
+      expect(mockEventBus.on).toHaveBeenCalledWith(Events.OBJECTIVES_ALL_COMPLETED, expect.any(Function));
     });
 
     it('should log info message on successful initialization', () => {
@@ -196,10 +193,7 @@ describe('ScenarioCompletionHandler', () => {
       handler.initialize();
       handler.dispose();
 
-      expect(mockEventBus.off).toHaveBeenCalledWith(
-        Events.OBJECTIVES_ALL_COMPLETED,
-        expect.any(Function)
-      );
+      expect(mockEventBus.off).toHaveBeenCalledWith(Events.OBJECTIVES_ALL_COMPLETED, expect.any(Function));
     });
 
     it('should log info message on dispose', () => {
@@ -314,9 +308,7 @@ describe('ScenarioCompletionHandler', () => {
           objective: {
             id: 'obj2',
             title: 'Test 2',
-            conditions: [
-              { type: 'status-check', description: 'Quiz 2', mustMaintain: false },
-            ],
+            conditions: [{ type: 'status-check', description: 'Quiz 2', mustMaintain: false }],
             points: 50,
           },
           isActive: true,
@@ -328,7 +320,7 @@ describe('ScenarioCompletionHandler', () => {
       ];
       mockObjectivesManager.getObjectiveStates.mockReturnValue(mockObjectiveStates);
       mockQuizManager.getPointsDeducted
-        .mockReturnValueOnce(5)  // obj1, condition 0
+        .mockReturnValueOnce(5) // obj1, condition 0
         .mockReturnValueOnce(10); // obj2, condition 0
 
       const handler = ScenarioCompletionHandler.getInstance();
@@ -517,9 +509,7 @@ describe('ScenarioCompletionHandler', () => {
       const onContinueCallback = mockLevelCompleteModal.showCompletion.mock.calls[0][1];
       await onContinueCallback();
 
-      expect(Logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Score saved for scenario test-scenario')
-      );
+      expect(Logger.info).toHaveBeenCalledWith(expect.stringContaining('Score saved for scenario test-scenario'));
     });
 
     it('should handle errors gracefully when saving fails', async () => {
@@ -688,10 +678,7 @@ describe('ScenarioCompletionHandler', () => {
       const callback = mockEventBus.on.mock.calls[0][1];
       await callback({ completedObjectives: [], totalTime: 0 });
 
-      expect(mockLevelCompleteModal.showCompletion).toHaveBeenCalledWith(
-        expect.objectContaining({ isAuthenticated: false }),
-        expect.any(Function)
-      );
+      expect(mockLevelCompleteModal.showCompletion).toHaveBeenCalledWith(expect.objectContaining({ isAuthenticated: false }), expect.any(Function));
     });
 
     it('does not save on continue and keeps the completion pending', async () => {
@@ -766,10 +753,7 @@ describe('ScenarioCompletionHandler', () => {
       authCallback('SIGNED_IN', { id: 'user' }, null, 'new-token');
       await flushTimers();
 
-      expect(mockUserDataService.updateScenarioProgress).toHaveBeenCalledWith(
-        'test-scenario',
-        expect.objectContaining({ completedAt: expect.any(String) })
-      );
+      expect(mockUserDataService.updateScenarioProgress).toHaveBeenCalledWith('test-scenario', expect.objectContaining({ completedAt: expect.any(String) }));
     });
   });
 });

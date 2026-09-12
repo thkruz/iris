@@ -53,11 +53,7 @@ export const natsEuScenario7Data: ScenarioData = {
   duration: '15-20 min',
   missionType: 'Anomaly Response',
   description: `Anneke called at 05:40. Space Surveillance flagged a conjunction between MERIDIAN-SAR-1 and a spent upper stage, close enough that the constellation flew an avoidance burn overnight rather than argue about probabilities.<br><br>The burn was small. The problem is that everything at GW-01 - your pass predictions, your program-track pointing, the antenna's idea of where to look at AOS - is computed from an element set that describes an orbit the spacecraft is no longer in.<br><br>New elements are on the way from Rotterdam. Until you load them, the station is confidently pointing at yesterday.`,
-  equipment: [
-    'GW-01 Galway: 4m Ku-Band LEO Tracker',
-    'Pass Schedule Console (ephemeris status)',
-    'QPSK 3/4 Receiver',
-  ],
+  equipment: ['GW-01 Galway: 4m Ku-Band LEO Tracker', 'Pass Schedule Console (ephemeris status)', 'QPSK 3/4 Receiver'],
   settings: {
     isSync: true,
     groundStations: [galwayGroundStation, shetlandGroundStation],
@@ -126,7 +122,7 @@ export const natsEuScenario7Data: ScenarioData = {
               'The receiver frequency, because the Doppler profile changes.',
             ],
             correctIndex: 0,
-            explanation: 'Correct. The element set is the station\'s entire model of where the satellite is. A stale set is a confidently wrong antenna.',
+            explanation: "Correct. The element set is the station's entire model of where the satellite is. A stale set is a confidently wrong antenna.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -157,7 +153,8 @@ export const natsEuScenario7Data: ScenarioData = {
       id: 'load-updated-ephemeris',
       nice: ['T1138', 'K1032', 'T0431'],
       title: 'Load the Post-Maneuver Elements',
-      description: 'Press Load Updated Ephemeris on the stale entry. This reloads the spacecraft\'s element set and immediately corrects both the pass predictions and where program-track will send the antenna.',
+      description:
+        "Press Load Updated Ephemeris on the stale entry. This reloads the spacecraft's element set and immediately corrects both the pass predictions and where program-track will send the antenna.",
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['find-stale-ephemeris'],
       conditions: [

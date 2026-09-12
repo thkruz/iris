@@ -1,13 +1,13 @@
-import { GroundStation } from "@app/assets/ground-station/ground-station";
+import { GroundStation } from '@app/assets/ground-station/ground-station';
 import activityPng from '@app/assets/icons/activity.png';
 import heartRateMonitorPng from '@app/assets/icons/heart-rate-monitor.png';
 import powerPng from '@app/assets/icons/power.png';
 import satellitePng from '@app/assets/icons/satellite.png';
 import sharePng from '@app/assets/icons/share.png';
 import temperaturePng from '@app/assets/icons/temperature.png';
-import { BaseElement } from "@app/components/base-element";
-import { html } from "@app/engine/utils/development/formatter";
-import { qs } from "@app/engine/utils/query-selector";
+import { BaseElement } from '@app/components/base-element';
+import { html } from '@app/engine/utils/development/formatter';
+import { qs } from '@app/engine/utils/query-selector';
 import './gps-timing-tab.css';
 import { GPSDOAdapter } from './gpsdo-adapter';
 

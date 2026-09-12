@@ -1,7 +1,7 @@
+import type { GroundStationConfig } from '@app/assets/ground-station/ground-station-state';
 import type { AntennaState } from '@app/equipment/antenna';
 import { Character, Emotion } from '@app/modal/character-enum';
 import type { ScenarioData } from '@app/ScenarioData';
-import type { GroundStationConfig } from '@app/assets/ground-station/ground-station-state';
 import type { dBm } from '@app/types';
 import { backyardYagiStation } from './ground-stations';
 import { cubehop1Satellite } from './satellites';
@@ -54,11 +54,7 @@ export const hamSdrScenario3Data: ScenarioData = {
   duration: '20-25 min',
   missionType: 'Backyard Session',
   description: `Riley rebuilt the yagi's feed harness last night - "improved" it, allegedly - and now something is off. The rotator tracks fine. The frequency is right. The bird is up there. And the signal is a ghost of what it was yesterday.<br><br>Circularly polarized signals have a handedness, like a screw thread: right-hand or left-hand. Match your antenna to the signal and you lose half a decibel. Get it backwards and a well-built crossed yagi throws away eighteen. Somewhere in last night's rewiring is a switch in the wrong position.<br><br>Track the pass, read the symptom, find the switch. The bird gives you seventeen minutes.`,
-  equipment: [
-    'DIY 70cm Crossed Yagi on TV Rotator (feed harness "improved")',
-    'RTL-SDR Receiver (Direct Sampling)',
-    'SkyWatcher SDR Console',
-  ],
+  equipment: ['DIY 70cm Crossed Yagi on TV Rotator (feed harness "improved")', 'RTL-SDR Receiver (Direct Sampling)', 'SkyWatcher SDR Console'],
   settings: {
     isSync: true,
     groundStations: [yagiStationLhcpStart],
@@ -90,13 +86,10 @@ export const hamSdrScenario3Data: ScenarioData = {
           params: {
             character: Character.RILEY_BROOKS,
             question: 'A right-hand circular (RHCP) signal reflects off a metal roof on its way to you. What arrives?',
-            options: [
-              'A left-hand circular signal - reflection reverses the handedness.',
-              'A right-hand circular signal, just weaker.',
-              'A linearly polarized signal.',
-            ],
+            options: ['A left-hand circular signal - reflection reverses the handedness.', 'A right-hand circular signal, just weaker.', 'A linearly polarized signal.'],
             correctIndex: 0,
-            explanation: 'Reflection flips the screw thread. It is why satellite antennas care so much about handedness - the direct signal and its reflections fight with opposite hands.',
+            explanation:
+              'Reflection flips the screw thread. It is why satellite antennas care so much about handedness - the direct signal and its reflections fight with opposite hands.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -109,7 +102,8 @@ export const hamSdrScenario3Data: ScenarioData = {
       id: 'track-cubehop',
       nice: ['S0421', 'K1032'],
       title: 'Track the Pass',
-      description: 'Select CUBEHOP-1 in the rotator panel and engage TRACK, same as yesterday. The downlink should appear at 435.25 MHz as the bird rises... but look at how weak it is.',
+      description:
+        'Select CUBEHOP-1 in the rotator panel and engage TRACK, same as yesterday. The downlink should appear at 435.25 MHz as the bird rises... but look at how weak it is.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [
@@ -138,7 +132,8 @@ export const hamSdrScenario3Data: ScenarioData = {
       id: 'fix-the-feed',
       nice: ['S0421', 'K0740'],
       title: 'Find the Switch',
-      description: 'The rotator is on the bird and the VFO is on frequency, so the missing decibels are in the antenna. CUBEHOP-1 transmits right-hand circular. Check the feed handedness switch on the SDR Console and put it back on RHCP.',
+      description:
+        'The rotator is on the bird and the VFO is on frequency, so the missing decibels are in the antenna. CUBEHOP-1 transmits right-hand circular. Check the feed handedness switch on the SDR Console and put it back on RHCP.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['track-cubehop'],
       conditions: [
@@ -156,7 +151,8 @@ export const hamSdrScenario3Data: ScenarioData = {
       id: 'prove-the-link',
       nice: ['S0421', 'K0740', 'T0153'],
       title: 'Prove It with a Lock',
-      description: 'With the feed right-handed the signal should come up like a light switch - about 18 dB. Chase the Doppler by hand like yesterday and hold a lock with at least 10 dB of C/N to prove the diagnosis.',
+      description:
+        'With the feed right-handed the signal should come up like a light switch - about 18 dB. Chase the Doppler by hand like yesterday and hold a lock with at least 10 dB of C/N to prove the diagnosis.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['fix-the-feed'],
       conditions: [
@@ -198,7 +194,8 @@ export const hamSdrScenario3Data: ScenarioData = {
               'Doppler has shifted the signal outside the channel.',
             ],
             correctIndex: 0,
-            explanation: 'A flat 15-20 dB deficit that does not vary with pointing or time is the polarization signature. Doppler moves, fades flutter - a wrong-handed feed just sits there, uniformly terrible.',
+            explanation:
+              'A flat 15-20 dB deficit that does not vary with pointing or time is the polarization signature. Doppler moves, fades flutter - a wrong-handed feed just sits there, uniformly terrible.',
             pointPenalty: 5,
           },
           mustMaintain: false,

@@ -1,17 +1,17 @@
-import { CampaignManager } from "@app/campaigns/campaign-manager";
-import { CampaignHeaderIdentity } from "@app/campaigns/campaign-types";
-import { activeChromeVariant } from "@app/campaigns/chrome-variant";
-import { html } from "@app/engine/utils/development/formatter";
-import { qs } from "@app/engine/utils/query-selector";
-import { EventBus } from "@app/events/event-bus";
-import { AggregatedAlarm, AlarmStateChangedData, Events, SimulatedTimeTickData, TimeSkipEndedData } from "@app/events/events";
-import { ObjectivesManager } from "@app/objectives/objectives-manager";
-import { ScenarioManager } from "@app/scenario-manager";
-import { getSimulatedNowMs } from "@app/simulation/sim-time";
-import { SkipTarget, TimeSkipController } from "@app/simulation/time-skip-controller";
-import { formatAstroClock, formatDtg, formatDurationCompact } from "./time-skip-format";
-import { TimeSkipModal } from "./time-skip-modal";
-import { TimeSkipOverlay } from "./time-skip-overlay";
+import { CampaignManager } from '@app/campaigns/campaign-manager';
+import { CampaignHeaderIdentity } from '@app/campaigns/campaign-types';
+import { activeChromeVariant } from '@app/campaigns/chrome-variant';
+import { html } from '@app/engine/utils/development/formatter';
+import { qs } from '@app/engine/utils/query-selector';
+import { EventBus } from '@app/events/event-bus';
+import { AggregatedAlarm, AlarmStateChangedData, Events, SimulatedTimeTickData, TimeSkipEndedData } from '@app/events/events';
+import { ObjectivesManager } from '@app/objectives/objectives-manager';
+import { ScenarioManager } from '@app/scenario-manager';
+import { getSimulatedNowMs } from '@app/simulation/sim-time';
+import { SkipTarget, TimeSkipController } from '@app/simulation/time-skip-controller';
+import { formatAstroClock, formatDtg, formatDurationCompact } from './time-skip-format';
+import { TimeSkipModal } from './time-skip-modal';
+import { TimeSkipOverlay } from './time-skip-overlay';
 
 /**
  * GlobalCommandBar
@@ -80,9 +80,8 @@ export class GlobalCommandBar {
    * timers, same behavior, different plate. Both military variants share the
    * labels - the wording belongs to the crew, not to the console vendor.
    */
-  private readonly timerLabels_ = this.chromeVariant_ === 'tactical' || this.chromeVariant_ === 'astro'
-    ? { objective: 'TASK', scenario: 'MSN' }
-    : { objective: 'OBJECTIVE', scenario: 'MISSION' };
+  private readonly timerLabels_ =
+    this.chromeVariant_ === 'tactical' || this.chromeVariant_ === 'astro' ? { objective: 'TASK', scenario: 'MSN' } : { objective: 'OBJECTIVE', scenario: 'MISSION' };
 
   private timeSkipBtn_: HTMLButtonElement | null = null;
   private timeSkipOverlay_: TimeSkipOverlay | null = null;
@@ -162,12 +161,16 @@ export class GlobalCommandBar {
           <div class="font-bold tracking-wide text-white">${this.headerIdentity_.name}<span class="text-blue-500">${this.headerIdentity_.nameAccent}</span></div>
           <div class="text-[10px] text-slate-400 font-mono" id="utc-clock">${this.clockPlaceholder_()}</div>
         </div>
-        ${this.isTimeSkipEnabled_ ? html`
+        ${
+          this.isTimeSkipEnabled_
+            ? html`
           <button id="time-skip-control" class="time-skip-btn" type="button" disabled>
             <i class="fa-solid fa-forward"></i>
             <span id="time-skip-control-label">Skip</span>
           </button>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
 
       <div id="${this.id}" class="command-bar-center">
@@ -287,16 +290,12 @@ export class GlobalCommandBar {
     }
 
     this.timeSkipBtn_.disabled = this.skipTarget_ === null;
-    this.timeSkipBtn_.title = this.skipTarget_
-      ? `Advance to ${this.skipTarget_.satelliteName} AOS`
-      : 'No upcoming contact to skip to';
+    this.timeSkipBtn_.title = this.skipTarget_ ? `Advance to ${this.skipTarget_.satelliteName} AOS` : 'No upcoming contact to skip to';
 
     if (labelEl) {
       // Count down from the live clock, not from the value cached at predict
       // time, so the label stays truthful between recomputes.
-      labelEl.textContent = this.skipTarget_
-        ? `Skip ${formatDurationCompact(this.skipTarget_.targetMs - nowMs)}`
-        : 'Skip';
+      labelEl.textContent = this.skipTarget_ ? `Skip ${formatDurationCompact(this.skipTarget_.targetMs - nowMs)}` : 'Skip';
     }
   }
 
@@ -374,7 +373,7 @@ export class GlobalCommandBar {
 
     // Count by severity
     const counts = { error: 0, warning: 0, info: 0 };
-    alarms.forEach(a => {
+    alarms.forEach((a) => {
       if (a.severity in counts) {
         counts[a.severity as keyof typeof counts]++;
       }
@@ -455,9 +454,7 @@ export class GlobalCommandBar {
   private getTopAlarms_(alarms: AggregatedAlarm[], limit: number): AggregatedAlarm[] {
     const severityOrder: Record<string, number> = { error: 0, warning: 1, info: 2, success: 3 };
 
-    return [...alarms]
-      .sort((a, b) => (severityOrder[a.severity] ?? 3) - (severityOrder[b.severity] ?? 3))
-      .slice(0, limit);
+    return [...alarms].sort((a, b) => (severityOrder[a.severity] ?? 3) - (severityOrder[b.severity] ?? 3)).slice(0, limit);
   }
 
   /**
@@ -482,19 +479,27 @@ export class GlobalCommandBar {
 
   private getColorClass_(severity: string): string {
     switch (severity) {
-      case 'error': return 'text-red-400';
-      case 'warning': return 'text-yellow-400';
-      case 'info': return 'text-blue-400';
-      default: return 'text-green-400';
+      case 'error':
+        return 'text-red-400';
+      case 'warning':
+        return 'text-yellow-400';
+      case 'info':
+        return 'text-blue-400';
+      default:
+        return 'text-green-400';
     }
   }
 
   private getIcon_(severity: string): string {
     switch (severity) {
-      case 'error': return 'fa-solid fa-circle-exclamation';
-      case 'warning': return 'fa-solid fa-triangle-exclamation';
-      case 'info': return 'fa-solid fa-circle-info';
-      default: return 'fa-solid fa-circle-check';
+      case 'error':
+        return 'fa-solid fa-circle-exclamation';
+      case 'warning':
+        return 'fa-solid fa-triangle-exclamation';
+      case 'info':
+        return 'fa-solid fa-circle-info';
+      default:
+        return 'fa-solid fa-circle-check';
     }
   }
 
@@ -584,7 +589,7 @@ export class GlobalCommandBar {
         // Check for quiz passed state first
         if (objectivesManager.isQuizPassed()) {
           const passedId = objectivesManager.getPassedObjectiveId();
-          const passedState = objectivesManager.getObjectiveStates().find(s => s.objective.id === passedId);
+          const passedState = objectivesManager.getObjectiveStates().find((s) => s.objective.id === passedId);
           if (passedState) {
             passedObjective = { title: passedState.objective.title };
           }
@@ -596,11 +601,10 @@ export class GlobalCommandBar {
               failedObjective = { title: state.objective.title };
               break; // Show failed state
             }
-            if (state.isTimerRunning && !state.isCompleted && !state.isFailed &&
-              state.timeRemainingSeconds !== undefined) {
+            if (state.isTimerRunning && !state.isCompleted && !state.isFailed && state.timeRemainingSeconds !== undefined) {
               activeObjectiveTimer = {
                 time: state.timeRemainingSeconds,
-                title: state.objective.title
+                title: state.objective.title,
               };
               break; // Show the first active timed objective
             }

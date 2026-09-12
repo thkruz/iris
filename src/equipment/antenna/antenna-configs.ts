@@ -1,5 +1,5 @@
-import { Hertz } from "@app/types";
-import { ANTENNA_CONFIG_KEYS } from "./antenna-config-keys";
+import { Hertz } from '@app/types';
+import { ANTENNA_CONFIG_KEYS } from './antenna-config-keys';
 
 /**
  * Antenna configuration interface
@@ -106,7 +106,7 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
   C_BAND_9M_VORTEK: {
     name: 'Vortek / Global Mechanics 9m C-Band',
     diameter: 9.0,
-    efficiency: 0.70,            // illumination/spill only; Ruze handled elsewhere
+    efficiency: 0.7, // illumination/spill only; Ruze handled elsewhere
     band: 'C',
     minRxFrequency: 3.625e9 as Hertz,
     maxRxFrequency: 4.2e9 as Hertz,
@@ -115,16 +115,16 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
     feedLoss: 0.6,
 
     // RF realism (from spec sheets)
-    surfaceRms_m: 0.0005,        // ≤0.5 mm RMS
-    blockageFraction: 0.08,      // cassegrain + struts typical
-    xpd_dB: 35,                  // on-axis (typical)
+    surfaceRms_m: 0.0005, // ≤0.5 mm RMS
+    blockageFraction: 0.08, // cassegrain + struts typical
+    xpd_dB: 35, // on-axis (typical)
     polType: 'linear',
     feedLossModel: { a: 0.2, b: 0.1, c: 0.01 },
 
     // Pattern / pointing
     kBeamConst: 70,
     patternModel: 'ITU465',
-    pointingSigma_deg: 0.02,     // tight EOA pointing
+    pointingSigma_deg: 0.02, // tight EOA pointing
     // Mechanical / environment
     elRange_deg: [5, 90],
     azContinuous: false,
@@ -148,7 +148,7 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
     minRxFrequency: 10.7e9 as Hertz,
     maxRxFrequency: 12.75e9 as Hertz,
     minTxFrequency: 13.75e9 as Hertz, // includes Ku Tx
-    maxTxFrequency: 18.4e9 as Hertz,  // extends to DBS Tx
+    maxTxFrequency: 18.4e9 as Hertz, // extends to DBS Tx
     feedLoss: 0.6,
 
     surfaceRms_m: 0.0005,
@@ -159,9 +159,9 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
 
     kBeamConst: 70,
     patternModel: 'ITU465',
-    pointingSigma_deg: 0.021,    // spec step-track rms
+    pointingSigma_deg: 0.021, // spec step-track rms
     elRange_deg: [0, 90],
-    azContinuous: false,         // two-segment az by spec
+    azContinuous: false, // two-segment az by spec
     maxRate_deg_s: 0.35,
 
     lnaNF_dB: 1.0,
@@ -190,10 +190,10 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
 
     kBeamConst: 70,
     patternModel: 'ITU465',
-    pointingSigma_deg: 0.05,   // servo position ≤0.05° rms
+    pointingSigma_deg: 0.05, // servo position ≤0.05° rms
     elRange_deg: [0, 90],
     azContinuous: true,
-    maxRate_deg_s: 3.0,        // 0–3°/s per axis
+    maxRate_deg_s: 3.0, // 0–3°/s per axis
 
     lnaNF_dB: 1.0,
     rxChainLoss_dB: 0.6,
@@ -254,7 +254,7 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
 
     kBeamConst: 70,
     patternModel: 'ITU465',
-    pointingSigma_deg: 0.05,   // servo position rms during rate tracking
+    pointingSigma_deg: 0.05, // servo position rms during rate tracking
     elRange_deg: [0, 90],
     azContinuous: true,
     // Purpose-built LEO tracker: real Ku LEO pedestals slew ~20-30 deg/s in
@@ -304,7 +304,7 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
   C_BAND_2M4_ANTESTAR: {
     name: 'Antestar 2.4m C-Band VSAT',
     diameter: 2.4,
-    efficiency: 0.60,
+    efficiency: 0.6,
     band: 'C',
     minRxFrequency: 3.625e9 as Hertz,
     maxRxFrequency: 4.2e9 as Hertz,
@@ -333,7 +333,7 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
   KU_BAND_2M4_ANTESTAR: {
     name: 'Antestar 2.4m Ku-Band VSAT',
     diameter: 2.4,
-    efficiency: 0.60,
+    efficiency: 0.6,
     band: 'Ku',
     minRxFrequency: 10.95e9 as Hertz,
     maxRxFrequency: 12.75e9 as Hertz,
@@ -372,7 +372,7 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
     feedLoss: 0.25,
 
     surfaceRms_m: 0.0005,
-    blockageFraction: 0.02,     // offset: low blockage
+    blockageFraction: 0.02, // offset: low blockage
     xpd_dB: 30,
     polType: 'linear',
     feedLossModel: { a: 0.25, b: 0.1, c: 0.01 },
@@ -455,7 +455,7 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
   C_BAND_2M: {
     name: '2m C-Band',
     diameter: 2.0,
-    efficiency: 0.60,
+    efficiency: 0.6,
     band: 'C',
     minRxFrequency: 3.7e9 as Hertz,
     maxRxFrequency: 4.2e9 as Hertz,
@@ -489,7 +489,7 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
   KU_BAND_1M2: {
     name: '1.2m Ku-Band',
     diameter: 1.2,
-    efficiency: 0.60,
+    efficiency: 0.6,
     band: 'Ku',
     minRxFrequency: 10.7e9 as Hertz,
     maxRxFrequency: 12.75e9 as Hertz,
@@ -512,7 +512,7 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
   KA_BAND_1M2: {
     name: '1.2m Ka-Band',
     diameter: 1.2,
-    efficiency: 0.60,
+    efficiency: 0.6,
     band: 'Ka',
     minRxFrequency: 17.7e9 as Hertz,
     maxRxFrequency: 21.2e9 as Hertz,
@@ -541,30 +541,30 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
   // pattern — no rotator, mounted pointing straight up.
   VHF_QFH_137: {
     name: 'DIY 137 MHz Quadrifilar Helix',
-    diameter: 0.4,               // physical size only; gain comes from fixed model
+    diameter: 0.4, // physical size only; gain comes from fixed model
     efficiency: 0.6,
     band: 'VHF',
     minRxFrequency: 130e6 as Hertz,
     maxRxFrequency: 148e6 as Hertz,
     minTxFrequency: 130e6 as Hertz,
     maxTxFrequency: 148e6 as Hertz,
-    feedLoss: 0.5,               // coax run to the shack
+    feedLoss: 0.5, // coax run to the shack
 
     gainModel: 'fixed',
     fixedGain_dBi: 3.0,
     fixedBeamwidth3dB_deg: 140,
-    fixedFrontToBack_dB: 10,     // some response even toward the horizon/ground
+    fixedFrontToBack_dB: 10, // some response even toward the horizon/ground
 
     xpd_dB: 20,
     polType: 'circular',
     circularCrossPolLoss_dB: 12, // hand-wound helix, modest discrimination
 
-    pointingSigma_deg: 0.5,      // it's zip-tied to a fence post
-    elRange_deg: [85, 90],       // fixed skyward (nudge the mast by hand)
+    pointingSigma_deg: 0.5, // it's zip-tied to a fence post
+    elRange_deg: [85, 90], // fixed skyward (nudge the mast by hand)
     azContinuous: false,
-    maxRate_deg_s: 0.5,          // walking over and re-aiming the mast
+    maxRate_deg_s: 0.5, // walking over and re-aiming the mast
 
-    lnaNF_dB: 1.5,               // budget SDR front end
+    lnaNF_dB: 1.5, // budget SDR front end
     rxChainLoss_dB: 1.0,
     rxPhysTemp_K: 290,
   },
@@ -572,7 +572,7 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
   // Crossed yagi on a repurposed TV rotator: switchable RHCP/LHCP feed.
   UHF_CROSSED_YAGI_70CM: {
     name: 'DIY 70cm Crossed Yagi',
-    diameter: 1.5,               // boom length; gain comes from fixed model
+    diameter: 1.5, // boom length; gain comes from fixed model
     efficiency: 0.6,
     band: 'UHF',
     minRxFrequency: 420e6 as Hertz,
@@ -590,11 +590,11 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
     polType: 'circular',
     circularCrossPolLoss_dB: 18, // wrong handedness decisively kills lock
 
-    pointingSigma_deg: 0.8,      // TV rotator has real backlash
+    pointingSigma_deg: 0.8, // TV rotator has real backlash
     elRange_deg: [0, 90],
     azContinuous: false,
     azRange_deg: [0, 360],
-    maxRate_deg_s: 6.0,          // typical hobby az/el rotator
+    maxRate_deg_s: 6.0, // typical hobby az/el rotator
 
     lnaNF_dB: 1.2,
     rxChainLoss_dB: 1.0,
@@ -623,11 +623,11 @@ export const ANTENNA_CONFIGS: Record<ANTENNA_CONFIG_KEYS, AntennaConfig> = {
     circularCrossPolLoss_dB: 15,
 
     pointingSigma_deg: 0.5,
-    elRange_deg: [85, 90],       // fixed skyward (nudge the mast by hand)
+    elRange_deg: [85, 90], // fixed skyward (nudge the mast by hand)
     azContinuous: false,
-    maxRate_deg_s: 0.5,          // walking over and re-aiming the mast
+    maxRate_deg_s: 0.5, // walking over and re-aiming the mast
 
-    lnaNF_dB: 1.0,               // active patch with built-in LNA
+    lnaNF_dB: 1.0, // active patch with built-in LNA
     rxChainLoss_dB: 0.5,
     rxPhysTemp_K: 290,
   },

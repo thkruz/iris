@@ -1,10 +1,6 @@
 import { expect, Locator, Page, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  dismissDialogIfPresent,
-  waitForQuizToAppear,
-  waitForSimulationReady,
-} from '../utils/simulation-helpers';
+import { dismissDialogIfPresent, waitForQuizToAppear, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
  * nats-eu Scenario 1 "First Light Over Galway" - full completion.
@@ -70,11 +66,7 @@ function objectiveItem(missionControl: MissionControlPage, title: string): Locat
 }
 
 /** Poll the checklist until the named objective carries the `completed` class. */
-async function waitForObjectiveComplete(
-  missionControl: MissionControlPage,
-  title: string,
-  timeout = 45000,
-): Promise<void> {
+async function waitForObjectiveComplete(missionControl: MissionControlPage, title: string, timeout = 45000): Promise<void> {
   if (!(await missionControl.objectivesChecklist.isVisible().catch(() => false))) {
     await missionControl.openChecklist();
   }

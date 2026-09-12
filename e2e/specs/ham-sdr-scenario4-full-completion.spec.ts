@@ -1,13 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  advanceSimClock,
-  answerRileyQuiz,
-  domClick,
-  engageTrack,
-  rideUntilObjectiveComplete,
-  waitForObjectiveComplete,
-} from '../utils/ham-sdr-helpers';
+import { advanceSimClock, answerRileyQuiz, domClick, engageTrack, rideUntilObjectiveComplete, waitForObjectiveComplete } from '../utils/ham-sdr-helpers';
 import { waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
@@ -58,7 +51,7 @@ test.describe('ham-sdr Scenario 4 Full Completion (AFC discovery)', () => {
     await missionControl.openMissionBrief();
     await missionControl.closeMissionBrief();
 
-    await answerRileyQuiz(page, "offset from the center of the channel");
+    await answerRileyQuiz(page, 'offset from the center of the channel');
     await missionControl.dismissDialogIfPresent();
     await waitForObjectiveComplete(missionControl, "Read Riley's Note");
   });

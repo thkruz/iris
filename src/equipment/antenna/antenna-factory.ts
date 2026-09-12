@@ -1,9 +1,9 @@
-import { ANTENNA_CONFIG_KEYS } from "./antenna-config-keys";
-import { AntennaCore, AntennaState } from "./antenna-core";
-import { AntennaUIBasic } from "./antenna-ui-basic";
-import { AntennaUIHeadless } from "./antenna-ui-headless";
-import { AntennaUIModern } from "./antenna-ui-modern";
-import { AntennaUIStandard } from "./antenna-ui-standard";
+import { ANTENNA_CONFIG_KEYS } from './antenna-config-keys';
+import { AntennaCore, AntennaState } from './antenna-core';
+import { AntennaUIBasic } from './antenna-ui-basic';
+import { AntennaUIHeadless } from './antenna-ui-headless';
+import { AntennaUIModern } from './antenna-ui-modern';
+import { AntennaUIStandard } from './antenna-ui-standard';
 
 /**
  * UI type options for antenna creation
@@ -60,7 +60,7 @@ export function createAntenna(
   configId: ANTENNA_CONFIG_KEYS = ANTENNA_CONFIG_KEYS.C_BAND_3M_ANTESTAR,
   initialState: Partial<AntennaState> = {},
   teamId: number = 1,
-  serverId: number = 1,
+  serverId: number = 1
 ): AntennaCore {
   switch (uiType) {
     case 'standard':

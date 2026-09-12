@@ -1,7 +1,7 @@
-import { GroundStation } from "@app/assets/ground-station/ground-station";
-import { BaseElement } from "@app/components/base-element";
-import { html } from "@app/engine/utils/development/formatter";
-import { qs } from "@app/engine/utils/query-selector";
+import { GroundStation } from '@app/assets/ground-station/ground-station';
+import { BaseElement } from '@app/components/base-element';
+import { html } from '@app/engine/utils/development/formatter';
+import { qs } from '@app/engine/utils/query-selector';
 import { BUCAdapter } from './buc-adapter';
 import { HPAAdapter } from './hpa-adapter';
 import { TransmitterAdapter } from './transmitter-adapter';
@@ -590,10 +590,12 @@ export class TxChainTab extends BaseElement {
   }
 
   private generateAntennaOptions_(): string {
-    return this.groundStation.antennas.map((_, index) => {
-      const antennaNumber = index + 1;
-      return `<option value="${antennaNumber}">Antenna ${antennaNumber}</option>`;
-    }).join('');
+    return this.groundStation.antennas
+      .map((_, index) => {
+        const antennaNumber = index + 1;
+        return `<option value="${antennaNumber}">Antenna ${antennaNumber}</option>`;
+      })
+      .join('');
   }
 
   protected addEventListeners_(): void {

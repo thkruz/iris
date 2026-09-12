@@ -1,3 +1,4 @@
+import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import type { AntennaState } from '@app/equipment/antenna';
 import { ANTENNA_CONFIG_KEYS } from '@app/equipment/antenna/antenna-config-keys';
 import { Receiver } from '@app/equipment/receiver/receiver';
@@ -7,7 +8,6 @@ import type { ScenarioData } from '@app/ScenarioData';
 import type { dB, dBm, Hertz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
-import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { vermontGroundStation } from './ground-stations';
 import { ses10Satellite, tidemark1Satellite, tidemark2Satellite, tidemark3Satellite } from './satellites';
 
@@ -62,13 +62,7 @@ export const scenario9Data: ScenarioData = {
   difficulty: 'intermediate',
   missionType: 'Routine Operations',
   description: `First qualified shift. Three birds to check this morning: TIDEMARK-1 from Vermont, TIDEMARK-2 from Maine, and a spot-check on the newly commissioned TIDEMARK-3.<br><br>Standard morning rounds - verify each link is healthy, log any anomalies, move on. The overnight commissioning crew brought TIDEMARK-3 online a few hours ago; the only thing on your list is a quick beacon verification before our customers start lighting it up.<br><br>No drama today. Just routine.`,
-  equipment: [
-    '9-meter C-band Antenna',
-    'RF Front End',
-    'Spectrum Analyzer',
-    'RX/TX Modems',
-    'ME-02: Operational',
-  ],
+  equipment: ['9-meter C-band Antenna', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'ME-02: Operational'],
   timeLimitSeconds: 25 * 60, // 25 minutes
   settings: {
     isSync: true,
@@ -138,12 +132,7 @@ export const scenario9Data: ScenarioData = {
         receivers: [Receiver.getDefaultState()],
       },
     ],
-    satellites: [
-      tidemark1Satellite,
-      tidemark2Satellite,
-      tidemark3Satellite,
-      ses10Satellite,
-    ],
+    satellites: [tidemark1Satellite, tidemark2Satellite, tidemark3Satellite, ses10Satellite],
     missionBriefUrl: 'https://docs.signalrange.space/campaign-1/scenario-9?content-only=true&dark=true',
     isExtraSatellitesVisible: true,
   },
@@ -230,12 +219,7 @@ export const scenario9Data: ScenarioData = {
           params: {
             character: Character.SYSTEM,
             question: 'What is the active alarm state on VT-01?',
-            options: [
-              'No active alarms - all systems nominal',
-              'BUC high current draw',
-              'LNB reference unlocked',
-              'HPA output fault',
-            ],
+            options: ['No active alarms - all systems nominal', 'BUC high current draw', 'LNB reference unlocked', 'HPA output fault'],
             correctIndex: 0,
             explanation: 'Clean board on the primary station. Moving on to timing.',
             pointPenalty: 5,
@@ -427,12 +411,7 @@ export const scenario9Data: ScenarioData = {
           params: {
             character: Character.SYSTEM,
             question: 'What is the alarm state on ME-02?',
-            options: [
-              'No active alarms - station nominal',
-              'Antenna tracking lost',
-              'GPSDO holdover',
-              'LNB over-temperature',
-            ],
+            options: ['No active alarms - station nominal', 'Antenna tracking lost', 'GPSDO holdover', 'LNB over-temperature'],
             correctIndex: 0,
             explanation: 'Maine is clean. Catherine has the station in good shape.',
             pointPenalty: 5,

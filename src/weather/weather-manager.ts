@@ -44,9 +44,9 @@ export class WeatherManager {
 
   /** Severity-based ice accumulation configuration (slowed 4x for gameplay) */
   static readonly SEVERITY_CONFIG: Record<string, IceAccumulationConfig> = {
-    minor: { maxDegradation_dB: 2, timeConstant_s: 2400 },    // 40 min to ~63%
+    minor: { maxDegradation_dB: 2, timeConstant_s: 2400 }, // 40 min to ~63%
     moderate: { maxDegradation_dB: 5, timeConstant_s: 1200 }, // 20 min to ~63%
-    severe: { maxDegradation_dB: 10, timeConstant_s: 720 },   // 12 min to ~63%
+    severe: { maxDegradation_dB: 10, timeConstant_s: 720 }, // 12 min to ~63%
   };
 
   /** Melt rate when heater is ON: 1 dB per minute */
@@ -78,7 +78,7 @@ export class WeatherManager {
   /** Load weather events from current scenario */
   private loadWeatherEvents_(): void {
     const events = ScenarioManager.getInstance().settings.weatherEvents ?? [];
-    this.weatherEvents_ = events.map(e => ({
+    this.weatherEvents_ = events.map((e) => ({
       ...e,
       isActive: false,
     }));
@@ -117,11 +117,7 @@ export class WeatherManager {
     const sim = SimulationManager.getInstance();
 
     for (const gs of sim.groundStations) {
-      const sunEvent = this.weatherEvents_.find(e =>
-        e.groundStationId === gs.state.id &&
-        e.type === 'sun-transit' &&
-        e.isActive
-      );
+      const sunEvent = this.weatherEvents_.find((e) => e.groundStationId === gs.state.id && e.type === 'sun-transit' && e.isActive);
 
       let degradation = 0;
       if (sunEvent) {
@@ -142,8 +138,7 @@ export class WeatherManager {
   private updateWeatherEventStates_(elapsedSeconds: number): void {
     for (const event of this.weatherEvents_) {
       const wasActive = event.isActive;
-      const shouldBeActive = elapsedSeconds >= event.startTime &&
-        elapsedSeconds < (event.startTime + event.duration);
+      const shouldBeActive = elapsedSeconds >= event.startTime && elapsedSeconds < event.startTime + event.duration;
 
       if (shouldBeActive && !wasActive) {
         event.isActive = true;
@@ -174,8 +169,7 @@ export class WeatherManager {
 
           // Calculate exponential ice buildup
           const config = WeatherManager.SEVERITY_CONFIG[activeIceEvent.severity];
-          const iceDegradation = config.maxDegradation_dB *
-            (1 - Math.exp(-newTime / config.timeConstant_s));
+          const iceDegradation = config.maxDegradation_dB * (1 - Math.exp(-newTime / config.timeConstant_s));
 
           antenna.updateIceAccumulation(iceDegradation);
         } else if (antenna.state.isHeaterEnabled && antenna.state.iceAccumulation_dB > 0) {
@@ -209,27 +203,17 @@ export class WeatherManager {
 
   /** Get active ice-producing weather event for a ground station */
   private getActiveIceEvent_(groundStationId: string): WeatherEventRuntime | null {
-    return this.weatherEvents_.find(e =>
-      e.groundStationId === groundStationId &&
-      e.isActive &&
-      (e.type === 'snow' || e.type === 'ice' || e.type === 'hail')
-    ) ?? null;
+    return this.weatherEvents_.find((e) => e.groundStationId === groundStationId && e.isActive && (e.type === 'snow' || e.type === 'ice' || e.type === 'hail')) ?? null;
   }
 
   /** Get all active weather events for a ground station */
   getActiveWeatherEvents(groundStationId: string): WeatherEventRuntime[] {
-    return this.weatherEvents_.filter(e =>
-      e.groundStationId === groundStationId && e.isActive
-    );
+    return this.weatherEvents_.filter((e) => e.groundStationId === groundStationId && e.isActive);
   }
 
   /** Check if precipitation is currently active at a ground station */
   isPrecipitationActive(groundStationId: string): boolean {
-    return this.weatherEvents_.some(e =>
-      e.groundStationId === groundStationId &&
-      e.isActive &&
-      ['snow', 'rain', 'hail', 'ice'].includes(e.type)
-    );
+    return this.weatherEvents_.some((e) => e.groundStationId === groundStationId && e.isActive && ['snow', 'rain', 'hail', 'ice'].includes(e.type));
   }
 
   /** Get the current ice accumulation time for an antenna */

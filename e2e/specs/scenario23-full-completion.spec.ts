@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  answerQuizByText,
-  dismissDialogIfPresent,
-  waitForQuizToAppear,
-  waitForSimulationReady,
-} from '../utils/simulation-helpers';
+import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
  * Scenario 23 - "Emergency Bypass": Manual Operations During Automation Failure.
@@ -18,14 +13,7 @@ import {
  * Spec also asserts the ACU-fault UI gating: program-track button disabled,
  * MANUAL button still usable.
  */
-type ObjectiveType =
-  | 'quiz'
-  | 'select-station'
-  | 'click-tab'
-  | 'set-manual-mode'
-  | 'configure-speca'
-  | 'verify-acu-gating'
-  | 'auto';
+type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'set-manual-mode' | 'configure-speca' | 'verify-acu-gating' | 'auto';
 
 interface Scenario23Objective {
   id: string;
@@ -64,8 +52,7 @@ const SCENARIO_23_OBJECTIVES: Scenario23Objective[] = [
     id: 'confirm-fault-dashboard',
     title: 'Confirm the Automation Fault',
     type: 'quiz',
-    correctAnswer:
-      'Current position (Az 161.8 / El 34.2 on TM-1) and that beacon + carrier are still locked - the dish is ON the bird; whatever you do next must not lose that',
+    correctAnswer: 'Current position (Az 161.8 / El 34.2 on TM-1) and that beacon + carrier are still locked - the dish is ON the bird; whatever you do next must not lose that',
   },
   {
     id: 'what-automation-did-quiz',
@@ -130,8 +117,7 @@ const SCENARIO_23_OBJECTIVES: Scenario23Objective[] = [
     id: 'instruments-not-feel-quiz',
     title: 'Fly Instruments, Not Feel',
     type: 'quiz',
-    correctAnswer:
-      'The beacon at 1074.5 MHz on the spectrum and receiver lock - the RF truth, independent of the dead ACU automation. Never the ACU lock indicator',
+    correctAnswer: 'The beacon at 1074.5 MHz on the spectrum and receiver lock - the RF truth, independent of the dead ACU automation. Never the ACU lock indicator',
   },
 
   // PHASE 4: HOLD AND COORDINATE
@@ -188,10 +174,7 @@ async function verifyAcuGating(page: import('@playwright/test').Page): Promise<v
   await expect(manualBtn).toBeEnabled();
 }
 
-async function configureSpeca(
-  page: import('@playwright/test').Page,
-  centerFrequencyMhz: number
-): Promise<void> {
+async function configureSpeca(page: import('@playwright/test').Page, centerFrequencyMhz: number): Promise<void> {
   const centerFreqInput = page.locator('#sa-center-freq');
   await expect(centerFreqInput).toBeVisible({ timeout: 5000 });
   await centerFreqInput.fill(centerFrequencyMhz.toString());
@@ -199,11 +182,7 @@ async function configureSpeca(
   await page.waitForTimeout(500);
 }
 
-async function executeObjective(
-  page: import('@playwright/test').Page,
-  missionControlPage: MissionControlPage,
-  objective: Scenario23Objective
-): Promise<void> {
+async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario23Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);

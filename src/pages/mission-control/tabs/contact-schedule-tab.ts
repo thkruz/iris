@@ -32,12 +32,15 @@ export class ContactScheduleTab extends BaseElement {
     const mgr = ContactScheduleManager.getInstance();
     const config = mgr.getConfig();
 
-    const stationOptions = (assigned: string | undefined): string => [
-      `<option value="" ${assigned === undefined ? 'selected' : ''}>— Unallocated</option>`,
-      ...config.stationIds.map((id) => `<option value="${id}" ${assigned === id ? 'selected' : ''}>${id}</option>`),
-    ].join('');
+    const stationOptions = (assigned: string | undefined): string =>
+      [
+        `<option value="" ${assigned === undefined ? 'selected' : ''}>— Unallocated</option>`,
+        ...config.stationIds.map((id) => `<option value="${id}" ${assigned === id ? 'selected' : ''}>${id}</option>`),
+      ].join('');
 
-    const rows = config.contacts.map((contact) => html`
+    const rows = config.contacts
+      .map(
+        (contact) => html`
       <tr>
         <td>
           <span class="fw-bold">${contact.label ?? contact.id}</span>
@@ -54,11 +57,14 @@ export class ContactScheduleTab extends BaseElement {
           </select>
         </td>
       </tr>
-    `).join('');
+    `
+      )
+      .join('');
 
-    const requiredNote = config.requiredPriorityAtOrAbove !== undefined
-      ? `All P${config.requiredPriorityAtOrAbove} and higher-priority contacts must be allocated.`
-      : 'Every contact must be allocated.';
+    const requiredNote =
+      config.requiredPriorityAtOrAbove !== undefined
+        ? `All P${config.requiredPriorityAtOrAbove} and higher-priority contacts must be allocated.`
+        : 'Every contact must be allocated.';
 
     return html`
       <div class="contact-schedule-tab">
@@ -133,17 +139,20 @@ export class ContactScheduleTab extends BaseElement {
     const conflicts = mgr.getConflicts();
 
     const requiredAtOrAbove = config.requiredPriorityAtOrAbove ?? Number.POSITIVE_INFINITY;
-    const unassignedRequired = config.contacts
-      .filter((c) => c.priority <= requiredAtOrAbove && !mgr.isContactAssigned(c.id));
+    const unassignedRequired = config.contacts.filter((c) => c.priority <= requiredAtOrAbove && !mgr.isContactAssigned(c.id));
 
     this.setText_('cs-unassigned-count', unassignedRequired.length.toString());
     this.setText_('cs-conflict-count', conflicts.length.toString());
 
     const list = this.cache_('cs-conflict-list');
     if (list) {
-      list.innerHTML = conflicts.map((c) => html`
+      list.innerHTML = conflicts
+        .map(
+          (c) => html`
         <li class="cs-conflict-item font-monospace">${c.contactA} × ${c.contactB} on ${c.stationId}</li>
-      `).join('');
+      `
+        )
+        .join('');
     }
 
     const badge = this.cache_('cs-plan-badge');

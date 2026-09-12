@@ -144,10 +144,10 @@ vi.mock('../../src/pages/base-page', () => {
       }
 
       // Abstract method to be overridden by subclasses
-      protected addEventListeners_(): void { }
-      protected initProgressSaveManager_(): void { }
-      protected disposeProgressSaveManager_(): void { }
-      protected async initializeObjectivesAndDialogs_(): Promise<void> { }
+      protected addEventListeners_(): void {}
+      protected initProgressSaveManager_(): void {}
+      protected disposeProgressSaveManager_(): void {}
+      protected async initializeObjectivesAndDialogs_(): Promise<void> {}
     },
   };
 });

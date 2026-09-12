@@ -182,7 +182,8 @@ export const natsEuScenario8Data: ScenarioData = {
       id: 'night-budget',
       nice: ['T0081', 'K0740'],
       title: 'Predict the Night Link',
-      description: 'Compute the expected C/N for this pass. The geometry is better than the afternoon passes: 581 km at maximum elevation, free-space path loss 169.1 dB at 11686 MHz. EIRP 28 dBm, receive gain 51.8 dBi, system noise temperature 88 K, bandwidth 36 MHz, miscellaneous losses 1 dB.',
+      description:
+        'Compute the expected C/N for this pass. The geometry is better than the afternoon passes: 581 km at maximum elevation, free-space path loss 169.1 dB at 11686 MHz. EIRP 28 dBm, receive gain 51.8 dBi, system noise temperature 88 K, bandwidth 36 MHz, miscellaneous losses 1 dB.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [
@@ -235,7 +236,8 @@ export const natsEuScenario8Data: ScenarioData = {
       id: 'night-decode-and-commit',
       nice: ['T0153', 'T0081', 'K0740'],
       title: 'Decode and Prove the Margin',
-      description: 'Lock the 1414 MHz imagery downlink, then commit the link in Link Analysis with at least 3 dB of margin over the 6 dB threshold. The strong part of this pass runs T+5 to T+9.',
+      description:
+        'Lock the 1414 MHz imagery downlink, then commit the link in Link Analysis with at least 3 dB of margin over the 6 dB threshold. The strong part of this pass runs T+5 to T+9.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['night-acquire'],
       conditions: [

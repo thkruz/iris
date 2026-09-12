@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  answerQuizByText,
-  dismissDialogIfPresent,
-  waitForQuizToAppear,
-  waitForSimulationReady,
-} from '../utils/simulation-helpers';
+import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
  * Scenario 22 - "End-of-Life Planning": AURORA-7 Sunset Recommendation.
@@ -16,15 +11,7 @@ import {
  * verifies the report content in the Working Document before the final quizzes
  * (the Mission Complete modal overlays the sidebar afterward).
  */
-type ObjectiveType =
-  | 'quiz'
-  | 'select-station'
-  | 'click-tab'
-  | 'repoint-program-track'
-  | 'set-step-track'
-  | 'configure-speca'
-  | 'verify-working-doc'
-  | 'auto';
+type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'repoint-program-track' | 'set-step-track' | 'configure-speca' | 'verify-working-doc' | 'auto';
 
 interface Scenario22Objective {
   id: string;
@@ -43,8 +30,7 @@ const SCENARIO_22_OBJECTIVES: Scenario22Objective[] = [
     id: 'review-mission-brief',
     title: 'Review the Tasking',
     type: 'quiz',
-    correctAnswer:
-      'A defensible recommendation grounded in measured data and an honest trend, with assumptions labeled - not a single date with false precision',
+    correctAnswer: 'A defensible recommendation grounded in measured data and an honest trend, with assumptions labeled - not a single date with false precision',
   },
   {
     id: 'select-vermont-station',
@@ -79,16 +65,15 @@ const SCENARIO_22_OBJECTIVES: Scenario22Objective[] = [
   },
   {
     id: 'measure-beacon',
-    title: 'Measure Today\'s Beacon',
+    title: "Measure Today's Beacon",
     type: 'configure-speca',
     centerFrequencyMhz: 1085,
   },
   {
     id: 'record-data-point-quiz',
-    title: 'Report: Today\'s Measurement',
+    title: "Report: Today's Measurement",
     type: 'quiz',
-    correctAnswer:
-      'Beacon at -4.0 dB relative to the 24-month reference; step-track held lock at this level; carrier C/N still above demod threshold - measured, not estimated',
+    correctAnswer: 'Beacon at -4.0 dB relative to the 24-month reference; step-track held lock at this level; carrier C/N still above demod threshold - measured, not estimated',
   },
 
   // PHASE 2: TREND ANALYSIS
@@ -134,7 +119,7 @@ const SCENARIO_22_OBJECTIVES: Scenario22Objective[] = [
     title: 'Confidence Discipline',
     type: 'quiz',
     correctAnswer:
-      'Explicitly: today\'s -4.0 dB and the historical points are measured; the sunset window is a projection from those points under stated assumptions. Label each so the board knows which is which',
+      "Explicitly: today's -4.0 dB and the historical points are measured; the sunset window is a projection from those points under stated assumptions. Label each so the board knows which is which",
   },
 
   // Verify the report BEFORE the final quizzes (modal overlays the sidebar after)
@@ -165,10 +150,7 @@ const SCENARIO_22_OBJECTIVES: Scenario22Objective[] = [
 // Helper Functions
 // ============================================================
 
-async function repointProgramTrack(
-  page: import('@playwright/test').Page,
-  satelliteNoradId: string
-): Promise<void> {
+async function repointProgramTrack(page: import('@playwright/test').Page, satelliteNoradId: string): Promise<void> {
   const modeButton = page.locator('.btn-tracking[data-mode="program-track"]');
   await expect(modeButton).toBeVisible({ timeout: 5000 });
   await modeButton.click();
@@ -195,7 +177,7 @@ async function repointProgramTrack(
           };
         };
       };
-      const gs = w.signalRange?.simulationManager?.groundStations?.find(g => g.state?.id === 'VT-01');
+      const gs = w.signalRange?.simulationManager?.groundStations?.find((g) => g.state?.id === 'VT-01');
       const antennaState = gs?.antennas?.[0]?.state;
       return antennaState ? antennaState.slewing === false && antennaState.isLocked === true : false;
     },
@@ -215,10 +197,7 @@ async function setStepTrack(page: import('@playwright/test').Page): Promise<void
   await page.waitForTimeout(300);
 }
 
-async function configureSpeca(
-  page: import('@playwright/test').Page,
-  centerFrequencyMhz: number
-): Promise<void> {
+async function configureSpeca(page: import('@playwright/test').Page, centerFrequencyMhz: number): Promise<void> {
   const centerFreqInput = page.locator('#sa-center-freq');
   await expect(centerFreqInput).toBeVisible({ timeout: 5000 });
   await centerFreqInput.fill(centerFrequencyMhz.toString());
@@ -247,11 +226,7 @@ async function verifyWorkingDocument(page: import('@playwright/test').Page): Pro
   }
 }
 
-async function executeObjective(
-  page: import('@playwright/test').Page,
-  missionControlPage: MissionControlPage,
-  objective: Scenario22Objective
-): Promise<void> {
+async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario22Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);

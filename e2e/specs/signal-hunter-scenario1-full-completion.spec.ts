@@ -3,18 +3,18 @@ import { MissionControlPage } from '../pages/mission-control.page';
 import {
   answerPendingStatusChecks,
   answerStatusCheck,
+  type CaptureContext,
   closeWorkingDocumentIfOpen,
   collectCaptures,
   computeFixWithin,
+  type DutyCycle,
   debugObjective,
   ensureOnWindowStart,
   greatCircleKm,
+  type InterfererPhase,
   objectiveItem,
   setConsoleInput,
   waitForObjectiveComplete,
-  type CaptureContext,
-  type DutyCycle,
-  type InterfererPhase,
 } from '../utils/signal-hunter-helpers';
 import { dismissDialogIfPresent, waitForSimulationReady } from '../utils/simulation-helpers';
 
@@ -195,11 +195,15 @@ test.describe('Signal Hunter Scenario 1 Full Completion', () => {
     // Three status-checks on one objective: the QuizManager surfaces the last
     // registered (polarization) first, then promotes the remaining ones, so
     // answer by question text rather than by condition order.
-    const seen = await answerPendingStatusChecks(page, [
-      { question: /DUTY CYCLE/, answer: 'Approximately 30%' },
-      { question: /OCCUPIED BANDWIDTH/, answer: 'About 3 MHz' },
-      { question: /POLARIZATION/, answer: 'Horizontal - TP-1 is an H-pol transponder' },
-    ], 3);
+    const seen = await answerPendingStatusChecks(
+      page,
+      [
+        { question: /DUTY CYCLE/, answer: 'Approximately 30%' },
+        { question: /OCCUPIED BANDWIDTH/, answer: 'About 3 MHz' },
+        { question: /POLARIZATION/, answer: 'Horizontal - TP-1 is an H-pol transponder' },
+      ],
+      3
+    );
     expect(new Set(seen).size).toBe(3);
     await dismissDialogIfPresent(page);
 
@@ -224,7 +228,9 @@ test.describe('Signal Hunter Scenario 1 Full Completion', () => {
     await expect(refine).toHaveCount(1);
     await expect(refine).toHaveClass(/completed/);
 
-    log(`first fix: ${firstFixErrorKm.toFixed(2)} km from ${firstFixCaptures} captures; ` +
-      `refined fix: ${refinedFixErrorKm.toFixed(2)} km from ${refinedFixCaptures} captures; score ${score}`);
+    log(
+      `first fix: ${firstFixErrorKm.toFixed(2)} km from ${firstFixCaptures} captures; ` +
+        `refined fix: ${refinedFixErrorKm.toFixed(2)} km from ${refinedFixCaptures} captures; score ${score}`
+    );
   });
 });

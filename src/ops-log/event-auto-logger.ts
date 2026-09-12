@@ -16,14 +16,7 @@ import type { NotchFilterState } from '@app/equipment/rf-front-end/notch-filter-
 import type { OMTState } from '@app/equipment/rf-front-end/omt-module/omt-module';
 import type { RFFrontEndState } from '@app/equipment/rf-front-end/rf-front-end-core';
 import { EventBus } from '@app/events/event-bus';
-import {
-  Events,
-  RxActiveModemChangedData,
-  RxConfigChangedData,
-  TxActiveModemChangedData,
-  TxConfigChangedData,
-  TxTransmitChangedData
-} from '@app/events/events';
+import { Events, RxActiveModemChangedData, RxConfigChangedData, TxActiveModemChangedData, TxConfigChangedData, TxTransmitChangedData } from '@app/events/events';
 import { ScenarioManager } from '@app/scenario-manager';
 import {
   formatAgcEvent,
@@ -41,7 +34,7 @@ import {
   formatRxConfigEvent,
   formatTxActiveModemEvent,
   formatTxConfigEvent,
-  formatTxTransmitEvent
+  formatTxTransmitEvent,
 } from './event-formatters';
 import { OpsLogManager } from './ops-log-manager';
 

@@ -46,12 +46,7 @@ export const natsEuScenario4Data: ScenarioData = {
   duration: '20-25 min',
   missionType: 'Commanding',
   description: `A command link that anyone can use is not a command link, it is a liability. MERIDIAN commands carry an authentication tag; the spacecraft rejects anything it cannot verify.<br><br>Today's rotation was scheduled weeks ago and it lands, as these things do, in the middle of your only pass. The old key is already marked for retirement and the new material is loaded but not yet active. Until you complete the rotation, the bird will not authenticate a thing you send.<br><br>Anneke needs a payload safe-mode command before the bird goes into its next imaging block. You have one window.`,
-  equipment: [
-    '4m Ku-Band LEO Tracking Antenna',
-    'Ku-Band BUC + HPA',
-    'TT&C Commanding Console (COMSEC)',
-    'QPSK 3/4 Transmit Modem',
-  ],
+  equipment: ['4m Ku-Band LEO Tracking Antenna', 'Ku-Band BUC + HPA', 'TT&C Commanding Console (COMSEC)', 'QPSK 3/4 Transmit Modem'],
   settings: {
     isSync: true,
     groundStations: [galwayGroundStation],
@@ -125,7 +120,8 @@ export const natsEuScenario4Data: ScenarioData = {
       id: 'complete-key-rotation',
       nice: ['K0874', 'K0728', 'S0077'],
       title: 'Complete the Scheduled Key Rotation',
-      description: 'Open the TT&C console and work the COMSEC panel: begin the scheduled rotation, then complete it. The key status must read Valid before any command will authenticate. Leave the zeroize control alone - that destroys key material and is not part of a routine rotation.',
+      description:
+        'Open the TT&C console and work the COMSEC panel: begin the scheduled rotation, then complete it. The key status must read Valid before any command will authenticate. Leave the zeroize control alone - that destroys key material and is not part of a routine rotation.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [

@@ -49,12 +49,7 @@ export const natsEuScenario3Data: ScenarioData = {
   duration: '20-25 min',
   missionType: 'Commanding',
   description: `GW-01 is accepted for receive. Today it earns the other half of its licence: transmit.<br><br>Anneke Visser at MERIDIAN constellation ops needs a recorder playback command on the bird this pass, and the constellation's flight rules say the command has to originate from a station that has demonstrated a clean uplink. That is you, in about three minutes.<br><br>One thing GEO never made you think about: the bird is closing at seven kilometres a second. Your 14 GHz carrier arrives at the spacecraft tens of kilohertz off frequency unless you compensate for it. The transmit chain will happily radiate a carrier the satellite cannot hear.`,
-  equipment: [
-    '4m Ku-Band LEO Tracking Antenna',
-    'Ku-Band BUC (12600 MHz LO) + HPA',
-    'TT&C Commanding Console',
-    'QPSK 3/4 Transmit Modem',
-  ],
+  equipment: ['4m Ku-Band LEO Tracking Antenna', 'Ku-Band BUC (12600 MHz LO) + HPA', 'TT&C Commanding Console', 'QPSK 3/4 Transmit Modem'],
   settings: {
     isSync: true,
     groundStations: [galwayGroundStation],
@@ -115,7 +110,8 @@ export const natsEuScenario3Data: ScenarioData = {
               'Attenuates it, but the frequency is unchanged.',
             ],
             correctIndex: 0,
-            explanation: 'Correct. Downlink Doppler you can chase with AFC; uplink Doppler you have to predict and pre-compensate, because the spacecraft cannot tell you it is off frequency.',
+            explanation:
+              'Correct. Downlink Doppler you can chase with AFC; uplink Doppler you have to predict and pre-compensate, because the spacecraft cannot tell you it is off frequency.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -157,7 +153,8 @@ export const natsEuScenario3Data: ScenarioData = {
       id: 'enable-doppler-comp',
       nice: ['T1567', 'K0773'],
       title: 'Enable Uplink Doppler Compensation',
-      description: 'Open the TT&C tab and engage uplink Doppler compensation. This slews the transmit carrier against the predicted range rate so the spacecraft receiver sees 14005 MHz throughout the pass.',
+      description:
+        'Open the TT&C tab and engage uplink Doppler compensation. This slews the transmit carrier against the predicted range rate so the spacecraft receiver sees 14005 MHz throughout the pass.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['track-for-commanding'],
       conditions: [
@@ -181,7 +178,8 @@ export const natsEuScenario3Data: ScenarioData = {
       id: 'key-the-uplink',
       nice: ['S0421', 'T1567'],
       title: 'Key the Uplink',
-      description: 'Bring the transmit chain up in the correct order: put the modem on the air FIRST, then enable the HPA. Enabling a high-power amplifier with no drive from the BUC amplifies its own noise floor and is a station-damaging error.',
+      description:
+        'Bring the transmit chain up in the correct order: put the modem on the air FIRST, then enable the HPA. Enabling a high-power amplifier with no drive from the BUC amplifies its own noise floor and is a station-damaging error.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['enable-doppler-comp'],
       conditions: [
@@ -205,7 +203,8 @@ export const natsEuScenario3Data: ScenarioData = {
       id: 'send-the-command',
       nice: ['T1567', 'K0773', 'K1032'],
       title: 'Send the Playback Command',
-      description: 'In the TT&C console send REC-PLAYBACK and wait for the acknowledgement. The command window closes at T+10 min - outside it the spacecraft is over the horizon and the command is rejected.',
+      description:
+        'In the TT&C console send REC-PLAYBACK and wait for the acknowledgement. The command window closes at T+10 min - outside it the spacecraft is over the horizon and the command is rejected.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['key-the-uplink'],
       conditions: [
@@ -233,13 +232,10 @@ export const natsEuScenario3Data: ScenarioData = {
           params: {
             character: Character.SYSTEM,
             question: 'Securing the uplink after the pass: what comes down first?',
-            options: [
-              'The HPA. Kill the amplifier before you remove its drive.',
-              'The modem. Stop the carrier first, then the amplifier.',
-              'Either - the interlocks handle it.',
-            ],
+            options: ['The HPA. Kill the amplifier before you remove its drive.', 'The modem. Stop the carrier first, then the amplifier.', 'Either - the interlocks handle it.'],
             correctIndex: 0,
-            explanation: 'Correct, and it is the mirror of bringing it up: drive before amplifier on the way up, amplifier before drive on the way down. An HPA is never left running on noise.',
+            explanation:
+              'Correct, and it is the mirror of bringing it up: drive before amplifier on the way up, amplifier before drive on the way down. An HPA is never left running on noise.',
             pointPenalty: 5,
           },
           mustMaintain: false,

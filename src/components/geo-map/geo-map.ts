@@ -24,15 +24,7 @@
 import { html } from '@app/engine/utils/development/formatter';
 import { qs } from '@app/engine/utils/query-selector';
 import type { ErrorEllipse } from '@app/services/geolocation-service';
-import {
-  interpolateGroundPoint,
-  nightPolygon,
-  splitAtAntimeridian,
-  subsolarPoint,
-  visibilityCircle,
-  type GroundPoint,
-  type LonLat,
-} from '@app/services/ground-track-math';
+import { type GroundPoint, interpolateGroundPoint, type LonLat, nightPolygon, splitAtAntimeridian, subsolarPoint, visibilityCircle } from '@app/services/ground-track-math';
 import './geo-map.css';
 
 export interface GeoMarker {
@@ -389,12 +381,8 @@ export class GeoMap {
   private clampView_(): void {
     const spanLon = this.width_ * this.view_.degPerPx;
     const spanLat = this.height_ * this.view_.degPerPx;
-    this.view_.centerLon = spanLon >= 360
-      ? 0
-      : Math.min(180 - spanLon / 2, Math.max(-180 + spanLon / 2, this.view_.centerLon));
-    this.view_.centerLat = spanLat >= 180
-      ? 0
-      : Math.min(90 - spanLat / 2, Math.max(-90 + spanLat / 2, this.view_.centerLat));
+    this.view_.centerLon = spanLon >= 360 ? 0 : Math.min(180 - spanLon / 2, Math.max(-180 + spanLon / 2, this.view_.centerLon));
+    this.view_.centerLat = spanLat >= 180 ? 0 : Math.min(90 - spanLat / 2, Math.max(-90 + spanLat / 2, this.view_.centerLat));
   }
 
   // ── Layers ────────────────────────────────────────────────────────────────
@@ -656,11 +644,7 @@ export class GeoMap {
    * as a list of pixel-space line segments. Sampling in screen space means the
    * line is drawn at whatever resolution the current zoom needs.
    */
-  private traceContour_(
-    residual: (lat: number, lon: number) => number,
-    cols: number,
-    rows: number,
-  ): Array<[number, number, number, number]> {
+  private traceContour_(residual: (lat: number, lon: number) => number, cols: number, rows: number): Array<[number, number, number, number]> {
     const cellW = this.width_ / cols;
     const cellH = this.height_ / rows;
     const nx = cols + 1;
@@ -675,10 +659,7 @@ export class GeoMap {
       }
     }
 
-    const interp = (
-      x1: number, y1: number, v1: number,
-      x2: number, y2: number, v2: number,
-    ): [number, number] => {
+    const interp = (x1: number, y1: number, v1: number, x2: number, y2: number, v2: number): [number, number] => {
       const t = v1 / (v1 - v2);
       return [x1 + (x2 - x1) * t, y1 + (y2 - y1) * t];
     };
@@ -699,10 +680,10 @@ export class GeoMap {
         }
 
         const crossings: Array<[number, number]> = [];
-        if ((tl < 0) !== (tr < 0)) crossings.push(interp(x0, y0, tl, x1, y0, tr)); // top
-        if ((tr < 0) !== (br < 0)) crossings.push(interp(x1, y0, tr, x1, y1, br)); // right
-        if ((br < 0) !== (bl < 0)) crossings.push(interp(x1, y1, br, x0, y1, bl)); // bottom
-        if ((bl < 0) !== (tl < 0)) crossings.push(interp(x0, y1, bl, x0, y0, tl)); // left
+        if (tl < 0 !== tr < 0) crossings.push(interp(x0, y0, tl, x1, y0, tr)); // top
+        if (tr < 0 !== br < 0) crossings.push(interp(x1, y0, tr, x1, y1, br)); // right
+        if (br < 0 !== bl < 0) crossings.push(interp(x1, y1, br, x0, y1, bl)); // bottom
+        if (bl < 0 !== tl < 0) crossings.push(interp(x0, y1, bl, x0, y0, tl)); // left
 
         if (crossings.length === 2) {
           segments.push([crossings[0][0], crossings[0][1], crossings[1][0], crossings[1][1]]);
@@ -736,10 +717,8 @@ export class GeoMap {
     ctx.beginPath();
     for (let a = 0; a <= 360; a += 6) {
       const rad = a * (Math.PI / 180);
-      const north = fix.ellipse.semiMajorKm * Math.cos(rad) * Math.cos(theta)
-        - fix.ellipse.semiMinorKm * Math.sin(rad) * Math.sin(theta);
-      const east = fix.ellipse.semiMajorKm * Math.cos(rad) * Math.sin(theta)
-        + fix.ellipse.semiMinorKm * Math.sin(rad) * Math.cos(theta);
+      const north = fix.ellipse.semiMajorKm * Math.cos(rad) * Math.cos(theta) - fix.ellipse.semiMinorKm * Math.sin(rad) * Math.sin(theta);
+      const east = fix.ellipse.semiMajorKm * Math.cos(rad) * Math.sin(theta) + fix.ellipse.semiMinorKm * Math.sin(rad) * Math.cos(theta);
       const px = east * pxPerKmX;
       const py = -north * pxPerKmY;
       if (a === 0) {

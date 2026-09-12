@@ -53,9 +53,7 @@ export async function advanceMissionClock(page: Page, minutes: number): Promise<
  * whose real-time duration varies (ride loops, quiz timing).
  */
 export async function advanceMissionClockToUtc(page: Page, targetIsoUtc: string): Promise<void> {
-  await page.waitForFunction(() =>
-    typeof (window as any).advanceMissionClock === 'function' &&
-    typeof (window as any).simClockMs === 'function');
+  await page.waitForFunction(() => typeof (window as any).advanceMissionClock === 'function' && typeof (window as any).simClockMs === 'function');
   await page.evaluate((targetMs) => {
     const deltaMs = targetMs - (window as any).simClockMs();
     if (deltaMs > 0) (window as any).advanceMissionClock(deltaMs);
@@ -69,11 +67,7 @@ export function objectiveItem(missionControl: MissionControlPage, title: string)
 }
 
 /** Poll the checklist until the named objective carries the `completed` class. */
-export async function waitForObjectiveComplete(
-  missionControl: MissionControlPage,
-  title: string,
-  timeout = 45000,
-): Promise<void> {
+export async function waitForObjectiveComplete(missionControl: MissionControlPage, title: string, timeout = 45000): Promise<void> {
   if (!(await missionControl.objectivesChecklist.isVisible().catch(() => false))) {
     await missionControl.openChecklist();
   }
@@ -138,7 +132,7 @@ export async function rideUntilObjectiveComplete(
   page: Page,
   missionControl: MissionControlPage,
   objectiveTitle: string,
-  opts: { maxMs?: number; correct?: boolean } = {},
+  opts: { maxMs?: number; correct?: boolean } = {}
 ): Promise<boolean> {
   const { maxMs = 220_000, correct = true } = opts;
   if (!(await missionControl.objectivesChecklist.isVisible().catch(() => false))) {

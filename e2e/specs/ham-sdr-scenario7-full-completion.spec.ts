@@ -1,13 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  advanceMissionClock,
-  answerRileyQuiz,
-  domClick,
-  engageTrack,
-  rideUntilObjectiveComplete,
-  waitForObjectiveComplete,
-} from '../utils/ham-sdr-helpers';
+import { advanceMissionClock, answerRileyQuiz, domClick, engageTrack, rideUntilObjectiveComplete, waitForObjectiveComplete } from '../utils/ham-sdr-helpers';
 import { waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
@@ -102,12 +95,7 @@ test.describe('ham-sdr Scenario 7 Full Completion', () => {
     await engageTrack(page, '63002');
     await domClick(page, '#sdr-afc-toggle');
 
-    const everLocked = await rideUntilObjectiveComplete(
-      page,
-      missionControl,
-      'Make the Margin, Catch the Pass',
-      { maxMs: 300_000, correct: true },
-    );
+    const everLocked = await rideUntilObjectiveComplete(page, missionControl, 'Make the Margin, Catch the Pass', { maxMs: 300_000, correct: true });
     expect(everLocked).toBe(true);
   });
 

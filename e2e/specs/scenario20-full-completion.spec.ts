@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  answerQuizByText,
-  dismissDialogIfPresent,
-  waitForQuizToAppear,
-  waitForSimulationReady,
-} from '../utils/simulation-helpers';
+import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
  * Scenario 20 - "Dual Outage": Concurrent Site Loss, Prioritized Recovery.
@@ -16,14 +11,7 @@ import {
  * restore back-off -> re-enable -> verify VT melt -> customer comms +
  * adversarial rule-out + log.
  */
-type ObjectiveType =
-  | 'quiz'
-  | 'select-station'
-  | 'click-tab'
-  | 'toggle-switch'
-  | 'configure-hpa-backoff'
-  | 'wait-ice-melt'
-  | 'auto';
+type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'toggle-switch' | 'configure-hpa-backoff' | 'wait-ice-melt' | 'auto';
 
 interface Scenario20Objective {
   id: string;
@@ -43,8 +31,7 @@ const SCENARIO_20_OBJECTIVES: Scenario20Objective[] = [
     id: 'review-mission-brief',
     title: 'Review the Incident Brief',
     type: 'quiz',
-    correctAnswer:
-      'Read both boards before fixing either - triage is a decision about order, and order needs the whole picture',
+    correctAnswer: 'Read both boards before fixing either - triage is a decision about order, and order needs the whole picture',
   },
 
   // PHASE 1: VERMONT - START THE SLOW RECOVERY
@@ -64,8 +51,7 @@ const SCENARIO_20_OBJECTIVES: Scenario20Objective[] = [
     id: 'vt-read-board',
     title: 'Read the Vermont Board',
     type: 'quiz',
-    correctAnswer:
-      'The feed heater is OFF - it should have been running before the front arrived; ice is the consequence, the cold heater is the fault',
+    correctAnswer: 'The feed heater is OFF - it should have been running before the front arrived; ice is the consequence, the cold heater is the fault',
   },
   {
     id: 'vt-enable-heater-tab',
@@ -113,7 +99,7 @@ const SCENARIO_20_OBJECTIVES: Scenario20Objective[] = [
     title: 'Defend the Order',
     type: 'quiz',
     correctAnswer:
-      'VT\'s recovery is slow but starts with one switch - starting it first costs ME nothing. ME\'s fault is actively dangerous (spectrum pollution + amplifier stress) and deterministic to fix, so it gets full attention immediately after',
+      "VT's recovery is slow but starts with one switch - starting it first costs ME nothing. ME's fault is actively dangerous (spectrum pollution + amplifier stress) and deterministic to fix, so it gets full attention immediately after",
   },
   {
     id: 'me-tx-tab',
@@ -165,8 +151,7 @@ const SCENARIO_20_OBJECTIVES: Scenario20Objective[] = [
     id: 'storm-steady-state-quiz',
     title: 'Steady State in the Storm',
     type: 'quiz',
-    correctAnswer:
-      'Nothing new - the heater holds ice at bay as fast as it forms; the steady state is heater ON plus periodic margin checks until the front clears',
+    correctAnswer: 'Nothing new - the heater holds ice at bay as fast as it forms; the steady state is heater ON plus periodic margin checks until the front clears',
   },
 
   // PHASE 4: CUSTOMER, EVIDENCE, LOG
@@ -197,11 +182,7 @@ const SCENARIO_20_OBJECTIVES: Scenario20Objective[] = [
 // Helper Functions
 // ============================================================
 
-async function toggleSwitch(
-  page: import('@playwright/test').Page,
-  switchId: string,
-  desiredState: boolean
-): Promise<void> {
+async function toggleSwitch(page: import('@playwright/test').Page, switchId: string, desiredState: boolean): Promise<void> {
   let switchEl = page.locator(`#${switchId}`);
   if ((await switchEl.count()) === 0) {
     switchEl = page.locator(`[id$="${switchId}"]`);
@@ -221,10 +202,7 @@ async function toggleSwitch(
   await page.waitForTimeout(300);
 }
 
-async function configureHpaBackoff(
-  page: import('@playwright/test').Page,
-  backoff: number
-): Promise<void> {
+async function configureHpaBackoff(page: import('@playwright/test').Page, backoff: number): Promise<void> {
   const backoffInput = page.locator('#hpa-backoff');
   await expect(backoffInput).toBeVisible({ timeout: 5000 });
   await backoffInput.fill(backoff.toString());
@@ -251,7 +229,7 @@ async function waitForIceMelt(page: import('@playwright/test').Page): Promise<vo
           };
         };
       };
-      const gs = w.signalRange?.simulationManager?.groundStations?.find(g => g.state?.id === 'VT-01');
+      const gs = w.signalRange?.simulationManager?.groundStations?.find((g) => g.state?.id === 'VT-01');
       const ice = gs?.antennas?.[0]?.state?.iceAccumulation_dB ?? 99;
       return ice < 2;
     },
@@ -262,11 +240,7 @@ async function waitForIceMelt(page: import('@playwright/test').Page): Promise<vo
   await page.waitForTimeout(2500);
 }
 
-async function executeObjective(
-  page: import('@playwright/test').Page,
-  missionControlPage: MissionControlPage,
-  objective: Scenario20Objective
-): Promise<void> {
+async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario20Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);

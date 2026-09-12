@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 import { GPSDOModuleCore } from '../../../../src/equipment/rf-front-end/gpsdo-module/gpsdo-module-core';
-import { GPSDOState, defaultGpsdoState } from '../../../../src/equipment/rf-front-end/gpsdo-module/gpsdo-state';
+import { defaultGpsdoState, GPSDOState } from '../../../../src/equipment/rf-front-end/gpsdo-module/gpsdo-state';
 import { RFFrontEndCore } from '../../../../src/equipment/rf-front-end/rf-front-end-core';
 import { EventBus } from '../../../../src/events/event-bus';
 import { Events } from '../../../../src/events/events';
@@ -153,11 +153,7 @@ describe('GPSDOModuleCore', () => {
         satelliteCount: 5,
       };
 
-      gpsdoModule = new TestGPSDOModule(
-        { ...defaultGpsdoState, ...customState } as GPSDOState,
-        mockRfFrontEnd,
-        1
-      );
+      gpsdoModule = new TestGPSDOModule({ ...defaultGpsdoState, ...customState } as GPSDOState, mockRfFrontEnd, 1);
 
       expect(gpsdoModule.state.isPowered).toBe(false);
       expect(gpsdoModule.state.temperature).toBe(50);
@@ -166,21 +162,13 @@ describe('GPSDOModuleCore', () => {
     });
 
     it('should start warmup timer if powered with warmup remaining', () => {
-      gpsdoModule = new TestGPSDOModule(
-        { ...defaultGpsdoState, isPowered: true, warmupTimeRemaining: 100 },
-        mockRfFrontEnd,
-        1
-      );
+      gpsdoModule = new TestGPSDOModule({ ...defaultGpsdoState, isPowered: true, warmupTimeRemaining: 100 }, mockRfFrontEnd, 1);
 
       expect(gpsdoModule.getWarmupInterval()).not.toBeNull();
     });
 
     it('should start holdover monitor if powered, warmed up, and not locked', () => {
-      gpsdoModule = new TestGPSDOModule(
-        { ...defaultGpsdoState, isPowered: true, warmupTimeRemaining: 0, isLocked: false },
-        mockRfFrontEnd,
-        1
-      );
+      gpsdoModule = new TestGPSDOModule({ ...defaultGpsdoState, isPowered: true, warmupTimeRemaining: 0, isLocked: false }, mockRfFrontEnd, 1);
 
       expect(gpsdoModule.getHoldoverInterval()).not.toBeNull();
     });
@@ -302,11 +290,7 @@ describe('GPSDOModuleCore', () => {
 
   describe('thermal state updates', () => {
     beforeEach(() => {
-      gpsdoModule = new TestGPSDOModule(
-        { ...defaultGpsdoState, temperature: 50 },
-        mockRfFrontEnd,
-        1
-      );
+      gpsdoModule = new TestGPSDOModule({ ...defaultGpsdoState, temperature: 50 }, mockRfFrontEnd, 1);
     });
 
     it('should cool down when powered off', () => {
@@ -390,11 +374,7 @@ describe('GPSDOModuleCore', () => {
 
   describe('handleGnssToggle()', () => {
     beforeEach(() => {
-      gpsdoModule = new TestGPSDOModule(
-        { ...defaultGpsdoState, isPowered: true, warmupTimeRemaining: 0 },
-        mockRfFrontEnd,
-        1
-      );
+      gpsdoModule = new TestGPSDOModule({ ...defaultGpsdoState, isPowered: true, warmupTimeRemaining: 0 }, mockRfFrontEnd, 1);
     });
 
     it('should set acquiring state when enabling GNSS', () => {
@@ -737,7 +717,7 @@ describe('GPSDOModuleCore', () => {
 
       const alarms = gpsdoModule.getAlarms();
 
-      expect(alarms.some(a => a.includes('GPSDO in holdover'))).toBe(true);
+      expect(alarms.some((a) => a.includes('GPSDO in holdover'))).toBe(true);
     });
 
     it('should alarm when holdover error approaches limit', () => {
@@ -746,7 +726,7 @@ describe('GPSDOModuleCore', () => {
 
       const alarms = gpsdoModule.getAlarms();
 
-      expect(alarms.some(a => a.includes('approaching limit'))).toBe(true);
+      expect(alarms.some((a) => a.includes('approaching limit'))).toBe(true);
     });
 
     it('should alarm when temperature out of range (high)', () => {
@@ -755,7 +735,7 @@ describe('GPSDOModuleCore', () => {
 
       const alarms = gpsdoModule.getAlarms();
 
-      expect(alarms.some(a => a.includes('oven temperature out of range'))).toBe(true);
+      expect(alarms.some((a) => a.includes('oven temperature out of range'))).toBe(true);
     });
 
     it('should alarm when temperature out of range (low)', () => {
@@ -764,7 +744,7 @@ describe('GPSDOModuleCore', () => {
 
       const alarms = gpsdoModule.getAlarms();
 
-      expect(alarms.some(a => a.includes('oven temperature out of range'))).toBe(true);
+      expect(alarms.some((a) => a.includes('oven temperature out of range'))).toBe(true);
     });
 
     it('should alarm when self-test failed', () => {

@@ -30,9 +30,15 @@ class TestableAntenna extends AntennaCore {
     super(configId, initialState, 1, 1);
   }
 
-  protected override addListeners_(): void { /* headless */ }
-  syncDomWithState(): void { /* headless */ }
-  draw(): void { /* headless */ }
+  protected override addListeners_(): void {
+    /* headless */
+  }
+  syncDomWithState(): void {
+    /* headless */
+  }
+  draw(): void {
+    /* headless */
+  }
 
   gainAt(fHz: number): number {
     return (this as any).antennaGain_dBi(fHz as Hertz);
@@ -89,8 +95,8 @@ describe('Campaign 3: circular polarization handedness', () => {
       circularHandedness: 'RHCP',
     });
 
-    expect(yagi.polLoss('RHCP')).toBe(0.5);  // matched
-    expect(yagi.polLoss('LHCP')).toBe(18);   // wrong handedness: circularCrossPolLoss_dB
+    expect(yagi.polLoss('RHCP')).toBe(0.5); // matched
+    expect(yagi.polLoss('LHCP')).toBe(18); // wrong handedness: circularCrossPolLoss_dB
   });
 
   it('switches discrimination with the handedness state', () => {
@@ -196,8 +202,7 @@ describe('Campaign 3: authored pass timing (Riley backyard, 2027-06-19 16:00 UTC
     const windowEndMs = Date.UTC(2027, 5, 23, 17, 30, 0);
 
     // Truth (roster) elements: the network's promised high pass exists
-    const truthPasses = planner.getPasses(cubehop, s6StartMs, { horizonHours: 3 })
-      .filter((p) => p.aosMs < windowEndMs && p.maxEl > 25);
+    const truthPasses = planner.getPasses(cubehop, s6StartMs, { horizonHours: 3 }).filter((p) => p.aosMs < windowEndMs && p.maxEl > 25);
     expect(truthPasses.length).toBeGreaterThanOrEqual(1);
     expect(truthPasses[0].aosMs).toBeGreaterThan(Date.UTC(2027, 5, 23, 16, 50, 0));
     expect(truthPasses[0].aosMs).toBeLessThan(Date.UTC(2027, 5, 23, 17, 10, 0));
@@ -209,8 +214,7 @@ describe('Campaign 3: authored pass timing (Riley backyard, 2027-06-19 16:00 UTC
       tle2: '2 63002  97.5000 154.0000 0010000  90.0000 226.0000 14.90000000123456' as TleLine2,
       observer: OBSERVER,
     });
-    const tamperedPasses = planner.getPasses(tampered, s6StartMs, { horizonHours: 3 })
-      .filter((p) => p.aosMs < windowEndMs && p.maxEl > 5);
+    const tamperedPasses = planner.getPasses(tampered, s6StartMs, { horizonHours: 3 }).filter((p) => p.aosMs < windowEndMs && p.maxEl > 5);
     expect(tamperedPasses).toHaveLength(0);
   });
 
@@ -278,16 +282,18 @@ describe('Campaign 3: receiver AFC', () => {
 
   function createReceiver(): Receiver {
     return new Receiver('test-root', [], {
-      modems: [{
-        modemNumber: 1,
-        antenna_id: 1,
-        frequency: 435.25 as MHz,
-        bandwidth: 0.03 as MHz,
-        modulation: 'QPSK' as ModulationType,
-        fec: '1/2' as FECType,
-        isPowered: true,
-        isAfcEnabled: true,
-      }],
+      modems: [
+        {
+          modemNumber: 1,
+          antenna_id: 1,
+          frequency: 435.25 as MHz,
+          bandwidth: 0.03 as MHz,
+          modulation: 'QPSK' as ModulationType,
+          fec: '1/2' as FECType,
+          isPowered: true,
+          isAfcEnabled: true,
+        },
+      ],
     } as any);
   }
 
@@ -365,30 +371,44 @@ describe('Campaign 3: LNB direct sampling', () => {
     const { LNBModuleCore } = await import('../../src/equipment/rf-front-end/lnb-module/lnb-module-core');
 
     class TestableLNB extends LNBModuleCore {
-      initializeDom(): HTMLElement { return document.createElement('div'); }
-      protected addListeners_(): void { /* headless */ }
-      syncDomWithState_(): void { /* headless */ }
-      draw(): void { /* headless */ }
-      syncDomWithState(): void { /* headless */ }
-      get rxSignalsIn(): RfSignal[] {
-        return [{
-          signalId: 'WXSAT-19-APT',
-          serverId: 1,
-          noradId: 63001,
-          frequency: 137.1e6 as RfFrequency,
-          bandwidth: 34e3 as Hertz,
-          power: -95 as dBm,
-          modulation: 'BPSK' as ModulationType,
-          fec: '1/2' as FECType,
-          polarization: 'RHCP',
-          feed: '',
-          isDegraded: false,
-          origin: SignalOrigin.OMT_RX,
-          noiseFloor: null,
-          gainInPath: 0 as any,
-        }];
+      initializeDom(): HTMLElement {
+        return document.createElement('div');
       }
-      isExtRefPresent(): boolean { return true; }
+      protected addListeners_(): void {
+        /* headless */
+      }
+      syncDomWithState_(): void {
+        /* headless */
+      }
+      draw(): void {
+        /* headless */
+      }
+      syncDomWithState(): void {
+        /* headless */
+      }
+      get rxSignalsIn(): RfSignal[] {
+        return [
+          {
+            signalId: 'WXSAT-19-APT',
+            serverId: 1,
+            noradId: 63001,
+            frequency: 137.1e6 as RfFrequency,
+            bandwidth: 34e3 as Hertz,
+            power: -95 as dBm,
+            modulation: 'BPSK' as ModulationType,
+            fec: '1/2' as FECType,
+            polarization: 'RHCP',
+            feed: '',
+            isDegraded: false,
+            origin: SignalOrigin.OMT_RX,
+            noiseFloor: null,
+            gainInPath: 0 as any,
+          },
+        ];
+      }
+      isExtRefPresent(): boolean {
+        return true;
+      }
     }
 
     const mockFrontEnd = {
@@ -397,11 +417,15 @@ describe('Campaign 3: LNB direct sampling', () => {
       bucModule: { state: { isLoopback: false }, outputSignals: [] },
     } as any;
 
-    const lnb = new TestableLNB({
-      ...LNBModuleCore.getDefaultState(),
-      isDirectSampling: true,
-      gain: 0 as dB,
-    }, mockFrontEnd, 1);
+    const lnb = new TestableLNB(
+      {
+        ...LNBModuleCore.getDefaultState(),
+        isDirectSampling: true,
+        gain: 0 as dB,
+      },
+      mockFrontEnd,
+      1
+    );
 
     lnb.update();
 
@@ -411,11 +435,15 @@ describe('Campaign 3: LNB direct sampling', () => {
     expect(lnb.ifSignals[0].power).toBe(-95);
     // Legacy path unchanged: same input without the flag mixes with the LO
     // and lands outside the 950-2150 MHz IF filter
-    const legacy = new TestableLNB({
-      ...LNBModuleCore.getDefaultState(),
-      loFrequency: 6080 as MHz,
-      gain: 0 as dB,
-    }, mockFrontEnd, 1);
+    const legacy = new TestableLNB(
+      {
+        ...LNBModuleCore.getDefaultState(),
+        loFrequency: 6080 as MHz,
+        gain: 0 as dB,
+      },
+      mockFrontEnd,
+      1
+    );
     legacy.update();
     expect(legacy.ifSignals[0].frequency).toBe(6080e6 - 137.1e6);
     expect(legacy.ifSignals[0].power).toBeLessThan(-95); // filtered (outside IF passband)
@@ -443,9 +471,14 @@ describe('Campaign 3: scenario registration', () => {
     const { SCENARIOS } = await import('../../src/scenario-manager');
 
     const ids = [
-      'ham-sdr-scenario1', 'ham-sdr-scenario2', 'ham-sdr-scenario3',
-      'ham-sdr-scenario4', 'ham-sdr-scenario5', 'ham-sdr-scenario6',
-      'ham-sdr-scenario7', 'ham-sdr-scenario8',
+      'ham-sdr-scenario1',
+      'ham-sdr-scenario2',
+      'ham-sdr-scenario3',
+      'ham-sdr-scenario4',
+      'ham-sdr-scenario5',
+      'ham-sdr-scenario6',
+      'ham-sdr-scenario7',
+      'ham-sdr-scenario8',
     ];
     const campaignIds = hamSdrCampaignData.scenarios.map((s) => s.id);
     const flatIds = SCENARIOS.map((s) => s.id);
@@ -560,7 +593,7 @@ describe('Campaign 3: scenario registration', () => {
     const txModem = txStation?.transmitters?.[0]?.modems?.[0];
     expect(txModem?.isPowered).toBe(true);
     expect(txModem?.isTransmitting).toBe(false);
-    expect(txModem?.ifSignal?.frequency).not.toBe(435.90e6);
+    expect(txModem?.ifSignal?.frequency).not.toBe(435.9e6);
 
     // The weather rig rides along for the epilogue
     expect(settings.groundStations.some((gs) => gs.id === 'BKYD-QFH')).toBe(true);
@@ -584,7 +617,7 @@ describe('Campaign 3: scenario registration', () => {
     // The uplink transponder the whole act depends on: 435.90 up / 435.29 down
     const { cubehop1Satellite } = await import('../../src/campaigns/ham-sdr/satellites');
     const vu = cubehop1Satellite.transponders.find((tp) => tp.id === 'VU-XPD');
-    expect(vu?.uplinkFrequency).toBe(435.90e6);
+    expect(vu?.uplinkFrequency).toBe(435.9e6);
     expect(vu?.downlinkFrequency).toBe(435.29e6);
     expect(vu?.polarization).toBe('RHCP');
     expect(vu?.gain).toBe(132);

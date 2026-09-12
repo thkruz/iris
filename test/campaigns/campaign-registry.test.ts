@@ -1,11 +1,6 @@
-import {
-  ccsCampaignData,
-  geolocationCampaignData,
-  hamSdrCampaignData,
-  natsCampaignData,
-} from '@app/campaigns/nats/campaign-data';
-import { natsEuCampaignData } from '@app/campaigns/nats-eu/campaign-data';
 import type { CampaignData } from '@app/campaigns/campaign-types';
+import { ccsCampaignData, geolocationCampaignData, hamSdrCampaignData, natsCampaignData } from '@app/campaigns/nats/campaign-data';
+import { natsEuCampaignData } from '@app/campaigns/nats-eu/campaign-data';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -13,13 +8,7 @@ import { describe, expect, it } from 'vitest';
  * (the pre-Campaign-5 collision). Campaign ids double as /campaigns/:id
  * routes and body theme classes, so they must be unique.
  */
-const ALL_CAMPAIGNS: CampaignData[] = [
-  natsCampaignData,
-  natsEuCampaignData,
-  hamSdrCampaignData,
-  ccsCampaignData,
-  geolocationCampaignData,
-];
+const ALL_CAMPAIGNS: CampaignData[] = [natsCampaignData, natsEuCampaignData, hamSdrCampaignData, ccsCampaignData, geolocationCampaignData];
 
 describe('campaign registry', () => {
   it('has unique campaign ids', () => {

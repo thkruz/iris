@@ -54,8 +54,7 @@ export class ContactScheduleManager {
   private readonly assignments_ = new Map<string, string>();
 
   private constructor() {
-    this.config_ = (ScenarioManager.getInstance().settings.contactSchedule as ContactScheduleConfig | undefined)
-      ?? { contacts: [], stationIds: [] };
+    this.config_ = (ScenarioManager.getInstance().settings.contactSchedule as ContactScheduleConfig | undefined) ?? { contacts: [], stationIds: [] };
   }
 
   static getInstance(): ContactScheduleManager {

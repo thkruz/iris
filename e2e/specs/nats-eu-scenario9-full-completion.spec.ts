@@ -1,12 +1,7 @@
 import { expect, Page, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
 import { advanceMissionClockToUtc, waitForObjectiveComplete } from '../utils/ham-sdr-helpers';
-import {
-  answerSystemQuiz,
-  assignContact,
-  programTrack,
-  setRxModemFrequency,
-} from '../utils/nats-eu-helpers';
+import { answerSystemQuiz, assignContact, programTrack, setRxModemFrequency } from '../utils/nats-eu-helpers';
 import { dismissDialogIfPresent, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**

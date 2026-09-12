@@ -1,7 +1,7 @@
-import { qs } from "@app/engine/utils/query-selector";
-import { GPSDOModuleCore } from "@app/equipment/rf-front-end/gpsdo-module/gpsdo-module-core";
-import { EventBus } from "@app/events/event-bus";
-import { Events } from "@app/events/events";
+import { qs } from '@app/engine/utils/query-selector';
+import { GPSDOModuleCore } from '@app/equipment/rf-front-end/gpsdo-module/gpsdo-module-core';
+import { EventBus } from '@app/events/event-bus';
+import { Events } from '@app/events/events';
 
 /**
  * GPSDOAdapter - Bridges GPSDOModuleCore state to web controls
@@ -79,10 +79,14 @@ export class GPSDOAdapter {
    */
   private getBadgeClass_(ledClass: string): string {
     switch (ledClass) {
-      case 'led-green': return 'status-badge-green';
-      case 'led-red': return 'status-badge-red';
-      case 'led-amber': return 'status-badge-amber';
-      default: return 'status-badge-off';
+      case 'led-green':
+        return 'status-badge-green';
+      case 'led-red':
+        return 'status-badge-red';
+      case 'led-amber':
+        return 'status-badge-amber';
+      default:
+        return 'status-badge-off';
     }
   }
 

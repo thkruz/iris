@@ -13,7 +13,7 @@ export class PerlinNoise {
     this.cacheSize = cacheSize;
   }
 
-  static getInstance(seed = "default", cacheSize = 100): PerlinNoise {
+  static getInstance(seed = 'default', cacheSize = 100): PerlinNoise {
     PerlinNoise.instance ??= new PerlinNoise(seed, cacheSize);
     return PerlinNoise.instance;
   }
@@ -43,7 +43,7 @@ export class PerlinNoise {
       hash = Math.imul(hash, 16777619);
     }
     // Convert to hex string
-    const hex = ("00000000" + (hash >>> 0).toString(16)).slice(-8);
+    const hex = ('00000000' + (hash >>> 0).toString(16)).slice(-8);
     return parseInt(hex.slice(0, 8), 16);
   }
 
@@ -51,7 +51,7 @@ export class PerlinNoise {
     const key = `${x},${y}`;
     if (this.cache.has(key)) {
       // Move to end (most recent)
-      this.cacheOrder = this.cacheOrder.filter(k => k !== key);
+      this.cacheOrder = this.cacheOrder.filter((k) => k !== key);
       this.cacheOrder.push(key);
       return this.cache.get(key)!;
     }

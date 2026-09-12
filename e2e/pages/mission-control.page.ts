@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
 /**
@@ -196,7 +196,7 @@ export class MissionControlPage extends BasePage {
     const exactTab = this.tabBar.locator(`.nav-link[data-tab-id="${tabId}"]`);
     const prefixTab = this.tabBar.locator(`.nav-link[data-tab-id^="${tabId}-"]`);
 
-    if (await exactTab.count() > 0) {
+    if ((await exactTab.count()) > 0) {
       await exactTab.click();
     } else {
       await prefixTab.first().click();

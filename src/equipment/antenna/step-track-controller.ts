@@ -1,8 +1,8 @@
-import { Hertz } from "@app/types";
-import { Degrees } from "ootk";
-import { SimulationManager } from "@app/simulation/simulation-manager";
-import { TapPoint } from "@app/equipment/rf-front-end/coupler-module/tap-points";
-import { AntennaCore } from "./antenna-core";
+import { TapPoint } from '@app/equipment/rf-front-end/coupler-module/tap-points';
+import { SimulationManager } from '@app/simulation/simulation-manager';
+import { Hertz } from '@app/types';
+import { Degrees } from 'ootk';
+import { AntennaCore } from './antenna-core';
 
 /**
  * Step Track Controller - Timer-Based Convergence
@@ -161,7 +161,7 @@ export class StepTrackController {
     const beaconFreq = this.antenna_.rfFrontEnd.lnbModule.state.loFrequency * 1e6 - state.beaconFrequencyHz;
     const searchBw = state.beaconSearchBwHz;
 
-    const beaconSignals = this.antenna_.rfFrontEnd.agcModule.outputSignals.filter(sig => {
+    const beaconSignals = this.antenna_.rfFrontEnd.agcModule.outputSignals.filter((sig) => {
       const freqDiff = Math.abs((sig.frequency as number) - beaconFreq);
       return freqDiff <= searchBw / 2;
     });
@@ -170,10 +170,7 @@ export class StepTrackController {
       return { power: null, cn: null };
     }
 
-    const strongestPower = beaconSignals.reduce(
-      (max, sig) => Math.max(max, sig.power as number),
-      -Infinity
-    );
+    const strongestPower = beaconSignals.reduce((max, sig) => Math.max(max, sig.power as number), -Infinity);
 
     if (strongestPower === -Infinity) {
       return { power: null, cn: null };
@@ -185,11 +182,7 @@ export class StepTrackController {
     }
 
     const trackingBw = state.beaconTrackingBwHz;
-    const { noiseFloorNoGain } =
-      rfFrontEnd.couplerModule.signalPathManager.getNoiseFloorAt(
-        TapPoint.RX_IF,
-        trackingBw as Hertz
-      );
+    const { noiseFloorNoGain } = rfFrontEnd.couplerModule.signalPathManager.getNoiseFloorAt(TapPoint.RX_IF, trackingBw as Hertz);
 
     const cn = strongestPower - noiseFloorNoGain;
 

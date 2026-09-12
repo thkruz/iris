@@ -1,9 +1,9 @@
-import { SimulationManager } from "@app/simulation/simulation-manager";
-import { Hertz, IfSignal, MHz, RfSignal } from "@app/types";
-import type { TraceMode } from "@app/equipment/real-time-spectrum-analyzer/analyzer-control/ac-trace-btn/ac-trace-btn";
-import { RealTimeSpectrumAnalyzer } from "@app/equipment/real-time-spectrum-analyzer/real-time-spectrum-analyzer";
-import { SpectrumDataProcessor } from "@app/equipment/real-time-spectrum-analyzer/spectrum-data-processor";
-import { RTSAScreen } from "./rtsa-screen";
+import type { TraceMode } from '@app/equipment/real-time-spectrum-analyzer/analyzer-control/ac-trace-btn/ac-trace-btn';
+import { RealTimeSpectrumAnalyzer } from '@app/equipment/real-time-spectrum-analyzer/real-time-spectrum-analyzer';
+import { SpectrumDataProcessor } from '@app/equipment/real-time-spectrum-analyzer/spectrum-data-processor';
+import { SimulationManager } from '@app/simulation/simulation-manager';
+import { Hertz, IfSignal, MHz, RfSignal } from '@app/types';
+import { RTSAScreen } from './rtsa-screen';
 
 /**
  * SpectralDensityPlot - Handles spectral density rendering
@@ -34,10 +34,10 @@ export class SpectralDensityPlot extends RTSAScreen {
   // Trace colors based on mode
   private readonly traceColors = {
     clearwrite: '#fff647ff', // Yellow (live data)
-    maxhold: '#ff0000',      // Red
-    minhold: '#0000ff',      // Blue
-    average: '#ff00ff',      // Magenta
-    hold: '#4eb136ff',       // Yellow (maintains color from before hold)
+    maxhold: '#ff0000', // Red
+    minhold: '#0000ff', // Blue
+    average: '#ff00ff', // Magenta
+    hold: '#4eb136ff', // Yellow (maintains color from before hold)
   };
 
   // Frequency label caching
@@ -51,13 +51,7 @@ export class SpectralDensityPlot extends RTSAScreen {
   private cachedMaxAmplitude: number = 0;
   cachedReferenceLevel: number;
 
-  constructor(
-    canvas: HTMLCanvasElement,
-    specA: RealTimeSpectrumAnalyzer,
-    dataProcessor: SpectrumDataProcessor,
-    width: number,
-    height: number
-  ) {
+  constructor(canvas: HTMLCanvasElement, specA: RealTimeSpectrumAnalyzer, dataProcessor: SpectrumDataProcessor, width: number, height: number) {
     super(canvas, specA, width, height);
 
     // Store reference to shared data processor
@@ -129,9 +123,11 @@ export class SpectralDensityPlot extends RTSAScreen {
       const minIntervalMs = 1000 / this.specA.state.refreshRate;
       if (now - this.lastDrawTime > Math.max(sweepTimeMs, minIntervalMs)) {
         // Invalidate grid cache if amplitude range changed
-        if (this.cachedMinAmplitude !== this.specA.state.minAmplitude ||
+        if (
+          this.cachedMinAmplitude !== this.specA.state.minAmplitude ||
           this.cachedMaxAmplitude !== this.specA.state.maxAmplitude ||
-          this.cachedReferenceLevel !== this.specA.state.referenceLevel) {
+          this.cachedReferenceLevel !== this.specA.state.referenceLevel
+        ) {
           this.cachedGridImageData = null;
         }
 
@@ -191,7 +187,7 @@ export class SpectralDensityPlot extends RTSAScreen {
       case 'average':
         // Rolling average: 20% new, 80% old
         for (let x = 0; x < this.width; x++) {
-          this.traceData[traceIndex][x] = (this.traceData[traceIndex][x] * 0.8) + (currentData[x] * 0.2);
+          this.traceData[traceIndex][x] = this.traceData[traceIndex][x] * 0.8 + currentData[x] * 0.2;
         }
         break;
 
@@ -200,7 +196,6 @@ export class SpectralDensityPlot extends RTSAScreen {
         break;
     }
   }
-
 
   draw(): void {
     if (!this.specA.state.isPaused && this.running) {
@@ -211,11 +206,13 @@ export class SpectralDensityPlot extends RTSAScreen {
         const isDualScreenMode = this.canvas.id.endsWith('-spectral');
 
         // Generate cached grid+labels ImageData if needed
-        if (!this.cachedGridImageData ||
+        if (
+          !this.cachedGridImageData ||
           this.cachedMinFreq !== this.minFreq ||
           this.cachedMaxFreq !== this.maxFreq ||
           this.cachedMinAmplitude !== this.specA.state.minAmplitude ||
-          this.cachedMaxAmplitude !== this.specA.state.maxAmplitude) {
+          this.cachedMaxAmplitude !== this.specA.state.maxAmplitude
+        ) {
           this.cachedGridImageData = this.generateGridImageData(isDualScreenMode);
           this.cachedMinFreq = this.minFreq;
           this.cachedMaxFreq = this.maxFreq;
@@ -310,13 +307,13 @@ export class SpectralDensityPlot extends RTSAScreen {
       const topPeaks = peaks.slice(0, 10);
 
       // Convert to marker format
-      topPeaks.forEach(peak => {
+      topPeaks.forEach((peak) => {
         const y = (peak.signal - this.specA.state.minAmplitude) / this.range;
         if (y > 0 && y < 1) {
           this.specA.state.topMarkers.push({
             x: peak.x,
             y: 1 - y,
-            signal: peak.signal
+            signal: peak.signal,
           });
         }
       });
@@ -329,12 +326,12 @@ export class SpectralDensityPlot extends RTSAScreen {
 
           if (y > 0 && y < 1) {
             // Check if we already have a marker near this position
-            const tooClose = this.specA.state.topMarkers.some(m => Math.abs(m.x - x) < 10);
+            const tooClose = this.specA.state.topMarkers.some((m) => Math.abs(m.x - x) < 10);
             if (!tooClose) {
               this.specA.state.topMarkers.push({
                 x,
                 y: 1 - y,
-                signal
+                signal,
               });
             }
           }
@@ -401,33 +398,17 @@ export class SpectralDensityPlot extends RTSAScreen {
     const formatCandidates = (freq: number): string[] => {
       if (freq >= 1e9) {
         const g = freq / 1e9;
-        return [
-          `${g.toFixed(3)} GHz`,
-          `${g.toFixed(3)}GHz`,
-          `${Math.round(g)} GHz`,
-          `${Math.round(g)}GHz`,
-          `${Math.round(g)}G`
-        ];
+        return [`${g.toFixed(3)} GHz`, `${g.toFixed(3)}GHz`, `${Math.round(g)} GHz`, `${Math.round(g)}GHz`, `${Math.round(g)}G`];
       } else if (freq >= 1e6) {
         const m = freq / 1e6;
-        return [
-          `${Math.round(m)} MHz`,
-          `${Math.round(m)}MHz`,
-          `${(m >= 1000) ? `${(m / 1000).toFixed(1)} GHz` : `${Math.round(m / 10) / 100}M`}`,
-          `${Math.round(m / 1000)}G`
-        ].filter(Boolean);
+        return [`${Math.round(m)} MHz`, `${Math.round(m)}MHz`, `${m >= 1000 ? `${(m / 1000).toFixed(1)} GHz` : `${Math.round(m / 10) / 100}M`}`, `${Math.round(m / 1000)}G`].filter(
+          Boolean
+        );
       } else if (freq >= 1e3) {
         const k = freq / 1e3;
-        return [
-          `${k.toFixed(3)} kHz`,
-          `${Math.round(k)} kHz`,
-          `${Math.round(k)}kHz`,
-          `${Math.round(freq)} Hz`
-        ];
+        return [`${k.toFixed(3)} kHz`, `${Math.round(k)} kHz`, `${Math.round(k)}kHz`, `${Math.round(freq)} Hz`];
       } else {
-        return [
-          `${Math.round(freq)} Hz`
-        ];
+        return [`${Math.round(freq)} Hz`];
       }
     };
 
@@ -608,12 +589,11 @@ export class SpectralDensityPlot extends RTSAScreen {
 
       // Draw frequency label
       ctx.fillStyle = '#fff';
-      const freqMhz = (this.minFreq + (maxX * (this.maxFreq - this.minFreq)) / this.width) / 1e6 as MHz;
+      const freqMhz = ((this.minFreq + (maxX * (this.maxFreq - this.minFreq)) / this.width) / 1e6) as MHz;
       ctx.fillText(`${freqMhz.toFixed(1)} MHz`, maxX - 20, this.height * maxY - 30);
       ctx.fillText(`${(maxSignalFreq).toFixed(1)} dB`, maxX - 20, this.height * maxY - 15);
     }
   }
-
 
   /**
    * Signal Processing Methods
@@ -628,7 +608,7 @@ export class SpectralDensityPlot extends RTSAScreen {
     // Use outOfBandWidth as the basis for sigma to create a wider, more realistic Gaussian
     // This creates the smooth bell curve shape
     const sigma = outOfBandWidth / 3; // Adjust factor to control width
-    const gaussian = Math.exp(-0.5 * Math.pow(distance / sigma, 2));
+    const gaussian = Math.exp(-0.5 * (distance / sigma) ** 2);
 
     // Convert gaussian to dB (this creates the smooth exponential rise/fall)
     const gaussianDb = 20 * Math.log10(Math.max(gaussian, 1e-10));

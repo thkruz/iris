@@ -1,13 +1,13 @@
-import { html } from "@app/engine/utils/development/formatter";
-import { qs } from "@app/engine/utils/query-selector";
-import { OrbitalSatellite } from "@app/equipment/satellite/orbital-satellite";
-import { EventBus } from "@app/events/event-bus";
-import { Events } from "@app/events/events";
-import { lightingSpans, type LightingSpan } from "@app/services/ground-track-math";
-import { DEFAULT_CONTACT_MIN_ELEVATION, PassPlannerService, type SatellitePass } from "@app/services/pass-planner-service";
-import { getSimulatedNowMs } from "@app/simulation/sim-time";
-import { SimulationManager } from "@app/simulation/simulation-manager";
-import type { Degrees } from "ootk";
+import { html } from '@app/engine/utils/development/formatter';
+import { qs } from '@app/engine/utils/query-selector';
+import { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
+import { EventBus } from '@app/events/event-bus';
+import { Events } from '@app/events/events';
+import { type LightingSpan, lightingSpans } from '@app/services/ground-track-math';
+import { DEFAULT_CONTACT_MIN_ELEVATION, PassPlannerService, type SatellitePass } from '@app/services/pass-planner-service';
+import { getSimulatedNowMs } from '@app/simulation/sim-time';
+import { SimulationManager } from '@app/simulation/simulation-manager';
+import type { Degrees } from 'ootk';
 import './timeline-deck.css';
 
 /** Options supplied by the scenario's `settings.contactTimeline` block. */
@@ -68,7 +68,10 @@ export class TimelineDeck {
   private lastPredictMs_ = Number.NEGATIVE_INFINITY;
   private lastSyncMs_ = 0;
 
-  constructor(private readonly parentContainerId_: string, config: TimelineDeckConfig = {}) {
+  constructor(
+    private readonly parentContainerId_: string,
+    config: TimelineDeckConfig = {}
+  ) {
     this.config_ = {
       horizonHours: config.horizonHours ?? 6,
       // Shared with the Pass Schedule tab via scenarioMinElevation(), so both
@@ -86,9 +89,11 @@ export class TimelineDeck {
   }
 
   private get html_(): string {
-    const zoomButtons = HORIZON_OPTIONS.map((hours) => html`
+    const zoomButtons = HORIZON_OPTIONS.map(
+      (hours) => html`
       <button data-horizon="${hours}" class="${hours === this.horizonHours_ ? 'active' : ''}">${hours}H</button>
-    `).join('');
+    `
+    ).join('');
 
     return html`
       <footer id="${this.id}" class="app-shell-timeline ${this.config_.startCollapsed ? 'collapsed' : ''}">
@@ -161,9 +166,7 @@ export class TimelineDeck {
   }
 
   private orbitalSatellites_(): OrbitalSatellite[] {
-    return SimulationManager.getInstance().satellites.filter(
-      (sat): sat is OrbitalSatellite => sat instanceof OrbitalSatellite,
-    );
+    return SimulationManager.getInstance().satellites.filter((sat): sat is OrbitalSatellite => sat instanceof OrbitalSatellite);
   }
 
   /** Re-run pass prediction and lighting sampling for the current window. */
@@ -238,7 +241,9 @@ export class TimelineDeck {
       return;
     }
 
-    tracks.innerHTML = this.rows_.map((row) => html`
+    tracks.innerHTML = this.rows_
+      .map(
+        (row) => html`
       <div class="timeline-track">
         <div class="timeline-track-label" title="${row.name}">${row.name}</div>
         <div class="timeline-track-lane">
@@ -246,7 +251,9 @@ export class TimelineDeck {
           ${this.passesHtml_(row, startMs, spanMs)}
         </div>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
 
     // Axis labels line up with the grid lines plus both ends.
     const ticks = 5;
@@ -261,36 +268,40 @@ export class TimelineDeck {
   }
 
   private lightingHtml_(row: DeckRow, startMs: number, spanMs: number): string {
-    return row.lighting.map((span) => {
-      const left = this.percent_(span.startMs, startMs, spanMs);
-      const right = this.percent_(span.endMs, startMs, spanMs);
+    return row.lighting
+      .map((span) => {
+        const left = this.percent_(span.startMs, startMs, spanMs);
+        const right = this.percent_(span.endMs, startMs, spanMs);
 
-      if (right <= left) {
-        return '';
-      }
+        if (right <= left) {
+          return '';
+        }
 
-      return html`<div class="timeline-lighting ${span.isSunlit ? 'lighting-sun' : 'lighting-eclipse'}"
+        return html`<div class="timeline-lighting ${span.isSunlit ? 'lighting-sun' : 'lighting-eclipse'}"
         style="left:${left.toFixed(2)}%;width:${(right - left).toFixed(2)}%"></div>`;
-    }).join('');
+      })
+      .join('');
   }
 
   private passesHtml_(row: DeckRow, startMs: number, spanMs: number): string {
-    return row.passes.map((pass) => {
-      const left = this.percent_(pass.aosMs, startMs, spanMs);
-      const right = this.percent_(pass.losMs, startMs, spanMs);
+    return row.passes
+      .map((pass) => {
+        const left = this.percent_(pass.aosMs, startMs, spanMs);
+        const right = this.percent_(pass.losMs, startMs, spanMs);
 
-      if (right <= left) {
-        return '';
-      }
+        if (right <= left) {
+          return '';
+        }
 
-      const aos = new Date(pass.aosMs).toISOString().slice(11, 19);
-      const los = new Date(pass.losMs).toISOString().slice(11, 19);
-      const tooltip = `${row.name}  AOS ${aos}Z → LOS ${los}Z  ·  max el ${pass.maxEl.toFixed(1)}°  ·  ${Math.round(pass.durationS / 60)} min`;
+        const aos = new Date(pass.aosMs).toISOString().slice(11, 19);
+        const los = new Date(pass.losMs).toISOString().slice(11, 19);
+        const tooltip = `${row.name}  AOS ${aos}Z → LOS ${los}Z  ·  max el ${pass.maxEl.toFixed(1)}°  ·  ${Math.round(pass.durationS / 60)} min`;
 
-      return html`<div class="timeline-block ${TimelineDeck.passClass_(pass.maxEl)}"
+        return html`<div class="timeline-block ${TimelineDeck.passClass_(pass.maxEl)}"
         style="left:${left.toFixed(2)}%;width:${(right - left).toFixed(2)}%"
         title="${tooltip}">${pass.maxEl.toFixed(0)}°</div>`;
-    }).join('');
+      })
+      .join('');
   }
 
   /**

@@ -1,13 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  advanceMissionClock,
-  answerRileyQuiz,
-  domClick,
-  engageTrack,
-  rideUntilObjectiveComplete,
-  waitForObjectiveComplete,
-} from '../utils/ham-sdr-helpers';
+import { advanceMissionClock, answerRileyQuiz, domClick, engageTrack, rideUntilObjectiveComplete, waitForObjectiveComplete } from '../utils/ham-sdr-helpers';
 import { waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
@@ -111,12 +104,7 @@ test.describe('ham-sdr Scenario 6 Full Completion', () => {
     // AFC is earned by now - let the loop chase the UHF Doppler
     await domClick(page, '#sdr-afc-toggle');
 
-    const everLocked = await rideUntilObjectiveComplete(
-      page,
-      missionControl,
-      'Network Request #2: CUBEHOP-1',
-      { maxMs: 300_000, correct: true },
-    );
+    const everLocked = await rideUntilObjectiveComplete(page, missionControl, 'Network Request #2: CUBEHOP-1', { maxMs: 300_000, correct: true });
     expect(everLocked).toBe(true);
   });
 

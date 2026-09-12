@@ -51,8 +51,7 @@ export class GnssThreatManager {
   private readonly boundUpdateHandler_: (dt: Milliseconds) => void;
 
   private constructor() {
-    this.config_ = (ScenarioManager.getInstance().settings.gnssThreat as GnssThreatConfig | undefined)
-      ?? { spoofStartS: 0 };
+    this.config_ = (ScenarioManager.getInstance().settings.gnssThreat as GnssThreatConfig | undefined) ?? { spoofStartS: 0 };
     this.boundUpdateHandler_ = this.update_.bind(this);
     EventBus.getInstance().on(Events.UPDATE, this.boundUpdateHandler_);
   }
@@ -118,8 +117,7 @@ export class GnssThreatManager {
 
   private update_(): void {
     const elapsed = (missionNowMs() - this.missionStartTime_) / 1000;
-    const inWindow = elapsed >= this.config_.spoofStartS
-      && (this.config_.spoofEndS === undefined || elapsed < this.config_.spoofEndS);
+    const inWindow = elapsed >= this.config_.spoofStartS && (this.config_.spoofEndS === undefined || elapsed < this.config_.spoofEndS);
     this.state_.spoofActive = inWindow;
 
     const deltaS = Math.max(0, elapsed - this.lastElapsedS_);

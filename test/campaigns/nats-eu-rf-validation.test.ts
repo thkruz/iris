@@ -47,12 +47,8 @@ vi.mock('@app/simulation/simulation-manager', () => ({
   SimulationManager: {
     getInstance: () => ({
       satellites: simSatellites,
-      getSatsByAzEl: (az: number, el: number) =>
-        simSatellites.filter(
-          (sat) => Math.abs(sat.az - az) <= 1 && Math.abs(sat.el - el) <= 1,
-        ),
-      getSatByNoradId: (noradId: number) =>
-        simSatellites.find((sat) => sat.noradId === noradId) ?? null,
+      getSatsByAzEl: (az: number, el: number) => simSatellites.filter((sat) => Math.abs(sat.az - az) <= 1 && Math.abs(sat.el - el) <= 1),
+      getSatByNoradId: (noradId: number) => simSatellites.find((sat) => sat.noradId === noradId) ?? null,
       isDeveloperMode: false,
       update: () => undefined,
       draw: () => undefined,
@@ -64,14 +60,14 @@ vi.mock('@app/simulation/simulation-manager', () => ({
 
 import { galwayGroundStation } from '@app/campaigns/nats-eu/ground-stations';
 import { meridianSar1Satellite, meridianSar2Satellite } from '@app/campaigns/nats-eu/satellites';
-import type { AntennaCore } from '@app/equipment/antenna/antenna-core';
 import { ANTENNA_CONFIG_KEYS } from '@app/equipment/antenna/antenna-config-keys';
+import type { AntennaCore } from '@app/equipment/antenna/antenna-core';
 import { AntennaUIHeadless } from '@app/equipment/antenna/antenna-ui-headless';
-import { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
 import { Receiver } from '@app/equipment/receiver/receiver';
 import { TapPoint } from '@app/equipment/rf-front-end/coupler-module/tap-points';
 import type { RFFrontEndCore } from '@app/equipment/rf-front-end/rf-front-end-core';
 import { createRFFrontEnd } from '@app/equipment/rf-front-end/rf-front-end-factory';
+import { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
 import { EventBus } from '@app/events/event-bus';
 import { SignalOrigin } from '@app/signal-origin';
 import type { dBi, dBm, FECType, Hertz, MHz, ModulationType, RfFrequency } from '@app/types';
@@ -123,17 +119,11 @@ describe('nats-eu Campaign 2 RF validation: MERIDIAN over GW-01 (Phase A gate)',
     // Deterministic run: zero out servo jitter and satellite power variation.
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
 
-    document.body.innerHTML =
-      '<div id="rf-validation-fe"></div><div id="rf-validation-rx"></div>';
+    document.body.innerHTML = '<div id="rf-validation-fe"></div><div id="rf-validation-rx"></div>';
 
     // Mirror GroundStation.createEquipment_/wireEquipment_ with the real
     // GW-01 config, minus the canvas-bound spectrum analyzer.
-    antenna = new AntennaUIHeadless(
-      'rf-validation-antenna',
-      ANTENNA_CONFIG_KEYS.KU_BAND_4M_LEO_TRACKER,
-      galwayGroundStation.antennasState![0],
-      1,
-    );
+    antenna = new AntennaUIHeadless('rf-validation-antenna', ANTENNA_CONFIG_KEYS.KU_BAND_4M_LEO_TRACKER, galwayGroundStation.antennasState![0], 1);
     frontEnd = createRFFrontEnd('rf-validation-fe', galwayGroundStation.rfFrontEnds[0], 'standard');
     frontEnd.connectAntenna(antenna);
     antenna.attachRfFrontEnd(frontEnd);
@@ -313,7 +303,7 @@ describe('nats-eu Campaign 2 RF validation: MERIDIAN over GW-01 (Phase A gate)',
             },
           },
         ],
-      },
+      }
     );
     simSatellites = [zenithSat];
 

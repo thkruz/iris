@@ -1,3 +1,4 @@
+import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import type { AntennaState } from '@app/equipment/antenna';
 import { ANTENNA_CONFIG_KEYS } from '@app/equipment/antenna/antenna-config-keys';
 import { Character, Emotion } from '@app/modal/character-enum';
@@ -7,7 +8,6 @@ import { SignalOrigin } from '@app/signal-origin';
 import type { dB, dBi, dBm, FECType, Hertz, IfFrequency, MHz, ModulationType } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
-import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { vermontGroundStation } from './ground-stations';
 import { ses10Satellite, tidemark1Satellite, tidemark2Satellite, tidemark3Satellite } from './satellites';
 
@@ -67,13 +67,7 @@ export const scenario11Data: ScenarioData = {
   difficulty: 'intermediate',
   missionType: 'Planned Operations',
   description: `Scheduled maintenance window opens at 10:00 for HPA waveguide gasket inspection on VT-01. Two hours of downtime, pre-coordinated with Maine.<br><br>Catherine has ME-02 standing by - already tracking TIDEMARK-1 in parallel, RX hot, waiting on your commit. Your job: verify her receive side, stage ME-02's transmit chain (cold - the transfer swaps RF authority), execute the handover, then safe VT-01 for the maintenance crew.<br><br>No fire, no weather, no surprise. This is procedural work and the grade is cleanliness. Maintenance crew arrives in thirty minutes.`,
-  equipment: [
-    '9-meter C-band Antenna',
-    'RF Front End',
-    'Spectrum Analyzer',
-    'RX/TX Modems',
-    'ME-02: Operational - RX Standing By',
-  ],
+  equipment: ['9-meter C-band Antenna', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'ME-02: Operational - RX Standing By'],
   timeLimitSeconds: 30 * 60, // 30 minutes
   settings: {
     isSync: true,
@@ -138,36 +132,40 @@ export const scenario11Data: ScenarioData = {
             selectedTrace: 1,
           },
         ],
-        transmitters: [{
-          activeModem: 1,
-          modems: [{
-            isPowered: true,
-            antenna_id: 1,
-            modem_number: 1,
-            isFaulted: false,
-            isTransmitting: false,
-            isTransmittingSwitchUp: false,
-            isFaultSwitchUp: false,
-            id: 1,
-            isLoopback: false,
-            ifSignal: {
-              signalId: 'TIDEMARK-1-Teleport',
-              serverId: 1,
-              noradId: 61525,
-              polarization: 'V',
-              feed: '',
-              isDegraded: false,
-              origin: SignalOrigin.TRANSMITTER,
-              noiseFloor: null,
-              gainInPath: 0 as dBi,
-              frequency: 1094e6 as IfFrequency,
-              power: -7 as dBm,
-              bandwidth: 36e6 as Hertz,
-              modulation: 'QPSK' as ModulationType,
-              fec: '3/4' as FECType,
-            },
-          }],
-        }],
+        transmitters: [
+          {
+            activeModem: 1,
+            modems: [
+              {
+                isPowered: true,
+                antenna_id: 1,
+                modem_number: 1,
+                isFaulted: false,
+                isTransmitting: false,
+                isTransmittingSwitchUp: false,
+                isFaultSwitchUp: false,
+                id: 1,
+                isLoopback: false,
+                ifSignal: {
+                  signalId: 'TIDEMARK-1-Teleport',
+                  serverId: 1,
+                  noradId: 61525,
+                  polarization: 'V',
+                  feed: '',
+                  isDegraded: false,
+                  origin: SignalOrigin.TRANSMITTER,
+                  noiseFloor: null,
+                  gainInPath: 0 as dBi,
+                  frequency: 1094e6 as IfFrequency,
+                  power: -7 as dBm,
+                  bandwidth: 36e6 as Hertz,
+                  modulation: 'QPSK' as ModulationType,
+                  fec: '3/4' as FECType,
+                },
+              },
+            ],
+          },
+        ],
         receivers: [
           {
             activeModem: 1,
@@ -186,12 +184,7 @@ export const scenario11Data: ScenarioData = {
         ],
       },
     ],
-    satellites: [
-      tidemark1Satellite,
-      tidemark2Satellite,
-      tidemark3Satellite,
-      ses10Satellite,
-    ],
+    satellites: [tidemark1Satellite, tidemark2Satellite, tidemark3Satellite, ses10Satellite],
     trafficOwnership: [
       {
         satelliteNoradId: 61525, // TIDEMARK-1
@@ -448,7 +441,8 @@ export const scenario11Data: ScenarioData = {
       id: 'me-stage-tx-for-handover',
       nice: ['T0129', 'S0421', 'K0770'],
       title: 'Stage ME-02 Transmit',
-      description: 'Enable transmit on Modem 1 so the TX chain is staged - but leave the BUC muted and the HPA disabled. The handover transfer, not the operator, swaps RF authority between stations.',
+      description:
+        'Enable transmit on Modem 1 so the TX chain is staged - but leave the BUC muted and the HPA disabled. The handover transfer, not the operator, swaps RF authority between stations.',
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['me-verify-beacon-and-rx'],
       timeLimitSeconds: 4 * 60,
@@ -503,7 +497,8 @@ export const scenario11Data: ScenarioData = {
               'A successful loopback test before the transfer',
             ],
             correctIndex: 0,
-            explanation: 'Receive side proves the link works in; transmit side is staged but cold. If both stations radiated at the same transponder, the satellite would see two carriers - dual illumination. The handover stands the source down and brings the target up in one coordinated swap.',
+            explanation:
+              'Receive side proves the link works in; transmit side is staged but cold. If both stations radiated at the same transponder, the satellite would see two carriers - dual illumination. The handover stands the source down and brings the target up in one coordinated swap.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -592,7 +587,7 @@ export const scenario11Data: ScenarioData = {
       id: 'catherine-confirm-hot',
       nice: ['K0718', 'K0741'],
       title: 'Confirm with Catherine',
-      description: 'Acknowledge Catherine\'s confirmation that ME-02 has the link clean.',
+      description: "Acknowledge Catherine's confirmation that ME-02 has the link clean.",
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['verify-me-traffic-owner'],
       timeLimitSeconds: 2 * 60,
@@ -648,7 +643,8 @@ export const scenario11Data: ScenarioData = {
       id: 'vt-safe-tx-chain',
       nice: ['S0421', 'K0770', 'S0593'],
       title: 'Verify VT-01 TX Chain Safed',
-      description: 'The handover stood VT-01\'s transmit down automatically - HPA disabled, BUC muted. Verify it on the panel; never trust an automatic safing you have not looked at.',
+      description:
+        "The handover stood VT-01's transmit down automatically - HPA disabled, BUC muted. Verify it on the panel; never trust an automatic safing you have not looked at.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['switch-to-vermont-safing'],
       timeLimitSeconds: 3 * 60,

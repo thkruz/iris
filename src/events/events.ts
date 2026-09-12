@@ -1,29 +1,24 @@
-import { GroundStationState } from "@app/assets/ground-station/ground-station-state";
-import { AntennaState } from "@app/equipment/antenna";
-import type { Character } from "@app/modal/character-enum";
-import { RealTimeSpectrumAnalyzerState } from "@app/equipment/real-time-spectrum-analyzer/real-time-spectrum-analyzer";
-import { AGCState } from "@app/equipment/rf-front-end/agc-module";
-import { BUCState } from "@app/equipment/rf-front-end/buc-module";
-import { CouplerState } from "@app/equipment/rf-front-end/coupler-module/coupler-module";
-import { IfFilterBankState } from "@app/equipment/rf-front-end/filter-module";
-import { NotchFilterState } from "@app/equipment/rf-front-end/notch-filter-module";
-import { GPSDOState } from "@app/equipment/rf-front-end/gpsdo-module";
-import { HPAState } from "@app/equipment/rf-front-end/hpa-module";
-import { LNBState } from "@app/equipment/rf-front-end/lnb-module";
-import { OMTState } from "@app/equipment/rf-front-end/omt-module/omt-module";
-import { RFFrontEndState } from "@app/equipment/rf-front-end/rf-front-end-core";
-import type {
-  CryptoKeyExpiredData,
-  CryptoKeyRotatedData,
-  CryptoStateChangedData,
-  CryptoZeroizedData,
-} from "@app/equipment/crypto/crypto-types";
-import { Milliseconds } from "ootk";
-import { ReceiverModemState } from "@app/equipment/receiver/receiver";
-import { TransmitterModem } from "@app/equipment/transmitter/transmitter";
-import { ConditionState, ConditionType, Objective, ObjectiveState } from "@app/objectives/objective-types";
-import { OpsLogEntry } from "@app/ops-log/ops-log-types";
-import { RfSignal } from "@app/types";
+import { GroundStationState } from '@app/assets/ground-station/ground-station-state';
+import { AntennaState } from '@app/equipment/antenna';
+import type { CryptoKeyExpiredData, CryptoKeyRotatedData, CryptoStateChangedData, CryptoZeroizedData } from '@app/equipment/crypto/crypto-types';
+import { RealTimeSpectrumAnalyzerState } from '@app/equipment/real-time-spectrum-analyzer/real-time-spectrum-analyzer';
+import { ReceiverModemState } from '@app/equipment/receiver/receiver';
+import { AGCState } from '@app/equipment/rf-front-end/agc-module';
+import { BUCState } from '@app/equipment/rf-front-end/buc-module';
+import { CouplerState } from '@app/equipment/rf-front-end/coupler-module/coupler-module';
+import { IfFilterBankState } from '@app/equipment/rf-front-end/filter-module';
+import { GPSDOState } from '@app/equipment/rf-front-end/gpsdo-module';
+import { HPAState } from '@app/equipment/rf-front-end/hpa-module';
+import { LNBState } from '@app/equipment/rf-front-end/lnb-module';
+import { NotchFilterState } from '@app/equipment/rf-front-end/notch-filter-module';
+import { OMTState } from '@app/equipment/rf-front-end/omt-module/omt-module';
+import { RFFrontEndState } from '@app/equipment/rf-front-end/rf-front-end-core';
+import { TransmitterModem } from '@app/equipment/transmitter/transmitter';
+import type { Character } from '@app/modal/character-enum';
+import { ConditionState, ConditionType, Objective, ObjectiveState } from '@app/objectives/objective-types';
+import { OpsLogEntry } from '@app/ops-log/ops-log-types';
+import { RfSignal } from '@app/types';
+import { Milliseconds } from 'ootk';
 
 // Antenna Event specific interfaces
 export interface AntennaLoopbackChangedData {
@@ -357,7 +352,7 @@ export enum Events {
 
   // Receiver events
   RX_CONFIG_CHANGED = 'rx:config:changed',
-  RX_ACTIVE_MODEM_CHANGED = "rx:activeModem:changed",
+  RX_ACTIVE_MODEM_CHANGED = 'rx:activeModem:changed',
   RX_SIGNAL_FOUND = 'rx:signal:found',
   RX_SIGNAL_LOST = 'rx:signal:lost',
 
@@ -366,26 +361,26 @@ export enum Events {
 
   // Router events
   ROUTE_CHANGED = 'route:changed',
-  STORAGE_ERROR = "STORAGE_ERROR",
+  STORAGE_ERROR = 'STORAGE_ERROR',
 
   // Game loop events
-  DOM_READY = "app:dom-ready",
+  DOM_READY = 'app:dom-ready',
   /** This event is called every simulation update tick */
-  UPDATE = "app:update",
+  UPDATE = 'app:update',
   /** This event is used for canvas rendering */
-  DRAW = "app:draw",
-  SYNC = "app:sync",
-  RF_FE_POWER_CHANGED = "rf-fe:power:changed",
-  RF_FE_BUC_CHANGED = "rf-fe:buc:changed",
-  RF_FE_HPA_CHANGED = "rf-fe:hpa:changed",
-  RF_FE_AGC_CHANGED = "rf-fe:agc:changed",
-  RF_FE_LNB_CHANGED = "rf-fe:lnb:changed",
-  RF_FE_ALARM = "rf-fe:alarm",
-  RF_FE_OMT_CHANGED = "rf-fe:omt:changed",
-  RF_FE_COUPLER_CHANGED = "rf-fe:coupler:changed",
-  RF_FE_FILTER_CHANGED = "rf-fe:filter:changed",
-  RF_FE_NOTCH_FILTER_CHANGED = "rf-fe:notch-filter:changed",
-  RF_FE_GPSDO_CHANGED = "rf-fe:gpsdo:changed",
+  DRAW = 'app:draw',
+  SYNC = 'app:sync',
+  RF_FE_POWER_CHANGED = 'rf-fe:power:changed',
+  RF_FE_BUC_CHANGED = 'rf-fe:buc:changed',
+  RF_FE_HPA_CHANGED = 'rf-fe:hpa:changed',
+  RF_FE_AGC_CHANGED = 'rf-fe:agc:changed',
+  RF_FE_LNB_CHANGED = 'rf-fe:lnb:changed',
+  RF_FE_ALARM = 'rf-fe:alarm',
+  RF_FE_OMT_CHANGED = 'rf-fe:omt:changed',
+  RF_FE_COUPLER_CHANGED = 'rf-fe:coupler:changed',
+  RF_FE_FILTER_CHANGED = 'rf-fe:filter:changed',
+  RF_FE_NOTCH_FILTER_CHANGED = 'rf-fe:notch-filter:changed',
+  RF_FE_GPSDO_CHANGED = 'rf-fe:gpsdo:changed',
 
   // Objectives events
   OBJECTIVE_ACTIVATED = 'objective:activated',
@@ -471,7 +466,7 @@ export interface EventMap {
   [Events.ANTENNA_STATE_CHANGED]: [Partial<AntennaState>];
 
   [Events.GROUND_STATION_STATE_CHANGED]: [Partial<GroundStationState>];
-  [Events.ASSET_SELECTED]: [{ type: 'ground-station' | 'satellite', id: string }];
+  [Events.ASSET_SELECTED]: [{ type: 'ground-station' | 'satellite'; id: string }];
 
   [Events.RF_FE_POWER_CHANGED]: [Partial<RFFrontEndState>];
   [Events.RF_FE_BUC_CHANGED]: [Partial<BUCState>];
@@ -483,10 +478,12 @@ export interface EventMap {
   [Events.RF_FE_FILTER_CHANGED]: [Partial<IfFilterBankState>];
   [Events.RF_FE_NOTCH_FILTER_CHANGED]: [Partial<NotchFilterState>];
   [Events.RF_FE_GPSDO_CHANGED]: [Partial<GPSDOState>];
-  [Events.RF_FE_ALARM]: [{
-    unit: number;
-    alarms: string[];
-  }];
+  [Events.RF_FE_ALARM]: [
+    {
+      unit: number;
+      alarms: string[];
+    },
+  ];
 
   [Events.TX_CONFIG_CHANGED]: [TxConfigChangedData];
   [Events.TX_ACTIVE_MODEM_CHANGED]: [TxActiveModemChangedData];

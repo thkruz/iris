@@ -26,8 +26,8 @@
  * never see the control.
  */
 
-import { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
 import { CryptoModule } from '@app/equipment/crypto';
+import { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { ObjectivesManager } from '@app/objectives/objectives-manager';
@@ -328,8 +328,7 @@ export class TimeSkipController {
       return [];
     }
 
-    return SimulationManager.getInstance().satellites
-      .filter((sat): sat is OrbitalSatellite => sat instanceof OrbitalSatellite);
+    return SimulationManager.getInstance().satellites.filter((sat): sat is OrbitalSatellite => sat instanceof OrbitalSatellite);
   }
 
   /**
@@ -337,7 +336,7 @@ export class TimeSkipController {
    * whereas spinning up and settling reads as time passing quickly.
    */
   private static ease_(t: number): number {
-    return t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2;
+    return t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
   }
 
   /** Whether the loaded COMSEC key would age past its validity during a skip. */

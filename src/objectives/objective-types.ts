@@ -133,18 +133,7 @@ export type ConditionType =
 /**
  * Equipment references for condition checking
  */
-export type EquipmentRef =
-  | 'antenna'
-  | 'gpsdo'
-  | 'buc'
-  | 'lnb'
-  | 'hpa'
-  | 'filter'
-  | 'coupler'
-  | 'omt'
-  | 'spectrum-analyzer'
-  | 'transmitter'
-  | 'receiver';
+export type EquipmentRef = 'antenna' | 'gpsdo' | 'buc' | 'lnb' | 'hpa' | 'filter' | 'coupler' | 'omt' | 'spectrum-analyzer' | 'transmitter' | 'receiver';
 
 /**
  * Parameters for different condition types

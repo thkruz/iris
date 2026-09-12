@@ -1,5 +1,5 @@
-import type { ScenarioData } from '@app/ScenarioData';
 import { Character } from '@app/modal/character-enum';
+import type { ScenarioData } from '@app/ScenarioData';
 import { sandstormGroundStation } from './ground-stations';
 import { cobalt4Satellite } from './satellites';
 
@@ -135,7 +135,8 @@ export const ccsScenario2Data: ScenarioData = {
           type: 'status-check',
           description: 'Rules of Engagement',
           params: {
-            question: 'The tasking order denies the COBALT-4 service uplink at 8125 MHz. FRIENDLY MILSATCOM uplinks in 8175-8225 MHz through the same slot of sky. Which of these ends the mission immediately?',
+            question:
+              'The tasking order denies the COBALT-4 service uplink at 8125 MHz. FRIENDLY MILSATCOM uplinks in 8175-8225 MHz through the same slot of sky. Which of these ends the mission immediately?',
             options: [
               'Any jam waveform overlapping 8175-8225 MHz, for any duration',
               'Letting J/S fall below 6 dB while a string is tripped',
@@ -143,7 +144,8 @@ export const ccsScenario2Data: ScenarioData = {
               'Running the monitor aperture off the target',
             ],
             correctIndex: 0,
-            explanation: 'Radiating into friendly SATCOM is fratricide. A lapse in J/S costs you the effect and points; a protected-band hit costs you the mission. Keep the jam on 8125 MHz at 5 MHz wide and it stays 48 MHz clear of the edge.',
+            explanation:
+              'Radiating into friendly SATCOM is fratricide. A lapse in J/S costs you the effect and points; a protected-band hit costs you the mission. Keep the jam on 8125 MHz at 5 MHz wide and it stays 48 MHz clear of the edge.',
             character: Character.SYSTEM,
             pointPenalty: 2,
           },
@@ -157,7 +159,8 @@ export const ccsScenario2Data: ScenarioData = {
       id: 'coordinate-apertures',
       nice: ['S0421', 'K1032'],
       title: 'Coordinate the Apertures',
-      description: 'The jam antenna is already trained on COBALT-4. The monitor aperture was stowed for last night\'s wind hold - slew it back onto the bird (azimuth 175, elevation 50) so you have look-through for the whole window.',
+      description:
+        "The jam antenna is already trained on COBALT-4. The monitor aperture was stowed for last night's wind hold - slew it back onto the bird (azimuth 175, elevation 50) so you have look-through for the whole window.",
       groundStation: 'SS-01',
       prerequisiteObjectiveIds: ['acknowledge-tasking'],
       conditions: [
@@ -217,7 +220,8 @@ export const ccsScenario2Data: ScenarioData = {
       id: 'hold-primary',
       nice: ['T0153', 'K0740'],
       title: 'Hold the Blackout',
-      description: 'The adversary ground segment will step its carrier up to punch through. Keep the amplifier up and J/S at or above 6 dB for two continuous minutes - any lapse restarts the clock.',
+      description:
+        'The adversary ground segment will step its carrier up to punch through. Keep the amplifier up and J/S at or above 6 dB for two continuous minutes - any lapse restarts the clock.',
       groundStation: 'SS-01',
       prerequisiteObjectiveIds: ['establish-denial'],
       conditions: [
@@ -261,7 +265,8 @@ export const ccsScenario2Data: ScenarioData = {
       id: 'failover-backup',
       nice: ['T0081', 'S0582', 'S0421'],
       title: 'Diagnose and Fail Over',
-      description: 'Read the panel before you act: which module tripped? Keep the amplifier up, select the backup string (JAM-B, modem 2), key it, and restore DENIED before the adversary link recovers.',
+      description:
+        'Read the panel before you act: which module tripped? Keep the amplifier up, select the backup string (JAM-B, modem 2), key it, and restore DENIED before the adversary link recovers.',
       groundStation: 'SS-01',
       prerequisiteObjectiveIds: ['detect-first-trip'],
       timeLimitSeconds: 180,
@@ -276,7 +281,8 @@ export const ccsScenario2Data: ScenarioData = {
           type: 'status-check',
           description: 'Fault Isolation',
           params: {
-            question: 'Transmitter panel: JAM-A shows FAULT. HPA reports enabled, output nominal, no overdrive. BUC unmuted and reference locked. Jam antenna still on target. What failed, and what is the recovery?',
+            question:
+              'Transmitter panel: JAM-A shows FAULT. HPA reports enabled, output nominal, no overdrive. BUC unmuted and reference locked. Jam antenna still on target. What failed, and what is the recovery?',
             options: [
               'The JAM-A exciter tripped; the amplifier is healthy - leave the HPA enabled and switch to JAM-B',
               'The HPA tripped - disable it, wait for cool-down, and re-enable before keying anything',
@@ -284,7 +290,8 @@ export const ccsScenario2Data: ScenarioData = {
               'The jam antenna lost pointing - re-slew before touching the transmit chain',
             ],
             correctIndex: 0,
-            explanation: 'The FAULT indicator is on the exciter and every amplifier and BUC alarm is clear. Both strings drive the same HPA, so the fast recovery is to leave it enabled and bring the backup exciter up behind it. Disabling the HPA only extends the lapse.',
+            explanation:
+              'The FAULT indicator is on the exciter and every amplifier and BUC alarm is clear. Both strings drive the same HPA, so the fast recovery is to leave it enabled and bring the backup exciter up behind it. Disabling the HPA only extends the lapse.',
             character: Character.SYSTEM,
             pointPenalty: 5,
           },
@@ -366,7 +373,8 @@ export const ccsScenario2Data: ScenarioData = {
       id: 'recover-string',
       nice: ['S0582', 'S0421'],
       title: 'Reset a String and Recover',
-      description: 'Both exciters have tripped once. A tripped exciter stays latched until you run its FAULT RESET with the string un-keyed. Select a cooled string, clear its fault, key it, and restore DENIED.',
+      description:
+        'Both exciters have tripped once. A tripped exciter stays latched until you run its FAULT RESET with the string un-keyed. Select a cooled string, clear its fault, key it, and restore DENIED.',
       groundStation: 'SS-01',
       prerequisiteObjectiveIds: ['detect-second-trip'],
       timeLimitSeconds: 150,
@@ -381,7 +389,8 @@ export const ccsScenario2Data: ScenarioData = {
           type: 'status-check',
           description: 'Recovery Procedure',
           params: {
-            question: 'JAM-B now shows FAULT as well; JAM-A has been sitting un-keyed since its own trip. The HPA is still enabled and nominal. What restores the effect fastest without damaging anything?',
+            question:
+              'JAM-B now shows FAULT as well; JAM-A has been sitting un-keyed since its own trip. The HPA is still enabled and nominal. What restores the effect fastest without damaging anything?',
             options: [
               'Select a string that has had time to cool, run FAULT RESET with it un-keyed, confirm FAULT clears, then key it with the HPA left enabled',
               'Power-cycle the HPA - a fresh amplifier start clears latched exciter faults downstream',
@@ -389,7 +398,8 @@ export const ccsScenario2Data: ScenarioData = {
               'Widen the jam bandwidth on whichever string comes up to make up for the lost time',
             ],
             correctIndex: 0,
-            explanation: 'The fault is on the exciter and it latches. Reset only takes with the string un-keyed and needs a few seconds to clear. The HPA never failed - leave it up. Widening the waveform toward 8175 MHz is the one thing that can end the mission outright.',
+            explanation:
+              'The fault is on the exciter and it latches. Reset only takes with the string un-keyed and needs a few seconds to clear. The HPA never failed - leave it up. Widening the waveform toward 8175 MHz is the one thing that can end the mission outright.',
             character: Character.SYSTEM,
             pointPenalty: 5,
           },

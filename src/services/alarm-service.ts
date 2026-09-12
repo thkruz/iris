@@ -1,8 +1,8 @@
-import { EventBus } from '@app/events/event-bus';
-import { Events, AlarmStateChangedData, AggregatedAlarm } from '@app/events/events';
-import { AlarmStatus } from '@app/equipment/base-equipment';
-import { SimulationManager } from '@app/simulation/simulation-manager';
 import { GroundStation } from '@app/assets/ground-station/ground-station';
+import { AlarmStatus } from '@app/equipment/base-equipment';
+import { EventBus } from '@app/events/event-bus';
+import { AggregatedAlarm, AlarmStateChangedData, Events } from '@app/events/events';
+import { SimulationManager } from '@app/simulation/simulation-manager';
 import { Milliseconds } from 'ootk';
 
 /**
@@ -72,7 +72,7 @@ export class AlarmService {
             message: alarm.message,
             assetId,
             equipmentType: 'ANT',
-            equipmentIndex: idx
+            equipmentIndex: idx,
           });
         }
       }
@@ -88,7 +88,7 @@ export class AlarmService {
               message: alarm.message,
               assetId,
               equipmentType: 'RF',
-              equipmentIndex: idx
+              equipmentIndex: idx,
             });
           }
         }
@@ -104,7 +104,7 @@ export class AlarmService {
             message: alarm.message,
             assetId,
             equipmentType: 'TX',
-            equipmentIndex: idx
+            equipmentIndex: idx,
           });
         }
       }
@@ -119,7 +119,7 @@ export class AlarmService {
             message: alarm.message,
             assetId,
             equipmentType: 'RX',
-            equipmentIndex: idx
+            equipmentIndex: idx,
           });
         }
       }
@@ -136,13 +136,13 @@ export class AlarmService {
     filtered: AggregatedAlarm[];
     severity: 'error' | 'warning' | 'info' | 'success';
   } {
-    const errors = alarms.filter(a => a.severity === 'error');
+    const errors = alarms.filter((a) => a.severity === 'error');
     if (errors.length > 0) return { filtered: errors, severity: 'error' };
 
-    const warnings = alarms.filter(a => a.severity === 'warning');
+    const warnings = alarms.filter((a) => a.severity === 'warning');
     if (warnings.length > 0) return { filtered: warnings, severity: 'warning' };
 
-    const infos = alarms.filter(a => a.severity === 'info');
+    const infos = alarms.filter((a) => a.severity === 'info');
     if (infos.length > 0) return { filtered: infos, severity: 'info' };
 
     return { filtered: [], severity: 'success' };
@@ -156,7 +156,7 @@ export class AlarmService {
 
     const data: AlarmStateChangedData = {
       alarms: filtered,
-      highestSeverity: severity
+      highestSeverity: severity,
     };
 
     EventBus.getInstance().emit(Events.ALARM_STATE_CHANGED, data);

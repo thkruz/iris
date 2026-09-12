@@ -8,6 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { GroundStation } from '../../../../src/assets/ground-station/ground-station';
 import { natsEuSandboxData } from '../../../../src/campaigns/nats-eu/sandbox';
 import { CommandingManager } from '../../../../src/commanding/commanding-manager';
 import { ContactScheduleManager } from '../../../../src/contact-schedule/contact-schedule-manager';
@@ -20,15 +21,17 @@ import { SecurityConsoleTab } from '../../../../src/pages/mission-control/tabs/s
 import { ScenarioManager } from '../../../../src/scenario-manager';
 import { SecurityConsoleCore } from '../../../../src/security-console/security-console-core';
 import { TransecManager } from '../../../../src/transec/transec-manager';
-import type { GroundStation } from '../../../../src/assets/ground-station/ground-station';
 
 /** Minimal receiver stub delivering a live 12 dB C/N on the active modem. */
-const stubGroundStation = (snrDb: number | null): GroundStation => ({
-  receivers: [{
-    state: { activeModem: 1, modems: [{ modemNumber: 1, isPowered: true }] },
-    getSnrForModem: () => snrDb,
-  }],
-}) as unknown as GroundStation;
+const stubGroundStation = (snrDb: number | null): GroundStation =>
+  ({
+    receivers: [
+      {
+        state: { activeModem: 1, modems: [{ modemNumber: 1, isPowered: true }] },
+        getSnrForModem: () => snrDb,
+      },
+    ],
+  }) as unknown as GroundStation;
 
 const setInput = (id: string, value: string): void => {
   const input = document.getElementById(id) as HTMLInputElement;

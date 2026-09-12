@@ -48,11 +48,7 @@ export const natsEuScenario5Data: ScenarioData = {
   duration: '20-25 min',
   missionType: 'Mission Planning',
   description: `SH-02 Shetland went operational overnight. Fiona MacLeod has been running acceptance up there for three weeks in weather you would not believe, and as of this morning NATS Europe is a network rather than a station.<br><br>That changes your job. Galway is no longer the only place a MERIDIAN pass can be worked, which means somebody has to decide which site takes which contact - and that somebody is the operator holding the plan.<br><br>Four contacts today across two birds. Both sites can see all four. One antenna cannot be in two places at once.`,
-  equipment: [
-    'GW-01 Galway: 4m Ku-Band LEO Tracker',
-    'SH-02 Shetland: 4m Ku-Band LEO Tracker',
-    'Contact Plan Console',
-  ],
+  equipment: ['GW-01 Galway: 4m Ku-Band LEO Tracker', 'SH-02 Shetland: 4m Ku-Band LEO Tracker', 'Contact Plan Console'],
   settings: {
     isSync: true,
     groundStations: [galwayGroundStation, shetlandGroundStation],
@@ -87,7 +83,7 @@ export const natsEuScenario5Data: ScenarioData = {
       id: 'review-mission-brief',
       nice: ['K0645', 'K0737'],
       title: 'Review the Network Brief',
-      description: 'Open the shift brief and read the day\'s tasking. Four contacts, two sites.',
+      description: "Open the shift brief and read the day's tasking. Four contacts, two sites.",
       groundStation: 'GW-01',
       freezesScenarioTimer: true,
       prerequisiteObjectiveIds: [],
@@ -123,7 +119,7 @@ export const natsEuScenario5Data: ScenarioData = {
       id: 'open-contact-plan',
       nice: ['T0129', 'K0689'],
       title: 'Open the Contact Plan',
-      description: 'The Contact Plan tab lists the day\'s contacts and lets you allocate each one to a site. Open it and review what is unassigned.',
+      description: "The Contact Plan tab lists the day's contacts and lets you allocate each one to a site. Open it and review what is unassigned.",
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [

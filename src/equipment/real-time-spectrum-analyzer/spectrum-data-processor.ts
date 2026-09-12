@@ -1,5 +1,5 @@
-import { Hertz, IfSignal, RfSignal } from "@app/types";
-import { RealTimeSpectrumAnalyzer } from "./real-time-spectrum-analyzer";
+import { Hertz, IfSignal, RfSignal } from '@app/types';
+import { RealTimeSpectrumAnalyzer } from './real-time-spectrum-analyzer';
 
 /**
  * SpectrumDataProcessor - Centralized data generation for spectrum analysis
@@ -82,14 +82,14 @@ export class SpectrumDataProcessor {
       let noise = this.gaussianRandom_(base, 0.6);
 
       // Layer 2: Smooth low-frequency drift (additive, not multiplicative)
-      noise += Math.sin((x / 300) + time / 8 + randPhase1) * randAmp1 * 0.15;
+      noise += Math.sin(x / 300 + time / 8 + randPhase1) * randAmp1 * 0.15;
 
       // Layer 3: Very subtle high-frequency jitter (additive)
-      noise += Math.sin((x * 0.5 + time * 2 + randPhase2)) * randAmp2 * 0.005;
+      noise += Math.sin(x * 0.5 + time * 2 + randPhase2) * randAmp2 * 0.005;
 
       // Layer 4: Band-limited noise (simulate mild interference, additive)
       if (x > len * 0.4 && x < len * 0.6) {
-        noise += Math.sin((x / 40) + time * 1.5 + randPhase3) * randAmp3 * 0.02;
+        noise += Math.sin(x / 40 + time * 1.5 + randPhase3) * randAmp3 * 0.02;
       }
 
       // Layer 5: Frequent small random peaks (creates natural "grass" above baseline)
@@ -151,9 +151,7 @@ export class SpectrumDataProcessor {
       // (total power spread across bandwidth/RBW bins), matching how a real
       // analyzer renders wideband signals. Narrow signals are unaffected, and
       // the displayed noise floor is already per-RBW, so heights stay honest.
-      const psdCorrection_dB = rbw && signal.bandwidth > rbw
-        ? 10 * Math.log10(signal.bandwidth / rbw)
-        : 0;
+      const psdCorrection_dB = rbw && signal.bandwidth > rbw ? 10 * Math.log10(signal.bandwidth / rbw) : 0;
 
       this.addSignalToData(signal, center, inBandWidth, outOfBandWidth, psdCorrection_dB);
     });
@@ -163,13 +161,7 @@ export class SpectrumDataProcessor {
    * Add a single signal to the signal data array
    * Uses a flat-top shape with steep roll-off at the band edges
    */
-  private addSignalToData(
-    signal: IfSignal | RfSignal,
-    center: number,
-    inBandWidth: number,
-    outOfBandWidth: number,
-    psdCorrection_dB: number = 0
-  ): void {
+  private addSignalToData(signal: IfSignal | RfSignal, center: number, inBandWidth: number, outOfBandWidth: number, psdCorrection_dB: number = 0): void {
     // inBandWidth = flat-top region (e.g., 17.5 MHz from center for 36 MHz signal)
     // outOfBandWidth = total signal edge (e.g., 18 MHz from center = half-bandwidth)
     // Roll-off region spans from inBandWidth to outOfBandWidth
@@ -207,7 +199,7 @@ export class SpectrumDataProcessor {
         }
 
         // Very subtle slow variation across the flat top
-        y += Math.sin((x / 50) + Date.now() / 2000) * 0.15;
+        y += Math.sin(x / 50 + Date.now() / 2000) * 0.15;
       }
       // Roll-off region - steep transition at the band edges
       else if (absDist <= outOfBandWidth) {

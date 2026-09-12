@@ -1,5 +1,5 @@
 import { BaseElement } from '@app/components/base-element';
-import { ElectronicAttackManager, type EaAssessment } from '@app/electronic-attack/electronic-attack-manager';
+import { type EaAssessment, ElectronicAttackManager } from '@app/electronic-attack/electronic-attack-manager';
 import { html } from '@app/engine/utils/development/formatter';
 import { qs } from '@app/engine/utils/query-selector';
 import { EventBus } from '@app/events/event-bus';
@@ -90,21 +90,14 @@ export class EaAssessmentTab extends BaseElement {
   }
 
   private syncDomWithState_(): void {
-    const assessment = ElectronicAttackManager.isInitialized()
-      ? ElectronicAttackManager.getInstance().getAssessment()
-      : null;
+    const assessment = ElectronicAttackManager.isInitialized() ? ElectronicAttackManager.getInstance().getAssessment() : null;
 
     this.setBadge_(assessment);
 
     const yn = (v: boolean): string => (v ? 'YES' : 'no');
     this.setText_('ea-radiating', assessment ? yn(assessment.isRadiatingInBand) : '—');
     this.setText_('ea-ontarget', assessment ? yn(assessment.isOnTarget) : '—');
-    this.setText_(
-      'ea-pointing',
-      assessment?.pointingErrorDeg !== null && assessment?.pointingErrorDeg !== undefined
-        ? `${assessment.pointingErrorDeg.toFixed(1)}°`
-        : '—',
-    );
+    this.setText_('ea-pointing', assessment?.pointingErrorDeg !== null && assessment?.pointingErrorDeg !== undefined ? `${assessment.pointingErrorDeg.toFixed(1)}°` : '—');
     this.setText_('ea-jam-power', EaAssessmentTab.dbm_(assessment?.jamPowerDbm ?? null));
     this.setText_('ea-victim-power', assessment ? EaAssessmentTab.dbm_(assessment.victimPowerDbm) : '—');
     this.setText_('ea-jts', assessment?.jToSDb !== null && assessment?.jToSDb !== undefined ? `${assessment.jToSDb.toFixed(1)} dB` : '—');
@@ -132,7 +125,9 @@ export class EaAssessmentTab extends BaseElement {
       label = 'DEGRADED';
       cls = 'ea-status-degraded';
       detailText = assessment.isRadiatingInBand
-        ? (assessment.isOnTarget ? 'On target — J/S below threshold' : 'Radiating — antenna off target')
+        ? assessment.isOnTarget
+          ? 'On target — J/S below threshold'
+          : 'Radiating — antenna off target'
         : 'Antenna on target — no jam in band';
     }
 

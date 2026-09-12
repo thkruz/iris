@@ -1,3 +1,4 @@
+import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import type { AntennaState } from '@app/equipment/antenna';
 import { ANTENNA_CONFIG_KEYS } from '@app/equipment/antenna/antenna-config-keys';
 import { Receiver } from '@app/equipment/receiver/receiver';
@@ -7,7 +8,6 @@ import type { ScenarioData } from '@app/ScenarioData';
 import type { dB, dBm, Hertz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
-import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { vermontGroundStation } from './ground-stations';
 import { ses10Satellite, tidemark1Satellite, tidemark2Satellite } from './satellites';
 
@@ -68,13 +68,7 @@ export const scenario14Data: ScenarioData = {
   difficulty: 'intermediate',
   missionType: 'Weather Contingency',
   description: `Rain front moving over Vermont. Light to moderate, maybe twenty minutes through. The link will fade but it shouldn't black out.<br><br>The customer - James Okafor at SeaLink - has called ahead. Their SLA terms penalize handover events more than they penalize a few dB of margin loss, so he's asked us to hold VT-01 through the weather if we can. ME-02 is busy on TIDEMARK-2 and would have to drop its own customers to take TIDEMARK-1.<br><br>Your job: enable the feed heater, watch AGC headroom, track the beacon C/N, and make the call. Hold or hand off - the right answer is the one the link supports.`,
-  equipment: [
-    '9-meter C-band Antenna',
-    'RF Front End (Feed Heater, AGC)',
-    'Spectrum Analyzer',
-    'RX/TX Modems',
-    'ME-02: Operational (TIDEMARK-2)',
-  ],
+  equipment: ['9-meter C-band Antenna', 'RF Front End (Feed Heater, AGC)', 'Spectrum Analyzer', 'RX/TX Modems', 'ME-02: Operational (TIDEMARK-2)'],
   timeLimitSeconds: 35 * 60, // 35 minutes
   settings: {
     isSync: true,
@@ -146,11 +140,7 @@ export const scenario14Data: ScenarioData = {
         receivers: [Receiver.getDefaultState()],
       },
     ],
-    satellites: [
-      tidemark1Satellite,
-      tidemark2Satellite,
-      ses10Satellite,
-    ],
+    satellites: [tidemark1Satellite, tidemark2Satellite, ses10Satellite],
     weatherEvents: [
       {
         id: 'vermont-rain-front',
@@ -236,7 +226,8 @@ export const scenario14Data: ScenarioData = {
               'Maine is currently weathered in as well',
             ],
             correctIndex: 0,
-            explanation: 'SeaLink runs vessel telemetry that survives short C/N dips but logs a hard event on every uplink change. A handover event costs them more contractually than 3 dB of fade does. The customer is telling us what they value - listen.',
+            explanation:
+              'SeaLink runs vessel telemetry that survives short C/N dips but logs a hard event on every uplink change. A handover event costs them more contractually than 3 dB of fade does. The customer is telling us what they value - listen.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -292,12 +283,7 @@ export const scenario14Data: ScenarioData = {
           params: {
             character: Character.SYSTEM,
             question: 'What is VT-01 reporting before the front arrives?',
-            options: [
-              'No active alarms, link healthy - clean baseline to fade from',
-              'BUC over-temperature, do not transmit',
-              'Antenna tracking error',
-              'GPSDO in holdover',
-            ],
+            options: ['No active alarms, link healthy - clean baseline to fade from', 'BUC over-temperature, do not transmit', 'Antenna tracking error', 'GPSDO in holdover'],
             correctIndex: 0,
             explanation: 'Clean baseline. Note the C/N now so you know what "nominal" looks like when the rain starts pulling it down.',
             pointPenalty: 5,
@@ -357,7 +343,8 @@ export const scenario14Data: ScenarioData = {
               'Boosting RF gain through the feed',
             ],
             correctIndex: 0,
-            explanation: 'Standing water on the feed is itself an attenuator. The heater keeps surfaces above dew point so droplets evaporate instead of pooling. Same hardware as the anti-icing case in S3, different mechanism.',
+            explanation:
+              'Standing water on the feed is itself an attenuator. The heater keeps surfaces above dew point so droplets evaporate instead of pooling. Same hardware as the anti-icing case in S3, different mechanism.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -451,7 +438,8 @@ export const scenario14Data: ScenarioData = {
               'It is required by the modem firmware',
             ],
             correctIndex: 0,
-            explanation: 'Margin = baseline C/N minus demod threshold. With 10+ dB of headroom and 3 dB of expected fade, we are comfortable. Without baseline data, every dip looks scary.',
+            explanation:
+              'Margin = baseline C/N minus demod threshold. With 10+ dB of headroom and 3 dB of expected fade, we are comfortable. Without baseline data, every dip looks scary.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -527,7 +515,8 @@ export const scenario14Data: ScenarioData = {
               'The receiver has switched to a backup carrier',
             ],
             correctIndex: 0,
-            explanation: 'AGC absorbs the first several dB of fade transparently. The thing to watch is not the output level (that is what AGC stabilizes) but how much gain the AGC is using. When it approaches its max, you are out of cushion.',
+            explanation:
+              'AGC absorbs the first several dB of fade transparently. The thing to watch is not the output level (that is what AGC stabilizes) but how much gain the AGC is using. When it approaches its max, you are out of cushion.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -559,7 +548,8 @@ export const scenario14Data: ScenarioData = {
               'We must reduce HPA backoff to relieve the AGC',
             ],
             correctIndex: 0,
-            explanation: 'AGC near floor = wide cushion. The handover trigger is not AGC active - it is AGC near max with continued fade, or modem unlock. We are nowhere near either.',
+            explanation:
+              'AGC near floor = wide cushion. The handover trigger is not AGC active - it is AGC near max with continued fade, or modem unlock. We are nowhere near either.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -616,7 +606,8 @@ export const scenario14Data: ScenarioData = {
               'No - because the HPA cannot be adjusted while transmitting',
             ],
             correctIndex: 0,
-            explanation: 'Optimization is not "turn every dial to max." If the link has margin you do not need, the responsible move is to not spend it. Reduced backoff means higher IMD on neighbors and more amplifier stress for no operational benefit here. Keep the configuration nominal.',
+            explanation:
+              'Optimization is not "turn every dial to max." If the link has margin you do not need, the responsible move is to not spend it. Reduced backoff means higher IMD on neighbors and more amplifier stress for no operational benefit here. Keep the configuration nominal.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -684,7 +675,8 @@ export const scenario14Data: ScenarioData = {
               'When ME-02 reports it would be available',
             ],
             correctIndex: 0,
-            explanation: 'The customer can ask us to favor "hold." The customer cannot ask us to keep serving on a dead link. The trigger is operational, not contractual: AGC at max and still fading, or actual lock loss.',
+            explanation:
+              'The customer can ask us to favor "hold." The customer cannot ask us to keep serving on a dead link. The trigger is operational, not contractual: AGC at max and still fading, or actual lock loss.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -794,7 +786,8 @@ export const scenario14Data: ScenarioData = {
               'Modem must be manually re-locked',
             ],
             correctIndex: 0,
-            explanation: 'Rain fade is transient. The AGC tracks the recovery downward without intervention, and the demod has had lock the whole time. Nothing to do but watch it normalize.',
+            explanation:
+              'Rain fade is transient. The AGC tracks the recovery downward without intervention, and the demod has had lock the whole time. Nothing to do but watch it normalize.',
             pointPenalty: 5,
           },
           mustMaintain: false,

@@ -2,7 +2,7 @@ import { DraggableModal } from '@app/engine/ui/draggable-modal';
 import { html } from '@app/engine/utils/development/formatter';
 import { Logger } from '@app/logging/logger';
 import { Router } from '@app/router';
-import { ScoreCalculator, type ScoreBreakdown } from '@app/scoring/score-calculator';
+import { type ScoreBreakdown, ScoreCalculator } from '@app/scoring/score-calculator';
 import { SimulationManager } from '@app/simulation/simulation-manager';
 import { clearPersistedStore } from '@app/sync/storage';
 import { Auth } from '@app/user-account/auth';
@@ -88,34 +88,50 @@ export class LevelCompleteModal extends DraggableModal {
               <span class="breakdown-value positive">+${score.basePoints}</span>
             </div>
             <div class="breakdown-detail">${this.formatObjectivesDetail_(score.objectiveBreakdown)}</div>
-            ${score.timeBonus > 0 ? `
+            ${
+              score.timeBonus > 0
+                ? `
             <div class="breakdown-row">
               <span class="breakdown-label">Time Bonus</span>
               <span class="breakdown-value positive">+${score.timeBonus}</span>
             </div>
             <div class="breakdown-detail">${score.timeRemainingSeconds} seconds remaining / ${ScoreCalculator.TIME_BONUS_DIVISOR}</div>
-            ` : ''}
-            ${score.quizPenalties > 0 ? `
+            `
+                : ''
+            }
+            ${
+              score.quizPenalties > 0
+                ? `
             <div class="breakdown-row">
               <span class="breakdown-label">Quiz Penalties</span>
               <span class="breakdown-value negative">-${score.quizPenalties}</span>
             </div>
             <div class="breakdown-detail">${score.quizPenalties} points deducted</div>
-            ` : ''}
-            ${score.timePenalties > 0 ? `
+            `
+                : ''
+            }
+            ${
+              score.timePenalties > 0
+                ? `
             <div class="breakdown-row">
               <span class="breakdown-label">Time Penalties</span>
               <span class="breakdown-value negative">-${score.timePenalties}</span>
             </div>
             <div class="breakdown-detail">${score.timePenalties} points deducted</div>
-            ` : ''}
-            ${score.hintPenalties > 0 ? `
+            `
+                : ''
+            }
+            ${
+              score.hintPenalties > 0
+                ? `
             <div class="breakdown-row">
               <span class="breakdown-label">Hint Penalties</span>
               <span class="breakdown-value negative">-${score.hintPenalties}</span>
             </div>
             <div class="breakdown-detail">${score.hintPenalties} points deducted for hints used</div>
-            ` : ''}
+            `
+                : ''
+            }
           </div>
         </div>
 
@@ -220,10 +236,7 @@ export class LevelCompleteModal extends DraggableModal {
     // Reset progress (preserves completedAt so prerequisites stay unlocked) and clear checkpoint
     try {
       const userDataService = getUserDataService();
-      await Promise.all([
-        userDataService.resetScenarioForReplay(scenarioId),
-        userDataService.deleteCheckpoint(scenarioId),
-      ]);
+      await Promise.all([userDataService.resetScenarioForReplay(scenarioId), userDataService.deleteCheckpoint(scenarioId)]);
       Logger.info(`Reset progress and cleared checkpoint for Play Again: ${scenarioId}`);
     } catch (error) {
       Logger.error('Failed to reset progress for Play Again:', error);

@@ -1,7 +1,6 @@
 import type { Objective } from './objectives';
 import type { DialogClip, SimulationSettings } from './scenario-manager';
 
-
 export interface ScenarioData {
   id: string;
   isDisabled?: boolean;

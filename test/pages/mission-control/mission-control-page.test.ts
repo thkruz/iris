@@ -174,6 +174,8 @@ import { QuizModal } from '../../../src/modal/quiz-modal';
 import { ObjectivesManager } from '../../../src/objectives/objectives-manager';
 import { AssetTreeSidebar } from '../../../src/pages/mission-control/asset-tree-sidebar';
 import { GlobalCommandBar } from '../../../src/pages/mission-control/global-command-bar';
+// Import after mocks are set up
+import { MissionControlPage } from '../../../src/pages/mission-control/mission-control-page';
 import { TabbedCanvas } from '../../../src/pages/mission-control/tabbed-canvas';
 import { TimelineDeck } from '../../../src/pages/mission-control/timeline-deck';
 import { ScenarioDialogManager } from '../../../src/scenarios/scenario-dialog-manager';
@@ -181,8 +183,6 @@ import { AlarmService } from '../../../src/services/alarm-service';
 import { SimulationManager } from '../../../src/simulation/simulation-manager';
 import { syncEquipmentWithStore } from '../../../src/sync';
 import { Auth } from '../../../src/user-account/auth';
-// Import after mocks are set up
-import { MissionControlPage } from '../../../src/pages/mission-control/mission-control-page';
 
 describe('MissionControlPage', () => {
   let bodyContainer: HTMLElement;
@@ -330,7 +330,6 @@ describe('MissionControlPage', () => {
     });
 
     it('should initialize equipment for each ground station', () => {
-
       const mockGsInstance = GroundStation.mock.results[0]?.value;
       expect(mockGsInstance?.initializeEquipment).toHaveBeenCalled();
     });
@@ -405,14 +404,12 @@ describe('MissionControlPage', () => {
       MissionControlPage.create();
       MissionControlPage.destroy();
 
-
       expect(AlarmService.destroy).toHaveBeenCalled();
     });
 
     it('should destroy SimulationManager', () => {
       MissionControlPage.create();
       MissionControlPage.destroy();
-
 
       expect(SimulationManager.destroy).toHaveBeenCalled();
     });
@@ -469,9 +466,7 @@ describe('MissionControlPage', () => {
       await Promise.resolve();
       vi.advanceTimersByTime(100);
 
-      expect(Logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Skipping checkpoint load due to forceReplay')
-      );
+      expect(Logger.info).toHaveBeenCalledWith(expect.stringContaining('Skipping checkpoint load due to forceReplay'));
     });
   });
 });
@@ -518,10 +513,7 @@ describe('MissionControlPage with logged in user', () => {
     await Promise.resolve();
     vi.advanceTimersByTime(100);
 
-
-    expect(Logger.info).toHaveBeenCalledWith(
-      expect.stringContaining('Loading checkpoint for scenario')
-    );
+    expect(Logger.info).toHaveBeenCalledWith(expect.stringContaining('Loading checkpoint for scenario'));
   });
 });
 

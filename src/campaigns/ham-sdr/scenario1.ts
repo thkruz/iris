@@ -42,18 +42,22 @@ import { cubehop1Satellite, wxsat19Satellite } from './satellites';
  */
 const firstLightQfhStation = {
   ...backyardQfhStation,
-  receivers: [{
-    activeModem: 1,
-    modems: [{
-      modemNumber: 1,
-      isPowered: true,
-      frequency: 137.17 as MHz, // parked 70 kHz above the APT downlink
-      bandwidth: 0.015 as MHz,  // last night's FM voice channel: clips 34 kHz APT
-      modulation: 'BPSK',
-      fec: '1/2',
-      antenna_id: 1,
-    }],
-  }],
+  receivers: [
+    {
+      activeModem: 1,
+      modems: [
+        {
+          modemNumber: 1,
+          isPowered: true,
+          frequency: 137.17 as MHz, // parked 70 kHz above the APT downlink
+          bandwidth: 0.015 as MHz, // last night's FM voice channel: clips 34 kHz APT
+          modulation: 'BPSK',
+          fec: '1/2',
+          antenna_id: 1,
+        },
+      ],
+    },
+  ],
 } as GroundStationConfig;
 
 export const hamSdrScenario1Data: ScenarioData = {
@@ -68,11 +72,7 @@ export const hamSdrScenario1Data: ScenarioData = {
   duration: '20-25 min',
   missionType: 'Backyard Session',
   description: `Riley's rule for new operators: before you get the rotator, you earn the fence post.<br><br>The quadrifilar helix zip-tied to the back fence stares straight up and hears most of the sky at once. WXSAT-19 - a polar weather bird - rises in three minutes and will spend a quarter of an hour drawing a picture of the weather, one scan line at a time, on 137.100 MHz.<br><br>The rig is exactly as Riley left it last night: VFO parked off-frequency, channel set for FM voice. Your whole job: find the signal, put the radio on it, open the channel wide enough to swallow it - and then keep your hands off.<br><br>No mission control. No checklist. An SDR dongle, a waterfall, and physics.`,
-  equipment: [
-    'DIY 137 MHz Quadrifilar Helix (fixed skyward)',
-    'RTL-SDR Receiver (Direct Sampling)',
-    'SkyWatcher SDR Console',
-  ],
+  equipment: ['DIY 137 MHz Quadrifilar Helix (fixed skyward)', 'RTL-SDR Receiver (Direct Sampling)', 'SkyWatcher SDR Console'],
   settings: {
     isSync: true,
     groundStations: [firstLightQfhStation],
@@ -141,7 +141,8 @@ export const hamSdrScenario1Data: ScenarioData = {
       id: 'detect-apt',
       nice: ['S0421', 'T0153'],
       title: 'See First Light',
-      description: 'Watch the SDR Console waterfall. When WXSAT-19 clears the horizon its APT downlink appears as a steady stripe at 137.100 MHz. That stripe is your first satellite - and notice it is NOT where the VFO is parked.',
+      description:
+        'Watch the SDR Console waterfall. When WXSAT-19 clears the horizon its APT downlink appears as a steady stripe at 137.100 MHz. That stripe is your first satellite - and notice it is NOT where the VFO is parked.',
       groundStation: 'BKYD-QFH',
       prerequisiteObjectiveIds: ['check-observations'],
       conditions: [
@@ -164,7 +165,8 @@ export const hamSdrScenario1Data: ScenarioData = {
       id: 'tune-apt',
       nice: ['S0421'],
       title: 'Put the VFO on the Bird',
-      description: 'The VFO is still parked where Riley left it last night, 70 kHz above the bird. Click the stripe on the waterfall to tune to it (the bookmark and the tune buttons work too). Get the VFO within 5 kHz of 137.100 MHz.',
+      description:
+        'The VFO is still parked where Riley left it last night, 70 kHz above the bird. Click the stripe on the waterfall to tune to it (the bookmark and the tune buttons work too). Get the VFO within 5 kHz of 137.100 MHz.',
       groundStation: 'BKYD-QFH',
       prerequisiteObjectiveIds: ['detect-apt'],
       conditions: [
@@ -186,7 +188,8 @@ export const hamSdrScenario1Data: ScenarioData = {
       id: 'lock-apt',
       nice: ['S0421', 'K1032'],
       title: 'Open the Channel and Lock',
-      description: 'On frequency and still no decode? Look at the channel: 15 kHz of FM voice channel cannot swallow 34 kHz of APT - the demodulator never even sees it. Set the channel bandwidth to 50 kHz to bracket the signal, and the lock will follow. Too narrow clips the signal; too wide drowns it in noise.',
+      description:
+        'On frequency and still no decode? Look at the channel: 15 kHz of FM voice channel cannot swallow 34 kHz of APT - the demodulator never even sees it. Set the channel bandwidth to 50 kHz to bracket the signal, and the lock will follow. Too narrow clips the signal; too wide drowns it in noise.',
       groundStation: 'BKYD-QFH',
       prerequisiteObjectiveIds: ['tune-apt'],
       conditions: [
@@ -214,7 +217,8 @@ export const hamSdrScenario1Data: ScenarioData = {
       id: 'hold-the-picture',
       nice: ['K1032', 'T0153'],
       title: "Don't Touch What's Working",
-      description: 'The picture is coming down one scan line at a time. Rule three of the backyard: when it works, hands off. Hold the lock for 45 seconds without losing it - no retuning, no fiddling.',
+      description:
+        'The picture is coming down one scan line at a time. Rule three of the backyard: when it works, hands off. Hold the lock for 45 seconds without losing it - no retuning, no fiddling.',
       groundStation: 'BKYD-QFH',
       prerequisiteObjectiveIds: ['lock-apt'],
       conditions: [
@@ -249,7 +253,8 @@ export const hamSdrScenario1Data: ScenarioData = {
               'The SDR hardware automatically removes Doppler from everything.',
             ],
             correctIndex: 0,
-            explanation: 'Exactly. Doppler scales with frequency. At 137 MHz it hides inside the channel. Remember that phrasing - tomorrow we work a bird at 435 MHz, and it will NOT hide.',
+            explanation:
+              'Exactly. Doppler scales with frequency. At 137 MHz it hides inside the channel. Remember that phrasing - tomorrow we work a bird at 435 MHz, and it will NOT hide.',
             pointPenalty: 5,
           },
           mustMaintain: false,

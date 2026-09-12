@@ -1,5 +1,5 @@
-import type { ScenarioData } from '@app/ScenarioData';
 import { Character } from '@app/modal/character-enum';
+import type { ScenarioData } from '@app/ScenarioData';
 import { sandstormGroundStation } from './ground-stations';
 import { cobalt4Satellite } from './satellites';
 

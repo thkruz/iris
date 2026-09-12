@@ -1,49 +1,48 @@
-import { App } from "@app/app";
-import { GroundStation } from "@app/assets/ground-station/ground-station";
-import { GroundStationConfig } from "@app/assets/ground-station/ground-station-state";
-import { html } from "@app/engine/utils/development/formatter";
-import { qs } from "@app/engine/utils/query-selector";
-import { EventBus } from "@app/events/event-bus";
-import { Logger } from "@app/logging/logger";
-import { PendingQuizIndicator } from "@app/modal/pending-quiz-indicator";
-import { QuizModal } from "@app/modal/quiz-modal";
-import { ObjectivesManager } from "@app/objectives/objectives-manager";
-import { NavigationOptions } from "@app/router";
-import { ScenarioManager } from "@app/scenario-manager";
-import { ScenarioDialogManager } from "@app/scenarios/scenario-dialog-manager";
-import { WorkingDocumentManager } from "@app/scenarios/working-document-manager";
-import { InterferenceManager } from "@app/interference/interference-manager";
-import { GeolocationConsoleCore } from "@app/equipment/geolocation-console/geolocation-console-core";
-import { ElectronicAttackManager } from "@app/electronic-attack/electronic-attack-manager";
-import { HardwareFaultManager } from "@app/faults/hardware-fault-manager";
-import { LinkBudgetManager } from "@app/link-budget/link-budget-manager";
-import { CommandingManager } from "@app/commanding/commanding-manager";
-import { ContactScheduleManager } from "@app/contact-schedule/contact-schedule-manager";
-import { SpaceEventManager } from "@app/space-events/space-event-manager";
-import { SecurityConsoleCore } from "@app/security-console/security-console-core";
-import { TransecManager } from "@app/transec/transec-manager";
-import { GnssThreatManager } from "@app/gnss-threat/gnss-threat-manager";
-import { WeatherManager } from "@app/weather/weather-manager";
-import { AlarmService } from "@app/services/alarm-service";
-import { SimulationManager } from "@app/simulation/simulation-manager";
-import { syncEquipmentWithStore } from "@app/sync";
-import { AppState, syncManager } from "@app/sync/storage";
-import { Auth } from "@app/user-account/auth";
-import { BasePage } from "@app/pages/base-page";
-import { Body } from "@app/pages/layout/body/body";
-import { AssetTreeSidebar } from "./asset-tree-sidebar";
-import { GlobalCommandBar } from "./global-command-bar";
+import { App } from '@app/app';
+import { GroundStation } from '@app/assets/ground-station/ground-station';
+import { GroundStationConfig } from '@app/assets/ground-station/ground-station-state';
+import { CommandingManager } from '@app/commanding/commanding-manager';
+import { ContactScheduleManager } from '@app/contact-schedule/contact-schedule-manager';
+import { ElectronicAttackManager } from '@app/electronic-attack/electronic-attack-manager';
+import { html } from '@app/engine/utils/development/formatter';
+import { qs } from '@app/engine/utils/query-selector';
+import { GeolocationConsoleCore } from '@app/equipment/geolocation-console/geolocation-console-core';
+import { EventBus } from '@app/events/event-bus';
+import { HardwareFaultManager } from '@app/faults/hardware-fault-manager';
+import { GnssThreatManager } from '@app/gnss-threat/gnss-threat-manager';
+import { InterferenceManager } from '@app/interference/interference-manager';
+import { LinkBudgetManager } from '@app/link-budget/link-budget-manager';
+import { Logger } from '@app/logging/logger';
+import { PendingQuizIndicator } from '@app/modal/pending-quiz-indicator';
+import { QuizModal } from '@app/modal/quiz-modal';
+import { ObjectivesManager } from '@app/objectives/objectives-manager';
+import { BasePage } from '@app/pages/base-page';
+import { Body } from '@app/pages/layout/body/body';
+import { NavigationOptions } from '@app/router';
+import { ScenarioManager } from '@app/scenario-manager';
+import { ScenarioDialogManager } from '@app/scenarios/scenario-dialog-manager';
+import { WorkingDocumentManager } from '@app/scenarios/working-document-manager';
+import { SecurityConsoleCore } from '@app/security-console/security-console-core';
+import { AlarmService } from '@app/services/alarm-service';
+import { SimulationManager } from '@app/simulation/simulation-manager';
+import { SpaceEventManager } from '@app/space-events/space-event-manager';
+import { syncEquipmentWithStore } from '@app/sync';
+import { AppState, syncManager } from '@app/sync/storage';
+import { TransecManager } from '@app/transec/transec-manager';
+import { Auth } from '@app/user-account/auth';
+import { WeatherManager } from '@app/weather/weather-manager';
+import { AssetTreeSidebar } from './asset-tree-sidebar';
+import { GlobalCommandBar } from './global-command-bar';
 import './mission-control-page.css';
-import { TabbedCanvas } from "./tabbed-canvas";
-import { TimelineDeck } from "./timeline-deck";
-
+import { TabbedCanvas } from './tabbed-canvas';
+import { TimelineDeck } from './timeline-deck';
 
 /**
  * AppShellPage - Mission Control Interface
-*
-* Modern web-based ground station control system
-* Displays asset tree, tabbed canvas for equipment control, and timeline
-*/
+ *
+ * Modern web-based ground station control system
+ * Displays asset tree, tabbed canvas for equipment control, and timeline
+ */
 export class MissionControlPage extends BasePage {
   readonly id = 'app-shell-page';
   static readonly containerId = 'app-shell-page-container';
@@ -61,7 +60,7 @@ export class MissionControlPage extends BasePage {
   private constructor(options?: NavigationOptions) {
     super();
     this.navigationOptions_ = options || {};
-    this.init_()
+    this.init_();
 
     Logger.info(
       `
@@ -76,7 +75,7 @@ export class MissionControlPage extends BasePage {
 
   static create(options?: NavigationOptions): MissionControlPage {
     if (this.instance_) {
-      throw new Error("AppShellPage instance already exists.");
+      throw new Error('AppShellPage instance already exists.');
     }
 
     this.instance_ = new MissionControlPage(options);
@@ -173,7 +172,7 @@ export class MissionControlPage extends BasePage {
     this.groundStations_ = scenario.getScenario().groundStations.map((config: GroundStationConfig) => new GroundStation(config));
 
     // Initialize equipment immediately so AlarmService can poll alarms
-    this.groundStations_.forEach(gs => gs.initializeEquipment());
+    this.groundStations_.forEach((gs) => gs.initializeEquipment());
   }
 
   /**
@@ -208,7 +207,7 @@ export class MissionControlPage extends BasePage {
       const scenario = ScenarioManager.getInstance();
       Logger.info(`loadCheckpointIfExists_: Loading checkpoint for scenario: ${scenario.data.id}`);
 
-      const checkpoint = await this.progressSaveManager_.loadCheckpoint(scenario.data.id) as {
+      const checkpoint = (await this.progressSaveManager_.loadCheckpoint(scenario.data.id)) as {
         state: AppState;
       };
 

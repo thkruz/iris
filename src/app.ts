@@ -1,16 +1,16 @@
 import { BaseElement } from '@app/components/base-element';
 import { getEl } from '@app/engine/utils/get-el';
+import { EventBus } from '@app/events/event-bus';
+import { Events } from '@app/events/events';
 import { Body } from '@app/pages/layout/body/body';
 import { Footer } from '@app/pages/layout/footer/footer';
 import { Header } from '@app/pages/layout/header/header';
 import { SandboxPage } from '@app/pages/sandbox-page';
 import { ScenarioSelectionPage } from '@app/pages/scenario-selection';
-import { Router } from './router';
 import { SimulationManager } from '@app/simulation/simulation-manager';
 import { Auth } from '@app/user-account/auth';
 import { initUserDataService } from '@app/user-account/user-data-service';
-import { EventBus } from '@app/events/event-bus';
-import { Events } from '@app/events/events';
+import { Router } from './router';
 
 /**
  * Main Application Class
@@ -38,7 +38,7 @@ export class App extends BaseElement {
 
   static create(): App {
     if (App.instance_) {
-      throw new Error("App instance already exists.");
+      throw new Error('App instance already exists.');
     }
 
     this.instance_ = new App();

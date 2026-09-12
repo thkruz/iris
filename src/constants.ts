@@ -4,7 +4,6 @@ import { Hertz, Satellite, Team } from './types';
  * Application Constants
  */
 
-
 export const SATELLITES: Satellite[] = [
   { noradId: 28912, name: 'METEOSAT-9 (MSG-2)', offset: 400e6 },
   { noradId: 1, name: 'ARKE 3G', offset: 400e6 },
@@ -112,5 +111,5 @@ export const FrequencyBand = {
     upLow: 47e9 as Hertz,
     upHigh: 51e9 as Hertz,
     transponderBandwidthHz: [250e6 as Hertz, 1000e6 as Hertz], // Typical Q/V-band transponder bandwidths
-  }
-}
+  },
+};

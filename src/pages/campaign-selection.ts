@@ -1,15 +1,15 @@
-import { CampaignManager } from "@app/campaigns/campaign-manager";
-import { CampaignData } from "@app/campaigns/campaign-types";
-import { getReleaseStage, renderReleaseBadge, renderReleaseCardNotice } from "@app/campaigns/release-stage";
-import { qs } from "@app/engine/utils/query-selector";
-import { Logger } from "@app/logging/logger";
-import { Router } from "@app/router";
-import { Auth } from "@app/user-account/auth";
-import { getUserDataService } from "@app/user-account/user-data-service";
-import { getAssetUrl } from "@app/utils/asset-url";
-import { html } from "@app/engine/utils/development/formatter";
-import { BasePage } from "./base-page";
-import "./campaign-selection.css";
+import { CampaignManager } from '@app/campaigns/campaign-manager';
+import { CampaignData } from '@app/campaigns/campaign-types';
+import { getReleaseStage, renderReleaseBadge, renderReleaseCardNotice } from '@app/campaigns/release-stage';
+import { html } from '@app/engine/utils/development/formatter';
+import { qs } from '@app/engine/utils/query-selector';
+import { Logger } from '@app/logging/logger';
+import { Router } from '@app/router';
+import { Auth } from '@app/user-account/auth';
+import { getUserDataService } from '@app/user-account/user-data-service';
+import { getAssetUrl } from '@app/utils/asset-url';
+import { BasePage } from './base-page';
+import './campaign-selection.css';
 
 /**
  * Campaign selection page implementation
@@ -46,7 +46,7 @@ export class CampaignSelectionPage extends BasePage {
     this.dataLoaded_ = true;
 
     // Load user progress asynchronously and update the UI when ready
-    this.loadUserDataAndUpdate_().catch(error => {
+    this.loadUserDataAndUpdate_().catch((error) => {
       Logger.error('Failed to initialize user data loading:', error);
     });
   }
@@ -68,9 +68,7 @@ export class CampaignSelectionPage extends BasePage {
       const progressResponse = await userDataService.getAllScenariosProgress().catch(() => null);
 
       // Get completed scenario IDs from progress records
-      this.completedScenarioIds_ = (progressResponse?.scenarios ?? [])
-        .filter(s => s.completedAt)
-        .map(s => s.scenarioId);
+      this.completedScenarioIds_ = (progressResponse?.scenarios ?? []).filter((s) => s.completedAt).map((s) => s.scenarioId);
 
       // Re-render the campaign grid with progress data
       this.updateCampaignCards_();
@@ -104,7 +102,7 @@ export class CampaignSelectionPage extends BasePage {
     const completedCampaignIds = campaignManager.getCompletedCampaigns(this.completedScenarioIds_);
 
     // Re-render all campaign cards with updated progress data
-    campaignGrid.innerHTML = campaigns.map(campaign => this.renderCampaignCard_(campaign, completedCampaignIds)).join('');
+    campaignGrid.innerHTML = campaigns.map((campaign) => this.renderCampaignCard_(campaign, completedCampaignIds)).join('');
 
     // Re-attach event listeners for the new cards
     this.attachCampaignCardListeners_();
@@ -115,7 +113,7 @@ export class CampaignSelectionPage extends BasePage {
    */
   private attachCampaignCardListeners_(): void {
     const campaignCards = this.dom_.querySelectorAll('.campaign-card:not(.disabled):not(.locked)');
-    campaignCards.forEach(card => {
+    campaignCards.forEach((card) => {
       card.addEventListener('click', this.handleCampaignClick_.bind(this));
     });
   }
@@ -147,7 +145,7 @@ export class CampaignSelectionPage extends BasePage {
     const campaignManager = CampaignManager.getInstance();
     const campaigns = campaignManager.getAllCampaigns();
 
-    return campaigns.map(campaign => this.renderCampaignCard_(campaign, [])).join('');
+    return campaigns.map((campaign) => this.renderCampaignCard_(campaign, [])).join('');
   }
 
   /**
@@ -158,9 +156,7 @@ export class CampaignSelectionPage extends BasePage {
     const progress = campaignManager.getCampaignProgress(campaign.id, this.completedScenarioIds_);
     // Same dev bypass the scenario grid applies, so the dev-menu unlock toggle
     // does not leave an unlocked scenario sitting behind a locked campaign card.
-    const isLocked = window.UNLOCK_ALL_SCENARIOS
-      ? false
-      : campaignManager.isCampaignLocked(campaign, completedCampaignIds, this.completedScenarioIds_);
+    const isLocked = window.UNLOCK_ALL_SCENARIOS ? false : campaignManager.isCampaignLocked(campaign, completedCampaignIds, this.completedScenarioIds_);
     const isDisabledOrLocked = campaign.isDisabled || isLocked || campaign.isLocked;
     const isCompleted = progress.isCompleted;
     const releaseStage = getReleaseStage(campaign);
@@ -171,10 +167,7 @@ export class CampaignSelectionPage extends BasePage {
         <div class="coming-soon-banner">${campaign.disabledText || 'Coming Soon'}</div>
       `;
     } else if (isLocked || campaign.isLocked) {
-      const nextPrereqScenario = campaignManager.getNextPrerequisiteScenarioForCampaign(
-        campaign,
-        this.completedScenarioIds_
-      );
+      const nextPrereqScenario = campaignManager.getNextPrerequisiteScenarioForCampaign(campaign, this.completedScenarioIds_);
       statusBanner = `
         <div class="locked-banner">
           <div>
@@ -232,7 +225,7 @@ export class CampaignSelectionPage extends BasePage {
             <div class="campaign-info">
               <div class="campaign-info-item">
                 <div class="info-label">Scenarios</div>
-                <div class="info-value">${campaign.scenarios.filter(s => s.missionType !== 'Sandbox').length}</div>
+                <div class="info-value">${campaign.scenarios.filter((s) => s.missionType !== 'Sandbox').length}</div>
               </div>
               <div class="campaign-info-item">
                 <div class="info-label">Type</div>
@@ -258,7 +251,7 @@ export class CampaignSelectionPage extends BasePage {
     // Only refresh on subsequent shows (after initial load)
     // to reflect any completion updates from playing scenarios
     if (this.hasShown_) {
-      this.loadUserDataAndUpdate_().catch(error => {
+      this.loadUserDataAndUpdate_().catch((error) => {
         Logger.error('Failed to refresh campaign data:', error);
       });
     }

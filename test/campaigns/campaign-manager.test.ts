@@ -30,11 +30,7 @@ describe('CampaignManager', () => {
   });
 
   // Mock campaign data factory
-  const createMockCampaign = (
-    id: string,
-    scenarios: ScenarioData[],
-    options: Partial<CampaignData> = {}
-  ): CampaignData => ({
+  const createMockCampaign = (id: string, scenarios: ScenarioData[], options: Partial<CampaignData> = {}): CampaignData => ({
     id,
     title: `Campaign ${id}`,
     subtitle: 'Test Campaign',
@@ -158,11 +154,7 @@ describe('CampaignManager', () => {
     it('should return specific scenario from campaign', () => {
       const manager = CampaignManager.getInstance();
       const scenario = createMockScenario('target-scn', 'Target Scenario');
-      const campaign = createMockCampaign('camp-1', [
-        createMockScenario('scn-1'),
-        scenario,
-        createMockScenario('scn-3'),
-      ]);
+      const campaign = createMockCampaign('camp-1', [createMockScenario('scn-1'), scenario, createMockScenario('scn-3')]);
       manager.registerCampaign(campaign);
 
       const result = manager.getScenario('camp-1', 'target-scn');
@@ -406,12 +398,7 @@ describe('CampaignManager', () => {
 
     it('should return correct progress for partial completion', () => {
       const manager = CampaignManager.getInstance();
-      const campaign = createMockCampaign('camp-1', [
-        createMockScenario('scn-1'),
-        createMockScenario('scn-2'),
-        createMockScenario('scn-3'),
-        createMockScenario('scn-4'),
-      ]);
+      const campaign = createMockCampaign('camp-1', [createMockScenario('scn-1'), createMockScenario('scn-2'), createMockScenario('scn-3'), createMockScenario('scn-4')]);
       manager.registerCampaign(campaign);
 
       const progress = manager.getCampaignProgress('camp-1', ['scn-1', 'scn-3']);
@@ -427,10 +414,7 @@ describe('CampaignManager', () => {
 
     it('should return 100% for fully completed campaign', () => {
       const manager = CampaignManager.getInstance();
-      const campaign = createMockCampaign('camp-1', [
-        createMockScenario('scn-1'),
-        createMockScenario('scn-2'),
-      ]);
+      const campaign = createMockCampaign('camp-1', [createMockScenario('scn-1'), createMockScenario('scn-2')]);
       manager.registerCampaign(campaign);
 
       const progress = manager.getCampaignProgress('camp-1', ['scn-1', 'scn-2']);
@@ -441,10 +425,7 @@ describe('CampaignManager', () => {
 
     it('should ignore completed scenarios from other campaigns', () => {
       const manager = CampaignManager.getInstance();
-      const campaign = createMockCampaign('camp-1', [
-        createMockScenario('scn-1'),
-        createMockScenario('scn-2'),
-      ]);
+      const campaign = createMockCampaign('camp-1', [createMockScenario('scn-1'), createMockScenario('scn-2')]);
       manager.registerCampaign(campaign);
 
       const progress = manager.getCampaignProgress('camp-1', ['scn-1', 'other-campaign-scn']);
@@ -455,11 +436,7 @@ describe('CampaignManager', () => {
 
     it('should round percentage correctly', () => {
       const manager = CampaignManager.getInstance();
-      const campaign = createMockCampaign('camp-1', [
-        createMockScenario('scn-1'),
-        createMockScenario('scn-2'),
-        createMockScenario('scn-3'),
-      ]);
+      const campaign = createMockCampaign('camp-1', [createMockScenario('scn-1'), createMockScenario('scn-2'), createMockScenario('scn-3')]);
       manager.registerCampaign(campaign);
 
       const progress = manager.getCampaignProgress('camp-1', ['scn-1']);
@@ -492,10 +469,7 @@ describe('CampaignManager', () => {
       const manager = CampaignManager.getInstance();
       manager.registerCampaign(createMockCampaign('camp-1', [createMockScenario('scn-1')]));
       manager.registerCampaign(createMockCampaign('camp-2', [createMockScenario('scn-2')]));
-      manager.registerCampaign(createMockCampaign('camp-3', [
-        createMockScenario('scn-3'),
-        createMockScenario('scn-4'),
-      ]));
+      manager.registerCampaign(createMockCampaign('camp-3', [createMockScenario('scn-3'), createMockScenario('scn-4')]));
 
       const completed = manager.getCompletedCampaigns(['scn-1', 'scn-2', 'scn-3']);
 
@@ -504,10 +478,7 @@ describe('CampaignManager', () => {
 
     it('should not include partially completed campaigns', () => {
       const manager = CampaignManager.getInstance();
-      manager.registerCampaign(createMockCampaign('camp-1', [
-        createMockScenario('scn-1'),
-        createMockScenario('scn-2'),
-      ]));
+      manager.registerCampaign(createMockCampaign('camp-1', [createMockScenario('scn-1'), createMockScenario('scn-2')]));
 
       const completed = manager.getCompletedCampaigns(['scn-1']);
 

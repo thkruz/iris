@@ -51,9 +51,15 @@ class TestableAntenna extends AntennaCore {
   constructor(configId: ANTENNA_CONFIG_KEYS, initialState: Partial<AntennaState> = {}) {
     super(configId, initialState, 1, 1);
   }
-  protected override addListeners_(): void { /* headless */ }
-  syncDomWithState(): void { /* headless */ }
-  draw(): void { /* headless */ }
+  protected override addListeners_(): void {
+    /* headless */
+  }
+  syncDomWithState(): void {
+    /* headless */
+  }
+  draw(): void {
+    /* headless */
+  }
 
   terrestrialSignals(): { power: number; frequency: number; signalId: string }[] {
     return (this as any).terrestrialRxSignals_();
@@ -82,10 +88,7 @@ describe('E1: terrestrial emitter path', () => {
   });
 
   it('activates and deactivates terrestrial events without touching satellites', () => {
-    scenarioSettings.interferenceEvents = [
-      RFI_EVENT,
-      { ...RFI_EVENT, id: 'not-yet', startTime: 99999 },
-    ];
+    scenarioSettings.interferenceEvents = [RFI_EVENT, { ...RFI_EVENT, id: 'not-yet', startTime: 99999 }];
     const manager = InterferenceManager.getInstance();
     (manager as any).update_();
 
@@ -100,19 +103,21 @@ describe('E1: terrestrial emitter path', () => {
   });
 
   it('legacy transponder events still inject at the satellite (regression)', () => {
-    scenarioSettings.interferenceEvents = [{
-      id: 'pirate',
-      satelliteNoradId: 63002,
-      frequency: 435.9e6,
-      bandwidth: 15e3,
-      power: -60,
-      polarization: 'H',
-      startTime: 0,
-      duration: 1e6,
-      periodSeconds: 100,
-      onSeconds: 100,
-      // no path field: default transponder behavior
-    }];
+    scenarioSettings.interferenceEvents = [
+      {
+        id: 'pirate',
+        satelliteNoradId: 63002,
+        frequency: 435.9e6,
+        bandwidth: 15e3,
+        power: -60,
+        polarization: 'H',
+        startTime: 0,
+        duration: 1e6,
+        periodSeconds: 100,
+        onSeconds: 100,
+        // no path field: default transponder behavior
+      },
+    ];
     const manager = InterferenceManager.getInstance();
     (manager as any).update_();
 
@@ -146,11 +151,13 @@ describe('E1: terrestrial emitter path', () => {
     (manager as any).update_();
 
     const front = new TestableAntenna(ANTENNA_CONFIG_KEYS.UHF_CROSSED_YAGI_70CM, {
-      azimuth: 0 as Degrees, elevation: 0 as Degrees,
+      azimuth: 0 as Degrees,
+      elevation: 0 as Degrees,
     });
     front.attachStationLocation(STATION.latitude, STATION.longitude);
     const back = new TestableAntenna(ANTENNA_CONFIG_KEYS.UHF_CROSSED_YAGI_70CM, {
-      azimuth: 180 as Degrees, elevation: 0 as Degrees,
+      azimuth: 180 as Degrees,
+      elevation: 0 as Degrees,
     });
     back.attachStationLocation(STATION.latitude, STATION.longitude);
 
@@ -166,13 +173,15 @@ describe('E1: terrestrial emitter path', () => {
     (manager as any).update_();
 
     const noLocation = new TestableAntenna(ANTENNA_CONFIG_KEYS.UHF_CROSSED_YAGI_70CM, {
-      azimuth: 0 as Degrees, elevation: 0 as Degrees,
+      azimuth: 0 as Degrees,
+      elevation: 0 as Degrees,
     });
     expect(noLocation.terrestrialSignals()).toHaveLength(0);
 
     InterferenceManager.destroy();
     const located = new TestableAntenna(ANTENNA_CONFIG_KEYS.UHF_CROSSED_YAGI_70CM, {
-      azimuth: 0 as Degrees, elevation: 0 as Degrees,
+      azimuth: 0 as Degrees,
+      elevation: 0 as Degrees,
     });
     located.attachStationLocation(STATION.latitude, STATION.longitude);
     expect(located.terrestrialSignals()).toHaveLength(0);

@@ -129,22 +129,14 @@ export class PassPlannerService {
    * Compute upcoming passes for several satellites, merged and sorted by AOS.
    */
   getContactSchedule(satellites: OrbitalSatellite[], startMs: number, options: PassPlannerOptions = {}): SatellitePass[] {
-    return satellites
-      .flatMap((sat) => this.getPasses(sat, startMs, options))
-      .sort((a, b) => a.aosMs - b.aosMs);
+    return satellites.flatMap((sat) => this.getPasses(sat, startMs, options)).sort((a, b) => a.aosMs - b.aosMs);
   }
 
   /**
    * Bisect the horizon crossing between two sample times.
    * @param rising true when refining an AOS (el crosses upward)
    */
-  private refineCrossing_(
-    elAt: (timeMs: number) => number,
-    belowMs: number,
-    aboveMs: number,
-    minEl: number,
-    rising: boolean,
-  ): number {
+  private refineCrossing_(elAt: (timeMs: number) => number, belowMs: number, aboveMs: number, minEl: number, rising: boolean): number {
     let lo = belowMs;
     let hi = aboveMs;
 

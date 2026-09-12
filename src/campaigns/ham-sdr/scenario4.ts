@@ -42,11 +42,7 @@ export const hamSdrScenario4Data: ScenarioData = {
   duration: '20-25 min',
   missionType: 'Backyard Session',
   description: `The tape comes off the checkbox tonight.<br><br>CUBEHOP-1 is coming over nearly dead overhead - the strongest pass yet, and the fastest Doppler at the edges. Riley's deal: fly the first half of the pass by hand, like you learned. At closest approach, flip on the AFC and take your hands off the dial. Watch what the loop does with the back half of the drift, and understand exactly what it's measuring to do it.<br><br>Automation you understand is a tool. Automation you don't is a prayer.`,
-  equipment: [
-    'DIY 70cm Crossed Yagi on TV Rotator',
-    'RTL-SDR Receiver (Direct Sampling)',
-    'SkyWatcher SDR Console (AFC unlocked)',
-  ],
+  equipment: ['DIY 70cm Crossed Yagi on TV Rotator', 'RTL-SDR Receiver (Direct Sampling)', 'SkyWatcher SDR Console (AFC unlocked)'],
   settings: {
     isSync: true,
     groundStations: [backyardYagiStation],
@@ -84,7 +80,8 @@ export const hamSdrScenario4Data: ScenarioData = {
               'The rotator azimuth and elevation rates.',
             ],
             correctIndex: 0,
-            explanation: "AFC is beautifully dumb: it sees a carrier off-center in the passband and walks the VFO toward it. No orbit knowledge at all - which is both its power and, as you'll see someday, its weakness.",
+            explanation:
+              "AFC is beautifully dumb: it sees a carrier off-center in the passband and walks the VFO toward it. No orbit knowledge at all - which is both its power and, as you'll see someday, its weakness.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -169,7 +166,8 @@ export const hamSdrScenario4Data: ScenarioData = {
       id: 'hands-off',
       nice: ['S0421', 'K0740', 'T0153'],
       title: 'Hands Off the Dial',
-      description: 'Let the loop fly the outbound drift. Hold lock with at least 10 dB C/N for two minutes with AFC on and your hands in your pockets. Watch the VFO readout follow the carrier down.',
+      description:
+        'Let the loop fly the outbound drift. Hold lock with at least 10 dB C/N for two minutes with AFC on and your hands in your pockets. Watch the VFO readout follow the carrier down.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['engage-afc'],
       conditions: [
@@ -217,7 +215,8 @@ export const hamSdrScenario4Data: ScenarioData = {
               'Only if the rotator loses the satellite.',
             ],
             correctIndex: 0,
-            explanation: "AFC follows what it can see. Lose the carrier and the loop goes quiet right when you need it most - it has no model of the orbit, only of the passband. That's why you learned the hand version first.",
+            explanation:
+              "AFC follows what it can see. Lose the carrier and the loop goes quiet right when you need it most - it has no model of the orbit, only of the passband. That's why you learned the hand version first.",
             pointPenalty: 5,
           },
           mustMaintain: false,

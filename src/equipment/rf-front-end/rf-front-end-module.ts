@@ -1,7 +1,7 @@
 import { HelpButton } from '@app/components/help-btn/help-btn';
 import { PowerSwitch } from '@app/components/power-switch/power-switch';
 import { RotaryKnob } from '@app/components/rotary-knob/rotary-knob';
-import { qs } from "@app/engine/utils/query-selector";
+import { qs } from '@app/engine/utils/query-selector';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { RFFrontEndCore } from './rf-front-end-core';
@@ -154,12 +154,7 @@ export abstract class RFFrontEndModule<TState extends RFFrontEndModuleState> {
    * Create power switch component
    */
   protected createPowerSwitch(): void {
-    this.powerSwitch_ = PowerSwitch.create(
-      `power-${this.uniqueId}`,
-      this.state.isPowered,
-      true,
-      true,
-    );
+    this.powerSwitch_ = PowerSwitch.create(`power-${this.uniqueId}`, this.state.isPowered, true, true);
   }
 
   /**
@@ -174,18 +169,11 @@ export abstract class RFFrontEndModule<TState extends RFFrontEndModuleState> {
       return;
     }
 
-    this.gainKnob_ = RotaryKnob.create(
-      `${this.uniqueId}-gain-knob`,
-      this.state.gain,
-      min,
-      max,
-      step,
-      (value: number) => {
-        if (this.state.gain !== undefined) {
-          this.state.gain = value;
-        }
+    this.gainKnob_ = RotaryKnob.create(`${this.uniqueId}-gain-knob`, this.state.gain, min, max, step, (value: number) => {
+      if (this.state.gain !== undefined) {
+        this.state.gain = value;
       }
-    );
+    });
   }
 
   /**
@@ -193,10 +181,7 @@ export abstract class RFFrontEndModule<TState extends RFFrontEndModuleState> {
    * @param cb Callback function when power state changes
    * @param onPowerOn Optional callback when powered on (for lock acquisition)
    */
-  protected addPowerSwitchListener(
-    cb: (state: TState) => void,
-    onPowerOn?: () => void
-  ): void {
+  protected addPowerSwitchListener(cb: (state: TState) => void, onPowerOn?: () => void): void {
     if (!this.powerSwitch_) {
       console.warn(`${this.uniqueId}: Cannot add power switch listener - not initialized`);
       return;
@@ -223,11 +208,7 @@ export abstract class RFFrontEndModule<TState extends RFFrontEndModuleState> {
    * @param maxDelay Maximum delay in milliseconds
    * @param cb Optional callback after lock is acquired
    */
-  protected simulateLockAcquisition(
-    minDelay: number = 2000,
-    maxDelay: number = 5000,
-    cb?: () => void
-  ): void {
+  protected simulateLockAcquisition(minDelay: number = 2000, maxDelay: number = 5000, cb?: () => void): void {
     if (this.state.isExtRefLocked === undefined) {
       return;
     }

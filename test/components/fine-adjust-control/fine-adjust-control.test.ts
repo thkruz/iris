@@ -29,14 +29,7 @@ describe('FineAdjustControl', () => {
     });
 
     it('should create instance with custom parameters', () => {
-      const control = new FineAdjustControl(
-        'custom-control',
-        'Frequency',
-        100,
-        'MHz',
-        [100, 10, 1],
-        3
-      );
+      const control = new FineAdjustControl('custom-control', 'Frequency', 100, 'MHz', [100, 10, 1], 3);
       mountControl(control);
 
       expect(control.html).toContain('id="custom-control"');
@@ -214,7 +207,7 @@ describe('FineAdjustControl', () => {
       const allButtons = container.querySelectorAll('.btn-fine');
       expect(allButtons.length).toBe(6);
 
-      allButtons.forEach(btn => (btn as HTMLButtonElement).click());
+      allButtons.forEach((btn) => (btn as HTMLButtonElement).click());
 
       expect(callback).toHaveBeenCalledTimes(6);
     });
@@ -293,7 +286,7 @@ describe('FineAdjustControl', () => {
       control.setEnabled(false);
 
       const allButtons = container.querySelectorAll('.btn-fine');
-      allButtons.forEach(btn => {
+      allButtons.forEach((btn) => {
         expect((btn as HTMLButtonElement).disabled).toBe(true);
       });
     });
@@ -308,7 +301,7 @@ describe('FineAdjustControl', () => {
       control.setEnabled(true);
 
       const allButtons = container.querySelectorAll('.btn-fine');
-      allButtons.forEach(btn => {
+      allButtons.forEach((btn) => {
         expect((btn as HTMLButtonElement).disabled).toBe(false);
       });
     });

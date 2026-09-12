@@ -1,11 +1,11 @@
 import { HelpButton } from '@app/components/help-btn/help-btn';
-import { html } from "@app/engine/utils/development/formatter";
-import { Logger } from '@app/logging/logger';
-import { SignalOrigin } from "@app/signal-origin";
-import type { dBi, dBm, RfSignal } from '@app/types';
-import { dB } from '@app/types';
+import { html } from '@app/engine/utils/development/formatter';
 import { RFFrontEndCore } from '@app/equipment/rf-front-end/rf-front-end-core';
 import { RFFrontEndModule } from '@app/equipment/rf-front-end/rf-front-end-module';
+import { Logger } from '@app/logging/logger';
+import { SignalOrigin } from '@app/signal-origin';
+import type { dBi, dBm, RfSignal } from '@app/types';
+import { dB } from '@app/types';
 
 /**
  * Polarization types for OMT/Duplexer
@@ -43,7 +43,7 @@ export class OMTModule extends RFFrontEndModule<OMTState> {
       effectiveRxPol: 'V',
       crossPolIsolation: 28.5 as dB,
       isFaulted: false,
-      insertionLoss: 0.5 as dB
+      insertionLoss: 0.5 as dB,
     };
   }
 
@@ -53,7 +53,7 @@ export class OMTModule extends RFFrontEndModule<OMTState> {
     // Create UI components
     this.helpBtn_ = HelpButton.create(
       `omt-help-${this.rfFrontEnd_.state.uuid}`,
-      "OMT / Duplexer",
+      'OMT / Duplexer',
       null,
       'https://docs.signalrange.space/equipment/orthomode-transducer?content-only=true&dark=true'
     );
@@ -83,7 +83,7 @@ export class OMTModule extends RFFrontEndModule<OMTState> {
    */
   getComponents() {
     return {
-      helpBtn: this.helpBtn_
+      helpBtn: this.helpBtn_,
     };
   }
 
@@ -95,7 +95,7 @@ export class OMTModule extends RFFrontEndModule<OMTState> {
     return {
       txPolarization: () => this.state.txPolarization || 'None',
       rxPolarization: () => this.state.rxPolarization || 'None',
-      crossPolIsolation: () => this.state.crossPolIsolation.toFixed(1)
+      crossPolIsolation: () => this.state.crossPolIsolation.toFixed(1),
     };
   }
 
@@ -105,7 +105,7 @@ export class OMTModule extends RFFrontEndModule<OMTState> {
    */
   getLEDs() {
     return {
-      fault: () => this.state.isFaulted ? 'led-red' : 'led-off'
+      fault: () => (this.state.isFaulted ? 'led-red' : 'led-off'),
     };
   }
 
@@ -131,7 +131,7 @@ export class OMTModule extends RFFrontEndModule<OMTState> {
     // feed (circularHandedness), so applying isolation here would double-count.
     const isCircularMode = this.state.rxPolarization === 'LHCP' || this.state.rxPolarization === 'RHCP';
 
-    this.rxSignalsOut = this.rxSignalsIn.map(sig => {
+    this.rxSignalsOut = this.rxSignalsIn.map((sig) => {
       if (!isCircularMode && sig.polarization !== this.state.effectiveRxPol) {
         // Apply cross-pol isolation loss
         const isolatedPower = sig.power - this.state.crossPolIsolation;
@@ -149,13 +149,11 @@ export class OMTModule extends RFFrontEndModule<OMTState> {
     // Set TX signal polarization based on OMT setting
     // Any changes to the TX signals' polarization by the antenna module
     // will happen inside the antenna module itself
-    this.txSignalsOut = this.txSignalsIn.map((sig: RfSignal) => {
-      return {
-        ...sig,
-        polarization: this.state.txPolarization,
-        origin: SignalOrigin.OMT_TX,
-      };
-    });
+    this.txSignalsOut = this.txSignalsIn.map((sig: RfSignal) => ({
+      ...sig,
+      polarization: this.state.txPolarization,
+      origin: SignalOrigin.OMT_TX,
+    }));
   }
 
   get txSignalsIn(): RfSignal[] {
@@ -165,13 +163,13 @@ export class OMTModule extends RFFrontEndModule<OMTState> {
   get rxSignalsIn(): RfSignal[] {
     if (this.rfFrontEnd_.antenna?.state.isLoopback) {
       // In loopback mode, RX signals come from the TX path
-      return this.txSignalsOut.map(sig => ({
+      return this.txSignalsOut.map((sig) => ({
         ...sig,
         polarization: sig.polarization === 'H' ? 'V' : 'H', // Reverse polarization for RX
       }));
     }
 
-    const rxSignals = this.rfFrontEnd_.antenna?.state.rxSignalsIn.map(sig => ({
+    const rxSignals = this.rfFrontEnd_.antenna?.state.rxSignalsIn.map((sig) => ({
       ...sig,
       // Add small loss through OMT to the gain calculation
       gainInPath: (sig.gainInPath - 0.5) as dBi,

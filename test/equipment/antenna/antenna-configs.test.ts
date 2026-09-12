@@ -1,5 +1,5 @@
-import { ANTENNA_CONFIGS, AntennaConfig } from '../../../src/equipment/antenna/antenna-configs';
 import { ANTENNA_CONFIG_KEYS } from '../../../src/equipment/antenna/antenna-config-keys';
+import { ANTENNA_CONFIGS, AntennaConfig } from '../../../src/equipment/antenna/antenna-configs';
 
 describe('ANTENNA_CONFIGS', () => {
   const allConfigKeys = Object.values(ANTENNA_CONFIG_KEYS);
@@ -331,9 +331,7 @@ describe('ANTENNA_CONFIGS', () => {
 
     it('professional antennas should have higher efficiency than basic', () => {
       // VORTEK professional antenna vs basic 9m
-      expect(ANTENNA_CONFIGS.C_BAND_9M_VORTEK.efficiency).toBeGreaterThanOrEqual(
-        ANTENNA_CONFIGS.C_BAND_9M.efficiency
-      );
+      expect(ANTENNA_CONFIGS.C_BAND_9M_VORTEK.efficiency).toBeGreaterThanOrEqual(ANTENNA_CONFIGS.C_BAND_9M.efficiency);
     });
   });
 });
@@ -347,7 +345,7 @@ describe('ANTENNA_CONFIG_KEYS', () => {
   it('should have expected number of entries', () => {
     const keys = Object.keys(ANTENNA_CONFIG_KEYS);
     // Filter out numeric keys (enum reverse mapping)
-    const stringKeys = keys.filter(k => isNaN(Number(k)));
+    const stringKeys = keys.filter((k) => isNaN(Number(k)));
     expect(stringKeys.length).toBeGreaterThan(15);
   });
 });

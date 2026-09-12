@@ -1,4 +1,4 @@
-import { ElectronicAttackManager, type ElectronicAttackConfig, type JamAntennaState, type JamOutput } from '../../src/electronic-attack/electronic-attack-manager';
+import { type ElectronicAttackConfig, ElectronicAttackManager, type JamAntennaState, type JamOutput } from '../../src/electronic-attack/electronic-attack-manager';
 
 /**
  * Unit coverage for the pure J/S / pointing / in-band assessment that drives

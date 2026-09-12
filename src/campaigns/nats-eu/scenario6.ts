@@ -45,10 +45,7 @@ export const natsEuScenario6Data: ScenarioData = {
   duration: '15-20 min',
   missionType: 'Security Operations',
   description: `Quiet shift. One pass on the plan and a monthly item nobody enjoys: the station security baseline.<br><br>Every console action at GW-01 is logged - logins, configuration changes, command traffic. Once a month somebody actually reads it. Group Security in London reads it too, eventually, but they read it a fortnight later and from four hundred miles away.<br><br>Charlie's guidance is characteristically brief: "You'll find nothing. Find it properly."`,
-  equipment: [
-    'GW-01 Galway: 4m Ku-Band LEO Tracker',
-    'Security Console (audit log + access control)',
-  ],
+  equipment: ['GW-01 Galway: 4m Ku-Band LEO Tracker', 'Security Console (audit log + access control)'],
   settings: {
     isSync: true,
     groundStations: [galwayGroundStation, shetlandGroundStation],
@@ -78,9 +75,26 @@ export const natsEuScenario6Data: ScenarioData = {
         { id: 'evt-login-charlie', timeS: 0, timestampLabel: '06:02 UTC', actor: 'op-charlie', action: 'Console login', category: 'auth', severity: 'info' },
         { id: 'evt-cfg-rx', timeS: 0, timestampLabel: '06:14 UTC', actor: 'op-charlie', action: 'Set receiver 1 frequency 1414 MHz', category: 'config', severity: 'info' },
         { id: 'evt-login-fiona', timeS: 0, timestampLabel: '06:30 UTC', actor: 'op-fiona', action: 'Console login (SH-02 remote)', category: 'auth', severity: 'info' },
-        { id: 'evt-cmd-playback', timeS: 0, timestampLabel: '07:11 UTC', actor: 'op-charlie', action: 'TT&C command REC-PLAYBACK acknowledged', category: 'command', severity: 'info' },
+        {
+          id: 'evt-cmd-playback',
+          timeS: 0,
+          timestampLabel: '07:11 UTC',
+          actor: 'op-charlie',
+          action: 'TT&C command REC-PLAYBACK acknowledged',
+          category: 'command',
+          severity: 'info',
+        },
         { id: 'evt-svc-poll', timeS: 0, timestampLabel: '07:30 UTC', actor: 'svc-monitor', action: 'Telemetry poll', category: 'config', severity: 'info' },
-        { id: 'evt-authfail', timeS: 0, timestampLabel: '02:47 UTC', actor: 'op-guest', action: 'Repeated failed logins (off-hours, 6 attempts)', category: 'auth', severity: 'warning', isAnomaly: true },
+        {
+          id: 'evt-authfail',
+          timeS: 0,
+          timestampLabel: '02:47 UTC',
+          actor: 'op-guest',
+          action: 'Repeated failed logins (off-hours, 6 attempts)',
+          category: 'auth',
+          severity: 'warning',
+          isAnomaly: true,
+        },
         { id: 'evt-keyrotate', timeS: 0, timestampLabel: '08:05 UTC', actor: 'op-charlie', action: 'COMSEC key rotation completed', category: 'command', severity: 'info' },
       ],
     },
@@ -133,7 +147,8 @@ export const natsEuScenario6Data: ScenarioData = {
       id: 'flag-the-anomaly',
       nice: ['S0844', 'K0686'],
       title: 'Flag the Off-Hours Failures',
-      description: 'One entry does not belong: six failed logins at 02:47 against the antenna contractor\'s account, hours after any maintenance window. Flag it so Group Security sees it in this month\'s return.',
+      description:
+        "One entry does not belong: six failed logins at 02:47 against the antenna contractor's account, hours after any maintenance window. Flag it so Group Security sees it in this month's return.",
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['review-audit-log'],
       conditions: [
@@ -151,7 +166,8 @@ export const natsEuScenario6Data: ScenarioData = {
       id: 'disable-contractor-account',
       nice: ['K0686', 'T1569'],
       title: 'Close the Contractor Account',
-      description: 'Kilbride Antenna Services finished the feed work three weeks ago and their account is still active. Set it to disabled in the access-control panel. Nothing was breached - and that is not a reason to leave it open.',
+      description:
+        'Kilbride Antenna Services finished the feed work three weeks ago and their account is still active. Set it to disabled in the access-control panel. Nothing was breached - and that is not a reason to leave it open.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['flag-the-anomaly'],
       conditions: [
@@ -169,7 +185,7 @@ export const natsEuScenario6Data: ScenarioData = {
       id: 'close-the-baseline',
       nice: ['S0844', 'K0685'],
       title: 'Close the Baseline',
-      description: 'Record the month\'s finding and its disposition.',
+      description: "Record the month's finding and its disposition.",
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['disable-contractor-account'],
       conditions: [

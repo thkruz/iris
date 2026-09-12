@@ -70,7 +70,7 @@ function createOrbitalSatellite(): OrbitalSatellite {
           },
         },
       ],
-    },
+    }
   );
 }
 

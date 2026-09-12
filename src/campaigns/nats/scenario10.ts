@@ -1,3 +1,4 @@
+import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import type { AntennaState } from '@app/equipment/antenna';
 import { Character, Emotion } from '@app/modal/character-enum';
 import type { Objective } from '@app/objectives/objective-types';
@@ -6,7 +7,6 @@ import { SignalOrigin } from '@app/signal-origin';
 import type { dB, dBm, FECType, Hertz, IfFrequency, MHz, ModulationType } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
-import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { vermontGroundStation } from './ground-stations';
 import { aurora7Satellite, tidemark1Satellite } from './satellites';
 
@@ -66,12 +66,7 @@ export const scenario10Data: ScenarioData = {
   difficulty: 'intermediate',
   missionType: 'Customer Operations',
   description: `SeaLink has booked a 30-minute high-priority data window on AURORA-7 - a routine maritime synchronization burst Marcus Chen in Halifax is watching live from the spacecraft side. The link is up from the overnight shift on program-track with a conservative 10 dB HPA backoff.<br><br>For a sustained high-throughput window on an inclined-orbit bird, that's not the right configuration. You need step-track to hold beacon stable through the figure-8 drift, and a tighter HPA backoff to give the customer the EIRP margin they're paying for - without overdriving the amp.<br><br>Customer is on the line. Marcus will be watching payload telemetry on his end throughout the pass. Standard work - just don't break the link with a customer watching.`,
-  equipment: [
-    '9-meter C-band Antenna',
-    'RF Front End',
-    'Spectrum Analyzer',
-    'RX/TX Modems',
-  ],
+  equipment: ['9-meter C-band Antenna', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems'],
   timeLimitSeconds: 30 * 60,
   settings: {
     isSync: true,
@@ -271,12 +266,7 @@ export const scenario10Data: ScenarioData = {
           params: {
             character: Character.SYSTEM,
             question: 'What is the alarm state on VT-01 going into the pass?',
-            options: [
-              'No active alarms - clean board, link up on AURORA-7',
-              'LNB reference unlocked',
-              'HPA output fault',
-              'GPSDO holdover',
-            ],
+            options: ['No active alarms - clean board, link up on AURORA-7', 'LNB reference unlocked', 'HPA output fault', 'GPSDO holdover'],
             correctIndex: 0,
             explanation: 'Clean board. Safe to push the link harder for the customer window.',
             pointPenalty: 5,
@@ -310,7 +300,8 @@ export const scenario10Data: ScenarioData = {
               'Step-track is required by the customer contract regardless of orbit type',
             ],
             correctIndex: 0,
-            explanation: 'Program-track follows ephemeris and lets the figure-8 drift bleed off C/N. For a sustained pass on an inclined bird, step-track keeps the beacon at peak.',
+            explanation:
+              'Program-track follows ephemeris and lets the figure-8 drift bleed off C/N. For a sustained pass on an inclined bird, step-track keeps the beacon at peak.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -580,7 +571,8 @@ export const scenario10Data: ScenarioData = {
               'EIRP and IMD are independent and can be optimized separately',
             ],
             correctIndex: 0,
-            explanation: 'Closer to saturation means more IMD. The decision is to spend a small amount of linearity for meaningful EIRP - then watch for overdrive across the window.',
+            explanation:
+              'Closer to saturation means more IMD. The decision is to spend a small amount of linearity for meaningful EIRP - then watch for overdrive across the window.',
             pointPenalty: 5,
           },
           mustMaintain: false,

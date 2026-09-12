@@ -1,8 +1,18 @@
 import { GroundStationConfig } from '@app/assets/ground-station/ground-station-state';
-import type { Degrees } from 'ootk';
-import { PreviousShiftLogEntry } from '@app/ops-log/ops-log-types';
+import { ccsScenario1Data } from '@app/campaigns/ccs/scenario1';
+import { ccsScenario2Data } from '@app/campaigns/ccs/scenario2';
+import { hamSdrSandboxData } from '@app/campaigns/ham-sdr/sandbox';
+import { hamSdrScenario1Data } from '@app/campaigns/ham-sdr/scenario1';
+import { hamSdrScenario2Data } from '@app/campaigns/ham-sdr/scenario2';
+import { hamSdrScenario3Data } from '@app/campaigns/ham-sdr/scenario3';
+import { hamSdrScenario4Data } from '@app/campaigns/ham-sdr/scenario4';
+import { hamSdrScenario5Data } from '@app/campaigns/ham-sdr/scenario5';
+import { hamSdrScenario6Data } from '@app/campaigns/ham-sdr/scenario6';
+import { hamSdrScenario7Data } from '@app/campaigns/ham-sdr/scenario7';
+import { hamSdrScenario8Data } from '@app/campaigns/ham-sdr/scenario8';
+import { sandboxData as natsSandboxData } from '@app/campaigns/nats/sandbox';
 import { scenario1Data } from '@app/campaigns/nats/scenario1';
-import { scenario2Data } from "@app/campaigns/nats/scenario2";
+import { scenario2Data } from '@app/campaigns/nats/scenario2';
 import { scenario3Data } from '@app/campaigns/nats/scenario3';
 import { scenario4Data } from '@app/campaigns/nats/scenario4';
 import { scenario5Data } from '@app/campaigns/nats/scenario5';
@@ -25,7 +35,7 @@ import { scenario21Data } from '@app/campaigns/nats/scenario21';
 import { scenario22Data } from '@app/campaigns/nats/scenario22';
 import { scenario23Data } from '@app/campaigns/nats/scenario23';
 import { scenario24Data } from '@app/campaigns/nats/scenario24';
-import { sandboxData as natsSandboxData } from '@app/campaigns/nats/sandbox';
+import { natsEuSandboxData } from '@app/campaigns/nats-eu/sandbox';
 import { natsEuScenario1Data } from '@app/campaigns/nats-eu/scenario1';
 import { natsEuScenario2Data } from '@app/campaigns/nats-eu/scenario2';
 import { natsEuScenario3Data } from '@app/campaigns/nats-eu/scenario3';
@@ -38,22 +48,10 @@ import { natsEuScenario9Data } from '@app/campaigns/nats-eu/scenario9';
 import { natsEuScenario10Data } from '@app/campaigns/nats-eu/scenario10';
 import { natsEuScenario11Data } from '@app/campaigns/nats-eu/scenario11';
 import { natsEuScenario12Data } from '@app/campaigns/nats-eu/scenario12';
-import { natsEuSandboxData } from '@app/campaigns/nats-eu/sandbox';
-import { hamSdrSandboxData } from '@app/campaigns/ham-sdr/sandbox';
-import { hamSdrScenario1Data } from '@app/campaigns/ham-sdr/scenario1';
-import { hamSdrScenario2Data } from '@app/campaigns/ham-sdr/scenario2';
-import { hamSdrScenario3Data } from '@app/campaigns/ham-sdr/scenario3';
-import { hamSdrScenario4Data } from '@app/campaigns/ham-sdr/scenario4';
-import { hamSdrScenario5Data } from '@app/campaigns/ham-sdr/scenario5';
-import { hamSdrScenario6Data } from '@app/campaigns/ham-sdr/scenario6';
-import { hamSdrScenario7Data } from '@app/campaigns/ham-sdr/scenario7';
-import { hamSdrScenario8Data } from '@app/campaigns/ham-sdr/scenario8';
 import { signalHunterSandboxData } from '@app/campaigns/signal-hunter/sandbox';
 import { signalHunterScenario1Data } from '@app/campaigns/signal-hunter/scenario1';
-import { ccsScenario1Data } from '@app/campaigns/ccs/scenario1';
-import { ccsScenario2Data } from '@app/campaigns/ccs/scenario2';
 import { AntennaState } from '@app/equipment/antenna';
-import { ANTENNA_CONFIG_KEYS } from "@app/equipment/antenna/antenna-config-keys";
+import { ANTENNA_CONFIG_KEYS } from '@app/equipment/antenna/antenna-config-keys';
 import { defaultSpectrumAnalyzerState } from '@app/equipment/real-time-spectrum-analyzer/defaultSpectrumAnalyzerState';
 import { RealTimeSpectrumAnalyzerState } from '@app/equipment/real-time-spectrum-analyzer/real-time-spectrum-analyzer';
 import { Receiver, ReceiverState } from '@app/equipment/receiver/receiver';
@@ -68,8 +66,10 @@ import { RFFrontEndState } from '@app/equipment/rf-front-end/rf-front-end-core';
 import { Satellite } from '@app/equipment/satellite/satellite';
 import { Transmitter, TransmitterState } from '@app/equipment/transmitter/transmitter';
 import { Character, Emotion } from '@app/modal/character-enum';
-import { ScenarioData } from './ScenarioData';
+import { PreviousShiftLogEntry } from '@app/ops-log/ops-log-types';
 import { sandboxData } from '@app/scenarios/sandbox';
+import type { Degrees } from 'ootk';
+import { ScenarioData } from './ScenarioData';
 
 declare global {
   interface Window {
@@ -101,8 +101,8 @@ export interface SimulationSettings {
   weatherEvents?: Array<{
     id: string;
     groundStationId: string;
-    type: "snow" | "rain" | "fog" | "wind" | "dust" | "hail" | "ice" | "storm" | "sun-transit";
-    severity: "minor" | "moderate" | "severe";
+    type: 'snow' | 'rain' | 'fog' | 'wind' | 'dust' | 'hail' | 'ice' | 'storm' | 'sun-transit';
+    severity: 'minor' | 'moderate' | 'severe';
     /** Seconds since mission start */
     startTime: number;
     /** Duration in seconds */
@@ -406,29 +406,21 @@ export class ScenarioManager {
       isSync: false,
       groundStations: [],
       antennas: [ANTENNA_CONFIG_KEYS.C_BAND_3M_ANTESTAR, ANTENNA_CONFIG_KEYS.KU_BAND_3M_ANTESTAR], // TODO: Max 1 for now because only 1 rfFrontEnd is supported
-      rfFrontEnds: [{
-        // Module states managed by their respective classes
-        omt: OMTModule.getDefaultState(),
-        buc: BUCModuleCore.getDefaultState(),
-        hpa: HPAModuleCore.getDefaultState(),
-        filter: IfFilterBankModuleCore.getDefaultState(),
-        lnb: LNBModuleCore.getDefaultState(),
-        coupler: CouplerModule.getDefaultState(),
-        gpsdo: defaultGpsdoState,
-      }],
+      rfFrontEnds: [
+        {
+          // Module states managed by their respective classes
+          omt: OMTModule.getDefaultState(),
+          buc: BUCModuleCore.getDefaultState(),
+          hpa: HPAModuleCore.getDefaultState(),
+          filter: IfFilterBankModuleCore.getDefaultState(),
+          lnb: LNBModuleCore.getDefaultState(),
+          coupler: CouplerModule.getDefaultState(),
+          gpsdo: defaultGpsdoState,
+        },
+      ],
       spectrumAnalyzers: [defaultSpectrumAnalyzerState],
-      transmitters: [
-        Transmitter.getDefaultState(),
-        Transmitter.getDefaultState(),
-        Transmitter.getDefaultState(),
-        Transmitter.getDefaultState()
-      ],
-      receivers: [
-        Receiver.getDefaultState(),
-        Receiver.getDefaultState(),
-        Receiver.getDefaultState(),
-        Receiver.getDefaultState()
-      ],
+      transmitters: [Transmitter.getDefaultState(), Transmitter.getDefaultState(), Transmitter.getDefaultState(), Transmitter.getDefaultState()],
+      receivers: [Receiver.getDefaultState(), Receiver.getDefaultState(), Receiver.getDefaultState(), Receiver.getDefaultState()],
       satellites: [],
     };
   }
@@ -437,9 +429,8 @@ export class ScenarioManager {
     return this.settings;
   }
 
-
   set scenario(scenarioId: string) {
-    const scenario = SCENARIOS.find(s => s.id === scenarioId);
+    const scenario = SCENARIOS.find((s) => s.id === scenarioId);
     if (scenario) {
       this.settings = scenario.settings;
       this.data = scenario;
@@ -513,9 +504,7 @@ export function isScenarioLocked(scenario: ScenarioData, completedScenarioIds: s
     return false;
   }
 
-  return !scenario.prerequisiteScenarioIds.every(prereqId =>
-    completedScenarioIds.includes(prereqId)
-  );
+  return !scenario.prerequisiteScenarioIds.every((prereqId) => completedScenarioIds.includes(prereqId));
 }
 
 /** Function finds the next scenario the user needs to complete in order to unlock the provided scenario */
@@ -526,7 +515,7 @@ export function getNextPrerequisiteScenario(scenario: ScenarioData, completedSce
 
   for (const prereqId of scenario.prerequisiteScenarioIds) {
     if (!completedScenarioIds.includes(prereqId)) {
-      const prereqScenario = SCENARIOS.find(s => s.id === prereqId);
+      const prereqScenario = SCENARIOS.find((s) => s.id === prereqId);
       return prereqScenario || null;
     }
   }
@@ -540,8 +529,8 @@ export function getPrerequisiteScenarioNames(scenario: ScenarioData): string[] {
   }
 
   return scenario.prerequisiteScenarioIds
-    .map(prereqId => {
-      const prereqScenario = SCENARIOS.find(s => s.id === prereqId);
+    .map((prereqId) => {
+      const prereqScenario = SCENARIOS.find((s) => s.id === prereqId);
       return prereqScenario ? prereqScenario.title : prereqId;
     })
     .filter(Boolean);

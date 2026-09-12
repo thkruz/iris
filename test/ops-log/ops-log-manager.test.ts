@@ -28,9 +28,7 @@ describe('OpsLogManager', () => {
     });
 
     it('should throw when getInstance() called before initialize()', () => {
-      expect(() => OpsLogManager.getInstance()).toThrow(
-        'OpsLogManager not initialized. Call initialize() first.'
-      );
+      expect(() => OpsLogManager.getInstance()).toThrow('OpsLogManager not initialized. Call initialize() first.');
     });
 
     it('should return true from isInitialized() after initialize()', () => {
@@ -52,9 +50,7 @@ describe('OpsLogManager', () => {
       OpsLogManager.initialize('10:00:00', '2026-01-01');
       const secondManager = OpsLogManager.initialize('14:00:00', '2026-06-15');
 
-      expect(warnSpy).toHaveBeenCalledWith(
-        'OpsLogManager already initialized. Destroying previous instance.'
-      );
+      expect(warnSpy).toHaveBeenCalledWith('OpsLogManager already initialized. Destroying previous instance.');
       expect(OpsLogManager.getInstance()).toBe(secondManager);
 
       warnSpy.mockRestore();
@@ -305,9 +301,7 @@ describe('OpsLogManager', () => {
 
   describe('state persistence', () => {
     it('should return serializable state', () => {
-      const previousLogs: PreviousShiftLogEntry[] = [
-        { timestamp: '08:00', entry: 'Shift started' },
-      ];
+      const previousLogs: PreviousShiftLogEntry[] = [{ timestamp: '08:00', entry: 'Shift started' }];
 
       OpsLogManager.initialize('12:00:00', '2026-01-01', previousLogs);
       const manager = OpsLogManager.getInstance();

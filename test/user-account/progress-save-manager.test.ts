@@ -1,4 +1,4 @@
-import { vi, Mock } from 'vitest';
+import { Mock, vi } from 'vitest';
 import packageJson from '../../package.json';
 import { Events } from '../../src/events/events';
 
@@ -143,22 +143,16 @@ describe('ProgressSaveManager', () => {
     await manager.saveCheckpoint();
 
     expect(mockToast.showSaving).toHaveBeenCalled();
-    expect(mockEventBus.emit).toHaveBeenCalledWith(
-      Events.PROGRESS_SAVE_START,
-      expect.objectContaining({ timestamp: expect.any(Number) }),
-    );
+    expect(mockEventBus.emit).toHaveBeenCalledWith(Events.PROGRESS_SAVE_START, expect.objectContaining({ timestamp: expect.any(Number) }));
     expect(mockUserDataService.saveCheckpoint).toHaveBeenCalledWith(
       'scenario-123',
       expect.objectContaining({
         version: packageJson.version,
         state: { equipment: { foo: 'bar' } },
-      }),
+      })
     );
     expect(mockToast.showSuccess).toHaveBeenCalled();
-    expect(mockEventBus.emit).toHaveBeenCalledWith(
-      Events.PROGRESS_SAVE_SUCCESS,
-      expect.objectContaining({ checkpointId: 'scenario-123' }),
-    );
+    expect(mockEventBus.emit).toHaveBeenCalledWith(Events.PROGRESS_SAVE_SUCCESS, expect.objectContaining({ checkpointId: 'scenario-123' }));
   });
 
   it('emits an error event when saving a checkpoint fails', async () => {
@@ -167,10 +161,7 @@ describe('ProgressSaveManager', () => {
 
     await expect(manager.saveCheckpoint()).rejects.toThrow('save failed');
     expect(mockToast.showError).toHaveBeenCalled();
-    expect(mockEventBus.emit).toHaveBeenCalledWith(
-      Events.PROGRESS_SAVE_ERROR,
-      expect.objectContaining({ error: expect.any(Error) }),
-    );
+    expect(mockEventBus.emit).toHaveBeenCalledWith(Events.PROGRESS_SAVE_ERROR, expect.objectContaining({ error: expect.any(Error) }));
   });
 
   it('loads a checkpoint when one exists and logs the result', async () => {

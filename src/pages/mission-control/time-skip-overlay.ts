@@ -44,7 +44,9 @@ export class TimeSkipOverlay {
     this.targetMs_ = data.targetMs;
     this.satelliteName_ = data.satelliteName;
 
-    document.body.insertAdjacentHTML('beforeend', html`
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      html`
       <div id="${TimeSkipOverlay.ELEMENT_ID}" class="time-skip-overlay">
         <div class="time-skip-overlay-card">
           <div class="time-skip-overlay-label">
@@ -58,7 +60,8 @@ export class TimeSkipOverlay {
           <div class="time-skip-overlay-target" id="time-skip-overlay-target"></div>
         </div>
       </div>
-    `);
+    `
+    );
 
     this.el_ = document.getElementById(TimeSkipOverlay.ELEMENT_ID);
   }

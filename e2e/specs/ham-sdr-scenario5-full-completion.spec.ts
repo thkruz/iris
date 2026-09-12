@@ -1,11 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  advanceMissionClock,
-  answerRileyQuiz,
-  domClick,
-  waitForObjectiveComplete,
-} from '../utils/ham-sdr-helpers';
+import { advanceMissionClock, answerRileyQuiz, domClick, waitForObjectiveComplete } from '../utils/ham-sdr-helpers';
 import { waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
@@ -84,10 +79,13 @@ test.describe('ham-sdr Scenario 5 Full Completion', () => {
   test('[read-the-tell] CLK deltaT walks while SATS stay healthy; quiz names the spoof', async () => {
     // E4 assertion: the timing-offset readout is actually walking
     await expect
-      .poll(async () => {
-        const text = (await page.locator('#sdr-clk-offset-readout').textContent()) ?? '';
-        return parseFloat(text.replace(/[^\d.+-]/g, ''));
-      }, { timeout: 30000 })
+      .poll(
+        async () => {
+          const text = (await page.locator('#sdr-clk-offset-readout').textContent()) ?? '';
+          return parseFloat(text.replace(/[^\d.+-]/g, ''));
+        },
+        { timeout: 30000 }
+      )
       .toBeGreaterThan(1);
     await expect(page.locator('#sdr-ref-readout')).toContainText('GPS');
 

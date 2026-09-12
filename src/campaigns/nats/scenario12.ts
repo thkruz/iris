@@ -1,3 +1,4 @@
+import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import type { AntennaState } from '@app/equipment/antenna';
 import { ANTENNA_CONFIG_KEYS } from '@app/equipment/antenna/antenna-config-keys';
 import { Character, Emotion } from '@app/modal/character-enum';
@@ -6,7 +7,6 @@ import type { ScenarioData } from '@app/ScenarioData';
 import type { dB, dBm, Hertz, MHz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
-import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { vermontGroundStation } from './ground-stations';
 import { ses10Satellite, tidemark1Satellite, tidemark2Satellite } from './satellites';
 
@@ -69,13 +69,7 @@ export const scenario12Data: ScenarioData = {
   difficulty: 'intermediate',
   missionType: 'Maintenance Recovery',
   description: `Waveguide gasket inspection is done. Maintenance crew is clear of the antenna and signed out. VT-01 is stowed, RF chain cold, and Catherine is holding TM-1 traffic on ME-02.<br><br>Bring Vermont back the clean way: antenna on target, RX chain validated against the beacon, transmit side swept for any leftovers the maintenance crew left behind, then a coordinated handover return from Maine. Marcus will want to hear from us once SeaLink's link is back where it started.<br><br>No clock pressure. Just do it right.`,
-  equipment: [
-    '9-meter C-band Antenna',
-    'RF Front End',
-    'Spectrum Analyzer',
-    'RX/TX Modems',
-    'ME-02: Holding TM-1 traffic',
-  ],
+  equipment: ['9-meter C-band Antenna', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'ME-02: Holding TM-1 traffic'],
   timeLimitSeconds: 35 * 60, // 35 minutes
   settings: {
     isSync: true,
@@ -223,11 +217,7 @@ export const scenario12Data: ScenarioData = {
         ],
       },
     ],
-    satellites: [
-      tidemark1Satellite,
-      tidemark2Satellite,
-      ses10Satellite,
-    ],
+    satellites: [tidemark1Satellite, tidemark2Satellite, ses10Satellite],
     trafficOwnership: [
       {
         satelliteNoradId: 61525, // TIDEMARK-1
@@ -327,7 +317,8 @@ export const scenario12Data: ScenarioData = {
               'All equipment powered down including GPSDO',
             ],
             correctIndex: 0,
-            explanation: 'You parked the dish at maintenance position (5°) for the crew; on sign-out they stowed it at 90° per post-work SOP. Stowed antenna + cold RF chain + GPSDO still up for timing continuity is the expected handback state. Anything else means somebody touched something they should not have.',
+            explanation:
+              'You parked the dish at maintenance position (5°) for the crew; on sign-out they stowed it at 90° per post-work SOP. Stowed antenna + cold RF chain + GPSDO still up for timing continuity is the expected handback state. Anything else means somebody touched something they should not have.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -513,7 +504,8 @@ export const scenario12Data: ScenarioData = {
               'Nothing is out of spec - state matches the operating baseline',
             ],
             correctIndex: 0,
-            explanation: 'The bench-test gain (50 dB) was never dialed back to 23 dB. With BUC powered off this is harmless, but bringing the chain up at this gain would over-drive the HPA the moment loopback or transmit was engaged. Catch it before you energize.',
+            explanation:
+              'The bench-test gain (50 dB) was never dialed back to 23 dB. With BUC powered off this is harmless, but bringing the chain up at this gain would over-drive the HPA the moment loopback or transmit was engaged. Catch it before you energize.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -649,7 +641,8 @@ export const scenario12Data: ScenarioData = {
       id: 'verify-tx-staged',
       nice: ['T1567', 'K0645', 'S0421'],
       title: 'Confirm TX Staged Cold',
-      description: 'Confirm the transmit chain is staged for the handover return: modem transmitting into a muted BUC, HPA output disabled. The transfer brings VT-01 RF up as Maine stands down.',
+      description:
+        'Confirm the transmit chain is staged for the handover return: modem transmitting into a muted BUC, HPA output disabled. The transfer brings VT-01 RF up as Maine stands down.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['start-modem-transmitting'],
       timeLimitSeconds: 2 * 60,
@@ -682,7 +675,7 @@ export const scenario12Data: ScenarioData = {
           description: 'Why TX Stays Cold',
           params: {
             character: Character.SYSTEM,
-            question: 'ME-02 is still carrying TIDEMARK-1. Why does VT-01\'s transmit chain stay cold (BUC muted, HPA disabled) until the handover executes?',
+            question: "ME-02 is still carrying TIDEMARK-1. Why does VT-01's transmit chain stay cold (BUC muted, HPA disabled) until the handover executes?",
             options: [
               'Two stations radiating at the same transponder is dual illumination - the handover swaps RF authority in one coordinated action so only one uplink is ever on the air',
               'The BUC cannot be unmuted while the antenna is in program-track',
@@ -690,7 +683,8 @@ export const scenario12Data: ScenarioData = {
               'The HPA needs the maintenance crew to re-certify it before it can radiate',
             ],
             correctIndex: 0,
-            explanation: 'Same rule that protected the S11 hand-off: the satellite must never see two carriers fighting on one transponder. Stage the chain, then let the transfer stand Maine down and bring Vermont up atomically.',
+            explanation:
+              'Same rule that protected the S11 hand-off: the satellite must never see two carriers fighting on one transponder. Stage the chain, then let the transfer stand Maine down and bring Vermont up atomically.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -746,7 +740,8 @@ export const scenario12Data: ScenarioData = {
               'No specific criteria - planned handovers cannot fail',
             ],
             correctIndex: 0,
-            explanation: 'Symmetric to S11: the receiving station proves its receive side and stages its transmit side cold. The transfer stands Maine down and brings Vermont up in one swap - radiating early would put two carriers on the transponder.',
+            explanation:
+              'Symmetric to S11: the receiving station proves its receive side and stages its transmit side cold. The transfer stands Maine down and brings Vermont up in one swap - radiating early would put two carriers on the transponder.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -866,7 +861,8 @@ export const scenario12Data: ScenarioData = {
               'No notification needed - the link was never down from their perspective.',
             ],
             correctIndex: 0,
-            explanation: 'Notify the spacecraft side of the change in source station and confirm no impact. They do not need to act, but they do need to know where the uplink is coming from now.',
+            explanation:
+              'Notify the spacecraft side of the change in source station and confirm no impact. They do not need to act, but they do need to know where the uplink is coming from now.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -898,12 +894,7 @@ export const scenario12Data: ScenarioData = {
           params: {
             character: Character.SYSTEM,
             question: 'Final VT-01 health check after restoration.',
-            options: [
-              'No active alarms - all systems nominal, TM-1 traffic on primary',
-              'BUC over-temperature',
-              'LNB reference unlocked',
-              'HPA overdriven',
-            ],
+            options: ['No active alarms - all systems nominal, TM-1 traffic on primary', 'BUC over-temperature', 'LNB reference unlocked', 'HPA overdriven'],
             correctIndex: 0,
             explanation: 'Clean restoration. The BUC gain catch earlier is the reason the HPA is not overdriven right now.',
             pointPenalty: 5,

@@ -65,13 +65,7 @@ export const scenario23Data: ScenarioData = {
   difficulty: 'advanced',
   missionType: 'Contingency Operations',
   description: `The ACU automation processor faulted at 1358. Program-track, move-to-target, and step-track are all offline - the dish is sitting exactly where automation left it, which for now is on TIDEMARK-1. The servos still work; it's the brains that died, not the muscles.<br><br>IT owns the controller and has no ETA. You own the link. TIDEMARK-1 is GEO and well-behaved, so the pointing solution doesn't change - but with the automation's lock logic dead, the ACU panel can no longer tell you whether you're on the satellite. The beacon on the spectrum is your only proof.<br><br>Get into manual cleanly, prove you're on the bird, hold it there, and do not experiment with the broken automation while IT is mid-diagnosis.`,
-  equipment: [
-    '9-meter C-band Antenna (manual servo control)',
-    'RF Front End',
-    'Spectrum Analyzer',
-    'RX/TX Modems',
-    'TIDEMARK-1 prediction sheet',
-  ],
+  equipment: ['9-meter C-band Antenna (manual servo control)', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'TIDEMARK-1 prediction sheet'],
   timeLimitSeconds: 30 * 60,
   settings: {
     isSync: true,
@@ -139,7 +133,8 @@ export const scenario23Data: ScenarioData = {
               'The RF chain is down; tracking is unaffected',
             ],
             correctIndex: 0,
-            explanation: 'Separating the failed subsystem from the healthy ones IS the bypass plan. The muscles work; the brain that usually aims them does not. You become the brain.',
+            explanation:
+              'Separating the failed subsystem from the healthy ones IS the bypass plan. The muscles work; the brain that usually aims them does not. You become the brain.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -202,7 +197,8 @@ export const scenario23Data: ScenarioData = {
               'A full spectrum sweep of every transponder',
             ],
             correctIndex: 0,
-            explanation: 'The single most valuable asset right now is that the dish is already pointed correctly. Record it before you move, so if a manual input goes wrong you know exactly where home was.',
+            explanation:
+              'The single most valuable asset right now is that the dish is already pointed correctly. Record it before you move, so if a manual input goes wrong you know exactly where home was.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -234,7 +230,8 @@ export const scenario23Data: ScenarioData = {
               'Re-derive the orbit from first principles',
             ],
             correctIndex: 0,
-            explanation: 'The dangerous assumption is trusting the ACU lock light - it is driven by the failed processor. The spectrum analyzer (beacon at the right IF) is the only pointing truth source that does not depend on the broken thing.',
+            explanation:
+              'The dangerous assumption is trusting the ACU lock light - it is driven by the failed processor. The spectrum analyzer (beacon at the right IF) is the only pointing truth source that does not depend on the broken thing.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -266,7 +263,8 @@ export const scenario23Data: ScenarioData = {
               'A reboot would drop the customer, which manual avoids - and nothing else matters',
             ],
             correctIndex: 0,
-            explanation: 'Same discipline as the S8/S16 LNB lesson scaled up: you cycle equipment you own; you coordinate cycles on equipment someone else is debugging. The calibration risk is the technical reason; preserving crash state is the investigative one.',
+            explanation:
+              'Same discipline as the S8/S16 LNB lesson scaled up: you cycle equipment you own; you coordinate cycles on equipment someone else is debugging. The calibration risk is the technical reason; preserving crash state is the investigative one.',
             pointPenalty: 5,
             preserveOptionOrder: true,
           },
@@ -330,7 +328,8 @@ export const scenario23Data: ScenarioData = {
               'There is no difference - the label is cosmetic',
             ],
             correctIndex: 0,
-            explanation: 'A half-failed automatic state is the worst of both worlds: it looks like something is in control and nothing is. Honest manual removes the ambiguity - every control does exactly what it says.',
+            explanation:
+              'A half-failed automatic state is the worst of both worlds: it looks like something is in control and nothing is. Honest manual removes the ambiguity - every control does exactly what it says.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -431,7 +430,8 @@ export const scenario23Data: ScenarioData = {
               'That the dish stopped moving',
             ],
             correctIndex: 0,
-            explanation: 'The ACU lock light is computed by the failed processor - it is exactly the instrument you cannot trust. The beacon and receiver lock come from the RF chain, which is healthy. Fly the instruments that still work.',
+            explanation:
+              'The ACU lock light is computed by the failed processor - it is exactly the instrument you cannot trust. The beacon and receiver lock come from the RF chain, which is healthy. Fly the instruments that still work.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -494,7 +494,8 @@ export const scenario23Data: ScenarioData = {
               'It only works at night',
             ],
             correctIndex: 0,
-            explanation: 'The same fault on AURORA-7 would be a genuine crisis - no step-track means chasing a figure-8 by hand. TIDEMARK-1\'s stability is what turns "automation failure" into "annoying but holdable."',
+            explanation:
+              'The same fault on AURORA-7 would be a genuine crisis - no step-track means chasing a figure-8 by hand. TIDEMARK-1\'s stability is what turns "automation failure" into "annoying but holdable."',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -526,7 +527,8 @@ export const scenario23Data: ScenarioData = {
               'Switch back to program-track now to help IT test',
             ],
             correctIndex: 0,
-            explanation: 'You drive the link; IT drives the box. The link must be on a stable footing (manual, verified) before the box gets touched, and re-verified on the RF after - never assume a recovered automation is pointed correctly just because it says so.',
+            explanation:
+              'You drive the link; IT drives the box. The link must be on a stable footing (manual, verified) before the box gets touched, and re-verified on the RF after - never assume a recovered automation is pointed correctly just because it says so.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -558,7 +560,8 @@ export const scenario23Data: ScenarioData = {
               'IT issue, no operator action required.',
             ],
             correctIndex: 0,
-            explanation: 'The load-bearing details for the next shift and for IT: pointing source, that the lock light was distrusted, that the controller was deliberately NOT rebooted, and that recovery needs RF re-verification.',
+            explanation:
+              'The load-bearing details for the next shift and for IT: pointing source, that the lock light was distrusted, that the controller was deliberately NOT rebooted, and that recovery needs RF re-verification.',
             pointPenalty: 5,
           },
           mustMaintain: false,

@@ -8,16 +8,16 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { EventBus } from '../../src/events/event-bus';
-import { ScenarioManager } from '../../src/scenario-manager';
 import { natsEuSandboxData } from '../../src/campaigns/nats-eu/sandbox';
-import { LinkBudgetManager } from '../../src/link-budget/link-budget-manager';
 import { CommandingManager } from '../../src/commanding/commanding-manager';
 import { ContactScheduleManager } from '../../src/contact-schedule/contact-schedule-manager';
-import { SpaceEventManager } from '../../src/space-events/space-event-manager';
-import { SecurityConsoleCore } from '../../src/security-console/security-console-core';
-import { TransecManager } from '../../src/transec/transec-manager';
+import { EventBus } from '../../src/events/event-bus';
 import { GnssThreatManager } from '../../src/gnss-threat/gnss-threat-manager';
+import { LinkBudgetManager } from '../../src/link-budget/link-budget-manager';
+import { ScenarioManager } from '../../src/scenario-manager';
+import { SecurityConsoleCore } from '../../src/security-console/security-console-core';
+import { SpaceEventManager } from '../../src/space-events/space-event-manager';
+import { TransecManager } from '../../src/transec/transec-manager';
 
 beforeEach(() => {
   // Load the sandbox settings so every manager reads its real opt-in block.

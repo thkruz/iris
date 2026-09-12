@@ -64,8 +64,7 @@ type CampaignId = keyof typeof CAMPAIGNS;
 
 async function probeChrome(page: Page): Promise<ChromeProbe> {
   return page.evaluate(() => {
-    const box = (selector: string): DOMRect | null =>
-      document.querySelector(selector)?.getBoundingClientRect() ?? null;
+    const box = (selector: string): DOMRect | null => document.querySelector(selector)?.getBoundingClientRect() ?? null;
 
     const sidebar = box('#asset-tree-sidebar-container');
     const canvas = box('#tabbed-canvas-container');
@@ -95,8 +94,7 @@ async function probeChrome(page: Page): Promise<ChromeProbe> {
       tabsBelowContent: !!tabBar && !!content && tabBar.y > content.y,
       satellitesAboveStations: !!satellites && !!stations && satellites.y < stations.y,
       clock: document.querySelector('#utc-clock')?.textContent?.trim() ?? '',
-      objectiveTimerLabel:
-        document.querySelector('#objective-timer-display .timer-label')?.textContent?.trim() ?? '',
+      objectiveTimerLabel: document.querySelector('#objective-timer-display .timer-label')?.textContent?.trim() ?? '',
       accent: read('--mc-accent-red'),
       barBg: header ? getComputedStyle(header).backgroundColor : '',
       faceplateBg: read('--mc-equip-panel-raised'),
@@ -159,9 +157,7 @@ test.describe('Campaign chrome identity', () => {
         // wording (nothing here is a real marking): C4 wears the Top Secret
         // style as "G14 CLASSIFIED", C5 the Secret style as "SPECIAL
         // PROGRAM". The color must not follow the campaign accent.
-        const marking = campaignId === 'ccs'
-          ? { text: 'G14 CLASSIFIED', bg: 'rgb(255, 140, 0)' }
-          : { text: 'SPECIAL PROGRAM', bg: 'rgb(200, 16, 46)' };
+        const marking = campaignId === 'ccs' ? { text: 'G14 CLASSIFIED', bg: 'rgb(255, 140, 0)' } : { text: 'SPECIAL PROGRAM', bg: 'rgb(200, 16, 46)' };
 
         expect(probe.classificationTop).toContain(marking.text);
         expect(probe.classificationBottom).toContain(marking.text);

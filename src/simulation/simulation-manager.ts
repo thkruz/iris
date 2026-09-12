@@ -13,10 +13,10 @@ import { Equipment } from '@app/pages/sandbox/equipment';
 import { ScenarioManager } from '@app/scenario-manager';
 import { resetMissionClock } from '@app/simulation/mission-clock';
 import { TimeSkipController } from '@app/simulation/time-skip-controller';
+import { RfSignal } from '@app/types';
 import { ProgressSaveManager } from '@app/user-account/progress-save-manager';
 import { UserDataService } from '@app/user-account/user-data-service';
 import { Degrees, Milliseconds } from 'ootk';
-import { RfSignal } from '@app/types';
 
 export class SimulationManager {
   private static instance_: SimulationManager;
@@ -47,9 +47,9 @@ export class SimulationManager {
     this.satellites = ScenarioManager.getInstance().settings.satellites;
 
     // Subscribe satellites to current EventBus (they may have been created before EventBus was ready)
-    this.satellites.forEach(sat => sat.subscribeToEventBus());
+    this.satellites.forEach((sat) => sat.subscribeToEventBus());
 
-    this.satelliteSignals = this.satellites.flatMap(sat => sat.txSignal);
+    this.satelliteSignals = this.satellites.flatMap((sat) => sat.txSignal);
 
     this.lastFrameTime = Date.now();
     // Start the loop on the NEXT frame, not synchronously. Running update()
@@ -74,7 +74,6 @@ export class SimulationManager {
   static hasInstance(): boolean {
     return !!this.instance_;
   }
-
 
   private gameLoop_(): void {
     // Stop the loop if destroyed
@@ -104,7 +103,7 @@ export class SimulationManager {
   }
 
   getSatByNoradId(noradId: number): Satellite | undefined {
-    return this.satellites.find(sat => sat.noradId === noradId);
+    return this.satellites.find((sat) => sat.noradId === noradId);
   }
 
   getSatsByAzEl(az: Degrees, el: Degrees): Satellite[] {

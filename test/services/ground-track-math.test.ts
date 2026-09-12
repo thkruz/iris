@@ -1,5 +1,6 @@
 import { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
 import {
+  type GroundPoint,
   groundTrack,
   interpolateGroundPoint,
   isNight,
@@ -11,9 +12,8 @@ import {
   subsolarPoint,
   visibilityCircle,
   visibilityRadiusDeg,
-  type GroundPoint,
 } from '@app/services/ground-track-math';
-import { EpochUTC, Sun, type Degrees, type Kilometers, type TleLine1, type TleLine2 } from 'ootk';
+import { type Degrees, EpochUTC, type Kilometers, Sun, type TleLine1, type TleLine2 } from 'ootk';
 import { describe, expect, it } from 'vitest';
 
 const OBSERVER = { lat: 53.27 as Degrees, lon: -9.05 as Degrees, alt: 0.02 as Kilometers };
@@ -90,8 +90,8 @@ describe('nightPolygon', () => {
 
       // A point exactly on the terminator has cosC ~ 0; verify the formula
       // itself is satisfied rather than a strict inequality.
-      const cosC = Math.sin((nudged.lat * Math.PI) / 180) * Math.sin((subsolar.lat * Math.PI) / 180)
-        + Math.cos((nudged.lat * Math.PI) / 180) * Math.cos((subsolar.lat * Math.PI) / 180) * cos;
+      const cosC =
+        Math.sin((nudged.lat * Math.PI) / 180) * Math.sin((subsolar.lat * Math.PI) / 180) + Math.cos((nudged.lat * Math.PI) / 180) * Math.cos((subsolar.lat * Math.PI) / 180) * cos;
 
       expect(Math.abs(cosC)).toBeLessThan(0.05);
     }
@@ -184,8 +184,7 @@ describe('visibilityCircle', () => {
     // Every ring point sits 20 deg of great-circle arc from the center.
     const DEG = Math.PI / 180;
     for (const point of ring) {
-      const cosC = Math.sin(center.lat * DEG) * Math.sin(point.lat * DEG)
-        + Math.cos(center.lat * DEG) * Math.cos(point.lat * DEG) * Math.cos((point.lon - center.lon) * DEG);
+      const cosC = Math.sin(center.lat * DEG) * Math.sin(point.lat * DEG) + Math.cos(center.lat * DEG) * Math.cos(point.lat * DEG) * Math.cos((point.lon - center.lon) * DEG);
 
       expect(Math.acos(Math.min(1, cosC)) / DEG).toBeCloseTo(20, 4);
     }

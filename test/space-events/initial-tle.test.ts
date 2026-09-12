@@ -47,13 +47,15 @@ describe('SpaceEventManager initialTle', () => {
       observer: OBSERVER,
     });
     simSatellites.push(sat);
-    scenarioSettings.spaceEvents = [{
-      id: 'CUBEHOP-TLE',
-      satelliteNoradId: 63002,
-      maneuverAtS: 30,
-      newTle: { tle1: TRUTH_TLE1, tle2: TRUTH_TLE2 },
-      initialTle: { tle1: TRUTH_TLE1, tle2: TAMPERED_TLE2 },
-    }];
+    scenarioSettings.spaceEvents = [
+      {
+        id: 'CUBEHOP-TLE',
+        satelliteNoradId: 63002,
+        maneuverAtS: 30,
+        newTle: { tle1: TRUTH_TLE1, tle2: TRUTH_TLE2 },
+        initialTle: { tle1: TRUTH_TLE1, tle2: TAMPERED_TLE2 },
+      },
+    ];
 
     // Compare orbits at one fixed instant so propagation timestamps cancel out
     const fixedDate = new Date(Date.UTC(2027, 5, 23, 16, 0, 0));
@@ -80,12 +82,14 @@ describe('SpaceEventManager initialTle', () => {
       observer: OBSERVER,
     });
     simSatellites.push(sat);
-    scenarioSettings.spaceEvents = [{
-      id: 'SAR1-CAM',
-      satelliteNoradId: 61701,
-      maneuverAtS: 60,
-      newTle: { tle1: TRUTH_TLE1, tle2: TRUTH_TLE2 },
-    }];
+    scenarioSettings.spaceEvents = [
+      {
+        id: 'SAR1-CAM',
+        satelliteNoradId: 61701,
+        maneuverAtS: 60,
+        newTle: { tle1: TRUTH_TLE1, tle2: TRUTH_TLE2 },
+      },
+    ];
 
     const fixedDate = new Date(Date.UTC(2027, 5, 23, 16, 0, 0));
     const beforeAz = sat.ootkSatellite.rae(sat.groundObserver, fixedDate).az;

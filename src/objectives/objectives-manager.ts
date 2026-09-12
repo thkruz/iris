@@ -5,35 +5,30 @@
  */
 
 import { GroundStation } from '@app/assets/ground-station/ground-station';
-import { CryptoModule } from '@app/equipment/crypto';
-import { TapPoint } from "@app/equipment/rf-front-end/coupler-module/tap-points";
-import { ElectronicAttackManager } from '@app/electronic-attack/electronic-attack-manager';
-import { LinkBudgetManager } from '@app/link-budget/link-budget-manager';
+import bulbPng from '@app/assets/icons/bulb.png';
 import { CommandingManager } from '@app/commanding/commanding-manager';
 import { ContactScheduleManager } from '@app/contact-schedule/contact-schedule-manager';
-import { SpaceEventManager } from '@app/space-events/space-event-manager';
-import { SecurityConsoleCore } from '@app/security-console/security-console-core';
-import { TransecManager } from '@app/transec/transec-manager';
-import { GnssThreatManager } from '@app/gnss-threat/gnss-threat-manager';
+import { ElectronicAttackManager } from '@app/electronic-attack/electronic-attack-manager';
+import { CryptoModule } from '@app/equipment/crypto';
+import { GeolocationConsoleCore } from '@app/equipment/geolocation-console/geolocation-console-core';
+import { TapPoint } from '@app/equipment/rf-front-end/coupler-module/tap-points';
 import { EventBus } from '@app/events/event-bus';
 import { Events, QuizCompletedData, QuizPassedData } from '@app/events/events';
 import { FaultInjector } from '@app/faults';
-import { GeolocationConsoleCore } from '@app/equipment/geolocation-console/geolocation-console-core';
+import { GnssThreatManager } from '@app/gnss-threat/gnss-threat-manager';
+import { LinkBudgetManager } from '@app/link-budget/link-budget-manager';
 import { HintManager } from '@app/modal/hint-manager';
 import { QuizManager } from '@app/modal/quiz-manager';
 import { OpsLogManager } from '@app/ops-log/ops-log-manager';
 import { TabbedCanvas } from '@app/pages/mission-control/tabbed-canvas';
+import { SecurityConsoleCore } from '@app/security-console/security-console-core';
 import { missionNowMs } from '@app/simulation/mission-clock';
 import { SimulationManager } from '@app/simulation/simulation-manager';
+import { SpaceEventManager } from '@app/space-events/space-event-manager';
 import { TrafficControlManager } from '@app/traffic/traffic-control-manager';
+import { TransecManager } from '@app/transec/transec-manager';
 import { Milliseconds } from 'ootk';
-import bulbPng from '@app/assets/icons/bulb.png';
-import {
-  Condition,
-  ConditionParams,
-  Objective,
-  ObjectiveState
-} from './objective-types';
+import { Condition, ConditionParams, Objective, ObjectiveState } from './objective-types';
 import './objectives-manager.css';
 
 /**
@@ -80,7 +75,7 @@ export class ObjectivesManager {
       this.scenarioTimeLimit_ = scenarioTimeLimit;
       this.scenarioTimeRemaining_ = scenarioTimeLimit;
       // Don't start timer if any objective freezes it
-      const hasFreezingObjective = objectives.some(obj => obj.freezesScenarioTimer);
+      const hasFreezingObjective = objectives.some((obj) => obj.freezesScenarioTimer);
       this.scenarioTimerRunning_ = !hasFreezingObjective;
     }
 
@@ -90,10 +85,8 @@ export class ObjectivesManager {
       const isActive = hasNoPrerequisites;
 
       // Determine if timer should start now (on-scenario-load) or later (on-activate)
-      const startsOnLoad = objective.timeLimitSeconds !== undefined &&
-        objective.timerStartTrigger === 'on-scenario-load';
-      const startsOnActivate = objective.timeLimitSeconds !== undefined &&
-        objective.timerStartTrigger !== 'on-scenario-load';
+      const startsOnLoad = objective.timeLimitSeconds !== undefined && objective.timerStartTrigger === 'on-scenario-load';
+      const startsOnActivate = objective.timeLimitSeconds !== undefined && objective.timerStartTrigger !== 'on-scenario-load';
 
       return {
         objective,
@@ -180,7 +173,7 @@ export class ObjectivesManager {
 
     // If there's no freezing objective, resume simulated time immediately
     // (OpsLogManager starts paused by default, waiting for scenario to unlock)
-    const hasFreezingObjective = objectives.some(obj => obj.freezesScenarioTimer);
+    const hasFreezingObjective = objectives.some((obj) => obj.freezesScenarioTimer);
     if (!hasFreezingObjective && OpsLogManager.isInitialized()) {
       OpsLogManager.getInstance().resume();
     }
@@ -261,9 +254,7 @@ export class ObjectivesManager {
     if (!ObjectivesManager.instance_) {
       return false;
     }
-    return ObjectivesManager.instance_.objectiveStates_.some(
-      state => state.objective.freezesScenarioTimer && !state.isCompleted
-    );
+    return ObjectivesManager.instance_.objectiveStates_.some((state) => state.objective.freezesScenarioTimer && !state.isCompleted);
   }
 
   /**
@@ -358,9 +349,7 @@ export class ObjectivesManager {
    */
   forceCompleteCurrentObjective(): boolean {
     // Find first active, non-completed, non-failed objective
-    const activeObjective = this.objectiveStates_.find(
-      (state) => state.isActive && !state.isCompleted && !state.isFailed
-    );
+    const activeObjective = this.objectiveStates_.find((state) => state.isActive && !state.isCompleted && !state.isFailed);
 
     if (!activeObjective) {
       return false;
@@ -424,16 +413,12 @@ export class ObjectivesManager {
    */
   uncompleteLastObjective(): boolean {
     // Find the most recently completed objective
-    const completedObjectives = this.objectiveStates_.filter(
-      (state) => state.isCompleted && state.completedAt
-    );
+    const completedObjectives = this.objectiveStates_.filter((state) => state.isCompleted && state.completedAt);
     if (completedObjectives.length === 0) {
       return false;
     }
 
-    const lastCompleted = completedObjectives.reduce((latest, current) =>
-      (current.completedAt ?? 0) > (latest.completedAt ?? 0) ? current : latest
-      , completedObjectives[0]);
+    const lastCompleted = completedObjectives.reduce((latest, current) => ((current.completedAt ?? 0) > (latest.completedAt ?? 0) ? current : latest), completedObjectives[0]);
 
     // Reset objective state
     lastCompleted.isCompleted = false;
@@ -482,9 +467,7 @@ export class ObjectivesManager {
    */
   setCurrentObjectiveTimeRemaining(seconds: number): boolean {
     // Find first active, non-completed, non-failed objective with a timer
-    const activeObjective = this.objectiveStates_.find(
-      (state) => state.isActive && !state.isCompleted && !state.isFailed && state.timeRemainingSeconds !== undefined
-    );
+    const activeObjective = this.objectiveStates_.find((state) => state.isActive && !state.isCompleted && !state.isFailed && state.timeRemainingSeconds !== undefined);
 
     if (!activeObjective) {
       return false;
@@ -586,8 +569,7 @@ export class ObjectivesManager {
    */
   hasRunningObjectiveTimer(): boolean {
     return this.objectiveStates_.some(
-      (state) => state.isTimerRunning && !state.isCompleted && !state.isFailed &&
-        state.timeRemainingSeconds !== undefined && state.timeRemainingSeconds > 0
+      (state) => state.isTimerRunning && !state.isCompleted && !state.isFailed && state.timeRemainingSeconds !== undefined && state.timeRemainingSeconds > 0
     );
   }
 
@@ -653,7 +635,7 @@ export class ObjectivesManager {
     this.scenarioTimerRunning_ = false;
 
     // Pause the objective timer for the passed objective
-    const state = this.objectiveStates_.find(s => s.objective.id === data.objectiveId);
+    const state = this.objectiveStates_.find((s) => s.objective.id === data.objectiveId);
     if (state) {
       state.isTimerRunning = false;
     }
@@ -677,10 +659,7 @@ export class ObjectivesManager {
     // 2. Time remains
     // 3. Not all objectives complete
     // 4. No incomplete freezing objectives (scenario is unlocked)
-    if (this.scenarioTimeLimit_ !== null &&
-      this.scenarioTimeRemaining_ > 0 &&
-      !this.areAllObjectivesCompleted() &&
-      !ObjectivesManager.isScenarioLocked()) {
+    if (this.scenarioTimeLimit_ !== null && this.scenarioTimeRemaining_ > 0 && !this.areAllObjectivesCompleted() && !ObjectivesManager.isScenarioLocked()) {
       this.scenarioTimerRunning_ = true;
     }
     // Note: objective timer doesn't resume - it will be replaced by next objective's timer
@@ -817,9 +796,7 @@ export class ObjectivesManager {
 
     // Resume OpsLogManager if no freezing objective is incomplete
     // (scenario should be unlocked if freezing objective was already completed)
-    const hasIncompleteFreezingObjective = this.objectiveStates_.some(
-      state => state.objective.freezesScenarioTimer && !state.isCompleted
-    );
+    const hasIncompleteFreezingObjective = this.objectiveStates_.some((state) => state.objective.freezesScenarioTimer && !state.isCompleted);
     if (!hasIncompleteFreezingObjective && OpsLogManager.isInitialized()) {
       OpsLogManager.getInstance().resume();
     }
@@ -1107,8 +1084,7 @@ export class ObjectivesManager {
 
         // Start timer for objectives with 'on-activate' trigger (default behavior)
         const objective = objectiveState.objective;
-        if (objective.timeLimitSeconds !== undefined &&
-          objective.timerStartTrigger !== 'on-scenario-load') {
+        if (objective.timeLimitSeconds !== undefined && objective.timerStartTrigger !== 'on-scenario-load') {
           objectiveState.timeRemainingSeconds = objective.timeLimitSeconds;
           objectiveState.isTimerRunning = true;
         }
@@ -1171,8 +1147,7 @@ export class ObjectivesManager {
       const conditionState = objectiveState.conditionStates[condIndex];
 
       // Skip already completed maintenance (unless it's indefinite maintenance)
-      if (conditionState.isMaintenanceComplete &&
-        !conditionState.condition.maintainUntilObjectiveComplete) {
+      if (conditionState.isMaintenanceComplete && !conditionState.condition.maintainUntilObjectiveComplete) {
         continue;
       }
 
@@ -1215,8 +1190,7 @@ export class ObjectivesManager {
         conditionState.maintainedDuration = 0;
 
         // Mark as complete based on condition type
-        if (conditionState.condition.maintainUntilObjectiveComplete ||
-          !conditionState.condition.mustMaintain) {
+        if (conditionState.condition.maintainUntilObjectiveComplete || !conditionState.condition.mustMaintain) {
           conditionState.isMaintenanceComplete = true;
         }
 
@@ -1359,11 +1333,7 @@ export class ObjectivesManager {
     return [...toComplete];
   }
 
-  private evaluateEquipment_<T>(
-    equipmentArray: readonly T[],
-    params: ConditionParams | undefined,
-    checker: (item: T) => boolean
-  ): boolean {
+  private evaluateEquipment_<T>(equipmentArray: readonly T[], params: ConditionParams | undefined, checker: (item: T) => boolean): boolean {
     if (!equipmentArray || equipmentArray.length === 0) return false;
 
     if (params?.equipmentIndex !== undefined) {
@@ -1411,9 +1381,7 @@ export class ObjectivesManager {
           if (!state.isLocked) return false;
 
           // If a specific satellite is required, check it
-          const requiredNoradId =
-            (condition.params?.noradId as number | undefined) ??
-            (condition.params?.satelliteId as number | undefined);
+          const requiredNoradId = (condition.params?.noradId as number | undefined) ?? (condition.params?.satelliteId as number | undefined);
 
           if (requiredNoradId !== undefined) {
             const targetSat = sim.getSatByNoradId(requiredNoradId);
@@ -1437,31 +1405,20 @@ export class ObjectivesManager {
       }
 
       case 'gpsdo-locked': {
-        return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
-          return rfFrontEnd.gpsdoModule.state.isLocked;
-        });
+        return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => rfFrontEnd.gpsdoModule.state.isLocked);
       }
 
       case 'gpsdo-warmed-up': {
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const gpsdoState = rfFrontEnd.gpsdoModule.state;
-          return (
-            gpsdoState.isPowered &&
-            gpsdoState.warmupTimeRemaining === 0 &&
-            gpsdoState.temperature >= 65 &&
-            gpsdoState.temperature <= 75
-          );
+          return gpsdoState.isPowered && gpsdoState.warmupTimeRemaining === 0 && gpsdoState.temperature >= 65 && gpsdoState.temperature <= 75;
         });
       }
 
       case 'gpsdo-gnss-locked': {
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const gpsdoState = rfFrontEnd.gpsdoModule.state;
-          return (
-            gpsdoState.isPowered &&
-            gpsdoState.gnssSignalPresent &&
-            gpsdoState.satelliteCount >= 4
-          );
+          return gpsdoState.isPowered && gpsdoState.gnssSignalPresent && gpsdoState.satelliteCount >= 4;
         });
       }
 
@@ -1471,11 +1428,7 @@ export class ObjectivesManager {
           const gpsdoState = rfFrontEnd.gpsdoModule.state;
           this.observe_({ frequencyAccuracy: gpsdoState.frequencyAccuracy, allanDeviation: gpsdoState.allanDeviation, phaseNoise: gpsdoState.phaseNoise });
           return (
-            gpsdoState.isPowered &&
-            gpsdoState.isLocked &&
-            gpsdoState.frequencyAccuracy < maxAccuracy &&
-            gpsdoState.allanDeviation < maxAccuracy &&
-            gpsdoState.phaseNoise < -125
+            gpsdoState.isPowered && gpsdoState.isLocked && gpsdoState.frequencyAccuracy < maxAccuracy && gpsdoState.allanDeviation < maxAccuracy && gpsdoState.phaseNoise < -125
           );
         });
       }
@@ -1488,19 +1441,13 @@ export class ObjectivesManager {
       }
 
       case 'buc-locked': {
-        return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
-          return rfFrontEnd.bucModule.state.isExtRefLocked;
-        });
+        return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => rfFrontEnd.bucModule.state.isExtRefLocked);
       }
 
       case 'buc-reference-locked': {
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const bucState = rfFrontEnd.bucModule.state;
-          return (
-            bucState.isPowered &&
-            bucState.isExtRefLocked &&
-            bucState.frequencyError === 0
-          );
+          return bucState.isPowered && bucState.isExtRefLocked && bucState.frequencyError === 0;
         });
       }
 
@@ -1524,10 +1471,7 @@ export class ObjectivesManager {
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const bucState = rfFrontEnd.bucModule.state;
           this.observe_({ outputPower: bucState.outputPower, saturationPower: bucState.saturationPower });
-          return (
-            bucState.isPowered &&
-            bucState.outputPower <= (bucState.saturationPower - 2)
-          );
+          return bucState.isPowered && bucState.outputPower <= bucState.saturationPower - 2;
         });
       }
 
@@ -1557,11 +1501,7 @@ export class ObjectivesManager {
       case 'lnb-reference-locked': {
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const lnbState = rfFrontEnd.lnbModule.state;
-          return (
-            lnbState.isPowered &&
-            lnbState.isExtRefLocked &&
-            lnbState.frequencyError === 0
-          );
+          return lnbState.isPowered && lnbState.isExtRefLocked && lnbState.frequencyError === 0;
         });
       }
 
@@ -1572,10 +1512,7 @@ export class ObjectivesManager {
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const lnbState = rfFrontEnd.lnbModule.state;
           this.observe_(lnbState.loFrequency);
-          return (
-            lnbState.isPowered &&
-            Math.abs(lnbState.loFrequency - targetLoFrequency) <= tolerance
-          );
+          return lnbState.isPowered && Math.abs(lnbState.loFrequency - targetLoFrequency) <= tolerance;
         });
       }
 
@@ -1586,23 +1523,14 @@ export class ObjectivesManager {
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const lnbState = rfFrontEnd.lnbModule.state;
           this.observe_(lnbState.gain);
-          return (
-            lnbState.isPowered &&
-            Math.abs(lnbState.gain - targetGain) <= tolerance
-          );
+          return lnbState.isPowered && Math.abs(lnbState.gain - targetGain) <= tolerance;
         });
       }
 
       case 'lnb-thermally-stable': {
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const lnbState = rfFrontEnd.lnbModule.state;
-          return (
-            lnbState.isPowered &&
-            lnbState.noiseTemperature < 100 &&
-            lnbState.temperature >= 25 &&
-            lnbState.temperature <= 50 &&
-            lnbState.frequencyError === 0
-          );
+          return lnbState.isPowered && lnbState.noiseTemperature < 100 && lnbState.temperature >= 25 && lnbState.temperature <= 50 && lnbState.frequencyError === 0;
         });
       }
 
@@ -1620,37 +1548,25 @@ export class ObjectivesManager {
 
         switch (condition.params.equipment) {
           case 'antenna':
-            return this.evaluateEquipment_(gs.antennas, condition.params, (antenna) => {
-              return antenna.state.isPowered;
-            });
+            return this.evaluateEquipment_(gs.antennas, condition.params, (antenna) => antenna.state.isPowered);
           case 'gpsdo':
-            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
-              return rfFrontEnd.gpsdoModule.state.isPowered;
-            });
+            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => rfFrontEnd.gpsdoModule.state.isPowered);
           case 'buc':
-            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
-              return rfFrontEnd.bucModule.state.isPowered;
-            });
+            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => rfFrontEnd.bucModule.state.isPowered);
           case 'lnb':
-            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
-              return rfFrontEnd.lnbModule.state.isPowered;
-            });
+            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => rfFrontEnd.lnbModule.state.isPowered);
           case 'spectrum-analyzer':
             return true; // Spectrum analyzer always powered on for this simulation
           case 'transmitter':
             return this.evaluateEquipment_(gs.transmitters, condition.params, (transmitter) => {
               const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
-              const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
+              const modem = transmitter.state.modems.find((m) => m.modem_number === modemNum);
               return modem?.isPowered ?? false;
             });
           case 'hpa':
-            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
-              return rfFrontEnd.hpaModule.state.isPowered;
-            });
+            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => rfFrontEnd.hpaModule.state.isPowered);
           case 'filter':
-            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
-              return rfFrontEnd.filterModule.state.isPowered;
-            });
+            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => rfFrontEnd.filterModule.state.isPowered);
           default:
             return false;
         }
@@ -1661,33 +1577,21 @@ export class ObjectivesManager {
 
         switch (condition.params.equipment) {
           case 'antenna':
-            return this.evaluateEquipment_(gs.antennas, condition.params, (antenna) => {
-              return !antenna.state.isPowered;
-            });
+            return this.evaluateEquipment_(gs.antennas, condition.params, (antenna) => !antenna.state.isPowered);
           case 'gpsdo':
-            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
-              return !rfFrontEnd.gpsdoModule.state.isPowered;
-            });
+            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => !rfFrontEnd.gpsdoModule.state.isPowered);
           case 'buc':
-            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
-              return !rfFrontEnd.bucModule.state.isPowered;
-            });
+            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => !rfFrontEnd.bucModule.state.isPowered);
           case 'lnb':
-            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
-              return !rfFrontEnd.lnbModule.state.isPowered;
-            });
+            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => !rfFrontEnd.lnbModule.state.isPowered);
           case 'hpa':
-            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
-              return !rfFrontEnd.hpaModule.state.isPowered;
-            });
+            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => !rfFrontEnd.hpaModule.state.isPowered);
           case 'filter':
-            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
-              return !rfFrontEnd.filterModule.state.isPowered;
-            });
+            return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => !rfFrontEnd.filterModule.state.isPowered);
           case 'transmitter':
             return this.evaluateEquipment_(gs.transmitters, condition.params, (transmitter) => {
               const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
-              const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
+              const modem = transmitter.state.modems.find((m) => m.modem_number === modemNum);
               return !(modem?.isPowered ?? true);
             });
           default:
@@ -1706,7 +1610,7 @@ export class ObjectivesManager {
           }
 
           // Find the specific signal by ID
-          const targetSignal = signals.find(s => s.signalId === condition.params?.signalId);
+          const targetSignal = signals.find((s) => s.signalId === condition.params?.signalId);
           if (!targetSignal) return false;
 
           // If minPower specified, check signal meets threshold (include path gain)
@@ -1733,7 +1637,7 @@ export class ObjectivesManager {
 
         return this.evaluateEquipment_(gs.spectrumAnalyzers, condition.params, (specA) => {
           const signals = specA.getInputSignals();
-          const targetSignal = signals.find(s => s.signalId === targetSignalId);
+          const targetSignal = signals.find((s) => s.signalId === targetSignalId);
           if (!targetSignal) return false;
 
           // Include path gain to get effective power at spectrum analyzer
@@ -1867,9 +1771,7 @@ export class ObjectivesManager {
           if (!notchState.isPowered) return false;
 
           // Check specific notch or any notch
-          const notchesToCheck = specificNotchIndex !== undefined
-            ? [notchState.notches[specificNotchIndex]].filter(Boolean)
-            : notchState.notches;
+          const notchesToCheck = specificNotchIndex !== undefined ? [notchState.notches[specificNotchIndex]].filter(Boolean) : notchState.notches;
 
           return notchesToCheck.some((notch) => {
             if (!notch.enabled) return false;
@@ -1913,8 +1815,7 @@ export class ObjectivesManager {
           this.observe_({ trackingMode: antenna.state.trackingMode, isStepTrackEnabled: antenna.state.isStepTrackEnabled });
           // Step-track is an optimization layer on top of program-track, not a separate mode
           if (targetMode === 'step-track') {
-            return antenna.state.trackingMode === 'program-track' &&
-              antenna.state.isStepTrackEnabled === true;
+            return antenna.state.trackingMode === 'program-track' && antenna.state.isStepTrackEnabled === true;
           }
           return antenna.state.trackingMode === targetMode;
         });
@@ -1930,9 +1831,7 @@ export class ObjectivesManager {
       }
 
       case 'antenna-beacon-locked': {
-        return this.evaluateEquipment_(gs.antennas, condition.params, (antenna) => {
-          return antenna.state.isBeaconLocked === true;
-        });
+        return this.evaluateEquipment_(gs.antennas, condition.params, (antenna) => antenna.state.isBeaconLocked === true);
       }
 
       case 'antenna-position': {
@@ -1968,9 +1867,7 @@ export class ObjectivesManager {
       }
 
       case 'feed-heater-enabled': {
-        return this.evaluateEquipment_(gs.antennas, condition.params, (antenna) => {
-          return antenna.state.isHeaterEnabled === true;
-        });
+        return this.evaluateEquipment_(gs.antennas, condition.params, (antenna) => antenna.state.isHeaterEnabled === true);
       }
 
       case 'buc-unmuted': {
@@ -1987,10 +1884,7 @@ export class ObjectivesManager {
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const bucState = rfFrontEnd.bucModule.state;
           this.observe_(bucState.gain);
-          return (
-            bucState.isPowered &&
-            Math.abs(bucState.gain - targetGain) <= tolerance
-          );
+          return bucState.isPowered && Math.abs(bucState.gain - targetGain) <= tolerance;
         });
       }
 
@@ -2008,10 +1902,7 @@ export class ObjectivesManager {
         return this.evaluateEquipment_(gs.rfFrontEnds, condition.params, (rfFrontEnd) => {
           const hpaState = rfFrontEnd.hpaModule.state;
           this.observe_(hpaState.backOff);
-          return (
-            hpaState.isPowered &&
-            Math.abs(hpaState.backOff - targetBackOff) <= tolerance
-          );
+          return hpaState.isPowered && Math.abs(hpaState.backOff - targetBackOff) <= tolerance;
         });
       }
 
@@ -2052,7 +1943,7 @@ export class ObjectivesManager {
       case 'receiver-signal-locked': {
         return this.evaluateEquipment_(gs.receivers, condition.params, (receiver) => {
           const modemNum = condition.params?.modemNumber ?? receiver.state.activeModem;
-          const modem = receiver.state.modems.find(m => m.modemNumber === modemNum);
+          const modem = receiver.state.modems.find((m) => m.modemNumber === modemNum);
           if (!modem?.isPowered) return false;
 
           const signalInfo = receiver.getSignalsInBandwidth(modem);
@@ -2069,7 +1960,7 @@ export class ObjectivesManager {
         const maxCNRatio = condition.params?.maxCNRatio ?? Infinity;
         return this.evaluateEquipment_(gs.receivers, condition.params, (receiver) => {
           const modemNum = condition.params?.modemNumber ?? receiver.state.activeModem;
-          const modem = receiver.state.modems.find(m => m.modemNumber === modemNum);
+          const modem = receiver.state.modems.find((m) => m.modemNumber === modemNum);
           if (!modem?.isPowered) return false;
 
           const snr = receiver.getSnrForModem(modem);
@@ -2084,7 +1975,7 @@ export class ObjectivesManager {
         const targetAfc = condition.params?.afcEnabled ?? true;
         return this.evaluateEquipment_(gs.receivers, condition.params, (receiver) => {
           const modemNum = condition.params?.modemNumber ?? receiver.state.activeModem;
-          const modem = receiver.state.modems.find(m => m.modemNumber === modemNum);
+          const modem = receiver.state.modems.find((m) => m.modemNumber === modemNum);
           if (!modem?.isPowered) return false;
 
           return (modem.isAfcEnabled === true) === targetAfc;
@@ -2097,7 +1988,7 @@ export class ObjectivesManager {
         const tolerance = condition.params.frequencyTolerance ?? 1e6; // Default 1 MHz
         return this.evaluateEquipment_(gs.receivers, condition.params, (receiver) => {
           const modemNum = condition.params?.modemNumber ?? receiver.state.activeModem;
-          const modem = receiver.state.modems.find(m => m.modemNumber === modemNum);
+          const modem = receiver.state.modems.find((m) => m.modemNumber === modemNum);
           if (!modem?.isPowered) return false;
 
           // Modem frequency is in MHz, target is in Hz
@@ -2114,7 +2005,7 @@ export class ObjectivesManager {
         const tolerance = condition.params.bandwidthTolerance ?? 1e6; // Default 1 MHz
         return this.evaluateEquipment_(gs.receivers, condition.params, (receiver) => {
           const modemNum = condition.params?.modemNumber ?? receiver.state.activeModem;
-          const modem = receiver.state.modems.find(m => m.modemNumber === modemNum);
+          const modem = receiver.state.modems.find((m) => m.modemNumber === modemNum);
           if (!modem?.isPowered) return false;
 
           // Modem bandwidth is in MHz, target is in Hz
@@ -2130,7 +2021,7 @@ export class ObjectivesManager {
         const targetModulation = condition.params.modulation;
         return this.evaluateEquipment_(gs.receivers, condition.params, (receiver) => {
           const modemNum = condition.params?.modemNumber ?? receiver.state.activeModem;
-          const modem = receiver.state.modems.find(m => m.modemNumber === modemNum);
+          const modem = receiver.state.modems.find((m) => m.modemNumber === modemNum);
           if (!modem?.isPowered) return false;
 
           this.observe_(modem.modulation);
@@ -2143,7 +2034,7 @@ export class ObjectivesManager {
         const targetFec = condition.params.fec;
         return this.evaluateEquipment_(gs.receivers, condition.params, (receiver) => {
           const modemNum = condition.params?.modemNumber ?? receiver.state.activeModem;
-          const modem = receiver.state.modems.find(m => m.modemNumber === modemNum);
+          const modem = receiver.state.modems.find((m) => m.modemNumber === modemNum);
           if (!modem?.isPowered) return false;
 
           this.observe_(modem.fec);
@@ -2157,7 +2048,7 @@ export class ObjectivesManager {
         const tolerance = condition.params.frequencyTolerance ?? 1e6; // Default 1 MHz
         return this.evaluateEquipment_(gs.transmitters, condition.params, (transmitter) => {
           const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
-          const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
+          const modem = transmitter.state.modems.find((m) => m.modem_number === modemNum);
           if (!modem?.isPowered) return false;
           // Transmitter frequency is in Hz (stored in ifSignal)
           this.observe_(modem.ifSignal.frequency);
@@ -2172,7 +2063,7 @@ export class ObjectivesManager {
         const tolerance = condition.params.powerTolerance ?? 1; // Default 1 dB
         return this.evaluateEquipment_(gs.transmitters, condition.params, (transmitter) => {
           const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
-          const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
+          const modem = transmitter.state.modems.find((m) => m.modem_number === modemNum);
           if (!modem?.isPowered) return false;
           this.observe_(modem.ifSignal.power);
           const diff = Math.abs(modem.ifSignal.power - targetPower);
@@ -2186,7 +2077,7 @@ export class ObjectivesManager {
         const tolerance = condition.params.bandwidthTolerance ?? 1e6; // Default 1 MHz
         return this.evaluateEquipment_(gs.transmitters, condition.params, (transmitter) => {
           const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
-          const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
+          const modem = transmitter.state.modems.find((m) => m.modem_number === modemNum);
           if (!modem?.isPowered) return false;
           this.observe_(modem.ifSignal.bandwidth);
           const diff = Math.abs(modem.ifSignal.bandwidth - targetBandwidth);
@@ -2199,7 +2090,7 @@ export class ObjectivesManager {
         const targetModulation = condition.params.modulation;
         return this.evaluateEquipment_(gs.transmitters, condition.params, (transmitter) => {
           const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
-          const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
+          const modem = transmitter.state.modems.find((m) => m.modem_number === modemNum);
           if (!modem?.isPowered) return false;
           this.observe_(modem.ifSignal.modulation);
           return modem.ifSignal.modulation === targetModulation;
@@ -2211,7 +2102,7 @@ export class ObjectivesManager {
         const targetFec = condition.params.fec;
         return this.evaluateEquipment_(gs.transmitters, condition.params, (transmitter) => {
           const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
-          const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
+          const modem = transmitter.state.modems.find((m) => m.modem_number === modemNum);
           if (!modem?.isPowered) {
             console.log(`[tx-modem-fec-set] Modem ${modemNum} not powered. isPowered=${modem?.isPowered}`);
             return false;
@@ -2227,7 +2118,7 @@ export class ObjectivesManager {
       case 'tx-modem-transmitting': {
         return this.evaluateEquipment_(gs.transmitters, condition.params, (transmitter) => {
           const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
-          const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
+          const modem = transmitter.state.modems.find((m) => m.modem_number === modemNum);
           return modem?.isPowered === true && modem?.isTransmitting === true;
         });
       }
@@ -2235,7 +2126,7 @@ export class ObjectivesManager {
       case 'tx-modem-not-transmitting': {
         return this.evaluateEquipment_(gs.transmitters, condition.params, (transmitter) => {
           const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
-          const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
+          const modem = transmitter.state.modems.find((m) => m.modem_number === modemNum);
           // Modem must be powered but NOT transmitting
           return modem?.isPowered === true && modem?.isTransmitting === false;
         });
@@ -2253,7 +2144,7 @@ export class ObjectivesManager {
       case 'tx-modem-loopback-enabled': {
         return this.evaluateEquipment_(gs.transmitters, condition.params, (transmitter) => {
           const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
-          const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
+          const modem = transmitter.state.modems.find((m) => m.modem_number === modemNum);
           return modem?.isPowered === true && modem?.isLoopback === true;
         });
       }
@@ -2261,7 +2152,7 @@ export class ObjectivesManager {
       case 'tx-modem-loopback-disabled': {
         return this.evaluateEquipment_(gs.transmitters, condition.params, (transmitter) => {
           const modemNum = condition.params?.modemNumber ?? transmitter.state.activeModem;
-          const modem = transmitter.state.modems.find(m => m.modem_number === modemNum);
+          const modem = transmitter.state.modems.find((m) => m.modem_number === modemNum);
           return modem?.isPowered === true && modem?.isLoopback === false;
         });
       }
@@ -2275,9 +2166,7 @@ export class ObjectivesManager {
         }
 
         const quizManager = QuizManager.getInstance();
-        const conditionIndex = objectiveState.conditionStates.findIndex(
-          cs => cs.condition === condition
-        );
+        const conditionIndex = objectiveState.conditionStates.findIndex((cs) => cs.condition === condition);
 
         // Register the quiz if not already registered
         // Note: Quiz is NOT shown immediately - pending indicator appears instead
@@ -2577,9 +2466,7 @@ export class ObjectivesManager {
         const minCount = condition.params?.minCount ?? 1;
         const eventId = condition.params?.interferenceEventId;
         const measurements = GeolocationConsoleCore.getInstance().state.measurements;
-        const count = eventId
-          ? measurements.filter((m) => m.interferenceEventId === eventId).length
-          : measurements.length;
+        const count = eventId ? measurements.filter((m) => m.interferenceEventId === eventId).length : measurements.length;
         return count >= minCount;
       }
 
@@ -2650,10 +2537,7 @@ export class ObjectivesManager {
         if (!ContactScheduleManager.isInitialized()) return false;
         const contactId = condition.params?.contactId;
         if (!contactId) return false;
-        return ContactScheduleManager.getInstance().isContactAssigned(
-          contactId,
-          condition.params?.groundStationId,
-        );
+        return ContactScheduleManager.getInstance().isContactAssigned(contactId, condition.params?.groundStationId);
       }
 
       case 'contact-plan-valid': {

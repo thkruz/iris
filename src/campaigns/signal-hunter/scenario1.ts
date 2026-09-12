@@ -1,5 +1,5 @@
-import type { ScenarioData } from '@app/ScenarioData';
 import { Character } from '@app/modal/character-enum';
+import type { ScenarioData } from '@app/ScenarioData';
 import type { dBm } from '@app/types';
 import { petersonGroundStation } from './ground-stations';
 import { sentry7Satellite, sentry9Satellite } from './satellites';
@@ -130,7 +130,8 @@ export const signalHunterScenario1Data: ScenarioData = {
       id: 'detect-interference',
       nice: ['K0926', 'S0648'],
       title: 'Find the Carrier',
-      description: 'The service carrier sits at 1365 MHz IF. Something else is inside the TP-1 passband and it is not there all the time - the max-hold trace on the RX Analysis view will keep it once it has shown up.',
+      description:
+        'The service carrier sits at 1365 MHz IF. Something else is inside the TP-1 passband and it is not there all the time - the max-hold trace on the RX Analysis view will keep it once it has shown up.',
       groundStation: 'PA-22',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [
@@ -153,7 +154,8 @@ export const signalHunterScenario1Data: ScenarioData = {
       id: 'characterize-duty-cycle',
       nice: ['K0926', 'S0648'],
       title: 'Time the Cadence',
-      description: 'Watch the clear-write trace against the mission clock through at least two full cycles. The correlator window is 12 s; you need to know how much on-time you have to work with.',
+      description:
+        'Watch the clear-write trace against the mission clock through at least two full cycles. The correlator window is 12 s; you need to know how much on-time you have to work with.',
       groundStation: 'PA-22',
       prerequisiteObjectiveIds: ['detect-interference'],
       conditions: [
@@ -170,7 +172,8 @@ export const signalHunterScenario1Data: ScenarioData = {
               'About 5 s on, then about 5 s off - a 10 s cycle',
             ],
             correctIndex: 0,
-            explanation: 'Forty seconds up in every 130 - roughly a 30% duty cycle. With a 12 s integration window that is three, at most four, captures per on-window, and none at all if you start late.',
+            explanation:
+              'Forty seconds up in every 130 - roughly a 30% duty cycle. With a 12 s integration window that is three, at most four, captures per on-window, and none at all if you start late.',
             pointPenalty: 5,
             documentLine: 'Cadence: ~40 s on / ~90 s off, 130 s period (~30% duty cycle), stable across cycles.',
             documentSection: 'Characterization',
@@ -203,7 +206,8 @@ export const signalHunterScenario1Data: ScenarioData = {
       id: 'collect-measurements',
       nice: ['K0926', 'K1032', 'S0421'],
       title: 'Capture Inside the Window',
-      description: 'Work the interferer uplink back from the IF you measured (RF = LO - IF; uplink = RF + TP-1 translation) and set the correlation bandwidth to match the carrier. Start captures only while the carrier is up - the correlator needs it present for 70% of the 12 s window or it reports NO CORRELATION. Six good captures across at least two cycles.',
+      description:
+        'Work the interferer uplink back from the IF you measured (RF = LO - IF; uplink = RF + TP-1 translation) and set the correlation bandwidth to match the carrier. Start captures only while the carrier is up - the correlator needs it present for 70% of the 12 s window or it reports NO CORRELATION. Six good captures across at least two cycles.',
       groundStation: 'PA-22',
       prerequisiteObjectiveIds: ['open-geolocation-console'],
       conditions: [
@@ -221,7 +225,8 @@ export const signalHunterScenario1Data: ScenarioData = {
       id: 'compute-fix',
       nice: ['K1032', 'K0926'],
       title: 'First Fix',
-      description: 'COMPUTE FIX. The cell needs the emitter inside 25 km. If the ellipse is still wide, keep capturing through further cycles - the inclined SENTRY pair moves between windows and every new epoch rotates the FDOA line - then compute again.',
+      description:
+        'COMPUTE FIX. The cell needs the emitter inside 25 km. If the ellipse is still wide, keep capturing through further cycles - the inclined SENTRY pair moves between windows and every new epoch rotates the FDOA line - then compute again.',
       groundStation: 'PA-22',
       prerequisiteObjectiveIds: ['collect-measurements'],
       conditions: [
@@ -248,7 +253,7 @@ export const signalHunterScenario1Data: ScenarioData = {
           description: 'Duty Cycle Reported',
           params: {
             character: Character.SYSTEM,
-            question: 'EW-27-0244, field 4 - DUTY CYCLE. Report the interferer\'s duty cycle.',
+            question: "EW-27-0244, field 4 - DUTY CYCLE. Report the interferer's duty cycle.",
             options: [
               'Approximately 30% (40 s on in each 130 s period)',
               'Approximately 57% (60 s on in each 105 s period)',
@@ -269,14 +274,10 @@ export const signalHunterScenario1Data: ScenarioData = {
           params: {
             character: Character.SYSTEM,
             question: 'EW-27-0244, field 5 - OCCUPIED BANDWIDTH. From the analyzer, how wide is the interfering carrier?',
-            options: [
-              'About 3 MHz',
-              'About 8 MHz - the same as the service carrier',
-              'About 40 MHz - the full transponder',
-              'Under 100 kHz - a narrowband CW spur',
-            ],
+            options: ['About 3 MHz', 'About 8 MHz - the same as the service carrier', 'About 40 MHz - the full transponder', 'Under 100 kHz - a narrowband CW spur'],
             correctIndex: 0,
-            explanation: 'Logged. A 3 MHz haystack, well inside the 40 MHz passband and clear of the 8 MHz service carrier - which is why the correlation bandwidth had to be set to match it, not to the transponder.',
+            explanation:
+              'Logged. A 3 MHz haystack, well inside the 40 MHz passband and clear of the 8 MHz service carrier - which is why the correlation bandwidth had to be set to match it, not to the transponder.',
             pointPenalty: 5,
             documentLine: 'Occupied bandwidth: ~3 MHz, centered 1354 MHz IF (3796 MHz downlink / 6021 MHz uplink).',
             documentSection: 'Characterization',
@@ -288,7 +289,7 @@ export const signalHunterScenario1Data: ScenarioData = {
           description: 'Polarization Reported',
           params: {
             character: Character.SYSTEM,
-            question: 'EW-27-0244, field 6 - POLARIZATION. The carrier is being relayed by SENTRY-7 TP-1. What is the interferer\'s uplink polarization, and how do you know?',
+            question: "EW-27-0244, field 6 - POLARIZATION. The carrier is being relayed by SENTRY-7 TP-1. What is the interferer's uplink polarization, and how do you know?",
             options: [
               'Horizontal - TP-1 is an H-pol transponder; a cross-polarized uplink would be rejected by ~28 dB and never appear on the downlink at this level',
               'Vertical - uplinks are always the opposite polarization to the downlink',
@@ -296,7 +297,8 @@ export const signalHunterScenario1Data: ScenarioData = {
               'Cannot be determined - polarization is lost through a transponder',
             ],
             correctIndex: 0,
-            explanation: 'Logged. The transponder is the polarization filter: only an H-pol uplink gets through TP-1 at the level you are seeing. That is a fact about the emitter\'s antenna the field team can use.',
+            explanation:
+              "Logged. The transponder is the polarization filter: only an H-pol uplink gets through TP-1 at the level you are seeing. That is a fact about the emitter's antenna the field team can use.",
             pointPenalty: 5,
             documentLine: 'Polarization: H (co-polar with TP-1; inferred from transponder routing).',
             documentSection: 'Characterization',
@@ -311,7 +313,8 @@ export const signalHunterScenario1Data: ScenarioData = {
       id: 'refine-fix',
       nice: ['K1032'],
       title: 'Close the Ellipse',
-      description: 'Stretch: keep capturing through further cycles - twelve or more captures - and recompute until the fix closes to within 15 km. A tighter ellipse is fewer square kilometres for the field team to search.',
+      description:
+        'Stretch: keep capturing through further cycles - twelve or more captures - and recompute until the fix closes to within 15 km. A tighter ellipse is fewer square kilometres for the field team to search.',
       groundStation: 'PA-22',
       prerequisiteObjectiveIds: ['compute-fix'],
       isOptional: true,

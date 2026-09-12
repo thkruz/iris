@@ -11,17 +11,14 @@
  * (fully inside the interferer's on-windows) and confirm the graded accuracy
  * thresholds are reachable with the configured measurement noise.
  */
+
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { geolocationCampaignData } from '@app/campaigns/nats/campaign-data';
 import { signalHunterSandboxData } from '@app/campaigns/signal-hunter/sandbox';
 import { signalHunterScenario1Data } from '@app/campaigns/signal-hunter/scenario1';
 import { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
-import {
-  GeolocationService,
-  greatCircleKm,
-  type GeolocationMeasurement,
-} from '@app/services/geolocation-service';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { type GeolocationMeasurement, GeolocationService, greatCircleKm } from '@app/services/geolocation-service';
 import { describe, expect, it } from 'vitest';
 
 const scenario = signalHunterScenario1Data;
@@ -96,7 +93,10 @@ describe('signal-hunter scenario 1: registration and identity', () => {
   it('requires the sandbox, which resolves inside the campaign', () => {
     expect(scenario.prerequisiteScenarioIds).toEqual(['signal-hunter-sandbox']);
     for (const prereq of scenario.prerequisiteScenarioIds ?? []) {
-      expect(geolocationCampaignData.scenarios.some((s) => s.id === prereq), prereq).toBe(true);
+      expect(
+        geolocationCampaignData.scenarios.some((s) => s.id === prereq),
+        prereq
+      ).toBe(true);
     }
   });
 
@@ -109,10 +109,9 @@ describe('signal-hunter scenario 1: registration and identity', () => {
 
     expect(event!.frequency).not.toBe(sandboxEvent.frequency);
     expect(event!.periodSeconds / event!.onSeconds).not.toBeCloseTo(sandboxEvent.periodSeconds / sandboxEvent.onSeconds, 2);
-    expect(greatCircleKm(
-      { lat: event!.emitter!.latitude, lon: event!.emitter!.longitude },
-      { lat: sandboxEvent.emitter!.latitude, lon: sandboxEvent.emitter!.longitude },
-    )).toBeGreaterThan(100);
+    expect(
+      greatCircleKm({ lat: event!.emitter!.latitude, lon: event!.emitter!.longitude }, { lat: sandboxEvent.emitter!.latitude, lon: sandboxEvent.emitter!.longitude })
+    ).toBeGreaterThan(100);
   });
 });
 
@@ -164,11 +163,7 @@ describe('signal-hunter scenario 1: objectives', () => {
     const report = objectiveById('file-incident-report');
 
     expect(report.conditions.map((c) => c.type)).toEqual(['status-check', 'status-check', 'status-check']);
-    expect(report.conditions.map((c) => c.description)).toEqual([
-      'Duty Cycle Reported',
-      'Occupied Bandwidth Reported',
-      'Polarization Reported',
-    ]);
+    expect(report.conditions.map((c) => c.description)).toEqual(['Duty Cycle Reported', 'Occupied Bandwidth Reported', 'Polarization Reported']);
   });
 
   it('tightens the sandbox thresholds and demands more captures', () => {
@@ -181,8 +176,7 @@ describe('signal-hunter scenario 1: objectives', () => {
     expect(fix.maxErrorKm!).toBeLessThan(sandboxFix.conditions[0].params!.maxErrorKm!);
     expect(captures.minCount!).toBeGreaterThan(sandboxCaptures.conditions[0].params!.minCount!);
     expect(stretch.isOptional).toBe(true);
-    expect(stretch.conditions.find((c) => c.type === 'geolocation-fix-accuracy')!.params!.maxErrorKm!)
-      .toBeLessThan(fix.maxErrorKm!);
+    expect(stretch.conditions.find((c) => c.type === 'geolocation-fix-accuracy')!.params!.maxErrorKm!).toBeLessThan(fix.maxErrorKm!);
   });
 
   it('references only ids the scenario declares', () => {
@@ -222,9 +216,7 @@ describe('signal-hunter scenario 1: RF and geolocation configuration', () => {
     const victim = settings.satellites.find((s) => s.noradId === event!.satelliteNoradId);
 
     expect(victim).toBeDefined();
-    const transponder = victim!.transponders.find(
-      (tp) => event!.frequency >= tp.uplinkLowEdge && event!.frequency <= tp.uplinkHighEdge,
-    );
+    const transponder = victim!.transponders.find((tp) => event!.frequency >= tp.uplinkLowEdge && event!.frequency <= tp.uplinkHighEdge);
 
     expect(transponder, `no SENTRY-7 transponder covers ${event!.frequency / 1e6} MHz`).toBeDefined();
     expect(transponder!.polarization).toBe(event!.polarization);
@@ -298,7 +290,7 @@ describe('signal-hunter scenario 1: accuracy targets are achievable', () => {
   function fixErrorKm(seed: number, perWindow: number, windows: number): number {
     const service = new GeolocationService(primary, adjacent, station, { rng: makeRng(seed) });
     const measurements: GeolocationMeasurement[] = captureEpochs(perWindow, windows).map((t, i) =>
-      service.synthesizeMeasurement(truth, t, event!.frequency, geolocation!.tdoaSigmaS, geolocation!.fdoaSigmaHz, i + 1),
+      service.synthesizeMeasurement(truth, t, event!.frequency, geolocation!.tdoaSigmaS, geolocation!.fdoaSigmaHz, i + 1)
     );
     const fix = service.solve(measurements, geolocation!.areaOfInterest);
 
@@ -325,8 +317,7 @@ describe('signal-hunter scenario 1: accuracy targets are achievable', () => {
 
     // And across noise draws: the great majority of minimum-count collections pass
     const trials = 25;
-    const passes = Array.from({ length: trials }, (_, i) => fixErrorKm(1000 + i * 7919, perWindow, windows))
-      .filter((err) => err < maxErrorKm).length;
+    const passes = Array.from({ length: trials }, (_, i) => fixErrorKm(1000 + i * 7919, perWindow, windows)).filter((err) => err < maxErrorKm).length;
 
     expect(passes).toBeGreaterThanOrEqual(Math.ceil(trials * 0.85));
   });
@@ -339,8 +330,7 @@ describe('signal-hunter scenario 1: accuracy targets are achievable', () => {
     const windows = Math.ceil(minCount / perWindow);
 
     const trials = 25;
-    const errors = Array.from({ length: trials }, (_, i) => fixErrorKm(5000 + i * 104729, perWindow, windows))
-      .sort((a, b) => a - b);
+    const errors = Array.from({ length: trials }, (_, i) => fixErrorKm(5000 + i * 104729, perWindow, windows)).sort((a, b) => a - b);
 
     // Median collection at the stretch count closes inside the stretch threshold
     expect(errors[Math.floor(trials / 2)]).toBeLessThan(maxErrorKm);

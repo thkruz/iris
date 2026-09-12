@@ -11,18 +11,7 @@
 
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
 import { Hertz, RfFrequency, RfSignal } from '@app/types';
-import {
-  Degrees,
-  EciVec3,
-  GroundObject,
-  Kilometers,
-  KilometersPerSecond,
-  LlaVec3,
-  Satellite as OotkSatellite,
-  TleLine1,
-  TleLine2,
-  Vec3,
-} from 'ootk';
+import { Degrees, EciVec3, GroundObject, Kilometers, KilometersPerSecond, LlaVec3, Satellite as OotkSatellite, TleLine1, TleLine2, Vec3 } from 'ootk';
 import { Satellite, SatelliteState } from './satellite';
 
 /** Geodetic location of the ground station observing this satellite. */
@@ -78,14 +67,7 @@ export class OrbitalSatellite extends Satellite {
   /** Current Doppler factor (observed = transmitted * factor), 1 when unavailable */
   dopplerFactor: number = 1;
 
-  constructor(
-    name: string,
-    norad: number,
-    rxSignal: RfSignal[],
-    beaconSignal: RfSignal[],
-    orbitalConfig: OrbitalSatelliteConfig,
-    satelliteState: Partial<SatelliteState> = {},
-  ) {
+  constructor(name: string, norad: number, rxSignal: RfSignal[], beaconSignal: RfSignal[], orbitalConfig: OrbitalSatelliteConfig, satelliteState: Partial<SatelliteState> = {}) {
     super(name, norad, rxSignal, beaconSignal, {
       az: 0 as Degrees,
       el: 0 as Degrees,
@@ -183,7 +165,7 @@ export class OrbitalSatellite extends Satellite {
       return;
     }
 
-    this.az = ((rae.az % 360) + 360) % 360 as Degrees;
+    this.az = (((rae.az % 360) + 360) % 360) as Degrees;
     this.el = rae.el;
     this.rangeKm = rae.rng;
 

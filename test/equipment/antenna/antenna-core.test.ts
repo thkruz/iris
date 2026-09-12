@@ -35,8 +35,12 @@ vi.mock('../../../src/events/event-bus', () => ({
 vi.mock('../../../src/equipment/antenna/step-track-controller', () => ({
   StepTrackController: vi.fn(function (this: any) {
     this.isActive = false;
-    this.start = vi.fn(() => { this.isActive = true; });
-    this.stop = vi.fn(() => { this.isActive = false; });
+    this.start = vi.fn(() => {
+      this.isActive = true;
+    });
+    this.stop = vi.fn(() => {
+      this.isActive = false;
+    });
     this.isRunning = vi.fn(() => this.isActive);
     this.update = vi.fn();
     return this;
@@ -52,12 +56,7 @@ class TestableAntennaCore extends AntennaCore {
   public drawCalled = false;
   public listenersCalled = false;
 
-  constructor(
-    configId: ANTENNA_CONFIG_KEYS = ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK,
-    initialState: Partial<AntennaState> = {},
-    teamId: number = 1,
-    serverId: number = 1
-  ) {
+  constructor(configId: ANTENNA_CONFIG_KEYS = ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK, initialState: Partial<AntennaState> = {}, teamId: number = 1, serverId: number = 1) {
     super(configId, initialState, teamId, serverId);
   }
 
@@ -87,19 +86,11 @@ class TestableAntennaCore extends AntennaCore {
     return (this as any).calculateAtmosphericLoss_(frequencyHz, elevationAngleDeg);
   }
 
-  public testCalculatePolarizationLoss(
-    txPolarization: string | null,
-    rxPolarization: string | null,
-    polarizationAngle: number
-  ): number {
+  public testCalculatePolarizationLoss(txPolarization: string | null, rxPolarization: string | null, polarizationAngle: number): number {
     return this.calculatePolarizationLoss_(txPolarization, rxPolarization, polarizationAngle);
   }
 
-  public testPolMismatchLoss(
-    signalPol: 'H' | 'V' | 'RHCP' | 'LHCP',
-    rxPol: 'linear' | 'circular',
-    polarizationMismatch: Degrees
-  ): number {
+  public testPolMismatchLoss(signalPol: 'H' | 'V' | 'RHCP' | 'LHCP', rxPol: 'linear' | 'circular', polarizationMismatch: Degrees): number {
     return (this as any).polMismatchLoss_dB_(signalPol, rxPol, polarizationMismatch);
   }
 
@@ -185,10 +176,7 @@ describe('AntennaCore', () => {
         elevation: 30 as Degrees,
         isPowered: false,
       };
-      const customAntenna = new TestableAntennaCore(
-        ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK,
-        initialState
-      );
+      const customAntenna = new TestableAntennaCore(ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK, initialState);
 
       expect(customAntenna.state.azimuth).toBe(45);
       expect(customAntenna.state.elevation).toBe(30);
@@ -204,12 +192,7 @@ describe('AntennaCore', () => {
     });
 
     it('should set teamId and serverId correctly', () => {
-      const antenna = new TestableAntennaCore(
-        ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK,
-        {},
-        2,
-        3
-      );
+      const antenna = new TestableAntennaCore(ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK, {}, 2, 3);
 
       expect(antenna.state.teamId).toBe(2);
       expect(antenna.state.serverId).toBe(3);
@@ -220,10 +203,7 @@ describe('AntennaCore', () => {
         azimuth: 100 as Degrees,
         elevation: 45 as Degrees,
       };
-      const antenna = new TestableAntennaCore(
-        ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK,
-        initialState
-      );
+      const antenna = new TestableAntennaCore(ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK, initialState);
 
       expect(antenna.state.targetAzimuth).toBe(100);
       expect(antenna.state.targetElevation).toBe(45);
@@ -905,7 +885,7 @@ describe('AntennaCore', () => {
       antenna.state.isOperational = false;
       const alarms = antenna.getStatusAlarms();
 
-      expect(alarms.some(a => a.severity === 'error' && a.message.includes('NOT OPERATIONAL'))).toBe(true);
+      expect(alarms.some((a) => a.severity === 'error' && a.message.includes('NOT OPERATIONAL'))).toBe(true);
     });
 
     it('should return warning for high polarization', () => {
@@ -914,7 +894,7 @@ describe('AntennaCore', () => {
       antenna.state.polarization = 50 as Degrees;
       const alarms = antenna.getStatusAlarms();
 
-      expect(alarms.some(a => a.severity === 'warning' && a.message.includes('POLARIZATION'))).toBe(true);
+      expect(alarms.some((a) => a.severity === 'warning' && a.message.includes('POLARIZATION'))).toBe(true);
     });
 
     it('should return error for critical ice buildup', () => {
@@ -923,7 +903,7 @@ describe('AntennaCore', () => {
       antenna.state.iceAccumulation_dB = 6;
       const alarms = antenna.getStatusAlarms();
 
-      expect(alarms.some(a => a.severity === 'error' && a.message.includes('ICE'))).toBe(true);
+      expect(alarms.some((a) => a.severity === 'error' && a.message.includes('ICE'))).toBe(true);
     });
 
     it('should return warning for moderate ice buildup', () => {
@@ -932,7 +912,7 @@ describe('AntennaCore', () => {
       antenna.state.iceAccumulation_dB = 3;
       const alarms = antenna.getStatusAlarms();
 
-      expect(alarms.some(a => a.severity === 'warning' && a.message.includes('ICE'))).toBe(true);
+      expect(alarms.some((a) => a.severity === 'warning' && a.message.includes('ICE'))).toBe(true);
     });
 
     it('should return info for low ice accumulation', () => {
@@ -941,7 +921,7 @@ describe('AntennaCore', () => {
       antenna.state.iceAccumulation_dB = 1;
       const alarms = antenna.getStatusAlarms();
 
-      expect(alarms.some(a => a.severity === 'info' && a.message.includes('ICE'))).toBe(true);
+      expect(alarms.some((a) => a.severity === 'info' && a.message.includes('ICE'))).toBe(true);
     });
 
     it('should return info when loopback is enabled', () => {
@@ -950,7 +930,7 @@ describe('AntennaCore', () => {
       antenna.state.isLoopback = true;
       const alarms = antenna.getStatusAlarms();
 
-      expect(alarms.some(a => a.severity === 'info' && a.message.includes('LOOPBACK'))).toBe(true);
+      expect(alarms.some((a) => a.severity === 'info' && a.message.includes('LOOPBACK'))).toBe(true);
     });
 
     it('should return info for manual tracking', () => {
@@ -958,7 +938,7 @@ describe('AntennaCore', () => {
       antenna.state.isOperational = true;
       const alarms = antenna.getStatusAlarms();
 
-      expect(alarms.some(a => a.severity === 'info' && a.message.includes('Manual'))).toBe(true);
+      expect(alarms.some((a) => a.severity === 'info' && a.message.includes('Manual'))).toBe(true);
     });
   });
 
@@ -1312,7 +1292,7 @@ describe('AntennaCore', () => {
       antenna.state.isBeaconLocked = false;
 
       const alarms = antenna.getStatusAlarms();
-      expect(alarms.some(a => a.message.includes('ACQUIRING LOCK'))).toBe(true);
+      expect(alarms.some((a) => a.message.includes('ACQUIRING LOCK'))).toBe(true);
     });
 
     it('should show AUTO TRACK FAILED when switch up but not enabled', () => {
@@ -1323,7 +1303,7 @@ describe('AntennaCore', () => {
       antenna.state.isLocked = false;
 
       const alarms = antenna.getStatusAlarms();
-      expect(alarms.some(a => a.message.includes('AUTO TRACK FAILED'))).toBe(true);
+      expect(alarms.some((a) => a.message.includes('AUTO TRACK FAILED'))).toBe(true);
     });
 
     it('should show NO SIGNALS RECEIVED when locked but no signals', () => {
@@ -1334,7 +1314,7 @@ describe('AntennaCore', () => {
       antenna.state.rxSignalsIn = [];
 
       const alarms = antenna.getStatusAlarms();
-      expect(alarms.some(a => a.message.includes('NO SIGNALS'))).toBe(true);
+      expect(alarms.some((a) => a.message.includes('NO SIGNALS'))).toBe(true);
     });
 
     it('should show locked status', () => {
@@ -1344,7 +1324,7 @@ describe('AntennaCore', () => {
       antenna.state.isLoopback = false;
 
       const alarms = antenna.getStatusAlarms();
-      expect(alarms.some(a => a.message.includes('LOCKED'))).toBe(true);
+      expect(alarms.some((a) => a.message.includes('LOCKED'))).toBe(true);
     });
   });
 
@@ -1998,7 +1978,7 @@ describe('AntennaCore', () => {
 
   describe('antennaGain_dBi frequency warnings', () => {
     it('should log warning for out-of-band frequency', () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Use frequency outside both Rx and Tx ranges
       antenna.antennaGain_dBi(1e9 as Hertz); // 1 GHz, way below C-band
@@ -2189,7 +2169,7 @@ describe('AntennaCore', () => {
       antenna.state.rxSignalsIn = null as any;
 
       const alarms = antenna.getStatusAlarms();
-      expect(alarms.some(a => a.message.includes('DISCONNECTED'))).toBe(true);
+      expect(alarms.some((a) => a.message.includes('DISCONNECTED'))).toBe(true);
     });
   });
 

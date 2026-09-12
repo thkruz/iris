@@ -60,60 +60,35 @@ describe('GPSDOModuleUIStandard', () => {
 
   describe('constructor', () => {
     it('should create instance extending GPSDOModuleCore', () => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, 'test-root');
 
       expect(gpsdoModule).toBeInstanceOf(GPSDOModuleCore);
       expect(gpsdoModule).toBeInstanceOf(GPSDOModuleUIStandard);
     });
 
     it('should create power switch component', () => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, 'test-root');
 
       const components = gpsdoModule.getComponents();
       expect(components.powerSwitch).toBeDefined();
     });
 
     it('should create GNSS switch component', () => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, 'test-root');
 
       const components = gpsdoModule.getComponents();
       expect(components.gnssSwitch).toBeDefined();
     });
 
     it('should create help button component', () => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, 'test-root');
 
       const components = gpsdoModule.getComponents();
       expect(components.helpBtn).toBeDefined();
     });
 
     it('should inject HTML into parent when parentId provided', () => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, 'test-root');
 
       const parent = document.getElementById('test-root');
       expect(parent?.innerHTML).toContain('gpsdo-module');
@@ -121,12 +96,7 @@ describe('GPSDOModuleUIStandard', () => {
     });
 
     it('should generate HTML without injecting when parentId is empty', () => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState },
-        mockRfFrontEnd,
-        1,
-        ''
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, '');
 
       expect(gpsdoModule.html).toContain('gpsdo-module');
       // Parent should remain empty
@@ -137,12 +107,7 @@ describe('GPSDOModuleUIStandard', () => {
     it('should register for SYNC events', () => {
       const onSpy = vi.spyOn(EventBus.getInstance(), 'on');
 
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, 'test-root');
 
       expect(onSpy).toHaveBeenCalledWith(Events.SYNC, expect.any(Function));
 
@@ -152,12 +117,7 @@ describe('GPSDOModuleUIStandard', () => {
 
   describe('HTML generation', () => {
     beforeEach(() => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, 'test-root');
     });
 
     it('should include module label', () => {
@@ -212,22 +172,12 @@ describe('GPSDOModuleUIStandard', () => {
   describe('initializeDom', () => {
     it('should throw error when parent element not found', () => {
       expect(() => {
-        new GPSDOModuleUIStandard(
-          { ...defaultGpsdoState },
-          mockRfFrontEnd,
-          1,
-          'non-existent-parent'
-        );
+        new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, 'non-existent-parent');
       }).toThrow('Parent element non-existent-parent not found');
     });
 
     it('should create DOM element with correct ID', () => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, 'test-root');
 
       const element = document.getElementById('rf-fe-gpsdo-1');
       expect(element).not.toBeNull();
@@ -236,12 +186,7 @@ describe('GPSDOModuleUIStandard', () => {
 
   describe('getComponents()', () => {
     beforeEach(() => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, 'test-root');
     });
 
     it('should return power switch', () => {
@@ -343,12 +288,7 @@ describe('GPSDOModuleUIStandard', () => {
 
   describe('getLEDs()', () => {
     beforeEach(() => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, 'test-root');
     });
 
     it('should return lock LED status function', () => {
@@ -406,12 +346,7 @@ describe('GPSDOModuleUIStandard', () => {
 
   describe('sync()', () => {
     beforeEach(() => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, 'test-root');
     });
 
     it('should update state from partial state', () => {
@@ -442,12 +377,7 @@ describe('GPSDOModuleUIStandard', () => {
 
   describe('syncDomWithState_', () => {
     beforeEach(() => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState, isPowered: true },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState, isPowered: true }, mockRfFrontEnd, 1, 'test-root');
     });
 
     it('should update LED classes', () => {
@@ -531,12 +461,7 @@ describe('GPSDOModuleUIStandard', () => {
 
   describe('event handlers', () => {
     beforeEach(() => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState }, mockRfFrontEnd, 1, 'test-root');
     });
 
     it('should call handlePowerToggle when power changes', () => {
@@ -621,7 +546,7 @@ describe('GPSDOModuleUIStandard', () => {
       gpsdoModule.state.gnssSignalPresent = true;
 
       // Trigger GNSS off to enter holdover
-      gpsdoModule.handleGnssToggle(false, () => { });
+      gpsdoModule.handleGnssToggle(false, () => {});
 
       const holdoverDisplay = document.querySelector('.gpsdo-holdover');
 
@@ -635,24 +560,14 @@ describe('GPSDOModuleUIStandard', () => {
 
   describe('warmup time formatting', () => {
     it('should display READY when warmed up', () => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState, warmupTimeRemaining: 0 },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState, warmupTimeRemaining: 0 }, mockRfFrontEnd, 1, 'test-root');
 
       const displays = gpsdoModule.getDisplays();
       expect(displays.warmupTime()).toBe('READY');
     });
 
     it('should display formatted time when warming up', () => {
-      gpsdoModule = new GPSDOModuleUIStandard(
-        { ...defaultGpsdoState, warmupTimeRemaining: 125 },
-        mockRfFrontEnd,
-        1,
-        'test-root'
-      );
+      gpsdoModule = new GPSDOModuleUIStandard({ ...defaultGpsdoState, warmupTimeRemaining: 125 }, mockRfFrontEnd, 1, 'test-root');
 
       const displays = gpsdoModule.getDisplays();
       expect(displays.warmupTime()).toBe('2:05');

@@ -1,5 +1,5 @@
-import type { ScenarioData } from '@app/ScenarioData';
 import { Character, Emotion } from '@app/modal/character-enum';
+import type { ScenarioData } from '@app/ScenarioData';
 import type { dBm } from '@app/types';
 import { backyardGpsStation, backyardQfhStation, backyardYagiStation } from './ground-stations';
 import { cubehop1Satellite, navstar77Satellite, wxsat19Satellite } from './satellites';
@@ -35,13 +35,7 @@ export const hamSdrSandboxData: ScenarioData = {
   missionType: 'Sandbox',
   description: `Charlie's niece Riley (KD2RLY) has turned the family backyard in Burlington into a satellite ground station built from scrap: a hand-wound quadrifilar helix on a fence post, a crossed yagi bolted to an old TV rotator, and a GPS patch antenna taped to a paint stick. Total budget: about $80 and one weekend.
   <br/><br/>No mission control, no shift supervisor - just an SDR dongle, a laptop running SkyWatcher, and physics. Everything runs from the SDR Console: tuning, polarization, the rotator, the decoder. Catch a weather satellite with the QFH, chase a cubesat's Doppler on the yagi (mind the polarization switch), and find the GPS constellation hiding under the noise floor.`,
-  equipment: [
-    'DIY 137 MHz Quadrifilar Helix',
-    'DIY 70cm Crossed Yagi on TV Rotator',
-    'GPS L1 Patch Antenna',
-    'RTL-SDR Receiver (Direct Sampling)',
-    'SkyWatcher SDR Console',
-  ],
+  equipment: ['DIY 137 MHz Quadrifilar Helix', 'DIY 70cm Crossed Yagi on TV Rotator', 'GPS L1 Patch Antenna', 'RTL-SDR Receiver (Direct Sampling)', 'SkyWatcher SDR Console'],
   settings: {
     isSync: true,
     groundStations: [backyardQfhStation, backyardYagiStation, backyardGpsStation],
@@ -54,7 +48,8 @@ export const hamSdrSandboxData: ScenarioData = {
     {
       id: 'check-observations',
       title: 'Check the Observations List',
-      description: 'Open the Observations tab and see what is coming over the horizon. WXSAT-19 rises in about three minutes; note its AOS time. NAVSTAR-77 is already overhead - MEO birds hang around for hours, not minutes.',
+      description:
+        'Open the Observations tab and see what is coming over the horizon. WXSAT-19 rises in about three minutes; note its AOS time. NAVSTAR-77 is already overhead - MEO birds hang around for hours, not minutes.',
       groundStation: 'BKYD-QFH',
       conditions: [
         {
@@ -70,7 +65,8 @@ export const hamSdrSandboxData: ScenarioData = {
     {
       id: 'wx-first-contact',
       title: 'First Contact: Decode the Weather Bird',
-      description: 'The QFH needs no pointing - it stares straight up and its beam covers most of the sky. On the Weather Rig, watch 137.100 MHz on the SDR Console as WXSAT-19 rises, and lock the APT downlink. VHF Doppler is only a few kHz, so the channel holds it without retuning. The channel BW must bracket the signal, like a modem symbol rate: the APT signal is 34 kHz wide, so the stock 50 kHz channel works - much narrower or wider than the signal and the demodulator drops out (watch the lock indicator, it tells you which way you are off).',
+      description:
+        'The QFH needs no pointing - it stares straight up and its beam covers most of the sky. On the Weather Rig, watch 137.100 MHz on the SDR Console as WXSAT-19 rises, and lock the APT downlink. VHF Doppler is only a few kHz, so the channel holds it without retuning. The channel BW must bracket the signal, like a modem symbol rate: the APT signal is 34 kHz wide, so the stock 50 kHz channel works - much narrower or wider than the signal and the demodulator drops out (watch the lock indicator, it tells you which way you are off).',
       groundStation: 'BKYD-QFH',
       prerequisiteObjectiveIds: ['check-observations'],
       conditions: [
@@ -98,7 +94,8 @@ export const hamSdrSandboxData: ScenarioData = {
     {
       id: 'yagi-track-cubehop',
       title: 'Track CUBEHOP-1 with the Yagi',
-      description: 'CUBEHOP-1 rises at T+18 min. On the Yagi Rig, select CUBEHOP-1 in the SDR Console rotator panel and engage TRACK so the yagi follows the bird. The crossed yagi has a switchable feed: CUBEHOP-1 transmits right-hand circular (RHCP) - pick the wrong handedness and you throw away ~18 dB.',
+      description:
+        'CUBEHOP-1 rises at T+18 min. On the Yagi Rig, select CUBEHOP-1 in the SDR Console rotator panel and engage TRACK so the yagi follows the bird. The crossed yagi has a switchable feed: CUBEHOP-1 transmits right-hand circular (RHCP) - pick the wrong handedness and you throw away ~18 dB.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['check-observations'],
       conditions: [
@@ -126,7 +123,8 @@ export const hamSdrSandboxData: ScenarioData = {
     {
       id: 'doppler-chase',
       title: 'Chase the Doppler',
-      description: 'At 435 MHz the Doppler shift runs +/-10 kHz across the pass - more than the 15 kHz channel can swallow. Watch the carrier slide across the waterfall and keep the VFO on it with the tune buttons (or discover the AFC checkbox). Hold the lock with decent C/N.',
+      description:
+        'At 435 MHz the Doppler shift runs +/-10 kHz across the pass - more than the 15 kHz channel can swallow. Watch the carrier slide across the waterfall and keep the VFO on it with the tune buttons (or discover the AFC checkbox). Hold the lock with decent C/N.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['yagi-track-cubehop'],
       conditions: [
@@ -149,7 +147,8 @@ export const hamSdrSandboxData: ScenarioData = {
     {
       id: 'gps-detect',
       title: 'Find GPS Under the Noise',
-      description: 'Switch to the GPS Experiment rig. NAVSTAR-77 is nearly overhead, but you will not see a carrier: GPS L1 is spread-spectrum, a 2 MHz-wide bump barely above the noise floor. That is the whole point - the signal is below the noise until a receiver despreads it. Spot the hump around 1575.42 MHz.',
+      description:
+        'Switch to the GPS Experiment rig. NAVSTAR-77 is nearly overhead, but you will not see a carrier: GPS L1 is spread-spectrum, a 2 MHz-wide bump barely above the noise floor. That is the whole point - the signal is below the noise until a receiver despreads it. Spot the hump around 1575.42 MHz.',
       groundStation: 'BKYD-GPS',
       isOptional: true,
       prerequisiteObjectiveIds: ['check-observations'],

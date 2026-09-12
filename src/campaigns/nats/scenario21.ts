@@ -1,3 +1,4 @@
+import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import type { AntennaState } from '@app/equipment/antenna';
 import { ANTENNA_CONFIG_KEYS } from '@app/equipment/antenna/antenna-config-keys';
 import { Character, Emotion } from '@app/modal/character-enum';
@@ -6,7 +7,6 @@ import type { ScenarioData } from '@app/ScenarioData';
 import type { dB, dBm, Hertz, IfFrequency, MHz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
-import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { vermontGroundStation } from './ground-stations';
 import { ses10Satellite, tidemark1Satellite, tidemark2Satellite } from './satellites';
 
@@ -73,13 +73,7 @@ export const scenario21Data: ScenarioData = {
   difficulty: 'advanced',
   missionType: 'Threat Response',
   description: `Catherine's day shift flagged it before she left: intermittent broadband noise riding the TIDEMARK-2 downlink, on-off-on, gone before she could characterize it. It's back this morning. It doesn't match the cross-pol neighbors and it doesn't match weather.<br><br>Treat it as an interference incident from the first minute. Characterize the signature, discriminate jamming from a benign accident, mitigate what you can on the receive side, and build the regulator package as you go. And verify the half of this that matters most: an RF interferer denies your signal - it does not touch your data. Prove the data layer is intact, or you are no longer working an interference event.<br><br>If it turns out to be somebody's misaligned uplink, the same evidence resolves it. If it's deliberate, the evidence IS the response.`,
-  equipment: [
-    '9-meter C-band Antenna (ME-02)',
-    'RF Front End (notch filter)',
-    'Spectrum Analyzer',
-    'RX/TX Modems',
-    'Crypto module (data-layer integrity)',
-  ],
+  equipment: ['9-meter C-band Antenna (ME-02)', 'RF Front End (notch filter)', 'Spectrum Analyzer', 'RX/TX Modems', 'Crypto module (data-layer integrity)'],
   timeLimitSeconds: 35 * 60,
   settings: {
     isSync: true,
@@ -205,7 +199,7 @@ export const scenario21Data: ScenarioData = {
       id: 'review-mission-brief',
       nice: ['K0645'],
       title: 'Review the Interference Flag',
-      description: 'Open the brief and Catherine\'s end-of-shift note.',
+      description: "Open the brief and Catherine's end-of-shift note.",
       groundStation: 'ME-02',
       freezesScenarioTimer: true,
       prerequisiteObjectiveIds: [],
@@ -229,7 +223,8 @@ export const scenario21Data: ScenarioData = {
               'Power-cycle the LNB - intermittent usually means a flaky receiver',
             ],
             correctIndex: 0,
-            explanation: 'Evidence first, conclusion last. Whether it ends as "misaligned partner uplink" or "deliberate denial," the work is identical until the evidence decides - and that discipline is what makes the eventual conclusion defensible.',
+            explanation:
+              'Evidence first, conclusion last. Whether it ends as "misaligned partner uplink" or "deliberate denial," the work is identical until the evidence decides - and that discipline is what makes the eventual conclusion defensible.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -320,11 +315,12 @@ export const scenario21Data: ScenarioData = {
             options: [
               'Against accident, toward deliberation: natural and accidental sources are continuous or random; a clean repeating on/off cadence on the scale of a minute implies a hand on a switch or an automated transmitter, not weather or a stuck oscillator',
               'Toward radar - rotating antennas produce exactly this minute-scale cadence',
-              'Toward a failing power supply on a neighbor\'s uplink',
+              "Toward a failing power supply on a neighbor's uplink",
               'Nothing - duty cycle carries no diagnostic information',
             ],
             correctIndex: 0,
-            explanation: 'Radar duty cycles are seconds, not minutes. Accidental interference is continuous or erratic. A deliberate, minute-scale on/off pattern is one of the strongest behavioral indicators of intent - though it is an indicator, not proof.',
+            explanation:
+              'Radar duty cycles are seconds, not minutes. Accidental interference is continuous or erratic. A deliberate, minute-scale on/off pattern is one of the strongest behavioral indicators of intent - though it is an indicator, not proof.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -356,7 +352,8 @@ export const scenario21Data: ScenarioData = {
               'Nothing - other stations seeing it is expected for any signal',
             ],
             correctIndex: 0,
-            explanation: 'This is the highest-information test in the matrix. Local interference appears at one station; uplink interference is relayed to all. Every-station visibility moves the source from "somewhere near Maine" to "transmitting at the satellite."',
+            explanation:
+              'This is the highest-information test in the matrix. Local interference appears at one station; uplink interference is relayed to all. Every-station visibility moves the source from "somewhere near Maine" to "transmitting at the satellite."',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -380,15 +377,17 @@ export const scenario21Data: ScenarioData = {
           description: 'Shape Read',
           params: {
             character: Character.SYSTEM,
-            question: 'The interferer is broadband-ish, sized close to our carrier, sitting inside our transponder near our allocation. How does that compare to benign explanations?',
+            question:
+              'The interferer is broadband-ish, sized close to our carrier, sitting inside our transponder near our allocation. How does that compare to benign explanations?',
             options: [
-              'It matches nothing in the coordination database: cross-pol leakage would mirror a known neighbor\'s carrier, an errant uplink would look like a modulated carrier at a coordinated slot - broadband noise shaped to our carrier inside our passband fits neither',
+              "It matches nothing in the coordination database: cross-pol leakage would mirror a known neighbor's carrier, an errant uplink would look like a modulated carrier at a coordinated slot - broadband noise shaped to our carrier inside our passband fits neither",
               'It is a textbook cross-pol leakage signature',
               'It matches a coordinated adjacent-satellite carrier exactly',
               'Bandwidth and placement carry no diagnostic weight',
             ],
             correctIndex: 0,
-            explanation: 'Accidents look like known things in the wrong place. Noise deliberately shaped and placed to deny a specific carrier looks like nothing the coordination database can account for - the absence of a benign match is itself evidence.',
+            explanation:
+              'Accidents look like known things in the wrong place. Noise deliberately shaped and placed to deny a specific carrier looks like nothing the coordination database can account for - the absence of a benign match is itself evidence.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -424,7 +423,8 @@ export const scenario21Data: ScenarioData = {
               'The distinction is academic - all attacks get the same response',
             ],
             correctIndex: 0,
-            explanation: 'Jamming denies availability; it does not breach confidentiality or integrity. Conflating denial with intrusion sends you down the wrong escalation path - you must check the data layer to know which incident you actually have.',
+            explanation:
+              'Jamming denies availability; it does not breach confidentiality or integrity. Conflating denial with intrusion sends you down the wrong escalation path - you must check the data layer to know which incident you actually have.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -482,7 +482,8 @@ export const scenario21Data: ScenarioData = {
               'Means the jamming has stopped',
             ],
             correctIndex: 0,
-            explanation: 'Two layers, two verifications, never conflated. Intact crypto bounds this to a denial-of-availability event. The hypothetical - a crypto change mid-incident - is exactly the tripwire that would escalate it to an intrusion.',
+            explanation:
+              'Two layers, two verifications, never conflated. Intact crypto bounds this to a denial-of-availability event. The hypothetical - a crypto change mid-incident - is exactly the tripwire that would escalate it to an intrusion.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -518,7 +519,8 @@ export const scenario21Data: ScenarioData = {
               'Mute the receiver until the interferer stops',
             ],
             correctIndex: 0,
-            explanation: 'A notch is the surgical tool: it removes the interferer\'s energy from the receive path. Power escalation degrades neighbors, violates coordination, and feeds the incident - there is NO transmit-side mitigation for uplink jamming available to a ground station.',
+            explanation:
+              "A notch is the surgical tool: it removes the interferer's energy from the receive path. Power escalation degrades neighbors, violates coordination, and feeds the incident - there is NO transmit-side mitigation for uplink jamming available to a ground station.",
             pointPenalty: 5,
             preserveOptionOrder: true,
           },
@@ -606,7 +608,8 @@ export const scenario21Data: ScenarioData = {
               'It is fine - more power always improves the link',
             ],
             correctIndex: 0,
-            explanation: 'Burn-through is a denial response that creates more denial. The operator\'s tools are receive-side mitigation and the regulator; offense belongs to the spectrum authority and geolocation services, not the victim\'s HPA.',
+            explanation:
+              "Burn-through is a denial response that creates more denial. The operator's tools are receive-side mitigation and the regulator; offense belongs to the spectrum authority and geolocation services, not the victim's HPA.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -639,10 +642,11 @@ export const scenario21Data: ScenarioData = {
               'Victim (satellite/transponder/pol/center freq/BW), interferer (center freq, BW, measured duty cycle, first/last seen), spectrum captures at documented settings, cross-station confirmation (transponder vs local), service impact, and mitigation applied - all timestamped',
               'A one-line summary: "being jammed, please help"',
               'Only our internal trouble-ticket number',
-              'The interferer\'s identity and location - which we determine ourselves',
+              "The interferer's identity and location - which we determine ourselves",
             ],
             correctIndex: 0,
-            explanation: 'Per ITU-R practice the report is evidence, not conclusion: measured parameters, captures, cross-station confirmation, and impact - everything timestamped. Attribution (who, where) belongs to the regulator and geolocation providers, not the ground operator.',
+            explanation:
+              'Per ITU-R practice the report is evidence, not conclusion: measured parameters, captures, cross-station confirmation, and impact - everything timestamped. Attribution (who, where) belongs to the regulator and geolocation providers, not the ground operator.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -666,7 +670,7 @@ export const scenario21Data: ScenarioData = {
           description: 'Finding Language',
           params: {
             character: Character.SYSTEM,
-            question: 'How should the operator\'s written finding be worded?',
+            question: "How should the operator's written finding be worded?",
             options: [
               '"Signature consistent with deliberate uplink interference" - a confidence-bounded characterization backed by the evidence; attribution and intent are for the regulator to determine, not the ground operator to assert',
               '"Confirmed hostile jamming by [named actor]" - state it plainly',
@@ -674,7 +678,8 @@ export const scenario21Data: ScenarioData = {
               'Avoid any characterization - just file the raw data',
             ],
             correctIndex: 0,
-            explanation: 'The evidence supports "consistent with deliberate" - it does not support naming an actor or declaring intent as fact. Disciplined language is what makes your evidence usable; overreach is what gets it dismissed.',
+            explanation:
+              'The evidence supports "consistent with deliberate" - it does not support naming an actor or declaring intent as fact. Disciplined language is what makes your evidence usable; overreach is what gets it dismissed.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -706,7 +711,8 @@ export const scenario21Data: ScenarioData = {
               'Intermittent RX issue, power-cycled LNB.',
             ],
             correctIndex: 0,
-            explanation: 'Everything load-bearing: signature, duty cycle, the uplink confirmation, the intact data layer (denial not intrusion), the mitigation, the disciplined finding, and the escalation tripwire. The next shift inherits a complete, defensible picture.',
+            explanation:
+              'Everything load-bearing: signature, duty cycle, the uplink confirmation, the intact data layer (denial not intrusion), the mitigation, the disciplined finding, and the escalation tripwire. The next shift inherits a complete, defensible picture.',
             pointPenalty: 5,
           },
           mustMaintain: false,

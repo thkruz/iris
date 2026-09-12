@@ -60,7 +60,7 @@ const vt01SkyNoise = (): number => {
       };
     };
   };
-  const gs = w.signalRange?.simulationManager?.groundStations?.find(g => g.state?.id === 'VT-01');
+  const gs = w.signalRange?.simulationManager?.groundStations?.find((g) => g.state?.id === 'VT-01');
   return gs?.antennas?.[0]?.state?.skyNoiseDegradation_dB ?? 0;
 };
 
@@ -76,13 +76,7 @@ export const scenario17Data: ScenarioData = {
   difficulty: 'intermediate',
   missionType: 'Environmental Operations',
   description: `The semiannual sun transit window arrives this morning: for about five minutes the Sun passes directly behind TIDEMARK-1 as seen from Vermont, and the antenna stares into a 20,000-kelvin noise source at full gain. The noise floor climbs, the margin collapses, and near the peak the demodulator will lose the carrier.<br><br>Nothing is broken. Nothing can be fixed. The event was predicted to the minute by the ephemeris service, the SLA excuses it with advance notice, and the geometry resolves itself.<br><br>Your job is the discipline: notify the customer before the window, hold the configuration through it, verify the recovery, and document what actually happened. The only way to fail a sun transit is to fight one.`,
-  equipment: [
-    '9-meter C-band Antenna',
-    'RF Front End',
-    'Spectrum Analyzer',
-    'RX/TX Modems',
-    'Sun Transit Prediction Sheet',
-  ],
+  equipment: ['9-meter C-band Antenna', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'Sun Transit Prediction Sheet'],
   timeLimitSeconds: 30 * 60,
   settings: {
     isSync: true,
@@ -196,7 +190,8 @@ export const scenario17Data: ScenarioData = {
               'It does not - the transit makes the baseline meaningless',
             ],
             correctIndex: 0,
-            explanation: 'Predictable events make perfect camouflage. Clean board before the window means everything during it is the Sun - and anything still wrong after it is not.',
+            explanation:
+              'Predictable events make perfect camouflage. Clean board before the window means everything during it is the Sun - and anything still wrong after it is not.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -228,7 +223,8 @@ export const scenario17Data: ScenarioData = {
               'Solar heating detunes the LNB local oscillator',
             ],
             correctIndex: 0,
-            explanation: 'The carrier power never changes - the noise under it rises. That is why nothing on the ground or the spacecraft can fix it: the antenna is pointed at the satellite, and the Sun is standing directly behind it.',
+            explanation:
+              'The carrier power never changes - the noise under it rises. That is why nothing on the ground or the spacecraft can fix it: the antenna is pointed at the satellite, and the Sun is standing directly behind it.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -260,7 +256,8 @@ export const scenario17Data: ScenarioData = {
               'Only during solar eclipses',
             ],
             correctIndex: 0,
-            explanation: 'Pure geometry: the Sun crosses the geostationary arc as seen from your latitude around each equinox. Every teleport publishes its transit calendar - which is why a late customer notification is an operator failure, never a surprise.',
+            explanation:
+              'Pure geometry: the Sun crosses the geostationary arc as seen from your latitude around each equinox. Every teleport publishes its transit calendar - which is why a late customer notification is an operator failure, never a surprise.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -336,7 +333,8 @@ export const scenario17Data: ScenarioData = {
               'It is not - handover is always the safer choice',
             ],
             correctIndex: 0,
-            explanation: 'Same lesson as the S14 rain fade, sharpened: escape has a price, and here the thing escaped costs less than the escape. Every station on the arc takes its transits; the constellation-level answer is notification discipline, not musical chairs.',
+            explanation:
+              'Same lesson as the S14 rain fade, sharpened: escape has a price, and here the thing escaped costs less than the escape. Every station on the arc takes its transits; the constellation-level answer is notification discipline, not musical chairs.',
             pointPenalty: 5,
             preserveOptionOrder: true,
           },
@@ -369,7 +367,8 @@ export const scenario17Data: ScenarioData = {
               'Notification after the event, with the measured impact attached.',
             ],
             correctIndex: 0,
-            explanation: 'Specific, timed, actionable, and BEFORE the event. The SLA exclusion is conditional on advance notice - a notification timestamped after window-open is contractually worthless.',
+            explanation:
+              'Specific, timed, actionable, and BEFORE the event. The SLA exclusion is conditional on advance notice - a notification timestamped after window-open is contractually worthless.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -413,7 +412,8 @@ export const scenario17Data: ScenarioData = {
               'A reason to repoint and check the geometry',
             ],
             correctIndex: 0,
-            explanation: 'The prediction is the baseline. Onset within a minute of the sheet, profile shaped like the sheet - that is a healthy station experiencing astronomy. Deviation from the sheet is what would demand investigation.',
+            explanation:
+              'The prediction is the baseline. Onset within a minute of the sheet, profile shaped like the sheet - that is a healthy station experiencing astronomy. Deviation from the sheet is what would demand investigation.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -488,7 +488,8 @@ export const scenario17Data: ScenarioData = {
               'The carrier is gone and must be re-acquired manually after the window',
             ],
             correctIndex: 0,
-            explanation: 'Sun transit is a receive-side event at one station. The uplink never flinched - which is exactly why the transmit chain stays untouched. Anything you "fix" now becomes a real problem you created during a fake one.',
+            explanation:
+              'Sun transit is a receive-side event at one station. The uplink never flinched - which is exactly why the transmit chain stays untouched. Anything you "fix" now becomes a real problem you created during a fake one.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -565,7 +566,8 @@ export const scenario17Data: ScenarioData = {
               'Elevated BUC temperature from the solar exposure',
             ],
             correctIndex: 0,
-            explanation: 'The window is a clean five-minute box. Healthy before, healthy after, astronomy in between. An alarm that outlives the box was never the Sun - and now is when you catch it.',
+            explanation:
+              'The window is a clean five-minute box. Healthy before, healthy after, astronomy in between. An alarm that outlives the box was never the Sun - and now is when you catch it.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -629,7 +631,8 @@ export const scenario17Data: ScenarioData = {
               'Only the lock-loss duration - the rest was predicted anyway',
             ],
             correctIndex: 0,
-            explanation: 'Predicted-vs-actual is what makes the next prediction trustworthy, the notification timestamp is what makes the SLA exclusion stick, and the impact statement is what the account team quotes. Three audiences, one log entry.',
+            explanation:
+              'Predicted-vs-actual is what makes the next prediction trustworthy, the notification timestamp is what makes the SLA exclusion stick, and the impact statement is what the account team quotes. Three audiences, one log entry.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -661,7 +664,7 @@ export const scenario17Data: ScenarioData = {
               'Emergency response to solar interference completed successfully.',
             ],
             correctIndex: 0,
-            explanation: 'Including tomorrow\'s window in today\'s entry is the mark of someone who understands the series. The next operator walks in pre-briefed.',
+            explanation: "Including tomorrow's window in today's entry is the mark of someone who understands the series. The next operator walks in pre-briefed.",
             pointPenalty: 5,
           },
           mustMaintain: false,

@@ -12,9 +12,9 @@
  * directly for determinism.
  */
 
+import { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
-import { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
 import { ScenarioManager } from '@app/scenario-manager';
 import { missionNowMs } from '@app/simulation/mission-clock';
 import { SimulationManager } from '@app/simulation/simulation-manager';

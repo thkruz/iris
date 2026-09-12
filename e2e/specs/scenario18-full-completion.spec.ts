@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  answerQuizByText,
-  dismissDialogIfPresent,
-  waitForQuizToAppear,
-  waitForSimulationReady,
-} from '../utils/simulation-helpers';
+import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
  * Scenario 18 - "Satellite Anomaly": TIDEMARK-2 Station-Keeping Drift.
@@ -22,12 +17,7 @@ import {
  * - 'set-tracking-mode': Step-track toggle (rides program-track)
  * - 'auto': Simulation-satisfied condition (maintain-duration holds)
  */
-type ObjectiveType =
-  | 'quiz'
-  | 'select-station'
-  | 'click-tab'
-  | 'set-tracking-mode'
-  | 'auto';
+type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'set-tracking-mode' | 'auto';
 
 interface Scenario18Objective {
   id: string;
@@ -45,8 +35,7 @@ const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
     id: 'review-mission-brief',
     title: 'Review Anomaly Brief',
     type: 'quiz',
-    correctAnswer:
-      'Keep the link alive and feed Halifax ground observations - the vehicle is theirs, the lock is mine',
+    correctAnswer: 'Keep the link alive and feed Halifax ground observations - the vehicle is theirs, the lock is mine',
   },
   {
     id: 'select-maine-station',
@@ -66,8 +55,7 @@ const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
     id: 'dashboard-baseline',
     title: 'Station Health vs Link Health',
     type: 'quiz',
-    correctAnswer:
-      'The ground segment is healthy - the degradation is on the space side or in the geometry, which matches Halifax\'s report exactly',
+    correctAnswer: "The ground segment is healthy - the degradation is on the space side or in the geometry, which matches Halifax's report exactly",
   },
   {
     id: 'station-keeping-quiz',
@@ -86,15 +74,13 @@ const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
     id: 'read-program-track-decay',
     title: 'Read the Program-Track Decay',
     type: 'quiz',
-    correctAnswer:
-      'Program-track IS on target - the ephemeris target. The satellite is somewhere else, and the gap between prediction and reality is being paid in pattern loss',
+    correctAnswer: 'Program-track IS on target - the ephemeris target. The satellite is somewhere else, and the gap between prediction and reality is being paid in pattern loss',
   },
   {
     id: 'beamwidth-risk-quiz',
     title: 'How Long Until It Falls Off',
     type: 'quiz',
-    correctAnswer:
-      'Already lost - the excursion is several beamwidths and only gets worse; any fix based on following the ephemeris fails until Halifax publishes a corrected one',
+    correctAnswer: 'Already lost - the excursion is several beamwidths and only gets worse; any fix based on following the ephemeris fails until Halifax publishes a corrected one',
   },
 
   // PHASE 2: TRANSITION TO STEP-TRACK
@@ -141,8 +127,7 @@ const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
     id: 'ground-observations-quiz',
     title: 'Feed the Vehicle Team',
     type: 'quiz',
-    correctAnswer:
-      'Timestamped step-track pointing history - the dish is physically following the satellite, so its az/el trace IS an independent measurement of the actual orbit',
+    correctAnswer: 'Timestamped step-track pointing history - the dish is physically following the satellite, so its az/el trace IS an independent measurement of the actual orbit',
   },
   {
     id: 'impact-assessment-quiz',
@@ -172,10 +157,7 @@ const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
 // ============================================================
 
 /** Step-track is a toggle riding program-track (same pattern as S6/S10). */
-async function setTrackingMode(
-  page: import('@playwright/test').Page,
-  trackingMode: string
-): Promise<void> {
+async function setTrackingMode(page: import('@playwright/test').Page, trackingMode: string): Promise<void> {
   if (trackingMode === 'step-track') {
     const stepTrackToggle = page.locator('input[id$="step-track-toggle"]');
     await expect(stepTrackToggle).toBeVisible({ timeout: 5000 });
@@ -194,11 +176,7 @@ async function setTrackingMode(
   await page.waitForTimeout(300);
 }
 
-async function executeObjective(
-  page: import('@playwright/test').Page,
-  missionControlPage: MissionControlPage,
-  objective: Scenario18Objective
-): Promise<void> {
+async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario18Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);

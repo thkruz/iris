@@ -1,3 +1,4 @@
+import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import type { AntennaState } from '@app/equipment/antenna';
 import { ANTENNA_CONFIG_KEYS } from '@app/equipment/antenna/antenna-config-keys';
 import { Satellite, TransponderConfig } from '@app/equipment/satellite/satellite';
@@ -8,7 +9,6 @@ import { SignalOrigin } from '@app/signal-origin';
 import type { dB, dBi, dBm, FECType, Hertz, IfFrequency, MHz, ModulationType, RfFrequency } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
-import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { vermontGroundStation } from './ground-stations';
 import { ses10Satellite, tidemark1Satellite } from './satellites';
 
@@ -136,13 +136,7 @@ export const scenario18Data: ScenarioData = {
   difficulty: 'advanced',
   missionType: 'Anomaly Response',
   description: `Halifax called at 0850: TIDEMARK-2's station-keeping thrusters are degraded and north-south burns are suspended while the vehicle team investigates. Residual inclination is building - from Maine's dish the bird now traces a growing daily figure-eight that the published ephemeris no longer predicts.<br><br>Program-track follows the ephemeris. The ephemeris is wrong. You can watch the C/N bleed in real time.<br><br>You have flown an inclined bird before - AURORA-7 taught you everything this needs. The difference is that this time the satellite is the patient, the spacecraft team is the surgeon, and the ground operator's whole job is to keep the monitors attached: hold the lock, feed Halifax your track data, and know exactly where the ground role ends.`,
-  equipment: [
-    '9-meter C-band Antenna (ME-02)',
-    'RF Front End',
-    'Spectrum Analyzer',
-    'RX/TX Modems',
-    'Halifax vehicle status feed',
-  ],
+  equipment: ['9-meter C-band Antenna (ME-02)', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'Halifax vehicle status feed'],
   timeLimitSeconds: 35 * 60,
   settings: {
     isSync: true,
@@ -258,7 +252,7 @@ export const scenario18Data: ScenarioData = {
       id: 'review-mission-brief',
       nice: ['K0645'],
       title: 'Review Anomaly Brief',
-      description: 'Open the brief and Halifax\'s 0850 vehicle status report.',
+      description: "Open the brief and Halifax's 0850 vehicle status report.",
       groundStation: 'ME-02',
       freezesScenarioTimer: true,
       prerequisiteObjectiveIds: [],
@@ -339,7 +333,7 @@ export const scenario18Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'The board shows degraded link margin but every equipment indicator is green. What does that combination tell you?',
             options: [
-              'The ground segment is healthy - the degradation is on the space side or in the geometry, which matches Halifax\'s report exactly',
+              "The ground segment is healthy - the degradation is on the space side or in the geometry, which matches Halifax's report exactly",
               'A hidden equipment fault - green indicators cannot be trusted during an anomaly',
               'The dashboard is stale and needs a refresh',
               'Weather - check the precipitation sensor',
@@ -373,11 +367,12 @@ export const scenario18Data: ScenarioData = {
             options: [
               'Residual inclination accumulates - the bird traces a daily figure-8 in az/el that grows over weeks, and the published ephemeris becomes progressively more wrong',
               'The satellite falls out of orbit within days',
-              'The satellite drifts east along the GEO arc into another operator\'s slot immediately',
+              "The satellite drifts east along the GEO arc into another operator's slot immediately",
               'Nothing observable - station-keeping only matters for collision avoidance',
             ],
             correctIndex: 0,
-            explanation: 'Exactly AURORA-7\'s life story, fast-forwarded. Inclination is the axis N-S burns fight; without them the figure-8 starts small and grows roughly 0.8-0.9° per year - except this drift is days old and already past the prediction.',
+            explanation:
+              "Exactly AURORA-7's life story, fast-forwarded. Inclination is the axis N-S burns fight; without them the figure-8 starts small and grows roughly 0.8-0.9° per year - except this drift is days old and already past the prediction.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -416,7 +411,8 @@ export const scenario18Data: ScenarioData = {
               'Cross-pol interference from SES-10',
             ],
             correctIndex: 0,
-            explanation: 'A 9-meter C-band dish has a half-degree-class beamwidth. A few tenths of a degree of ephemeris error puts the bird on the shoulder of the beam - present, degraded, and wandering with the figure-8.',
+            explanation:
+              'A 9-meter C-band dish has a half-degree-class beamwidth. A few tenths of a degree of ephemeris error puts the bird on the shoulder of the beam - present, degraded, and wandering with the figure-8.',
             pointPenalty: 5,
             preserveOptionOrder: true,
           },
@@ -449,7 +445,8 @@ export const scenario18Data: ScenarioData = {
               'Program-track will self-correct as it learns the drift',
             ],
             correctIndex: 0,
-            explanation: 'No gain knob recovers pointing loss. When reality has left the prediction by multiple beamwidths, the only thing worth tracking is the satellite itself - which is what the beacon is for.',
+            explanation:
+              'No gain knob recovers pointing loss. When reality has left the prediction by multiple beamwidths, the only thing worth tracking is the satellite itself - which is what the beacon is for.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -566,7 +563,8 @@ export const scenario18Data: ScenarioData = {
               'Manual pointing voids the antenna warranty',
             ],
             correctIndex: 0,
-            explanation: 'Step-track corrects continuously against the measured beacon. The day automation actually dies you will fly manual because you must (that day comes in this campaign) - but choosing manual while the loop works is choosing worse performance at higher risk.',
+            explanation:
+              'Step-track corrects continuously against the measured beacon. The day automation actually dies you will fly manual because you must (that day comes in this campaign) - but choosing manual while the loop works is choosing worse performance at higher risk.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -615,7 +613,7 @@ export const scenario18Data: ScenarioData = {
       id: 'ground-observations-quiz',
       nice: ['T1314', 'K1032'],
       title: 'Feed the Vehicle Team',
-      description: 'Choose what ground data actually helps Halifax\'s investigation.',
+      description: "Choose what ground data actually helps Halifax's investigation.",
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['sustained-hold'],
       timeLimitSeconds: 2 * 60,
@@ -629,12 +627,13 @@ export const scenario18Data: ScenarioData = {
             question: 'Which ground-side dataset is most valuable to the spacecraft team right now?',
             options: [
               'Timestamped step-track pointing history - the dish is physically following the satellite, so its az/el trace IS an independent measurement of the actual orbit',
-              'The receiver\'s frame error counters',
+              "The receiver's frame error counters",
               'BUC and HPA temperatures',
               'The spectrum analyzer screenshot archive',
             ],
             correctIndex: 0,
-            explanation: 'When step-track follows the beacon, the antenna becomes a tracking instrument. Halifax can fit your pointing trace against their dynamics model - ground stations have refined orbits this way for decades.',
+            explanation:
+              'When step-track follows the beacon, the antenna becomes a tracking instrument. Halifax can fit your pointing trace against their dynamics model - ground stations have refined orbits this way for decades.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -666,7 +665,8 @@ export const scenario18Data: ScenarioData = {
               'Impact unknown - decline to assess until Halifax finishes',
             ],
             correctIndex: 0,
-            explanation: 'Honest posture: green today, amber risk, named tripwires. The S22 board work later in this phase grades exactly this skill - say what you know, label what you are watching.',
+            explanation:
+              'Honest posture: green today, amber risk, named tripwires. The S22 board work later in this phase grades exactly this skill - say what you know, label what you are watching.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -679,7 +679,7 @@ export const scenario18Data: ScenarioData = {
       id: 'escalation-boundary-quiz',
       nice: ['S0593', 'K0721'],
       title: 'Escalation Tripwires',
-      description: 'Define when this stops being a ride-along and starts being Dana\'s call.',
+      description: "Define when this stops being a ride-along and starts being Dana's call.",
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['impact-assessment-quiz'],
       timeLimitSeconds: 2 * 60,
@@ -698,7 +698,8 @@ export const scenario18Data: ScenarioData = {
               'Nothing - the operator owns the incident end to end',
             ],
             correctIndex: 0,
-            explanation: 'You own the link while the link is holdable. The moment the question becomes "should this traffic move?" or "should this bird carry traffic at all?" - that is supervision and spacecraft authority, with your data underneath it.',
+            explanation:
+              'You own the link while the link is holdable. The moment the question becomes "should this traffic move?" or "should this bird carry traffic at all?" - that is supervision and spacecraft authority, with your data underneath it.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -730,7 +731,8 @@ export const scenario18Data: ScenarioData = {
               'See Halifax for details.',
             ],
             correctIndex: 0,
-            explanation: 'OPEN in capital letters is the load-bearing word. The next operator inherits a healthy link inside an unresolved anomaly - the log must make both halves of that true.',
+            explanation:
+              'OPEN in capital letters is the load-bearing word. The next operator inherits a healthy link inside an unresolved anomaly - the log must make both halves of that true.',
             pointPenalty: 5,
           },
           mustMaintain: false,

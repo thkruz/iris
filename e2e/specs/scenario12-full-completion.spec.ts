@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  answerQuizByText,
-  dismissDialogIfPresent,
-  waitForQuizToAppear,
-  waitForSimulationReady,
-} from '../utils/simulation-helpers';
+import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
  * Scenario 12 - "Planned Maintenance: Return to Service".
@@ -164,8 +159,7 @@ const SCENARIO_12_OBJECTIVES: Scenario12Objective[] = [
     id: 'tx-chain-inspection',
     title: 'TX Chain Pre-Power Inspection',
     type: 'quiz',
-    correctAnswer:
-      'BUC gain is at 50 dB - testing value left over from maintenance, operating value is 23 dB',
+    correctAnswer: 'BUC gain is at 50 dB - testing value left over from maintenance, operating value is 23 dB',
   },
   // ============================================================
   // PHASE 5: TX CHAIN RESTORATION
@@ -223,8 +217,7 @@ const SCENARIO_12_OBJECTIVES: Scenario12Objective[] = [
     id: 'pre-handover-criteria',
     title: 'Confirm Handover-Ready State',
     type: 'quiz',
-    correctAnswer:
-      'Beacon lock + RX modem lock with C/N margin + TX chain staged cold (modem on, BUC muted, HPA disabled)',
+    correctAnswer: 'Beacon lock + RX modem lock with C/N margin + TX chain staged cold (modem on, BUC muted, HPA disabled)',
   },
   {
     id: 'execute-handover-return-select-sat',
@@ -248,8 +241,7 @@ const SCENARIO_12_OBJECTIVES: Scenario12Objective[] = [
     id: 'verify-handover-success',
     title: 'Confirm Return Complete',
     type: 'quiz',
-    correctAnswer:
-      'VT-01 owns TM-1 traffic, ME-02 TX stood down, no packet loss reported, no new alarms',
+    correctAnswer: 'VT-01 owns TM-1 traffic, ME-02 TX stood down, no packet loss reported, no new alarms',
   },
 
   // ============================================================
@@ -259,8 +251,7 @@ const SCENARIO_12_OBJECTIVES: Scenario12Objective[] = [
     id: 'notify-customer',
     title: 'Notify SeaLink',
     type: 'quiz',
-    correctAnswer:
-      'VT-01 restored, TM-1 traffic returned to primary station, no service interruption observed.',
+    correctAnswer: 'VT-01 restored, TM-1 traffic returned to primary station, no service interruption observed.',
   },
   {
     id: 'final-dashboard-sweep-tab',
@@ -291,10 +282,7 @@ const SCENARIO_12_OBJECTIVES: Scenario12Objective[] = [
  * Set the antenna tracking mode by clicking the appropriate button.
  * ACU control tab must be active before calling this.
  */
-async function setTrackingMode(
-  page: import('@playwright/test').Page,
-  trackingMode: string
-): Promise<void> {
+async function setTrackingMode(page: import('@playwright/test').Page, trackingMode: string): Promise<void> {
   const modeButton = page.locator(`.btn-tracking[data-mode="${trackingMode}"]`);
   await expect(modeButton).toBeVisible({ timeout: 5000 });
   await modeButton.click();
@@ -312,10 +300,7 @@ async function setTrackingMode(
  * Select a target satellite from the ACU dropdown and click Move to Target.
  * Used after setTrackingMode('program-track').
  */
-async function selectSatelliteAndMove(
-  page: import('@playwright/test').Page,
-  satelliteNoradId: string
-): Promise<void> {
+async function selectSatelliteAndMove(page: import('@playwright/test').Page, satelliteNoradId: string): Promise<void> {
   const satelliteSelect = page.locator('select[id$="satellite-select"]');
   await expect(satelliteSelect).toBeVisible({ timeout: 5000 });
   await satelliteSelect.selectOption({ value: satelliteNoradId });
@@ -333,15 +318,14 @@ async function selectSatelliteAndMove(
  * the wait early while the dish is still slewing from stow, which desyncs the
  * whole objective chain).
  */
-async function waitForAntennaMovement(
-  page: import('@playwright/test').Page,
-  timeout = 240000
-): Promise<void> {
+async function waitForAntennaMovement(page: import('@playwright/test').Page, timeout = 240000): Promise<void> {
   await page.waitForFunction(
     () => {
-      const sim = (window as unknown as {
-        signalRange?: { simulationManager?: { groundStations?: Array<{ antennas?: Array<{ state?: { slewing?: boolean; isLocked?: boolean } }> }> } };
-      }).signalRange?.simulationManager;
+      const sim = (
+        window as unknown as {
+          signalRange?: { simulationManager?: { groundStations?: Array<{ antennas?: Array<{ state?: { slewing?: boolean; isLocked?: boolean } }> }> } };
+        }
+      ).signalRange?.simulationManager;
       const antennaState = sim?.groundStations?.[0]?.antennas?.[0]?.state;
       return antennaState ? antennaState.slewing === false && antennaState.isLocked === true : false;
     },
@@ -355,10 +339,7 @@ async function waitForAntennaMovement(
 /**
  * Configure spectrum analyzer center frequency. Span is optional.
  */
-async function configureSpectrumAnalyzer(
-  page: import('@playwright/test').Page,
-  config: { centerFrequency: number; span?: number }
-): Promise<void> {
+async function configureSpectrumAnalyzer(page: import('@playwright/test').Page, config: { centerFrequency: number; span?: number }): Promise<void> {
   const centerFreqInput = page.locator('#sa-center-freq');
   await expect(centerFreqInput).toBeVisible({ timeout: 5000 });
   await centerFreqInput.fill(config.centerFrequency.toString());
@@ -380,10 +361,7 @@ async function configureSpectrumAnalyzer(
  * Power on the LNB and apply operating LO + gain values.
  * Waits for thermal stabilization after Apply.
  */
-async function configureLnb(
-  page: import('@playwright/test').Page,
-  config: { loFrequency: number; gain: number }
-): Promise<void> {
+async function configureLnb(page: import('@playwright/test').Page, config: { loFrequency: number; gain: number }): Promise<void> {
   const powerSwitch = page.locator('#lnb-power');
   await expect(powerSwitch).toBeVisible({ timeout: 5000 });
   // The static template renders the power switch `checked`; the adapter syncs
@@ -420,10 +398,7 @@ async function configureLnb(
  * Set the BUC gain via the TX Chain panel and click Apply.
  * TX Chain tab must be active.
  */
-async function configureBucGain(
-  page: import('@playwright/test').Page,
-  gain: number
-): Promise<void> {
+async function configureBucGain(page: import('@playwright/test').Page, gain: number): Promise<void> {
   const gainInput = page.locator('#buc-gain');
   await expect(gainInput).toBeVisible({ timeout: 5000 });
   await gainInput.fill(gain.toString());
@@ -439,11 +414,7 @@ async function configureBucGain(
 /**
  * Toggle a switch to the desired state.
  */
-async function toggleSwitch(
-  page: import('@playwright/test').Page,
-  switchId: string,
-  desiredState: boolean
-): Promise<void> {
+async function toggleSwitch(page: import('@playwright/test').Page, switchId: string, desiredState: boolean): Promise<void> {
   const switchEl = page.locator(`#${switchId}`);
   await expect(switchEl).toBeVisible({ timeout: 5000 });
   // Let the adapter's throttled DOM sync land before reading - the static
@@ -464,10 +435,7 @@ async function toggleSwitch(
 /**
  * Select a satellite by clicking its asset-tree item.
  */
-async function selectSatellite(
-  page: import('@playwright/test').Page,
-  satelliteAssetId: string
-): Promise<void> {
+async function selectSatellite(page: import('@playwright/test').Page, satelliteAssetId: string): Promise<void> {
   const satTreeItem = page.locator(`[data-asset-id="${satelliteAssetId}"]`);
   await expect(satTreeItem).toBeVisible({ timeout: 10000 });
   await satTreeItem.click();
@@ -478,10 +446,7 @@ async function selectSatellite(
 /**
  * Execute the satellite-dashboard traffic handover to the target station.
  */
-async function executeTrafficHandover(
-  page: import('@playwright/test').Page,
-  targetStation: string
-): Promise<void> {
+async function executeTrafficHandover(page: import('@playwright/test').Page, targetStation: string): Promise<void> {
   const handoverSelect = page.locator('#sat-handover-target');
   await expect(handoverSelect).toBeVisible({ timeout: 5000 });
   await handoverSelect.selectOption({ value: targetStation });
@@ -498,11 +463,7 @@ async function executeTrafficHandover(
 /**
  * Execute an objective based on its type.
  */
-async function executeObjective(
-  page: import('@playwright/test').Page,
-  missionControlPage: MissionControlPage,
-  objective: Scenario12Objective
-): Promise<void> {
+async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario12Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);

@@ -58,11 +58,11 @@ vi.mock('@app/scenario-manager', async (importOriginal) => {
   };
 });
 
-import { ccsCampaignData } from '@app/campaigns/nats/campaign-data';
 import { sandstormGroundStation } from '@app/campaigns/ccs/ground-stations';
 import { ccsScenario1Data } from '@app/campaigns/ccs/scenario1';
 import { ccsScenario2Data } from '@app/campaigns/ccs/scenario2';
-import { ElectronicAttackManager, type ElectronicAttackConfig, type JamOutput } from '@app/electronic-attack/electronic-attack-manager';
+import { ccsCampaignData } from '@app/campaigns/nats/campaign-data';
+import { type ElectronicAttackConfig, ElectronicAttackManager, type JamOutput } from '@app/electronic-attack/electronic-attack-manager';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { HardwareFaultManager } from '@app/faults/hardware-fault-manager';
@@ -232,9 +232,7 @@ describe('ccs scenario 2: objectives', () => {
   });
 
   it('makes the operator hold the effect (mustMaintain + maintainDuration) after each recovery', () => {
-    const holds = objectives.filter((o) =>
-      o.conditions.some((c) => c.type === 'jamming-effective' && c.mustMaintain && (c.maintainDuration ?? 0) >= 120),
-    );
+    const holds = objectives.filter((o) => o.conditions.some((c) => c.type === 'jamming-effective' && c.mustMaintain && (c.maintainDuration ?? 0) >= 120));
 
     expect(holds.map((o) => o.id)).toEqual(['hold-primary', 'hold-backup', 'hold-to-recall']);
   });
@@ -305,7 +303,10 @@ describe('ccs scenario 2: fault schedule', () => {
       const tx = station.transmitters![event.transmitterIndex ?? 0];
 
       expect(tx, `${event.id}: transmitter ${event.transmitterIndex}`).toBeDefined();
-      expect(tx.modems.some((m) => m.modem_number === event.modemNumber), `${event.id}: modem ${event.modemNumber}`).toBe(true);
+      expect(
+        tx.modems.some((m) => m.modem_number === event.modemNumber),
+        `${event.id}: modem ${event.modemNumber}`
+      ).toBe(true);
       expect(event.startTime).toBeGreaterThan(0);
     }
 

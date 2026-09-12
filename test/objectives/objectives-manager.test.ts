@@ -1,7 +1,7 @@
+import type { Milliseconds } from 'ootk';
 import { vi } from 'vitest';
 import { EventBus } from '../../src/events/event-bus';
 import { Events, QuizCompletedData, QuizPassedData } from '../../src/events/events';
-import type { Milliseconds } from 'ootk';
 import { Objective, ObjectiveState } from '../../src/objectives/objective-types';
 import { ObjectivesManager } from '../../src/objectives/objectives-manager';
 import { addSkippedTime, resetMissionClock } from '../../src/simulation/mission-clock';
@@ -131,47 +131,57 @@ let mockReceiverSnr: number | null = null;
 
 const createMockGroundStation = () => ({
   state: { id: 'gs-1' },
-  antennas: [{
-    state: mockAntennaState,
-  }],
-  rfFrontEnds: [{
-    gpsdoModule: { state: mockGpsdoState },
-    bucModule: { state: mockBucState },
-    lnbModule: { state: mockLnbState },
-    hpaModule: { state: mockHpaState },
-    filterModule: { state: mockFilterState },
-    notchFilterModule: { state: mockNotchFilterState },
-    couplerModule: {
-      signalPathManager: {
-        getTotalGainTo: vi.fn(() => 0),
-      },
+  antennas: [
+    {
+      state: mockAntennaState,
     },
-  }],
-  spectrumAnalyzers: [{
-    state: mockSpectrumAnalyzerState,
-    getInputSignals: vi.fn(() => mockInputSignals),
-    rfFrontEnd_: {
+  ],
+  rfFrontEnds: [
+    {
+      gpsdoModule: { state: mockGpsdoState },
+      bucModule: { state: mockBucState },
+      lnbModule: { state: mockLnbState },
+      hpaModule: { state: mockHpaState },
+      filterModule: { state: mockFilterState },
+      notchFilterModule: { state: mockNotchFilterState },
       couplerModule: {
         signalPathManager: {
           getTotalGainTo: vi.fn(() => 0),
         },
       },
     },
-  }],
-  receivers: [{
-    state: {
-      activeModem: 1,
-      modems: [mockReceiverModemState],
+  ],
+  spectrumAnalyzers: [
+    {
+      state: mockSpectrumAnalyzerState,
+      getInputSignals: vi.fn(() => mockInputSignals),
+      rfFrontEnd_: {
+        couplerModule: {
+          signalPathManager: {
+            getTotalGainTo: vi.fn(() => 0),
+          },
+        },
+      },
     },
-    getSignalsInBandwidth: vi.fn(() => ({ hasLock: mockReceiverHasLock })),
-    getSnrForModem: vi.fn(() => mockReceiverSnr),
-  }],
-  transmitters: [{
-    state: {
-      activeModem: 1,
-      modems: [mockTransmitterModemState],
+  ],
+  receivers: [
+    {
+      state: {
+        activeModem: 1,
+        modems: [mockReceiverModemState],
+      },
+      getSignalsInBandwidth: vi.fn(() => ({ hasLock: mockReceiverHasLock })),
+      getSnrForModem: vi.fn(() => mockReceiverSnr),
     },
-  }],
+  ],
+  transmitters: [
+    {
+      state: {
+        activeModem: 1,
+        modems: [mockTransmitterModemState],
+      },
+    },
+  ],
 });
 
 // Mock dependencies
@@ -274,9 +284,7 @@ describe('ObjectivesManager', () => {
     });
 
     it('should throw error when getInstance() called before initialize()', () => {
-      expect(() => ObjectivesManager.getInstance()).toThrow(
-        'ObjectivesManager not initialized. Call initialize() first.'
-      );
+      expect(() => ObjectivesManager.getInstance()).toThrow('ObjectivesManager not initialized. Call initialize() first.');
     });
 
     it('should warn and destroy previous instance on re-initialize', () => {
@@ -288,9 +296,7 @@ describe('ObjectivesManager', () => {
       const objectives2 = [createTestObjective({ id: 'obj-2' })];
       const manager2 = ObjectivesManager.initialize(objectives2);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'ObjectivesManager already initialized. Destroying previous instance.'
-      );
+      expect(consoleSpy).toHaveBeenCalledWith('ObjectivesManager already initialized. Destroying previous instance.');
       expect(manager1).not.toBe(manager2);
 
       consoleSpy.mockRestore();
@@ -299,10 +305,7 @@ describe('ObjectivesManager', () => {
 
   describe('Initialization', () => {
     it('should initialize objectives with correct initial state', () => {
-      const objectives = [
-        createTestObjective({ id: 'obj-1' }),
-        createTestObjective({ id: 'obj-2', prerequisiteObjectiveIds: ['obj-1'] }),
-      ];
+      const objectives = [createTestObjective({ id: 'obj-1' }), createTestObjective({ id: 'obj-2', prerequisiteObjectiveIds: ['obj-1'] })];
 
       const manager = ObjectivesManager.initialize(objectives);
       const states = manager.getObjectiveStates();
@@ -336,10 +339,7 @@ describe('ObjectivesManager', () => {
 
   describe('Objective State Retrieval', () => {
     it('should get objective state by ID', () => {
-      const objectives = [
-        createTestObjective({ id: 'obj-1' }),
-        createTestObjective({ id: 'obj-2' }),
-      ];
+      const objectives = [createTestObjective({ id: 'obj-1' }), createTestObjective({ id: 'obj-2' })];
 
       const manager = ObjectivesManager.initialize(objectives);
       const state = manager.getObjectiveState('obj-1');
@@ -493,9 +493,7 @@ describe('ObjectivesManager', () => {
 
       manager.applyTimeSkip(45_000);
 
-      expect(failedCallback).toHaveBeenCalledWith(
-        expect.objectContaining({ objectiveId: 'timed-obj', reason: 'timeout' })
-      );
+      expect(failedCallback).toHaveBeenCalledWith(expect.objectContaining({ objectiveId: 'timed-obj', reason: 'timeout' }));
     });
 
     it('should ignore non-positive deltas', () => {
@@ -555,10 +553,7 @@ describe('ObjectivesManager', () => {
     });
 
     it('should resume timer on QUIZ_COMPLETED if scenario not complete', () => {
-      const objectives = [
-        createTestObjective({ id: 'quiz-obj' }),
-        createTestObjective({ id: 'obj-2', prerequisiteObjectiveIds: ['quiz-obj'] }),
-      ];
+      const objectives = [createTestObjective({ id: 'quiz-obj' }), createTestObjective({ id: 'obj-2', prerequisiteObjectiveIds: ['quiz-obj'] })];
       const manager = ObjectivesManager.initialize(objectives, 60);
 
       // Emit quiz passed event to pause timer
@@ -651,10 +646,7 @@ describe('ObjectivesManager', () => {
 
   describe('State Restoration', () => {
     it('should restore objective states from checkpoint', () => {
-      const objectives = [
-        createTestObjective({ id: 'obj-1' }),
-        createTestObjective({ id: 'obj-2', prerequisiteObjectiveIds: ['obj-1'] }),
-      ];
+      const objectives = [createTestObjective({ id: 'obj-1' }), createTestObjective({ id: 'obj-2', prerequisiteObjectiveIds: ['obj-1'] })];
 
       const manager = ObjectivesManager.initialize(objectives, 300);
 
@@ -700,9 +692,7 @@ describe('ObjectivesManager', () => {
 
   describe('HTML Checklist Generation', () => {
     it('should generate HTML checklist with correct structure', () => {
-      const objectives = [
-        createTestObjective({ id: 'obj-1', title: 'First Objective' }),
-      ];
+      const objectives = [createTestObjective({ id: 'obj-1', title: 'First Objective' })];
 
       const manager = ObjectivesManager.initialize(objectives);
       const html = manager.generateHtmlChecklist();
@@ -729,10 +719,7 @@ describe('ObjectivesManager', () => {
 
   describe('areAllObjectivesCompleted', () => {
     it('should return false when objectives remain incomplete', () => {
-      const objectives = [
-        createTestObjective({ id: 'obj-1' }),
-        createTestObjective({ id: 'obj-2' }),
-      ];
+      const objectives = [createTestObjective({ id: 'obj-1' }), createTestObjective({ id: 'obj-2' })];
 
       const manager = ObjectivesManager.initialize(objectives);
 
@@ -750,11 +737,7 @@ describe('ObjectivesManager', () => {
     });
 
     it('should return true when only required objectives are complete and an optional one is not', () => {
-      const objectives = [
-        createTestObjective({ id: 'req-1' }),
-        createTestObjective({ id: 'req-2' }),
-        createTestObjective({ id: 'opt-1', isOptional: true }),
-      ];
+      const objectives = [createTestObjective({ id: 'req-1' }), createTestObjective({ id: 'req-2' }), createTestObjective({ id: 'opt-1', isOptional: true })];
       const manager = ObjectivesManager.initialize(objectives);
 
       const states = manager.getObjectiveStates();
@@ -765,10 +748,7 @@ describe('ObjectivesManager', () => {
     });
 
     it('should return false when a required objective is incomplete even if the optional one is done', () => {
-      const objectives = [
-        createTestObjective({ id: 'req-1' }),
-        createTestObjective({ id: 'opt-1', isOptional: true }),
-      ];
+      const objectives = [createTestObjective({ id: 'req-1' }), createTestObjective({ id: 'opt-1', isOptional: true })];
       const manager = ObjectivesManager.initialize(objectives);
 
       const states = manager.getObjectiveStates();
@@ -778,10 +758,7 @@ describe('ObjectivesManager', () => {
     });
 
     it('should fall back to requiring every objective when all of them are optional', () => {
-      const objectives = [
-        createTestObjective({ id: 'opt-1', isOptional: true }),
-        createTestObjective({ id: 'opt-2', isOptional: true }),
-      ];
+      const objectives = [createTestObjective({ id: 'opt-1', isOptional: true }), createTestObjective({ id: 'opt-2', isOptional: true })];
       const manager = ObjectivesManager.initialize(objectives);
 
       expect(manager.areAllObjectivesCompleted()).toBe(false);
@@ -796,10 +773,7 @@ describe('ObjectivesManager', () => {
 
   describe('Collapse State Sync', () => {
     it('should sync collapsed states from DOM', () => {
-      const objectives = [
-        createTestObjective({ id: 'obj-1' }),
-        createTestObjective({ id: 'obj-2' }),
-      ];
+      const objectives = [createTestObjective({ id: 'obj-1' }), createTestObjective({ id: 'obj-2' })];
 
       const manager = ObjectivesManager.initialize(objectives);
 
@@ -1510,10 +1484,7 @@ describe('ObjectivesManager', () => {
 
   describe('Objectives All Completed Event', () => {
     it('should emit OBJECTIVES_ALL_COMPLETED when all objectives done', () => {
-      const objectives = [
-        createTestObjective({ id: 'obj-1' }),
-        createTestObjective({ id: 'obj-2' }),
-      ];
+      const objectives = [createTestObjective({ id: 'obj-1' }), createTestObjective({ id: 'obj-2' })];
 
       const allCompletedCallback = vi.fn();
       eventBus.on(Events.OBJECTIVES_ALL_COMPLETED, allCompletedCallback);
@@ -1647,9 +1618,7 @@ describe('ObjectivesManager', () => {
       eventBus.emit(Events.ASSET_SELECTED, { type: 'satellite', id: 'sat-1' });
       eventBus.emit(Events.UPDATE, 16);
 
-      const unsatisfiedCall = conditionChangedCallback.mock.calls.find(
-        call => call[0].isSatisfied === false
-      );
+      const unsatisfiedCall = conditionChangedCallback.mock.calls.find((call) => call[0].isSatisfied === false);
 
       expect(unsatisfiedCall).toBeDefined();
       expect(unsatisfiedCall[0]).toMatchObject({
@@ -1873,9 +1842,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'antenna-obj',
-          conditions: [
-            { type: 'antenna-locked', description: 'Lock antenna', mustMaintain: false },
-          ],
+          conditions: [{ type: 'antenna-locked', description: 'Lock antenna', mustMaintain: false }],
         }),
       ];
 
@@ -2093,9 +2060,7 @@ describe('ObjectivesManager', () => {
         }),
         createTestObjective({
           id: 'pol-obj-noparam',
-          conditions: [
-            { type: 'antenna-polarization-set', description: 'No target given', mustMaintain: false },
-          ],
+          conditions: [{ type: 'antenna-polarization-set', description: 'No target given', mustMaintain: false }],
         }),
       ];
 
@@ -2114,9 +2079,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'beacon-lock-obj',
-          conditions: [
-            { type: 'antenna-beacon-locked', description: 'Lock beacon', mustMaintain: false },
-          ],
+          conditions: [{ type: 'antenna-beacon-locked', description: 'Lock beacon', mustMaintain: false }],
         }),
       ];
 
@@ -2135,9 +2098,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'heater-obj',
-          conditions: [
-            { type: 'feed-heater-enabled', description: 'Enable heater', mustMaintain: false },
-          ],
+          conditions: [{ type: 'feed-heater-enabled', description: 'Enable heater', mustMaintain: false }],
         }),
       ];
 
@@ -2158,9 +2119,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'gpsdo-obj',
-          conditions: [
-            { type: 'gpsdo-locked', description: 'Lock GPSDO', mustMaintain: false },
-          ],
+          conditions: [{ type: 'gpsdo-locked', description: 'Lock GPSDO', mustMaintain: false }],
         }),
       ];
 
@@ -2181,9 +2140,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'gpsdo-obj',
-          conditions: [
-            { type: 'gpsdo-warmed-up', description: 'GPSDO warmed up', mustMaintain: false },
-          ],
+          conditions: [{ type: 'gpsdo-warmed-up', description: 'GPSDO warmed up', mustMaintain: false }],
         }),
       ];
 
@@ -2204,9 +2161,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'gpsdo-obj',
-          conditions: [
-            { type: 'gpsdo-gnss-locked', description: 'GNSS locked', mustMaintain: false },
-          ],
+          conditions: [{ type: 'gpsdo-gnss-locked', description: 'GNSS locked', mustMaintain: false }],
         }),
       ];
 
@@ -2256,9 +2211,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'gpsdo-obj',
-          conditions: [
-            { type: 'gpsdo-not-in-holdover', description: 'Not in holdover', mustMaintain: false },
-          ],
+          conditions: [{ type: 'gpsdo-not-in-holdover', description: 'Not in holdover', mustMaintain: false }],
         }),
       ];
 
@@ -2279,9 +2232,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'buc-obj',
-          conditions: [
-            { type: 'buc-locked', description: 'Lock BUC', mustMaintain: false },
-          ],
+          conditions: [{ type: 'buc-locked', description: 'Lock BUC', mustMaintain: false }],
         }),
       ];
 
@@ -2302,9 +2253,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'buc-obj',
-          conditions: [
-            { type: 'buc-reference-locked', description: 'BUC ref locked', mustMaintain: false },
-          ],
+          conditions: [{ type: 'buc-reference-locked', description: 'BUC ref locked', mustMaintain: false }],
         }),
       ];
 
@@ -2324,9 +2273,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'buc-obj',
-          conditions: [
-            { type: 'buc-muted', description: 'BUC muted', mustMaintain: false },
-          ],
+          conditions: [{ type: 'buc-muted', description: 'BUC muted', mustMaintain: false }],
         }),
       ];
 
@@ -2346,9 +2293,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'buc-obj',
-          conditions: [
-            { type: 'buc-unmuted', description: 'BUC unmuted', mustMaintain: false },
-          ],
+          conditions: [{ type: 'buc-unmuted', description: 'BUC unmuted', mustMaintain: false }],
         }),
       ];
 
@@ -2396,9 +2341,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'buc-obj',
-          conditions: [
-            { type: 'buc-not-saturated', description: 'Not saturated', mustMaintain: false },
-          ],
+          conditions: [{ type: 'buc-not-saturated', description: 'Not saturated', mustMaintain: false }],
         }),
       ];
 
@@ -2421,9 +2364,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'lnb-obj',
-          conditions: [
-            { type: 'lnb-reference-locked', description: 'LNB locked', mustMaintain: false },
-          ],
+          conditions: [{ type: 'lnb-reference-locked', description: 'LNB locked', mustMaintain: false }],
         }),
       ];
 
@@ -2499,9 +2440,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'lnb-obj',
-          conditions: [
-            { type: 'lnb-thermally-stable', description: 'Thermally stable', mustMaintain: false },
-          ],
+          conditions: [{ type: 'lnb-thermally-stable', description: 'Thermally stable', mustMaintain: false }],
         }),
       ];
 
@@ -2550,9 +2489,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'hpa-obj',
-          conditions: [
-            { type: 'hpa-enabled', description: 'HPA enabled', mustMaintain: false },
-          ],
+          conditions: [{ type: 'hpa-enabled', description: 'HPA enabled', mustMaintain: false }],
         }),
       ];
 
@@ -2572,9 +2509,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'hpa-obj',
-          conditions: [
-            { type: 'hpa-disabled', description: 'HPA disabled', mustMaintain: false },
-          ],
+          conditions: [{ type: 'hpa-disabled', description: 'HPA disabled', mustMaintain: false }],
         }),
       ];
 
@@ -2621,9 +2556,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'hpa-obj',
-          conditions: [
-            { type: 'hpa-not-overdriven', description: 'Not overdriven', mustMaintain: false },
-          ],
+          conditions: [{ type: 'hpa-not-overdriven', description: 'Not overdriven', mustMaintain: false }],
         }),
       ];
 
@@ -3032,9 +2965,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'signal-obj',
-          conditions: [
-            { type: 'signal-detected', description: 'Signal detected', mustMaintain: false },
-          ],
+          conditions: [{ type: 'signal-detected', description: 'Signal detected', mustMaintain: false }],
         }),
       ];
 
@@ -3464,9 +3395,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'rx-obj',
-          conditions: [
-            { type: 'receiver-signal-locked', description: 'Signal locked', mustMaintain: false },
-          ],
+          conditions: [{ type: 'receiver-signal-locked', description: 'Signal locked', mustMaintain: false }],
         }),
       ];
 
@@ -3511,9 +3440,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'afc-obj',
-          conditions: [
-            { type: 'receiver-afc-enabled', description: 'AFC engaged', mustMaintain: false },
-          ],
+          conditions: [{ type: 'receiver-afc-enabled', description: 'AFC engaged', mustMaintain: false }],
         }),
       ];
 
@@ -3555,9 +3482,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'afc-obj',
-          conditions: [
-            { type: 'receiver-afc-enabled', description: 'AFC engaged', mustMaintain: false },
-          ],
+          conditions: [{ type: 'receiver-afc-enabled', description: 'AFC engaged', mustMaintain: false }],
         }),
       ];
 
@@ -3813,9 +3738,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'tx-obj',
-          conditions: [
-            { type: 'tx-modem-transmitting', description: 'Transmitting', mustMaintain: false },
-          ],
+          conditions: [{ type: 'tx-modem-transmitting', description: 'Transmitting', mustMaintain: false }],
         }),
       ];
 
@@ -3920,9 +3843,7 @@ describe('ObjectivesManager', () => {
       const objectives = [
         createTestObjective({
           id: 'unknown-obj',
-          conditions: [
-            { type: 'unknown-condition' as any, description: 'Unknown', mustMaintain: false },
-          ],
+          conditions: [{ type: 'unknown-condition' as any, description: 'Unknown', mustMaintain: false }],
         }),
       ];
 
@@ -4060,12 +3981,14 @@ describe('ObjectivesManager', () => {
       tick();
 
       expect(listener).toHaveBeenCalledTimes(1);
-      expect(listener).toHaveBeenCalledWith(expect.objectContaining({
-        objectiveId: 'test-objective-1',
-        conditionIndex: 0,
-        type: 'mission-brief-opened',
-        isSatisfied: expect.any(Boolean),
-      }));
+      expect(listener).toHaveBeenCalledWith(
+        expect.objectContaining({
+          objectiveId: 'test-objective-1',
+          conditionIndex: 0,
+          type: 'mission-brief-opened',
+          isSatisfied: expect.any(Boolean),
+        })
+      );
 
       manager.enableConditionTelemetry(false);
       tick();

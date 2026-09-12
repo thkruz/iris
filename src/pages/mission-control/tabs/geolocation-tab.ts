@@ -2,11 +2,7 @@ import { BaseElement } from '@app/components/base-element';
 import { GeoMap, type GeoMapLayers, type GeoMarker } from '@app/components/geo-map/geo-map';
 import { html } from '@app/engine/utils/development/formatter';
 import { qs } from '@app/engine/utils/query-selector';
-import {
-  GeolocationConsoleCore,
-  type ConsoleMeasurement,
-  type GeolocationConsoleState,
-} from '@app/equipment/geolocation-console/geolocation-console-core';
+import { type ConsoleMeasurement, GeolocationConsoleCore, type GeolocationConsoleState } from '@app/equipment/geolocation-console/geolocation-console-core';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import './geolocation-tab.css';
@@ -56,9 +52,7 @@ export class GeolocationTab extends BaseElement {
   }
 
   protected get html_(): string {
-    const adjacentOptions = this.core_.adjacentSatellites
-      .map((sat) => html`<option value="${sat.noradId}">${sat.name}</option>`)
-      .join('');
+    const adjacentOptions = this.core_.adjacentSatellites.map((sat) => html`<option value="${sat.noradId}">${sat.name}</option>`).join('');
 
     return html`
       <div class="geolocation-tab">
@@ -305,11 +299,11 @@ export class GeolocationTab extends BaseElement {
       return;
     }
 
-    const nameFor = (noradId: number): string =>
-      this.core_.adjacentSatellites.find((sat) => sat.noradId === noradId)?.name ?? String(noradId);
+    const nameFor = (noradId: number): string => this.core_.adjacentSatellites.find((sat) => sat.noradId === noradId)?.name ?? String(noradId);
 
     tbody.innerHTML = measurements
-      .map((m) => html`
+      .map(
+        (m) => html`
         <tr>
           <td class="font-monospace">${m.measurement.id}</td>
           <td class="font-monospace">${GeolocationTab.formatTime_(m.measurement.timestampMs)}</td>
@@ -317,7 +311,8 @@ export class GeolocationTab extends BaseElement {
           <td class="font-monospace">${(m.measurement.tdoaS * 1e6).toFixed(2)}</td>
           <td class="font-monospace">${m.measurement.fdoaHz.toFixed(1)}</td>
         </tr>
-      `)
+      `
+      )
       .join('');
   }
 
@@ -332,20 +327,15 @@ export class GeolocationTab extends BaseElement {
     }
 
     const ellipse = state.fix.errorEllipse;
-    const ellipseText = ellipse
-      ? ` · ±${ellipse.semiMajorKm.toFixed(0)}×${ellipse.semiMinorKm.toFixed(0)} km (95%)`
-      : ' · geometry singular';
-    summary.textContent =
-      `${state.fix.lat.toFixed(3)}°, ${state.fix.lon.toFixed(3)}°${ellipseText}`;
+    const ellipseText = ellipse ? ` · ±${ellipse.semiMajorKm.toFixed(0)}×${ellipse.semiMinorKm.toFixed(0)} km (95%)` : ' · geometry singular';
+    summary.textContent = `${state.fix.lat.toFixed(3)}°, ${state.fix.lon.toFixed(3)}°${ellipseText}`;
   }
 
   private renderMap_(): void {
     const state = this.core_.state;
     const markers: GeoMarker[] = [];
 
-    const now = state.measurements.length > 0
-      ? state.measurements[state.measurements.length - 1].measurement.timestampMs
-      : Date.now();
+    const now = state.measurements.length > 0 ? state.measurements[state.measurements.length - 1].measurement.timestampMs : Date.now();
     const primary = this.core_.primarySatellite;
     if (primary) {
       const lla = primary.ootkSatellite.lla(new Date(now));

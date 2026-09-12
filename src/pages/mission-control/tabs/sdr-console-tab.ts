@@ -1,21 +1,21 @@
-import type { GroundStation } from "@app/assets/ground-station/ground-station";
-import { BaseElement } from "@app/components/base-element";
-import { html } from "@app/engine/utils/development/formatter";
-import { qs } from "@app/engine/utils/query-selector";
-import type { AntennaCore } from "@app/equipment/antenna";
-import type { RealTimeSpectrumAnalyzer } from "@app/equipment/real-time-spectrum-analyzer/real-time-spectrum-analyzer";
-import { WaterfallDisplay } from "@app/equipment/real-time-spectrum-analyzer/rtsa-screen/waterfall-display";
-import type { Receiver, ReceiverModemState } from "@app/equipment/receiver/receiver";
-import { FILTER_BANDWIDTH_CONFIGS, IfFilterBankModuleCore } from "@app/equipment/rf-front-end/filter-module";
-import type { GPSDOModuleCore } from "@app/equipment/rf-front-end/gpsdo-module/gpsdo-module-core";
-import type { LNBModuleCore } from "@app/equipment/rf-front-end/lnb-module/lnb-module-core";
-import type { NotchFilterModuleCore } from "@app/equipment/rf-front-end/notch-filter-module/notch-filter-module-core";
-import type { Transmitter } from "@app/equipment/transmitter/transmitter";
-import { EventBus } from "@app/events/event-bus";
-import { Events } from "@app/events/events";
-import { GnssThreatManager } from "@app/gnss-threat/gnss-threat-manager";
-import { SimulationManager } from "@app/simulation/simulation-manager";
-import type { dB, FECType, MHz, ModulationType } from "@app/types";
+import type { GroundStation } from '@app/assets/ground-station/ground-station';
+import { BaseElement } from '@app/components/base-element';
+import { html } from '@app/engine/utils/development/formatter';
+import { qs } from '@app/engine/utils/query-selector';
+import type { AntennaCore } from '@app/equipment/antenna';
+import type { RealTimeSpectrumAnalyzer } from '@app/equipment/real-time-spectrum-analyzer/real-time-spectrum-analyzer';
+import { WaterfallDisplay } from '@app/equipment/real-time-spectrum-analyzer/rtsa-screen/waterfall-display';
+import type { Receiver, ReceiverModemState } from '@app/equipment/receiver/receiver';
+import { FILTER_BANDWIDTH_CONFIGS, IfFilterBankModuleCore } from '@app/equipment/rf-front-end/filter-module';
+import type { GPSDOModuleCore } from '@app/equipment/rf-front-end/gpsdo-module/gpsdo-module-core';
+import type { LNBModuleCore } from '@app/equipment/rf-front-end/lnb-module/lnb-module-core';
+import type { NotchFilterModuleCore } from '@app/equipment/rf-front-end/notch-filter-module/notch-filter-module-core';
+import type { Transmitter } from '@app/equipment/transmitter/transmitter';
+import { EventBus } from '@app/events/event-bus';
+import { Events } from '@app/events/events';
+import { GnssThreatManager } from '@app/gnss-threat/gnss-threat-manager';
+import { SimulationManager } from '@app/simulation/simulation-manager';
+import type { dB, FECType, MHz, ModulationType } from '@app/types';
 import './sdr-console-tab.css';
 
 /** Known allocations painted on the band plan ribbon (RF Hz) */
@@ -109,8 +109,7 @@ export class SdrConsoleTab extends BaseElement {
    * buc.isPowered false, so their consoles render the RX-only stub unchanged.
    */
   private get hasTxRig_(): boolean {
-    return this.transmitter_ !== undefined &&
-      this.groundStation_.rfFrontEnds[0]?.bucModule.state.isPowered === true;
+    return this.transmitter_ !== undefined && this.groundStation_.rfFrontEnds[0]?.bucModule.state.isPowered === true;
   }
 
   private get txModem_() {
@@ -119,7 +118,7 @@ export class SdrConsoleTab extends BaseElement {
   }
 
   private get modem1_(): ReceiverModemState | undefined {
-    return this.receiver_?.state.modems.find(m => m.modemNumber === 1);
+    return this.receiver_?.state.modems.find((m) => m.modemNumber === 1);
   }
 
   // ==========================================================================
@@ -131,21 +130,22 @@ export class SdrConsoleTab extends BaseElement {
     const isCircular = this.antenna_?.config.polType === 'circular';
     const handedness = this.antenna_?.state.circularHandedness ?? 'RHCP';
 
-    const satelliteOptions = SimulationManager.getInstance().satellites
-      .map((sat) => html`<option value="${sat.noradId}">${sat.name}</option>`)
+    const satelliteOptions = SimulationManager.getInstance()
+      .satellites.map((sat) => html`<option value="${sat.noradId}">${sat.name}</option>`)
       .join('');
 
     // Bookmarks: every downlink beacon in the scenario
-    const bookmarkRows = SimulationManager.getInstance().satellites
-      .flatMap((sat) => sat.transponders
-        .filter((tp) => tp.beacon?.frequency)
-        .map((tp) => ({ name: tp.beacon!.signalId, freqHz: tp.beacon!.frequency as number })))
-      .map(({ name, freqHz }) => html`
+    const bookmarkRows = SimulationManager.getInstance()
+      .satellites.flatMap((sat) => sat.transponders.filter((tp) => tp.beacon?.frequency).map((tp) => ({ name: tp.beacon!.signalId, freqHz: tp.beacon!.frequency as number })))
+      .map(
+        ({ name, freqHz }) => html`
         <button class="sdr-bookmark" data-freq-hz="${freqHz}">
           <span class="sdr-bookmark-name">${name}</span>
           <span class="sdr-bookmark-freq">${(freqHz / 1e6).toFixed(3)}</span>
         </button>
-      `).join('');
+      `
+      )
+      .join('');
 
     const rotatorBody = this.isSteerable_
       ? html`
@@ -279,13 +279,17 @@ export class SdrConsoleTab extends BaseElement {
                       <input type="checkbox" id="sdr-afc-toggle" />
                       AFC
                     </label>
-                    ${isCircular ? html`
+                    ${
+                      isCircular
+                        ? html`
                       <div class="sdr-pol-group">
                         <span class="sdr-label">POL</span>
                         <button id="sdr-pol-rhcp" class="sdr-btn sdr-pol-btn ${handedness === 'RHCP' ? 'active' : ''}">RHCP</button>
                         <button id="sdr-pol-lhcp" class="sdr-btn sdr-pol-btn ${handedness === 'LHCP' ? 'active' : ''}">LHCP</button>
                       </div>
-                    ` : ''}
+                    `
+                        : ''
+                    }
                   </div>
                 </div>
               </div>
@@ -409,10 +413,7 @@ export class SdrConsoleTab extends BaseElement {
         if (!section) return;
         section.classList.toggle('collapsed');
         const isCollapsed = section.classList.contains('collapsed');
-        header.innerHTML = header.innerHTML.replace(
-          isCollapsed ? '▾' : '▸',
-          isCollapsed ? '▸' : '▾',
-        );
+        header.innerHTML = header.innerHTML.replace(isCollapsed ? '▾' : '▸', isCollapsed ? '▸' : '▾');
       });
     });
 
@@ -424,12 +425,16 @@ export class SdrConsoleTab extends BaseElement {
 
     // Digit-wise VFO tuning: scroll a digit to spin it, click upper/lower half to +/-
     const digits = qs<HTMLElement>('#sdr-freq-digits', dom);
-    digits.addEventListener('wheel', (e: WheelEvent) => {
-      const place = (e.target as HTMLElement).dataset?.place;
-      if (!place) return;
-      e.preventDefault();
-      this.tuneByHz_((e.deltaY < 0 ? 1 : -1) * Number(place));
-    }, { passive: false });
+    digits.addEventListener(
+      'wheel',
+      (e: WheelEvent) => {
+        const place = (e.target as HTMLElement).dataset?.place;
+        if (!place) return;
+        e.preventDefault();
+        this.tuneByHz_((e.deltaY < 0 ? 1 : -1) * Number(place));
+      },
+      { passive: false }
+    );
     digits.addEventListener('click', (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const place = target.dataset?.place;
@@ -582,11 +587,15 @@ export class SdrConsoleTab extends BaseElement {
       this.receiver_?.handleModemFrequencyChange(1, (startHz + frac * this.specA_.state.span) / 1e6);
       this.syncDomWithState_();
     });
-    stack.addEventListener('wheel', (e: WheelEvent) => {
-      e.preventDefault();
-      const stepHz = e.shiftKey ? 10_000 : 1_000;
-      this.tuneByHz_((e.deltaY < 0 ? 1 : -1) * stepHz);
-    }, { passive: false });
+    stack.addEventListener(
+      'wheel',
+      (e: WheelEvent) => {
+        e.preventDefault();
+        const stepHz = e.shiftKey ? 10_000 : 1_000;
+        this.tuneByHz_((e.deltaY < 0 ? 1 : -1) * stepHz);
+      },
+      { passive: false }
+    );
   }
 
   /**
@@ -763,8 +772,7 @@ export class SdrConsoleTab extends BaseElement {
     const startHz = specA.state.centerFrequency - specA.state.span / 2;
     const spanHz = specA.state.span;
 
-    ribbon.innerHTML = BAND_PLAN
-      .filter((band) => band.highHz > startHz && band.lowHz < startHz + spanHz)
+    ribbon.innerHTML = BAND_PLAN.filter((band) => band.highHz > startHz && band.lowHz < startHz + spanHz)
       .map((band) => {
         const left = Math.max(0, ((band.lowHz - startHz) / spanHz) * 100);
         const right = Math.min(100, ((band.highHz - startHz) / spanHz) * 100);
@@ -867,9 +875,7 @@ export class SdrConsoleTab extends BaseElement {
     const passbandExcess = this.passbandEnergyExcessDb_(modem);
 
     const meterFill = qs<HTMLElement>('#sdr-meter-fill', dom);
-    const meterFrac = hasCn
-      ? Math.max(0, Math.min(1, cn / 30))
-      : Math.max(0, Math.min(1, passbandExcess.max / 30));
+    const meterFrac = hasCn ? Math.max(0, Math.min(1, cn / 30)) : Math.max(0, Math.min(1, passbandExcess.max / 30));
     meterFill.style.width = `${(meterFrac * 100).toFixed(0)}%`;
 
     qs<HTMLElement>('#sdr-cn-readout', dom).textContent = hasCn ? `${cn.toFixed(1)} dB` : '--.- dB';
@@ -894,9 +900,7 @@ export class SdrConsoleTab extends BaseElement {
     lockIndicator.classList.toggle('locked', info.hasLock);
     lockIndicator.classList.toggle('hint', !info.hasLock && lockText !== 'NO LOCK');
 
-    qs<HTMLElement>('#sdr-offset-readout', dom).textContent = info.hasCarrier
-      ? `${info.frequencyOffset_Hz >= 0 ? '+' : ''}${Math.round(info.frequencyOffset_Hz)} Hz`
-      : '--- Hz';
+    qs<HTMLElement>('#sdr-offset-readout', dom).textContent = info.hasCarrier ? `${info.frequencyOffset_Hz >= 0 ? '+' : ''}${Math.round(info.frequencyOffset_Hz)} Hz` : '--- Hz';
 
     const adcReadout = qs<HTMLElement>('#sdr-adc-readout', dom);
     if (info.adcDegradation) {
@@ -908,8 +912,7 @@ export class SdrConsoleTab extends BaseElement {
       adcReadout.classList.remove('sdr-adc-bad');
     }
 
-    qs<HTMLElement>('#sdr-status-tuning', dom).textContent =
-      `VFO ${modem.frequency.toFixed(3)} MHz${modem.isAfcEnabled ? ' (AFC)' : ''} | ${modem.modulation} ${modem.fec}`;
+    qs<HTMLElement>('#sdr-status-tuning', dom).textContent = `VFO ${modem.frequency.toFixed(3)} MHz${modem.isAfcEnabled ? ' (AFC)' : ''} | ${modem.modulation} ${modem.fec}`;
 
     this.syncRefRow_(dom);
     this.syncFilterSection_(dom);
@@ -944,7 +947,7 @@ export class SdrConsoleTab extends BaseElement {
     const hpa = this.groundStation_.rfFrontEnds[0]?.hpaModule;
     const paReadout = dom.querySelector<HTMLElement>('#sdr-tx-pa-readout');
     if (hpa && paReadout) {
-      const watts = onAir ? Math.pow(10, (hpa.state.outputPower - 30) / 10) : 0;
+      const watts = onAir ? 10 ** ((hpa.state.outputPower - 30) / 10) : 0;
       paReadout.textContent = `${watts.toFixed(1)} W`;
     }
   }
@@ -992,9 +995,7 @@ export class SdrConsoleTab extends BaseElement {
       refToggle.textContent = 'HOLD';
     }
 
-    const offsetUs = GnssThreatManager.isInitialized()
-      ? GnssThreatManager.getInstance().state.timeOffsetUs
-      : 0;
+    const offsetUs = GnssThreatManager.isInitialized() ? GnssThreatManager.getInstance().state.timeOffsetUs : 0;
     const offsetReadout = qs<HTMLElement>('#sdr-clk-offset-readout', dom);
     offsetReadout.textContent = `${offsetUs >= 0 ? '+' : ''}${offsetUs.toFixed(1)} µs`;
     offsetReadout.classList.toggle('sdr-adc-bad', Math.abs(offsetUs) > 20);
@@ -1041,9 +1042,7 @@ export class SdrConsoleTab extends BaseElement {
     if (status) {
       let statusText = 'IDLE';
       if (isTracking) {
-        const target = antenna.state.targetSatelliteId !== null
-          ? SimulationManager.getInstance().getSatByNoradId(antenna.state.targetSatelliteId)?.name
-          : null;
+        const target = antenna.state.targetSatelliteId !== null ? SimulationManager.getInstance().getSatByNoradId(antenna.state.targetSatelliteId)?.name : null;
         statusText = target ? `TRACKING ${target}` : 'TRACKING';
       }
       status.textContent = statusText;

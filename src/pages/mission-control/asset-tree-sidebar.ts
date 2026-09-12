@@ -1,31 +1,31 @@
-import { GroundStation } from "@app/assets/ground-station/ground-station";
-import { WorkingDocumentManager } from '@app/scenarios/working-document-manager';
-import { BaseElement } from "@app/components/base-element";
-import { html } from "@app/engine/utils/development/formatter";
-import { qs } from "@app/engine/utils/query-selector";
-import { Satellite } from "@app/equipment/satellite/satellite";
-import { EventBus } from "@app/events/event-bus";
-import { Events } from "@app/events/events";
-import { DialogHistoryBox } from "@app/modal/dialog-history-box";
-import { DraggableHtmlBox } from "@app/modal/draggable-html-box";
-import { HintManager } from "@app/modal/hint-manager";
-import { HintModal } from "@app/modal/hint-modal";
-import { PendingQuizIndicator } from "@app/modal/pending-quiz-indicator";
-import { QuizManager } from "@app/modal/quiz-manager";
-import { ObjectivesManager } from "@app/objectives";
-import { OpsLogModal } from "@app/ops-log/ops-log-modal";
-import { ScenarioManager } from "@app/scenario-manager";
-import { SimulationManager } from "@app/simulation/simulation-manager";
+import { GroundStation } from '@app/assets/ground-station/ground-station';
 import activityPng from '@app/assets/icons/activity.png';
 import antennaPng from '@app/assets/icons/antenna.png';
-import checklistPng from "@app/assets/icons/checklist.png";
+import checklistPng from '@app/assets/icons/checklist.png';
 import dashboardPng from '@app/assets/icons/dashboard.png';
 import historyPng from '@app/assets/icons/history.png';
 import layoutSidebarLeftCollapsePng from '@app/assets/icons/layout-sidebar-left-collapse.png';
 import layoutSidebarLeftExpandPng from '@app/assets/icons/layout-sidebar-left-expand.png';
-import satelliteOffPng from '@app/assets/icons/satellite-off.png';
 import satellitePng from '@app/assets/icons/satellite.png';
+import satelliteOffPng from '@app/assets/icons/satellite-off.png';
 import targetArrowPng from '@app/assets/icons/target-arrow.png';
+import { BaseElement } from '@app/components/base-element';
+import { html } from '@app/engine/utils/development/formatter';
+import { qs } from '@app/engine/utils/query-selector';
+import { Satellite } from '@app/equipment/satellite/satellite';
+import { EventBus } from '@app/events/event-bus';
+import { Events } from '@app/events/events';
+import { DialogHistoryBox } from '@app/modal/dialog-history-box';
+import { DraggableHtmlBox } from '@app/modal/draggable-html-box';
+import { HintManager } from '@app/modal/hint-manager';
+import { HintModal } from '@app/modal/hint-modal';
+import { PendingQuizIndicator } from '@app/modal/pending-quiz-indicator';
+import { QuizManager } from '@app/modal/quiz-manager';
+import { ObjectivesManager } from '@app/objectives';
+import { OpsLogModal } from '@app/ops-log/ops-log-modal';
+import { ScenarioManager } from '@app/scenario-manager';
+import { WorkingDocumentManager } from '@app/scenarios/working-document-manager';
+import { SimulationManager } from '@app/simulation/simulation-manager';
 import './asset-tree-sidebar.css';
 
 /**
@@ -155,7 +155,7 @@ export class AssetTreeSidebar extends BaseElement {
 
     // Update UI - remove active from all items and add to the selected one
     const assetItems = this.dom_.querySelectorAll('.list-group-item-action:not(.placeholder-item):not(.mission-brief-icon):not(.checklist-icon):not(.dialog-icon)');
-    assetItems.forEach(item => {
+    assetItems.forEach((item) => {
       const itemId = item.getAttribute('data-asset-id');
       if (itemId === assetId) {
         item.classList.add('active');
@@ -282,17 +282,12 @@ export class AssetTreeSidebar extends BaseElement {
             } else {
               // First time - show confirmation with penalty warning
               const penaltyPoints = hintManager.getPenaltyPoints(objectiveId);
-              const objectiveTitle = ObjectivesManager.getInstance()
-                .getObjectiveStates()
-                .find(s => s.objective.id === objectiveId)?.objective.title ?? 'Unknown';
+              const objectiveTitle =
+                ObjectivesManager.getInstance()
+                  .getObjectiveStates()
+                  .find((s) => s.objective.id === objectiveId)?.objective.title ?? 'Unknown';
 
-              HintModal.getInstance().showConfirmation(
-                objectiveId,
-                conditionIndex,
-                hint,
-                penaltyPoints,
-                objectiveTitle
-              );
+              HintModal.getInstance().showConfirmation(objectiveId, conditionIndex, hint, penaltyPoints, objectiveTitle);
             }
           }
         }
@@ -411,22 +406,23 @@ export class AssetTreeSidebar extends BaseElement {
         <div class="list-group-header sticky-top">
           <span class="list-group-header-text">Ground Stations</span>
         </div>
-        ${this.groundStations_.map(gs => this.renderGroundStationNode_(gs)).join('')}
+        ${this.groundStations_.map((gs) => this.renderGroundStationNode_(gs)).join('')}
       </div>
 
       <div class="list-group list-group-flush asset-group-satellites">
         <div class="list-group-header sticky-top">
           <span class="list-group-header-text">Satellites</span>
         </div>
-        ${this.satellites_.length > 0
-        ? this.satellites_.map(sat => this.renderSatelliteNode_(sat)).join('')
-        : `<div class="list-group-item placeholder-item">
+        ${
+          this.satellites_.length > 0
+            ? this.satellites_.map((sat) => this.renderSatelliteNode_(sat)).join('')
+            : `<div class="list-group-item placeholder-item">
               <span class="item-icon">
                 <img src="${satelliteOffPng}" alt="Satellite"/>
               </span>
               <span class="flex-fill">No satellites in scenario</span>
             </div>`
-      }
+        }
       </div>
     `;
 
@@ -483,7 +479,7 @@ export class AssetTreeSidebar extends BaseElement {
   private addTreeEventListeners_(): void {
     const assetItems = this.dom_.querySelectorAll('.list-group-item-action:not(.placeholder-item):not(.mission-brief-icon):not(.checklist-icon):not(.dialog-icon)');
 
-    assetItems.forEach(item => {
+    assetItems.forEach((item) => {
       item.addEventListener('click', (e) => {
         e.preventDefault();
         const type = item.getAttribute('data-asset-type') as 'ground-station' | 'satellite' | 'mission-overview';
@@ -493,7 +489,7 @@ export class AssetTreeSidebar extends BaseElement {
           this.selectedAssetId_ = null;
 
           // Update UI
-          assetItems.forEach(i => i.classList.remove('active'));
+          assetItems.forEach((i) => i.classList.remove('active'));
           item.classList.add('active');
 
           // Emit mission overview selected event
@@ -508,7 +504,7 @@ export class AssetTreeSidebar extends BaseElement {
         this.selectedAssetId_ = id;
 
         // Update UI
-        assetItems.forEach(i => i.classList.remove('active'));
+        assetItems.forEach((i) => i.classList.remove('active'));
         item.classList.add('active');
 
         // Emit asset selected event

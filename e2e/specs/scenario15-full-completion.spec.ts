@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  answerQuizByText,
-  dismissDialogIfPresent,
-  waitForQuizToAppear,
-  waitForSimulationReady,
-} from '../utils/simulation-helpers';
+import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
  * Scenario 15 - "Frequency Coordination": Inter-Operator Spectrum Etiquette.
@@ -27,13 +22,7 @@ import {
  * - 'configure-hpa-backoff': HPA back-off slider/input
  * - 'auto': Auto-satisfied by simulation state (no user action needed)
  */
-type ObjectiveType =
-  | 'quiz'
-  | 'select-station'
-  | 'click-tab'
-  | 'configure-speca'
-  | 'configure-hpa-backoff'
-  | 'auto';
+type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'configure-speca' | 'configure-hpa-backoff' | 'auto';
 
 interface Scenario15Objective {
   id: string;
@@ -94,8 +83,7 @@ const SCENARIO_15_OBJECTIVES: Scenario15Objective[] = [
     id: 'assess-guard-adequacy',
     title: 'Assess Guard Band Adequacy',
     type: 'quiz',
-    correctAnswer:
-      "Verify our TX chain is producing clean spectrum - no spurs or IMD landing in RedSky's band",
+    correctAnswer: "Verify our TX chain is producing clean spectrum - no spurs or IMD landing in RedSky's band",
   },
 
   // ============================================================
@@ -117,15 +105,13 @@ const SCENARIO_15_OBJECTIVES: Scenario15Objective[] = [
     id: 'observe-current-hpa-backoff',
     title: 'Observe HPA Backoff',
     type: 'quiz',
-    correctAnswer:
-      'Operating close to saturation - third-order IMD products will be elevated and extend several MHz beyond the carrier edges',
+    correctAnswer: 'Operating close to saturation - third-order IMD products will be elevated and extend several MHz beyond the carrier edges',
   },
   {
     id: 'understand-imd-mechanism',
     title: 'Understand IMD Mechanism',
     type: 'quiz',
-    correctAnswer:
-      'Nonlinearity in the amplifier mixes spectral components, generating intermodulation products that fall just outside the carrier edges',
+    correctAnswer: 'Nonlinearity in the amplifier mixes spectral components, generating intermodulation products that fall just outside the carrier edges',
   },
 
   // ============================================================
@@ -135,8 +121,7 @@ const SCENARIO_15_OBJECTIVES: Scenario15Objective[] = [
     id: 'evaluate-mitigation-options',
     title: 'Choose Mitigation',
     type: 'quiz',
-    correctAnswer:
-      'Increase HPA backoff to 10 dB - reduces IMD without dropping the carrier and without requiring customer coordination',
+    correctAnswer: 'Increase HPA backoff to 10 dB - reduces IMD without dropping the carrier and without requiring customer coordination',
   },
 
   // ============================================================
@@ -179,8 +164,7 @@ const SCENARIO_15_OBJECTIVES: Scenario15Objective[] = [
     id: 'confirm-carrier-still-nominal',
     title: 'Confirm Carrier Still Nominal',
     type: 'quiz',
-    correctAnswer:
-      'Wideband carrier still present at slightly reduced power - customer link healthy, IMD skirts dropped well below the adjacent slot noise floor',
+    correctAnswer: 'Wideband carrier still present at slightly reduced power - customer link healthy, IMD skirts dropped well below the adjacent slot noise floor',
   },
   {
     id: 'verify-receiver-locked',
@@ -219,10 +203,7 @@ const SCENARIO_15_OBJECTIVES: Scenario15Objective[] = [
  * Configure spectrum analyzer settings.
  * Element IDs: #sa-center-freq, #sa-span, #sa-min-amp, #sa-max-amp, #sa-rbw
  */
-async function configureSpectrumAnalyzer(
-  page: import('@playwright/test').Page,
-  config: NonNullable<Scenario15Objective['specaConfig']>
-): Promise<void> {
+async function configureSpectrumAnalyzer(page: import('@playwright/test').Page, config: NonNullable<Scenario15Objective['specaConfig']>): Promise<void> {
   if (config.centerFrequency !== undefined) {
     const centerInput = page.locator('#sa-center-freq');
     await expect(centerInput).toBeVisible({ timeout: 5000 });
@@ -270,10 +251,7 @@ async function configureSpectrumAnalyzer(
 /**
  * Configure HPA back-off via input + Apply button.
  */
-async function configureHpaBackoff(
-  page: import('@playwright/test').Page,
-  backoff: number
-): Promise<void> {
+async function configureHpaBackoff(page: import('@playwright/test').Page, backoff: number): Promise<void> {
   const backoffInput = page.locator('#hpa-backoff');
   await expect(backoffInput).toBeVisible({ timeout: 5000 });
   await backoffInput.fill(backoff.toString());
@@ -289,11 +267,7 @@ async function configureHpaBackoff(
 /**
  * Execute an objective based on its type.
  */
-async function executeObjective(
-  page: import('@playwright/test').Page,
-  missionControlPage: MissionControlPage,
-  objective: Scenario15Objective
-): Promise<void> {
+async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario15Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);

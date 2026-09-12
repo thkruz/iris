@@ -125,8 +125,26 @@ export const natsEuSandboxData: ScenarioData = {
       events: [
         { id: 'evt-login', timeS: 0, timestampLabel: '14:00 UTC', actor: 'op-charlie', action: 'Console login', category: 'auth', severity: 'info' },
         { id: 'evt-cfg', timeS: 0, timestampLabel: '14:02 UTC', actor: 'op-charlie', action: 'Set receiver 1 frequency', category: 'config', severity: 'info' },
-        { id: 'evt-authfail', timeS: 0, timestampLabel: '03:14 UTC', actor: 'op-guest', action: 'Repeated failed logins (off-hours)', category: 'auth', severity: 'warning', isAnomaly: true },
-        { id: 'evt-replay', timeS: 0, timestampLabel: '03:16 UTC', actor: 'unknown', action: 'Replayed TT&C command frame', category: 'command', severity: 'critical', isAnomaly: true },
+        {
+          id: 'evt-authfail',
+          timeS: 0,
+          timestampLabel: '03:14 UTC',
+          actor: 'op-guest',
+          action: 'Repeated failed logins (off-hours)',
+          category: 'auth',
+          severity: 'warning',
+          isAnomaly: true,
+        },
+        {
+          id: 'evt-replay',
+          timeS: 0,
+          timestampLabel: '03:16 UTC',
+          actor: 'unknown',
+          action: 'Replayed TT&C command frame',
+          category: 'command',
+          severity: 'critical',
+          isAnomaly: true,
+        },
       ],
     },
 

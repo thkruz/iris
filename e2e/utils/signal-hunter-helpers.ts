@@ -72,9 +72,7 @@ export function greatCircleKm(a: LatLon, b: LatLon): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const dLat = toRad(b.lat - a.lat);
   const dLon = toRad(b.lon - a.lon);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
@@ -143,10 +141,7 @@ export async function advanceMissionClockMs(page: Page, deltaMs: number, settleM
  * the rest of any current on-window, then through the off-window until the
  * probe flips ON.
  */
-export async function ensureOnWindowStart(
-  ctx: CaptureContext,
-  opts: { stepMs?: number; leadMs?: number } = {},
-): Promise<number> {
+export async function ensureOnWindowStart(ctx: CaptureContext, opts: { stepMs?: number; leadMs?: number } = {}): Promise<number> {
   const { page, phase, probeObjectiveId, duty } = ctx;
   const { stepMs = 1000, leadMs = 400 } = opts;
   const periodMs = duty.periodSeconds * 1000;
@@ -281,7 +276,7 @@ export async function computeFixWithin(
   ctx: CaptureContext,
   truth: LatLon,
   maxErrorKm: number,
-  opts: { extraPerRound?: number; maxRounds?: number } = {},
+  opts: { extraPerRound?: number; maxRounds?: number } = {}
 ): Promise<{ fix: FixSummary; errorKm: number; captures: number }> {
   const { page } = ctx;
   const log = ctx.log ?? (() => undefined);
@@ -326,11 +321,7 @@ export interface StatusCheckAnswer {
  * #quiz-question text. Dismisses the feedback panel and any completion
  * dialog / working-document box between quizzes. Returns the questions seen.
  */
-export async function answerPendingStatusChecks(
-  page: Page,
-  answers: StatusCheckAnswer[],
-  count: number,
-): Promise<string[]> {
+export async function answerPendingStatusChecks(page: Page, answers: StatusCheckAnswer[], count: number): Promise<string[]> {
   const seen: string[] = [];
   for (let i = 0; i < count; i++) {
     await waitForQuizToAppear(page);
@@ -375,11 +366,7 @@ export function objectiveItem(missionControl: MissionControlPage, title: string)
 }
 
 /** Poll the checklist until the named objective carries the `completed` class */
-export async function waitForObjectiveComplete(
-  missionControl: MissionControlPage,
-  title: string,
-  timeout = 45000,
-): Promise<void> {
+export async function waitForObjectiveComplete(missionControl: MissionControlPage, title: string, timeout = 45000): Promise<void> {
   if (!(await missionControl.objectivesChecklist.isVisible().catch(() => false))) {
     await missionControl.openChecklist();
   }

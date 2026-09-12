@@ -1,7 +1,7 @@
-import { SimulationManager } from '@app/simulation/simulation-manager';
-import { clamp } from 'ootk';
 import { RFFrontEndCore } from '@app/equipment/rf-front-end/rf-front-end-core';
 import { RFFrontEndModule } from '@app/equipment/rf-front-end/rf-front-end-module';
+import { SimulationManager } from '@app/simulation/simulation-manager';
+import { clamp } from 'ootk';
 import { defaultGpsdoState, GPSDOState } from './gpsdo-state';
 
 /**
@@ -45,9 +45,7 @@ export abstract class GPSDOModuleCore extends RFFrontEndModule<GPSDOState> {
    * Update lock status based on power, warmup, and GNSS availability
    */
   private updateLockStatus_(): void {
-    const canLock = this.state.isPowered &&
-      this.state.isGnssSwitchUp &&
-      this.state.warmupTimeRemaining === 0;
+    const canLock = this.state.isPowered && this.state.isGnssSwitchUp && this.state.warmupTimeRemaining === 0;
 
     if (canLock) {
       if (!this.state.isLocked && this.state.gnssSignalPresent) {
@@ -81,9 +79,10 @@ export abstract class GPSDOModuleCore extends RFFrontEndModule<GPSDOState> {
     }
 
     // Phase noise: < -125 dBc/Hz at 10 Hz when locked
-    this.state.phaseNoise = this.state.gnssSignalPresent && !this.state.isInHoldover
-      ? -125 - Math.random() * 5  // -125 to -130 dBc/Hz when GPS locked
-      : -100 - Math.random() * 10; // -100 to -110 dBc/Hz in holdover
+    this.state.phaseNoise =
+      this.state.gnssSignalPresent && !this.state.isInHoldover
+        ? -125 - Math.random() * 5 // -125 to -130 dBc/Hz when GPS locked
+        : -100 - Math.random() * 10; // -100 to -110 dBc/Hz in holdover
 
     // Frequency accuracy: < 5×10⁻¹¹ at 1s when GPS locked
     if (this.state.gnssSignalPresent && !this.state.isInHoldover) {
@@ -108,17 +107,15 @@ export abstract class GPSDOModuleCore extends RFFrontEndModule<GPSDOState> {
       const ambientTemp = 25;
       const coolRateInSeconds = 0.0001; // Per second
       // Convert to ms
-      const coolRate = 1 - Math.pow(1 - coolRateInSeconds, 1 / 60);
-      this.state.temperature = this.state.temperature +
-        (ambientTemp - this.state.temperature) * coolRate;
+      const coolRate = 1 - (1 - coolRateInSeconds) ** (1 / 60);
+      this.state.temperature = this.state.temperature + (ambientTemp - this.state.temperature) * coolRate;
       return;
     }
 
     // OCXO oven-controlled to ~70°C
     const targetTemp = 70;
     const heatRate = 0.00005;
-    this.state.temperature = this.state.temperature +
-      (targetTemp - this.state.temperature) * heatRate;
+    this.state.temperature = this.state.temperature + (targetTemp - this.state.temperature) * heatRate;
   }
 
   /**
@@ -203,11 +200,11 @@ export abstract class GPSDOModuleCore extends RFFrontEndModule<GPSDOState> {
    * Improve specs gradually during warmup
    */
   private improveSpecsDuringWarmup_(): void {
-    const warmupProgress = 1 - (this.state.warmupTimeRemaining / (SimulationManager.getInstance().isDeveloperMode ? 20 : 600));
+    const warmupProgress = 1 - this.state.warmupTimeRemaining / (SimulationManager.getInstance().isDeveloperMode ? 20 : 600);
 
     // Accuracy improves exponentially
-    this.state.frequencyAccuracy = 1000 * Math.pow(2 / 1000, warmupProgress);
-    this.state.allanDeviation = 100 * Math.pow(2 / 100, warmupProgress);
+    this.state.frequencyAccuracy = 1000 * (2 / 1000) ** warmupProgress;
+    this.state.allanDeviation = 100 * (2 / 100) ** warmupProgress;
     this.state.phaseNoise = -80 + (-127 + 80) * warmupProgress;
   }
 
@@ -292,7 +289,7 @@ export abstract class GPSDOModuleCore extends RFFrontEndModule<GPSDOState> {
       this.state.holdoverError = hourlyDrift * elapsedHours;
 
       // Frequency accuracy degrades in holdover at aging rate
-      this.state.frequencyAccuracy += this.state.agingRate * 0.05 / (365 * 86400); // ppm/year → per second
+      this.state.frequencyAccuracy += (this.state.agingRate * 0.05) / (365 * 86400); // ppm/year → per second
 
       // If holdover error exceeds spec
       if (this.state.holdoverError > 40) {
@@ -375,9 +372,7 @@ export abstract class GPSDOModuleCore extends RFFrontEndModule<GPSDOState> {
    * Check if reference is providing stable output
    */
   isOutputStable(): boolean {
-    return this.state.isPowered &&
-      this.state.isLocked &&
-      this.state.warmupTimeRemaining === 0;
+    return this.state.isPowered && this.state.isLocked && this.state.warmupTimeRemaining === 0;
   }
 
   /**

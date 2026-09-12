@@ -4,7 +4,7 @@ import { html } from '@app/engine/utils/development/formatter';
 import { qs } from '@app/engine/utils/query-selector';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
-import { LinkBudgetManager, type LinkBudgetInputs } from '@app/link-budget/link-budget-manager';
+import { type LinkBudgetInputs, LinkBudgetManager } from '@app/link-budget/link-budget-manager';
 import './link-budget-tab.css';
 
 /**
@@ -194,8 +194,7 @@ export class LinkBudgetTab extends BaseElement {
     const bandwidthMHz = read('lb-bandwidth');
     const miscLossRaw = read('lb-miscloss');
 
-    if ([eirpDbm, fsplDb, rxGainDbi, systemNoiseTempK, bandwidthMHz].some((v) => Number.isNaN(v)) ||
-      systemNoiseTempK <= 0 || bandwidthMHz <= 0) {
+    if ([eirpDbm, fsplDb, rxGainDbi, systemNoiseTempK, bandwidthMHz].some((v) => Number.isNaN(v)) || systemNoiseTempK <= 0 || bandwidthMHz <= 0) {
       return null;
     }
 
@@ -238,10 +237,7 @@ export class LinkBudgetTab extends BaseElement {
     const liveCNR = this.getLiveCNR_();
 
     this.setText_('lb-live-cnr', liveCNR !== null ? `${liveCNR.toFixed(1)} dB` : '—');
-    this.setText_(
-      'lb-predicted-margin',
-      liveCNR !== null && config ? `${(liveCNR - config.thresholdCNRDb).toFixed(1)} dB` : '—',
-    );
+    this.setText_('lb-predicted-margin', liveCNR !== null && config ? `${(liveCNR - config.thresholdCNRDb).toFixed(1)} dB` : '—');
 
     const commitBtn = this.dom_?.querySelector<HTMLButtonElement>('#lb-commit');
     if (commitBtn) {

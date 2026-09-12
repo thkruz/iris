@@ -1,7 +1,7 @@
-import { SignalOrigin } from "@app/signal-origin";
-import { dB, dBm, Hertz, IfFrequency, IfSignal, MHz, RfFrequency, RfSignal } from '@app/types';
-import { RFFrontEndCore } from "@app/equipment/rf-front-end/rf-front-end-core";
+import { RFFrontEndCore } from '@app/equipment/rf-front-end/rf-front-end-core';
 import { RFFrontEndModule, RFFrontEndModuleState } from '@app/equipment/rf-front-end/rf-front-end-module';
+import { SignalOrigin } from '@app/signal-origin';
+import { dB, dBm, Hertz, IfFrequency, IfSignal, MHz, RfFrequency, RfSignal } from '@app/types';
 
 /**
  * Spurious output from mixer products
@@ -98,9 +98,9 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
       phaseLockRange: 10000, // ±10 kHz tracking range
 
       // Output Filter (C-band uplink)
-      filterLowHz: 5.925e9 as Hertz,   // 5.925 GHz
-      filterHighHz: 6.425e9 as Hertz,  // 6.425 GHz
-      filterRejectionDb: -60 as dB,    // Out-of-band rejection
+      filterLowHz: 5.925e9 as Hertz, // 5.925 GHz
+      filterHighHz: 6.425e9 as Hertz, // 6.425 GHz
+      filterRejectionDb: -60 as dB, // Out-of-band rejection
 
       // Gain & Power
       gain: 0 as dB,
@@ -153,14 +153,12 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
     // Bandpass filter rejects out-of-band signals entirely
     const maxOutputPower = this.state.saturationPower + 2; // Hard saturation limit
     this.outputSignals = this.inputSignals
-      .map(sig => {
+      .map((sig) => {
         const rfFreq = this.calculateRfFrequency(sig.frequency);
         const inBand = this.isInPassband_(rfFreq);
-        if (!inBand) return null;  // Reject out-of-band signals
+        if (!inBand) return null; // Reject out-of-band signals
 
-        const gain = !this.state.isMuted
-          ? this.state.gain
-          : -170;
+        const gain = !this.state.isMuted ? this.state.gain : -170;
         const linearPower = sig.power + gain;
         return {
           ...sig,
@@ -227,13 +225,9 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
   // ═══════════════════════════════════════════════════════════════
 
   get inputSignals(): IfSignal[] {
-    return this.rfFrontEnd_.transmitters
-      .flatMap((tx) => tx.state.modems
-        .filter((modem) => modem.isTransmitting
-          && !modem.isFaulted
-          && !modem.isLoopback
-          && !tx.isModemInIntermittentDropout(modem))
-        .map((modem) => modem.ifSignal));
+    return this.rfFrontEnd_.transmitters.flatMap((tx) =>
+      tx.state.modems.filter((modem) => modem.isTransmitting && !modem.isFaulted && !modem.isLoopback && !tx.isModemInIntermittentDropout(modem)).map((modem) => modem.ifSignal)
+    );
   }
 
   /**
@@ -248,13 +242,11 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
     const loFrequencyHz = this.state.loFrequency * 1e6;
 
     // Apply frequency error when not locked to external reference
-    const effectiveLO = (this.state.isExtRefLocked && this.isExtRefWarmedUp())
-      ? loFrequencyHz
-      : loFrequencyHz + this.state.frequencyError;
+    const effectiveLO = this.state.isExtRefLocked && this.isExtRefWarmedUp() ? loFrequencyHz : loFrequencyHz + this.state.frequencyError;
 
     // Mixer produces both sidebands
-    const upperSideband = effectiveLO + ifFrequency;  // LO + IF
-    const lowerSideband = effectiveLO - ifFrequency;  // LO - IF
+    const upperSideband = effectiveLO + ifFrequency; // LO + IF
+    const lowerSideband = effectiveLO - ifFrequency; // LO - IF
 
     // Bandpass filter selects the in-band signal
     const upperInBand = this.isInPassband_(upperSideband);
@@ -274,8 +266,7 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
    * Check if a frequency falls within the output bandpass filter
    */
   private isInPassband_(frequencyHz: number): boolean {
-    return frequencyHz >= this.state.filterLowHz
-      && frequencyHz <= this.state.filterHighHz;
+    return frequencyHz >= this.state.filterLowHz && frequencyHz <= this.state.filterHighHz;
   }
 
   /**
@@ -291,9 +282,9 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
     const upperInBand = this.isInPassband_(loHz + ifFreq);
     const lowerInBand = this.isInPassband_(loHz - ifFreq);
 
-    if (upperInBand) return 'low';   // Low-side injection → USB
-    if (lowerInBand) return 'high';  // High-side injection → LSB
-    return 'none';  // Neither in band
+    if (upperInBand) return 'low'; // Low-side injection → USB
+    if (lowerInBand) return 'high'; // High-side injection → LSB
+    return 'none'; // Neither in band
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -390,7 +381,7 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
     // Use random walk model for realistic drift behavior
     const driftPpm = 10 + Math.random() * 90; // 10-100 ppm
     const driftDirection = Math.random() > 0.5 ? 1 : -1;
-    this.state.frequencyError = driftDirection * (loFrequencyHz * driftPpm / 1e6);
+    this.state.frequencyError = driftDirection * ((loFrequencyHz * driftPpm) / 1e6);
   }
 
   /**
@@ -434,7 +425,7 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
     const loFreqHz = this.state.loFrequency * 1e6;
 
     // For each input signal, calculate primary spurious products
-    this.inputSignals.forEach(signal => {
+    this.inputSignals.forEach((signal) => {
       const ifFreqHz = signal.frequency;
 
       spurious.push(
@@ -473,22 +464,20 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
       // Cooling down gradually toward ambient (25°C)
       const ambientTemp = 25;
       const coolRate = 0.00001; // Slow cooling per update
-      this.state.temperature = this.state.temperature +
-        (ambientTemp - this.state.temperature) * coolRate;
+      this.state.temperature = this.state.temperature + (ambientTemp - this.state.temperature) * coolRate;
       this.state.currentDraw = 0;
       return;
     }
 
     // Calculate target temperature based on output power
     const ambientTemp = 25; // °C
-    const powerDissipation = Math.max(0, this.state.outputPower - (-10));
+    const powerDissipation = Math.max(0, this.state.outputPower - -10);
     const thermalRise = powerDissipation * 0.8; // °C per dBm above reference
     const targetTemp = ambientTemp + thermalRise;
 
     // Simulate gradual heating (thermal inertia)
     const heatRate = 0.00005; // Slow heating per update
-    this.state.temperature = this.state.temperature +
-      (targetTemp - this.state.temperature) * heatRate;
+    this.state.temperature = this.state.temperature + (targetTemp - this.state.temperature) * heatRate;
 
     // Current draw trends gradually toward target value
     const idleCurrent = 0.5;
@@ -496,8 +485,7 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
     const outputCurrent = Math.max(0, (this.state.outputPower + 10) / 20) * 1.5;
     const targetCurrent = idleCurrent + powerCurrent + outputCurrent;
     const currentRate = 0.1; // Slow current change per update
-    this.state.currentDraw = this.state.currentDraw +
-      (targetCurrent - this.state.currentDraw) * currentRate;
+    this.state.currentDraw = this.state.currentDraw + (targetCurrent - this.state.currentDraw) * currentRate;
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -600,7 +588,7 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
     currentDraw: number;
     powerDissipation: number;
   } {
-    const powerOut = Math.pow(10, this.state.outputPower / 10);
+    const powerOut = 10 ** (this.state.outputPower / 10);
     const powerDissipation = this.state.currentDraw * 28 - powerOut; // Assuming 28V supply
 
     return {

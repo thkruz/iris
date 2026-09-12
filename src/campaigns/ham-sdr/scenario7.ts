@@ -43,11 +43,7 @@ export const hamSdrScenario7Data: ScenarioData = {
   duration: '20-25 min',
   missionType: 'Backyard Session',
   description: `Something in the neighborhood is sick. The 70cm band has grown a hash of noise that was not there yesterday - and tonight's only CUBEHOP-1 pass tops out at eighteen degrees, right in the trees, with no margin to spare.<br><br>A directional antenna is a signal finder AND a direction finder. Sweep the yagi by hand until the hash peaks and you own the bearing. Then take the interference out of the receiver: notch the hash, narrow the front-end filter until the noise gate drops below the bird, and catch a pass most operators would write off.<br><br>Decibels are a budget. Tonight you audit it.`,
-  equipment: [
-    'DIY 70cm Crossed Yagi on TV Rotator (manual slew)',
-    'RTL-SDR Receiver (Direct Sampling)',
-    'SkyWatcher SDR Console (FILTER section unlocked)',
-  ],
+  equipment: ['DIY 70cm Crossed Yagi on TV Rotator (manual slew)', 'RTL-SDR Receiver (Direct Sampling)', 'SkyWatcher SDR Console (FILTER section unlocked)'],
   settings: {
     isSync: true,
     groundStations: [backyardYagiStation],
@@ -80,7 +76,7 @@ export const hamSdrScenario7Data: ScenarioData = {
       id: 'review-mission-brief',
       nice: ['K0645'],
       title: "Read Riley's Note",
-      description: 'The note covers two things: what a noise floor actually is, and why tonight\'s eighteen-degree pass leaves no room for one that has grown.',
+      description: "The note covers two things: what a noise floor actually is, and why tonight's eighteen-degree pass leaves no room for one that has grown.",
       groundStation: 'BKYD-YAGI',
       freezesScenarioTimer: true,
       prerequisiteObjectiveIds: [],
@@ -103,7 +99,8 @@ export const hamSdrScenario7Data: ScenarioData = {
               'The rotator moves too fast on low passes.',
             ],
             correctIndex: 0,
-            explanation: 'Slant range nearly doubles at 18 degrees versus overhead, and the horizon is full of obstructions. On a fat pass you never notice a noisy band. Tonight you will.',
+            explanation:
+              'Slant range nearly doubles at 18 degrees versus overhead, and the horizon is full of obstructions. On a fat pass you never notice a noisy band. Tonight you will.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -116,7 +113,8 @@ export const hamSdrScenario7Data: ScenarioData = {
       id: 'hear-the-hash',
       nice: ['S0648', 'T0153'],
       title: 'Confirm the Intruder',
-      description: 'Get the hash on the waterfall - a raised, ragged band around 435.360. Note what it is NOT doing: not drifting, not scheduled, not in the Observations list. Everything about it says local.',
+      description:
+        'Get the hash on the waterfall - a raised, ragged band around 435.360. Note what it is NOT doing: not drifting, not scheduled, not in the Observations list. Everything about it says local.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [
@@ -139,7 +137,8 @@ export const hamSdrScenario7Data: ScenarioData = {
       id: 'df-the-source',
       nice: ['S0421', 'S0648'],
       title: 'Foxhunt: Take a Bearing',
-      description: 'Use MAN AZ to sweep the yagi around the horizon and watch the hash strength. Twelve dB of forward gain means it peaks hard when the boom crosses the source. Park the beam on the peak.',
+      description:
+        'Use MAN AZ to sweep the yagi around the horizon and watch the hash strength. Twelve dB of forward gain means it peaks hard when the boom crosses the source. Park the beam on the peak.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['hear-the-hash'],
       conditions: [
@@ -157,7 +156,8 @@ export const hamSdrScenario7Data: ScenarioData = {
       id: 'notch-it',
       nice: ['S0421', 'K0740'],
       title: 'Notch the Hash',
-      description: 'You cannot unplug the neighbor\'s gear, but you can carve it out of your receiver. In the FILTER section, enable the notch and center it on 435.360 - watch the hash drop out of the waterfall.',
+      description:
+        "You cannot unplug the neighbor's gear, but you can carve it out of your receiver. In the FILTER section, enable the notch and center it on 435.360 - watch the hash drop out of the waterfall.",
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['df-the-source'],
       conditions: [
@@ -178,7 +178,8 @@ export const hamSdrScenario7Data: ScenarioData = {
       id: 'narrow-and-catch',
       nice: ['S0421', 'K0740', 'T0153'],
       title: 'Make the Margin, Catch the Pass',
-      description: 'Last dB: narrow the IF filter to 100 kHz - the front-end noise gate drops with it. Then TRACK CUBEHOP-1 and hold a lock through the eighteen-degree pass. AFC is allowed; excuses are not.',
+      description:
+        'Last dB: narrow the IF filter to 100 kHz - the front-end noise gate drops with it. Then TRACK CUBEHOP-1 and hold a lock through the eighteen-degree pass. AFC is allowed; excuses are not.',
       groundStation: 'BKYD-YAGI',
       prerequisiteObjectiveIds: ['notch-it'],
       conditions: [
@@ -224,7 +225,8 @@ export const hamSdrScenario7Data: ScenarioData = {
               'Satellites never transmit near 435.3 MHz.',
             ],
             correctIndex: 0,
-            explanation: 'Physics again: real birds drift and set; ground noise sits there and swings with your beam. The DF sweep is the same trick you will use on the day something pretends to be a satellite.',
+            explanation:
+              'Physics again: real birds drift and set; ground noise sits there and swings with your beam. The DF sweep is the same trick you will use on the day something pretends to be a satellite.',
             pointPenalty: 5,
           },
           mustMaintain: false,

@@ -130,7 +130,7 @@ export class ProgressSaveManager {
       toast.showSuccess();
       this.eventBus.emit(Events.PROGRESS_SAVE_SUCCESS, {
         timestamp: Date.now(),
-        checkpointId: scenarioId
+        checkpointId: scenarioId,
       });
     } catch (error) {
       Logger.error('Failed to save checkpoint:', error);
@@ -139,7 +139,7 @@ export class ProgressSaveManager {
       toast.showError();
       this.eventBus.emit(Events.PROGRESS_SAVE_ERROR, {
         timestamp: Date.now(),
-        error: error as Error
+        error: error as Error,
       });
 
       throw error;

@@ -1,5 +1,5 @@
-import { ANTENNA_CONFIG_KEYS } from "./antenna-config-keys";
-import { AntennaCore, AntennaState } from "./antenna-core";
+import { ANTENNA_CONFIG_KEYS } from './antenna-config-keys';
+import { AntennaCore, AntennaState } from './antenna-core';
 
 /**
  * AntennaUIHeadless - No UI implementation for testing and backend simulations
@@ -22,7 +22,7 @@ export class AntennaUIHeadless extends AntennaCore {
     configId: ANTENNA_CONFIG_KEYS = ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK,
     initialState: Partial<AntennaState> = {},
     teamId: number = 1,
-    serverId: number = 1,
+    serverId: number = 1
   ) {
     // Call parent constructor
     super(configId, initialState, teamId, serverId);

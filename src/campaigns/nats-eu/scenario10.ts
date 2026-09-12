@@ -85,12 +85,7 @@ export const natsEuScenario10Data: ScenarioData = {
   duration: '20-25 min',
   missionType: 'Tasking',
   description: `15:30 local. Erik Halvorsen at Nordic Maritime Watch has a vessel of interest off the Faroes and needs SAR imagery of it today. The only MERIDIAN-SAR-1 window that covers the box peaks at 18 degrees over Galway, in five minutes.<br><br>The collect has to be tasked by command early in that pass, and the imagery has to come down on the same pass. Anneke at constellation ops has confirmed the bird is available.<br><br>The link budget says the margin at 18 degrees is about two decibels. The uplink needs more EIRP than you have ever run from GW-01, and the amplifier has a limit. One pass. Everything else is arithmetic.`,
-  equipment: [
-    '4m Ku-Band LEO Tracking Antenna',
-    'Ku-Band BUC (12600 MHz LO) + HPA',
-    'Link Analysis / TT&C Commanding consoles',
-    'QPSK 3/4 Transmit and Receive Modems',
-  ],
+  equipment: ['4m Ku-Band LEO Tracking Antenna', 'Ku-Band BUC (12600 MHz LO) + HPA', 'Link Analysis / TT&C Commanding consoles', 'QPSK 3/4 Transmit and Receive Modems'],
   settings: {
     isSync: true,
     groundStations: [galwayGroundStation],
@@ -163,7 +158,8 @@ export const natsEuScenario10Data: ScenarioData = {
               'The satellite EIRP drops at low elevation, so the bird has to be commanded to full power first.',
             ],
             correctIndex: 0,
-            explanation: 'Correct. Path loss goes as the square of the range, and at 18 degrees the signal crosses several times more atmosphere than it does near the zenith. The receiver will still lock, but only just, and only near max elevation.',
+            explanation:
+              'Correct. Path loss goes as the square of the range, and at 18 degrees the signal crosses several times more atmosphere than it does near the zenith. The receiver will still lock, but only just, and only near max elevation.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -176,7 +172,8 @@ export const natsEuScenario10Data: ScenarioData = {
       id: 'budget-the-low-pass',
       nice: ['T0080', 'S0015', 'K0740'],
       title: 'Budget the Low Pass',
-      description: 'Fill the Link Analysis worksheet for MERIDIAN-SAR-1 at maximum elevation and press Compute. Worksheet numbers: satellite EIRP 28 dBm; slant range at max elevation 1040 km (free-space path loss 174.1 dB at 11686 MHz); GW-01 receive gain 51.8 dBi; system noise temperature 88 K; occupied bandwidth 36 MHz; miscellaneous losses 1.2 dB.',
+      description:
+        'Fill the Link Analysis worksheet for MERIDIAN-SAR-1 at maximum elevation and press Compute. Worksheet numbers: satellite EIRP 28 dBm; slant range at max elevation 1040 km (free-space path loss 174.1 dB at 11686 MHz); GW-01 receive gain 51.8 dBi; system noise temperature 88 K; occupied bandwidth 36 MHz; miscellaneous losses 1.2 dB.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [
@@ -201,7 +198,8 @@ export const natsEuScenario10Data: ScenarioData = {
       id: 'raise-the-eirp',
       nice: ['S0675', 'K0064', 'K0740'],
       title: 'Raise Uplink EIRP Without Overdriving',
-      description: 'The command has to reach the bird at long range: take the HPA back-off from 10 dB to 4 dB for 6 dB more EIRP. Below 3 dB the amplifier is overdriven and the IMD alarm trips. Leave the BUC gain where it is.',
+      description:
+        'The command has to reach the bird at long range: take the HPA back-off from 10 dB to 4 dB for 6 dB more EIRP. Below 3 dB the amplifier is overdriven and the IMD alarm trips. Leave the BUC gain where it is.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['review-mission-brief'],
       conditions: [
@@ -266,7 +264,8 @@ export const natsEuScenario10Data: ScenarioData = {
       id: 'task-the-collect',
       nice: ['T1567', 'K0773'],
       title: 'Task the Collect',
-      description: 'Modem on air FIRST, then the HPA, then send SAR-TASK-URGENT early in the pass. The imaging block needs lead time to arm before the bird is over the box, and the window closes at T+13.3.',
+      description:
+        'Modem on air FIRST, then the HPA, then send SAR-TASK-URGENT early in the pass. The imaging block needs lead time to arm before the bird is over the box, and the window closes at T+13.3.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['acquire-low'],
       conditions: [
@@ -296,7 +295,8 @@ export const natsEuScenario10Data: ScenarioData = {
       id: 'pull-the-imagery',
       nice: ['T0153', 'K0740', 'T0080'],
       title: 'Pull the Imagery With the Margin You Have',
-      description: 'Lock the 1414 MHz imagery downlink and hold C/N above the 6 dB threshold for 30 seconds, then commit the link in Link Analysis at max elevation (T+9.5) with at least 1 dB over threshold. Commit early and the margin is not there.',
+      description:
+        'Lock the 1414 MHz imagery downlink and hold C/N above the 6 dB threshold for 30 seconds, then commit the link in Link Analysis at max elevation (T+9.5) with at least 1 dB over threshold. Commit early and the margin is not there.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['task-the-collect'],
       conditions: [
@@ -343,7 +343,8 @@ export const natsEuScenario10Data: ScenarioData = {
               'Captured, but the imagery is degraded because the link was marginal.',
             ],
             correctIndex: 0,
-            explanation: 'Correct. Two decibels over threshold is a clean decode, not a degraded one; the frames are as good as any. What the customer needs to know is that 18 degrees is about the lowest pass this station will close, so the next box further north is a Shetland job or a wait for a better orbit.',
+            explanation:
+              'Correct. Two decibels over threshold is a clean decode, not a degraded one; the frames are as good as any. What the customer needs to know is that 18 degrees is about the lowest pass this station will close, so the next box further north is a Shetland job or a wait for a better orbit.',
             pointPenalty: 5,
           },
           mustMaintain: false,

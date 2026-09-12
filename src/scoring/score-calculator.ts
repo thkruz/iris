@@ -38,27 +38,17 @@ export class ScoreCalculator {
    * @param timePenalties - Total points deducted from time-based objective penalties
    * @param hintPenalties - Total points deducted from requesting hints
    */
-  static calculate(
-    objectives: ObjectiveState[],
-    timeRemainingSeconds: number,
-    quizPenalties: number,
-    timePenalties: number = 0,
-    hintPenalties: number = 0
-  ): ScoreBreakdown {
+  static calculate(objectives: ObjectiveState[], timeRemainingSeconds: number, quizPenalties: number, timePenalties: number = 0, hintPenalties: number = 0): ScoreBreakdown {
     // Only completed objectives score. Optional objectives no longer gate
     // Mission Complete, so an unfinished one can be in this list and must not
     // award its points or count in the breakdown.
     const completedObjectives = objectives.filter((objState) => objState.isCompleted);
 
     // Sum objective points (default to 0 if undefined)
-    const basePoints = completedObjectives.reduce((sum, objState) => {
-      return sum + (objState.objective.points ?? 0);
-    }, 0);
+    const basePoints = completedObjectives.reduce((sum, objState) => sum + (objState.objective.points ?? 0), 0);
 
     // Time bonus: 1 point per TIME_BONUS_DIVISOR seconds remaining
-    const timeBonus = timeRemainingSeconds > 0
-      ? Math.floor(timeRemainingSeconds / ScoreCalculator.TIME_BONUS_DIVISOR)
-      : 0;
+    const timeBonus = timeRemainingSeconds > 0 ? Math.floor(timeRemainingSeconds / ScoreCalculator.TIME_BONUS_DIVISOR) : 0;
 
     // Ensure penalties are non-negative
     const sanitizedQuizPenalties = Math.max(0, quizPenalties);

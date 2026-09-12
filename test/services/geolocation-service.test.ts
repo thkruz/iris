@@ -1,11 +1,5 @@
 import { OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
-import {
-  GeolocationService,
-  greatCircleKm,
-  llaToEcef,
-  type GeolocationMeasurement,
-  type AreaOfInterest,
-} from '@app/services/geolocation-service';
+import { type AreaOfInterest, type GeolocationMeasurement, GeolocationService, greatCircleKm, llaToEcef } from '@app/services/geolocation-service';
 import type { Degrees, Kilometers, TleLine1, TleLine2 } from 'ootk';
 import { describe, expect, it } from 'vitest';
 

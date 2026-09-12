@@ -1,7 +1,7 @@
 import { OrbitalObserver, OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
 import { TransponderConfig } from '@app/equipment/satellite/satellite';
 import { SignalOrigin } from '@app/signal-origin';
-import type { FECType, Hertz, ModulationType, RfFrequency, dBi, dBm } from '@app/types';
+import type { dBi, dBm, FECType, Hertz, ModulationType, RfFrequency } from '@app/types';
 import type { Degrees, Kilometers, TleLine1, TleLine2 } from 'ootk';
 
 /**
@@ -102,5 +102,5 @@ export const cobalt4Satellite = new OrbitalSatellite(
         },
       } as TransponderConfig,
     ],
-  },
+  }
 );

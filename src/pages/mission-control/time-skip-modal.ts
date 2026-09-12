@@ -113,9 +113,10 @@ export class TimeSkipModal extends DraggableModal {
     }
 
     if (noteEl) {
-      noteEl.textContent = `The clock stops ${formatDuration(target.aosMs - target.targetMs)} short of AOS - `
-        + `you still point the antenna and configure the chain yourself. Skipped time counts toward your `
-        + `shift, and everything scheduled during it still happens.`;
+      noteEl.textContent =
+        `The clock stops ${formatDuration(target.aosMs - target.targetMs)} short of AOS - ` +
+        `you still point the antenna and configure the chain yourself. Skipped time counts toward your ` +
+        `shift, and everything scheduled during it still happens.`;
     }
 
     // Keep the operator's default action the safe one.

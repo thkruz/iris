@@ -10,15 +10,13 @@
  * by scripts/gen-nice-catalog.mjs; scripts/nice-coverage.mjs prints the full
  * coverage table. This test enforces the same off-catalog rule in CI.
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const repoRoot = process.cwd();
 const campaignsDir = join(repoRoot, 'src', 'campaigns');
-const catalog = JSON.parse(
-  readFileSync(join(repoRoot, 'scripts', 'nice-catalog.json'), 'utf8'),
-) as { count: number; codes: string[] };
+const catalog = JSON.parse(readFileSync(join(repoRoot, 'scripts', 'nice-catalog.json'), 'utf8')) as { count: number; codes: string[] };
 const validCodes = new Set(catalog.codes);
 
 function walkTs(dir: string): string[] {

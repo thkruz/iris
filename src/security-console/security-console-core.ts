@@ -60,8 +60,7 @@ export class SecurityConsoleCore {
   private reviewed_ = false;
 
   private constructor() {
-    this.config_ = (ScenarioManager.getInstance().settings.security as SecurityConfig | undefined)
-      ?? { accounts: [], events: [] };
+    this.config_ = (ScenarioManager.getInstance().settings.security as SecurityConfig | undefined) ?? { accounts: [], events: [] };
     this.config_.accounts.forEach((a) => this.accountStatus_.set(a.id, a.status));
   }
 

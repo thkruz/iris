@@ -163,7 +163,10 @@ test.describe('nats-eu Scenario 12 Full Completion', () => {
     ];
     const answered = new Set<string>();
     for (let i = 0; i < entries.length; i++) {
-      const hint = await answerPendingQuizFrom(page, entries.filter((e) => !answered.has(e.questionHint)));
+      const hint = await answerPendingQuizFrom(
+        page,
+        entries.filter((e) => !answered.has(e.questionHint))
+      );
       answered.add(hint);
       await dismissDialogIfPresent(page);
       await closeWorkingDocumentIfOpen(page);

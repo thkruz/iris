@@ -146,10 +146,7 @@ export class InterferenceManager {
    */
   getActiveTerrestrialEmissions(): ActiveTerrestrialEmission[] {
     return this.events_
-      .filter((event) =>
-        (event.path ?? 'transponder') === 'terrestrial' &&
-        event.emitter !== undefined &&
-        this.activeSignalIds_.has(InterferenceManager.signalIdFor(event.id)))
+      .filter((event) => (event.path ?? 'transponder') === 'terrestrial' && event.emitter !== undefined && this.activeSignalIds_.has(InterferenceManager.signalIdFor(event.id)))
       .map((event) => ({
         signalId: InterferenceManager.signalIdFor(event.id),
         frequencyHz: event.frequency,
@@ -188,7 +185,7 @@ export class InterferenceManager {
         continue;
       }
 
-      const satellite = sim.satellites.find(s => s.noradId === event.satelliteNoradId);
+      const satellite = sim.satellites.find((s) => s.noradId === event.satelliteNoradId);
       if (!satellite) continue;
 
       if (shouldTransmit) {
@@ -211,7 +208,7 @@ export class InterferenceManager {
         satellite.externalSignal.push(signal);
         this.activeSignalIds_.add(signalId);
       } else {
-        satellite.externalSignal = satellite.externalSignal.filter(s => s.signalId !== signalId);
+        satellite.externalSignal = satellite.externalSignal.filter((s) => s.signalId !== signalId);
         this.activeSignalIds_.delete(signalId);
       }
     }

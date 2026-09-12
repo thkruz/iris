@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
-import {
-  answerQuizByText,
-  dismissDialogIfPresent,
-  waitForQuizToAppear,
-  waitForSimulationReady,
-} from '../utils/simulation-helpers';
+import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
  * Scenario 19 - "Train the New Hire": Producing the Quick-Reference Card.
@@ -16,15 +11,7 @@ import {
  * beacon tune, step-track, verify) interleaved with the card quizzes, then
  * verifies the Working Document panel actually contains the card lines.
  */
-type ObjectiveType =
-  | 'quiz'
-  | 'select-station'
-  | 'click-tab'
-  | 'repoint-program-track'
-  | 'configure-speca'
-  | 'set-step-track'
-  | 'verify-working-doc'
-  | 'auto';
+type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'repoint-program-track' | 'configure-speca' | 'set-step-track' | 'verify-working-doc' | 'auto';
 
 interface Scenario19Objective {
   id: string;
@@ -53,7 +40,7 @@ const SCENARIO_19_OBJECTIVES: Scenario19Objective[] = [
   },
   {
     id: 'card-scope-quiz',
-    title: 'Set the Card\'s Scope',
+    title: "Set the Card's Scope",
     type: 'quiz',
     correctAnswer:
       'The numbers someone needs under pressure plus the mistakes with the highest local base rate - one page, taped to the console; the procedure itself stays in the SOP',
@@ -76,8 +63,7 @@ const SCENARIO_19_OBJECTIVES: Scenario19Objective[] = [
     id: 'acquire-callout-quiz',
     title: 'Card Line: Acquisition',
     type: 'quiz',
-    correctAnswer:
-      'Program-track FIRST - it puts you inside beacon capture range. Nominal: Az 190, El 32, but the bird rides a ±3° figure-8',
+    correctAnswer: 'Program-track FIRST - it puts you inside beacon capture range. Nominal: Az 190, El 32, but the bird rides a ±3° figure-8',
   },
   {
     id: 'tune-beacon-tab',
@@ -95,8 +81,7 @@ const SCENARIO_19_OBJECTIVES: Scenario19Objective[] = [
     id: 'beacon-formula-quiz',
     title: 'Card Line: the Beacon Number',
     type: 'quiz',
-    correctAnswer:
-      'Beacon IF = LO − RF = 5250 − 4165 = 1085 MHz. Weak CW (aging bird) - use a narrow span, ~2 kHz',
+    correctAnswer: 'Beacon IF = LO − RF = 5250 − 4165 = 1085 MHz. Weak CW (aging bird) - use a narrow span, ~2 kHz',
   },
   {
     id: 'mistake-lo-quiz',
@@ -122,8 +107,7 @@ const SCENARIO_19_OBJECTIVES: Scenario19Objective[] = [
     id: 'step-track-rule-quiz',
     title: 'Card Line: the Engagement Rule',
     type: 'quiz',
-    correctAnswer:
-      'Step-track RIDES program-track - engage it as an optimization on an acquired beacon, never from MANUAL (the loop needs a beacon to optimize)',
+    correctAnswer: 'Step-track RIDES program-track - engage it as an optimization on an acquired beacon, never from MANUAL (the loop needs a beacon to optimize)',
   },
   {
     id: 'hold-beacon',
@@ -135,8 +119,7 @@ const SCENARIO_19_OBJECTIVES: Scenario19Objective[] = [
     id: 'healthy-track-quiz',
     title: 'Card Line: What Healthy Looks Like',
     type: 'quiz',
-    correctAnswer:
-      'Healthy = beacon C/N steady at its peak while Az/El visibly wander the figure-8. Moving dish + flat C/N is the loop WORKING, not a fault',
+    correctAnswer: 'Healthy = beacon C/N steady at its peak while Az/El visibly wander the figure-8. Moving dish + flat C/N is the loop WORKING, not a fault',
   },
   {
     id: 'mistake-chase-quiz',
@@ -164,7 +147,7 @@ const SCENARIO_19_OBJECTIVES: Scenario19Objective[] = [
     title: 'Card Line: the Proof Chain',
     type: 'quiz',
     correctAnswer:
-      'Proof chain, in order: beacon at 1085 (pointing + LO) → RX locked at 1422 MHz / 24 MHz (carrier) → C/N ≥ 8 (margin). Each link proves something the others don\'t',
+      "Proof chain, in order: beacon at 1085 (pointing + LO) → RX locked at 1422 MHz / 24 MHz (carrier) → C/N ≥ 8 (margin). Each link proves something the others don't",
   },
   {
     id: 'mistake-span-quiz',
@@ -177,8 +160,7 @@ const SCENARIO_19_OBJECTIVES: Scenario19Objective[] = [
     id: 'tx-numbers-quiz',
     title: 'Card Line: the TX Number',
     type: 'quiz',
-    correctAnswer:
-      'TX IF = BUC LO − uplink RF = 7500 − 6053 = 1447 MHz. AURORA\'s chain uses BUC LO 7500 - NOT the TIDEMARK 7000',
+    correctAnswer: "TX IF = BUC LO − uplink RF = 7500 − 6053 = 1447 MHz. AURORA's chain uses BUC LO 7500 - NOT the TIDEMARK 7000",
   },
 
   // Verify the card BEFORE the final quizzes (the Mission Complete modal
@@ -195,7 +177,7 @@ const SCENARIO_19_OBJECTIVES: Scenario19Objective[] = [
     title: 'Editorial Review',
     type: 'quiz',
     correctAnswer:
-      'Card space is the reader\'s attention under pressure - every line they scan past to find the one they need is time on a degraded link; the card earns trust by containing only what earns its place',
+      "Card space is the reader's attention under pressure - every line they scan past to find the one they need is time on a degraded link; the card earns trust by containing only what earns its place",
   },
   {
     id: 'log-handoff',
@@ -211,10 +193,7 @@ const SCENARIO_19_OBJECTIVES: Scenario19Objective[] = [
 // ============================================================
 
 /** Program-track + select satellite + Move to Target, then wait on sim state. */
-async function repointProgramTrack(
-  page: import('@playwright/test').Page,
-  satelliteNoradId: string
-): Promise<void> {
+async function repointProgramTrack(page: import('@playwright/test').Page, satelliteNoradId: string): Promise<void> {
   const modeButton = page.locator('.btn-tracking[data-mode="program-track"]');
   await expect(modeButton).toBeVisible({ timeout: 5000 });
   await modeButton.click();
@@ -242,7 +221,7 @@ async function repointProgramTrack(
           };
         };
       };
-      const gs = w.signalRange?.simulationManager?.groundStations?.find(g => g.state?.id === 'VT-01');
+      const gs = w.signalRange?.simulationManager?.groundStations?.find((g) => g.state?.id === 'VT-01');
       const antennaState = gs?.antennas?.[0]?.state;
       return antennaState ? antennaState.slewing === false && antennaState.isLocked === true : false;
     },
@@ -252,10 +231,7 @@ async function repointProgramTrack(
   await page.waitForTimeout(1500);
 }
 
-async function configureSpeca(
-  page: import('@playwright/test').Page,
-  centerFrequencyMhz: number
-): Promise<void> {
+async function configureSpeca(page: import('@playwright/test').Page, centerFrequencyMhz: number): Promise<void> {
   const centerFreqInput = page.locator('#sa-center-freq');
   await expect(centerFreqInput).toBeVisible({ timeout: 5000 });
   await centerFreqInput.fill(centerFrequencyMhz.toString());
@@ -296,11 +272,7 @@ async function verifyWorkingDocument(page: import('@playwright/test').Page): Pro
   }
 }
 
-async function executeObjective(
-  page: import('@playwright/test').Page,
-  missionControlPage: MissionControlPage,
-  objective: Scenario19Objective
-): Promise<void> {
+async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario19Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);

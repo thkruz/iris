@@ -43,31 +43,31 @@ class TestBUCModule extends BUCModuleCore {
 function createMockTransmitter(modems: any[] = []): any {
   return {
     state: {
-      modems: modems.length > 0 ? modems : [{
-        isTransmitting: true,
-        isFaulted: false,
-        isLoopback: false,
-        ifSignal: {
-          frequency: 500e6,
-          bandwidth: 36e6,
-          power: -10 as dBm,
-          origin: SignalOrigin.TRANSMITTER,
-        } as IfSignal,
-      }],
+      modems:
+        modems.length > 0
+          ? modems
+          : [
+              {
+                isTransmitting: true,
+                isFaulted: false,
+                isLoopback: false,
+                ifSignal: {
+                  frequency: 500e6,
+                  bandwidth: 36e6,
+                  power: -10 as dBm,
+                  origin: SignalOrigin.TRANSMITTER,
+                } as IfSignal,
+              },
+            ],
     },
     isModemInIntermittentDropout: () => false, // Mock method - no dropout
   };
 }
 
 // Mock RFFrontEndCore
-function createMockRfFrontEnd(
-  gpsdoOverrides: { isPresent?: boolean; isWarmedUp?: boolean } = {},
-  transmitters?: any[]
-): RFFrontEndCore {
+function createMockRfFrontEnd(gpsdoOverrides: { isPresent?: boolean; isWarmedUp?: boolean } = {}, transmitters?: any[]): RFFrontEndCore {
   // If transmitters is explicitly undefined, use default; if explicitly empty array, use empty
-  const txList = transmitters === undefined
-    ? [createMockTransmitter()]
-    : transmitters;
+  const txList = transmitters === undefined ? [createMockTransmitter()] : transmitters;
   return {
     gpsdoModule: {
       get10MhzOutput: () => ({
@@ -144,11 +144,7 @@ describe('BUCModuleCore', () => {
 
   describe('constructor', () => {
     it('should create instance with default state', () => {
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
 
       expect(bucModule).toBeInstanceOf(BUCModuleCore);
       expect(bucModule.state.isPowered).toBe(true);
@@ -172,21 +168,13 @@ describe('BUCModuleCore', () => {
     });
 
     it('should generate correct uniqueId', () => {
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        2
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 2);
 
       expect((bucModule as any).uniqueId).toBe('rf-fe-buc-2');
     });
 
     it('should initialize with empty output signals', () => {
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
 
       expect(bucModule.outputSignals).toEqual([]);
     });
@@ -194,11 +182,7 @@ describe('BUCModuleCore', () => {
 
   describe('update()', () => {
     beforeEach(() => {
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
     });
 
     describe('signal processing', () => {
@@ -249,24 +233,22 @@ describe('BUCModuleCore', () => {
 
       it('should reject out-of-band signals', () => {
         // Create a transmitter with out-of-band IF signal
-        const outOfBandTransmitter = createMockTransmitter([{
-          isTransmitting: true,
-          isFaulted: false,
-          isLoopback: false,
-          ifSignal: {
-            frequency: 2000e6 as Hertz, // This will produce out-of-band RF
-            bandwidth: 36e6,
-            power: -10 as dBm,
-            origin: SignalOrigin.TRANSMITTER,
-          } as IfSignal,
-        }]);
+        const outOfBandTransmitter = createMockTransmitter([
+          {
+            isTransmitting: true,
+            isFaulted: false,
+            isLoopback: false,
+            ifSignal: {
+              frequency: 2000e6 as Hertz, // This will produce out-of-band RF
+              bandwidth: 36e6,
+              power: -10 as dBm,
+              origin: SignalOrigin.TRANSMITTER,
+            } as IfSignal,
+          },
+        ]);
 
         mockRfFrontEnd = createMockRfFrontEnd({}, [outOfBandTransmitter]);
-        bucModule = new TestBUCModule(
-          BUCModuleCore.getDefaultState(),
-          mockRfFrontEnd,
-          1
-        );
+        bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
 
         bucModule.update();
 
@@ -275,24 +257,22 @@ describe('BUCModuleCore', () => {
       });
 
       it('should not process signals from faulted modems', () => {
-        const faultedTransmitter = createMockTransmitter([{
-          isTransmitting: true,
-          isFaulted: true,
-          isLoopback: false,
-          ifSignal: {
-            frequency: 500e6,
-            bandwidth: 36e6,
-            power: -10 as dBm,
-            origin: SignalOrigin.TRANSMITTER,
-          } as IfSignal,
-        }]);
+        const faultedTransmitter = createMockTransmitter([
+          {
+            isTransmitting: true,
+            isFaulted: true,
+            isLoopback: false,
+            ifSignal: {
+              frequency: 500e6,
+              bandwidth: 36e6,
+              power: -10 as dBm,
+              origin: SignalOrigin.TRANSMITTER,
+            } as IfSignal,
+          },
+        ]);
 
         mockRfFrontEnd = createMockRfFrontEnd({}, [faultedTransmitter]);
-        bucModule = new TestBUCModule(
-          BUCModuleCore.getDefaultState(),
-          mockRfFrontEnd,
-          1
-        );
+        bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
 
         bucModule.update();
 
@@ -300,24 +280,22 @@ describe('BUCModuleCore', () => {
       });
 
       it('should not process signals from loopback modems', () => {
-        const loopbackTransmitter = createMockTransmitter([{
-          isTransmitting: true,
-          isFaulted: false,
-          isLoopback: true,
-          ifSignal: {
-            frequency: 500e6,
-            bandwidth: 36e6,
-            power: -10 as dBm,
-            origin: SignalOrigin.TRANSMITTER,
-          } as IfSignal,
-        }]);
+        const loopbackTransmitter = createMockTransmitter([
+          {
+            isTransmitting: true,
+            isFaulted: false,
+            isLoopback: true,
+            ifSignal: {
+              frequency: 500e6,
+              bandwidth: 36e6,
+              power: -10 as dBm,
+              origin: SignalOrigin.TRANSMITTER,
+            } as IfSignal,
+          },
+        ]);
 
         mockRfFrontEnd = createMockRfFrontEnd({}, [loopbackTransmitter]);
-        bucModule = new TestBUCModule(
-          BUCModuleCore.getDefaultState(),
-          mockRfFrontEnd,
-          1
-        );
+        bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
 
         bucModule.update();
 
@@ -325,24 +303,22 @@ describe('BUCModuleCore', () => {
       });
 
       it('should not process signals from non-transmitting modems', () => {
-        const nonTxTransmitter = createMockTransmitter([{
-          isTransmitting: false,
-          isFaulted: false,
-          isLoopback: false,
-          ifSignal: {
-            frequency: 500e6,
-            bandwidth: 36e6,
-            power: -10 as dBm,
-            origin: SignalOrigin.TRANSMITTER,
-          } as IfSignal,
-        }]);
+        const nonTxTransmitter = createMockTransmitter([
+          {
+            isTransmitting: false,
+            isFaulted: false,
+            isLoopback: false,
+            ifSignal: {
+              frequency: 500e6,
+              bandwidth: 36e6,
+              power: -10 as dBm,
+              origin: SignalOrigin.TRANSMITTER,
+            } as IfSignal,
+          },
+        ]);
 
         mockRfFrontEnd = createMockRfFrontEnd({}, [nonTxTransmitter]);
-        bucModule = new TestBUCModule(
-          BUCModuleCore.getDefaultState(),
-          mockRfFrontEnd,
-          1
-        );
+        bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
 
         bucModule.update();
 
@@ -363,11 +339,7 @@ describe('BUCModuleCore', () => {
 
       it('should lose lock when external reference is not present', () => {
         mockRfFrontEnd = createMockRfFrontEnd({ isPresent: false });
-        bucModule = new TestBUCModule(
-          { ...BUCModuleCore.getDefaultState(), isExtRefLocked: true },
-          mockRfFrontEnd,
-          1
-        );
+        bucModule = new TestBUCModule({ ...BUCModuleCore.getDefaultState(), isExtRefLocked: true }, mockRfFrontEnd, 1);
 
         bucModule.update();
 
@@ -397,11 +369,7 @@ describe('BUCModuleCore', () => {
 
       it('should have frequency drift when external reference is not warmed up', () => {
         mockRfFrontEnd = createMockRfFrontEnd({ isPresent: true, isWarmedUp: false });
-        bucModule = new TestBUCModule(
-          { ...BUCModuleCore.getDefaultState(), isExtRefLocked: true },
-          mockRfFrontEnd,
-          1
-        );
+        bucModule = new TestBUCModule({ ...BUCModuleCore.getDefaultState(), isExtRefLocked: true }, mockRfFrontEnd, 1);
 
         bucModule.update();
 
@@ -411,11 +379,7 @@ describe('BUCModuleCore', () => {
 
       it('should have frequency drift when unlocked', () => {
         mockRfFrontEnd = createMockRfFrontEnd({ isPresent: false });
-        bucModule = new TestBUCModule(
-          BUCModuleCore.getDefaultState(),
-          mockRfFrontEnd,
-          1
-        );
+        bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
 
         bucModule.update();
 
@@ -488,11 +452,7 @@ describe('BUCModuleCore', () => {
 
       it('should have degraded phase noise when unlocked', () => {
         mockRfFrontEnd = createMockRfFrontEnd({ isPresent: false });
-        bucModule = new TestBUCModule(
-          BUCModuleCore.getDefaultState(),
-          mockRfFrontEnd,
-          1
-        );
+        bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
         bucModule.state.isPowered = true;
 
         bucModule.update();
@@ -519,17 +479,13 @@ describe('BUCModuleCore', () => {
 
         expect(bucModule.state.spuriousOutputs.length).toBeGreaterThan(0);
         // Should have 2nd and 3rd harmonic products
-        expect(bucModule.state.spuriousOutputs.some(s => s.loHarmonic === 2)).toBe(true);
-        expect(bucModule.state.spuriousOutputs.some(s => s.loHarmonic === 3)).toBe(true);
+        expect(bucModule.state.spuriousOutputs.some((s) => s.loHarmonic === 2)).toBe(true);
+        expect(bucModule.state.spuriousOutputs.some((s) => s.loHarmonic === 3)).toBe(true);
       });
 
       it('should not generate spurious products when no input signals', () => {
         mockRfFrontEnd = createMockRfFrontEnd({}, []);
-        bucModule = new TestBUCModule(
-          BUCModuleCore.getDefaultState(),
-          mockRfFrontEnd,
-          1
-        );
+        bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
         bucModule.state.isPowered = true;
 
         bucModule.update();
@@ -580,11 +536,7 @@ describe('BUCModuleCore', () => {
 
   describe('getAlarms()', () => {
     beforeEach(() => {
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
     });
 
     it('should return empty array when no alarms', () => {
@@ -627,8 +579,8 @@ describe('BUCModuleCore', () => {
 
       const alarms = bucModule.getAlarms();
 
-      expect(alarms.some(a => a.includes('frequency error'))).toBe(true);
-      expect(alarms.some(a => a.includes('60.0 kHz'))).toBe(true);
+      expect(alarms.some((a) => a.includes('frequency error'))).toBe(true);
+      expect(alarms.some((a) => a.includes('60.0 kHz'))).toBe(true);
     });
 
     it('should return saturation warning when approaching P1dB', () => {
@@ -638,7 +590,7 @@ describe('BUCModuleCore', () => {
 
       const alarms = bucModule.getAlarms();
 
-      expect(alarms.some(a => a.includes('saturation'))).toBe(true);
+      expect(alarms.some((a) => a.includes('saturation'))).toBe(true);
     });
 
     it('should return over-temperature alarm when > 70°C', () => {
@@ -647,8 +599,8 @@ describe('BUCModuleCore', () => {
 
       const alarms = bucModule.getAlarms();
 
-      expect(alarms.some(a => a.includes('over-temperature'))).toBe(true);
-      expect(alarms.some(a => a.includes('75.0'))).toBe(true);
+      expect(alarms.some((a) => a.includes('over-temperature'))).toBe(true);
+      expect(alarms.some((a) => a.includes('75.0'))).toBe(true);
     });
 
     it('should return high current alarm when > 4.5A', () => {
@@ -657,8 +609,8 @@ describe('BUCModuleCore', () => {
 
       const alarms = bucModule.getAlarms();
 
-      expect(alarms.some(a => a.includes('high current'))).toBe(true);
-      expect(alarms.some(a => a.includes('5.00 A'))).toBe(true);
+      expect(alarms.some((a) => a.includes('high current'))).toBe(true);
+      expect(alarms.some((a) => a.includes('5.00 A'))).toBe(true);
     });
 
     it('should return phase noise alarm when degraded and unlocked', () => {
@@ -695,11 +647,7 @@ describe('BUCModuleCore', () => {
 
   describe('calculateRfFrequency()', () => {
     beforeEach(() => {
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
     });
 
     it('should calculate upper sideband frequency when in band', () => {
@@ -760,20 +708,12 @@ describe('BUCModuleCore', () => {
 
   describe('getActiveInjectionMode()', () => {
     beforeEach(() => {
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
     });
 
     it('should return "none" when no input signals', () => {
       mockRfFrontEnd = createMockRfFrontEnd({}, []);
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
 
       expect(bucModule.getActiveInjectionMode()).toBe('none');
     });
@@ -807,11 +747,7 @@ describe('BUCModuleCore', () => {
 
   describe('handler methods', () => {
     beforeEach(() => {
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
     });
 
     describe('handlePowerToggle()', () => {
@@ -867,11 +803,7 @@ describe('BUCModuleCore', () => {
 
   describe('getLoopbackLedStatus()', () => {
     beforeEach(() => {
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
     });
 
     it('should return led-blue when in loopback', () => {
@@ -887,11 +819,7 @@ describe('BUCModuleCore', () => {
 
   describe('utility methods', () => {
     beforeEach(() => {
-      bucModule = new TestBUCModule(
-        { ...BUCModuleCore.getDefaultState(), isPowered: true, isMuted: false },
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule({ ...BUCModuleCore.getDefaultState(), isPowered: true, isMuted: false }, mockRfFrontEnd, 1);
     });
 
     describe('getTotalGain()', () => {
@@ -1015,9 +943,7 @@ describe('BUCModuleCore', () => {
         bucModule.state.groupDelay = 5;
         bucModule.state.frequencyError = 1000;
         bucModule.state.isExtRefLocked = true;
-        bucModule.state.spuriousOutputs = [
-          { frequency: 10e9 as Hertz, level: -40, loHarmonic: 2, ifHarmonic: 1 },
-        ];
+        bucModule.state.spuriousOutputs = [{ frequency: 10e9 as Hertz, level: -40, loHarmonic: 2, ifHarmonic: 1 }];
 
         const metrics = bucModule.getSignalQualityMetrics();
 
@@ -1057,11 +983,7 @@ describe('BUCModuleCore', () => {
   describe('inputSignals getter', () => {
     it('should return empty array when no transmitters', () => {
       mockRfFrontEnd = createMockRfFrontEnd({}, []);
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
 
       expect(bucModule.inputSignals).toEqual([]);
     });
@@ -1069,11 +991,7 @@ describe('BUCModuleCore', () => {
     it('should return IF signals from transmitting modems', () => {
       const tx = createMockTransmitter();
       mockRfFrontEnd = createMockRfFrontEnd({}, [tx]);
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
 
       const inputs = bucModule.inputSignals;
       expect(inputs.length).toBe(1);
@@ -1082,24 +1000,22 @@ describe('BUCModuleCore', () => {
 
     it('should aggregate signals from multiple transmitters', () => {
       const tx1 = createMockTransmitter();
-      const tx2 = createMockTransmitter([{
-        isTransmitting: true,
-        isFaulted: false,
-        isLoopback: false,
-        ifSignal: {
-          frequency: 600e6,
-          bandwidth: 36e6,
-          power: -10 as dBm,
-          origin: SignalOrigin.TRANSMITTER,
-        } as IfSignal,
-      }]);
+      const tx2 = createMockTransmitter([
+        {
+          isTransmitting: true,
+          isFaulted: false,
+          isLoopback: false,
+          ifSignal: {
+            frequency: 600e6,
+            bandwidth: 36e6,
+            power: -10 as dBm,
+            origin: SignalOrigin.TRANSMITTER,
+          } as IfSignal,
+        },
+      ]);
 
       mockRfFrontEnd = createMockRfFrontEnd({}, [tx1, tx2]);
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
 
       const inputs = bucModule.inputSignals;
       expect(inputs.length).toBe(2);
@@ -1108,11 +1024,7 @@ describe('BUCModuleCore', () => {
 
   describe('sync()', () => {
     beforeEach(() => {
-      bucModule = new TestBUCModule(
-        BUCModuleCore.getDefaultState(),
-        mockRfFrontEnd,
-        1
-      );
+      bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
     });
 
     it('should merge partial state', () => {

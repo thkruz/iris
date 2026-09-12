@@ -1,7 +1,7 @@
 import { OrbitalObserver, OrbitalSatellite } from '@app/equipment/satellite/orbital-satellite';
 import { TransponderConfig } from '@app/equipment/satellite/satellite';
 import { SignalOrigin } from '@app/signal-origin';
-import type { FECType, Hertz, ModulationType, RfFrequency, dBi, dBm } from '@app/types';
+import type { dBi, dBm, FECType, Hertz, ModulationType, RfFrequency } from '@app/types';
 import type { Degrees, Kilometers, TleLine1, TleLine2 } from 'ootk';
 
 /**
@@ -67,7 +67,7 @@ export const wxsat19Satellite = new OrbitalSatellite(
         },
       } as TransponderConfig,
     ],
-  },
+  }
 );
 
 export const CUBEHOP1_TLE1 = '1 63002U 27042A   27170.66666667  .00001000  00000-0  10000-3 0  9997' as TleLine1;
@@ -88,7 +88,7 @@ const makeCubehop1Options = () => ({
       // transponded downlink leaves at roughly beacon strength. Inert in
       // S1-S7: nothing transmits on 435.90 until S8.
       id: 'VU-XPD',
-      uplinkCenterFrequency: 435.90e6 as RfFrequency,
+      uplinkCenterFrequency: 435.9e6 as RfFrequency,
       bandwidth: 30e3 as Hertz,
       frequencyOffset: 0.61e6 as Hertz,
       polarization: 'RHCP',
@@ -126,14 +126,8 @@ const makeCubehop1Options = () => ({
  * update); sharing the roster instance would leak the tamper into S2-S4
  * within one SPA session.
  */
-export const makeCubehop1Satellite = (): OrbitalSatellite => new OrbitalSatellite(
-  'CUBEHOP-1',
-  63002,
-  [],
-  [],
-  { tle1: CUBEHOP1_TLE1, tle2: CUBEHOP1_TLE2, observer: backyardObserver },
-  makeCubehop1Options(),
-);
+export const makeCubehop1Satellite = (): OrbitalSatellite =>
+  new OrbitalSatellite('CUBEHOP-1', 63002, [], [], { tle1: CUBEHOP1_TLE1, tle2: CUBEHOP1_TLE2, observer: backyardObserver }, makeCubehop1Options());
 
 /** Amateur FM cubesat with a 70cm downlink carrying SSTV frames (RHCP) */
 export const cubehop1Satellite = makeCubehop1Satellite();
@@ -180,5 +174,5 @@ export const navstar77Satellite = new OrbitalSatellite(
         },
       } as TransponderConfig,
     ],
-  },
+  }
 );
