@@ -608,7 +608,7 @@ export const natsEuScenario7Data: ScenarioData = {
       id: 'reacquire-sar2',
       nice: ['S0421', 'K1032'],
       title: 'Reacquire MERIDIAN-SAR-2',
-      description: 'Program-track slews the half degree to the real bird. Confirm the imagery carrier comes up on RX analysis where the new prediction says it should.',
+      description: 'Program-track slews the half degree to the real bird. Confirm the 1397 MHz beacon comes up on RX analysis where the new prediction says it should.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['load-the-ephemeris'],
       conditions: [
@@ -620,9 +620,11 @@ export const natsEuScenario7Data: ScenarioData = {
         },
         {
           type: 'signal-detected',
-          description: 'MERIDIAN-SAR-2 Downlink Detected',
+          // The analyzer is framed on the 1397 MHz beacon (2 MHz span) by the
+          // retune step: the CW beacon is what acquisition watches (phase 27 B2)
+          description: 'MERIDIAN-SAR-2 Beacon Detected',
           params: {
-            signalId: 'MERIDIAN-SAR-2-VIDEO',
+            signalId: 'MERIDIAN-SAR-2-Beacon',
             minPower: -130 as dBm,
             requiresObservation: true,
             observationTab: 'rx-analysis',

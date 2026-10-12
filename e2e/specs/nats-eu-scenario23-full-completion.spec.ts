@@ -103,10 +103,10 @@ test.describe('nats-eu Scenario 23 Full Completion', () => {
     await waitForObjectiveComplete(missionControl, 'Arm the Uplink');
   });
 
-  test('[rx-chain-ready] retunes the receiver and frames a 40 MHz span on 1370', async () => {
+  test('[rx-chain-ready] retunes the receiver and frames a 60 MHz span on 1370', async () => {
     await setRxModemFrequency(page, missionControl, 1370);
     await fillAndChange(page, '#sa-center-freq', '1370');
-    await fillAndChange(page, '#sa-span', '40');
+    await fillAndChange(page, '#sa-span', '60');
     await dismissDialogIfPresent(page);
     await waitForObjectiveComplete(missionControl, 'Set Up the Receiver for SAR-2');
   });

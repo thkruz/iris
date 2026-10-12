@@ -1,6 +1,6 @@
 ﻿import { Character, Emotion } from '@app/modal/character-enum';
 import type { ScenarioData } from '@app/ScenarioData';
-import type { dBm } from '@app/types';
+import type { dBm, Hertz } from '@app/types';
 import { backyardYagiStation } from './ground-stations';
 import { cubehop1Satellite } from './satellites';
 
@@ -30,6 +30,16 @@ import { cubehop1Satellite } from './satellites';
  *   - K0740: Knowledge of system performance indicators
  *   - T0153: Monitor system performance
  */
+/**
+ * The yagi rig with the console display opened to 250 kHz (Phase 27 B2): the
+ * hash only counts once it is on the waterfall, and the shared 100 kHz view
+ * (435.20-435.30) stops 20 kHz short of its lower edge (435.32). Any hobby SDR
+ * shows a quarter megahertz; this frame holds CUBEHOP-1 at 435.25 and the
+ * hash at 435.36 together. Deep clone, never spread.
+ */
+const backyardYagiS7 = structuredClone(backyardYagiStation);
+backyardYagiS7.spectrumAnalyzers[0] = { ...backyardYagiS7.spectrumAnalyzers[0], span: 250e3 as Hertz };
+
 export const hamSdrScenario7Data: ScenarioData = {
   id: 'ham-sdr-scenario7',
   url: 'ham-sdr/scenarios/ham-sdr-scenario7',
@@ -46,7 +56,7 @@ export const hamSdrScenario7Data: ScenarioData = {
   equipment: ['DIY 70cm Crossed Yagi on TV Rotator (manual slew)', 'RTL-SDR Receiver (Direct Sampling)', 'SkyWatcher SDR Console (FILTER section unlocked)'],
   settings: {
     isSync: true,
-    groundStations: [backyardYagiStation],
+    groundStations: [backyardYagiS7],
     satellites: [cubehop1Satellite],
     isExtraSatellitesVisible: false,
     scenarioStartDate: '2027-06-24',

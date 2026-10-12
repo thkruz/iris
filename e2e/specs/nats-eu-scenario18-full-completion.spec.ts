@@ -122,10 +122,10 @@ test.describe('nats-eu Scenario 18 Full Completion', () => {
     await waitForObjectiveComplete(missionControl, 'Reference Check');
   });
 
-  test('[rx-chain-ready-sar2] retunes the modem to 1370 MHz and frames a 40 MHz span', async () => {
+  test('[rx-chain-ready-sar2] retunes the modem to 1370 MHz and frames a 60 MHz span', async () => {
     await setRxModemFrequency(page, missionControl, 1370);
     await fillAndChange(page, '#sa-center-freq', '1370');
-    await fillAndChange(page, '#sa-span', '40');
+    await fillAndChange(page, '#sa-span', '60');
     await dismissDialogIfPresent(page);
     await waitForObjectiveComplete(missionControl, 'Set Up the Receiver for SAR-2');
   });
@@ -194,7 +194,7 @@ test.describe('nats-eu Scenario 18 Full Completion', () => {
   test('[rx-chain-ready-sar1] retunes the modem and analyzer for SAR-1', async () => {
     await setRxModemFrequency(page, missionControl, 1414);
     await fillAndChange(page, '#sa-center-freq', '1414');
-    await fillAndChange(page, '#sa-span', '40');
+    await fillAndChange(page, '#sa-span', '60');
     await dismissDialogIfPresent(page);
     await waitForObjectiveComplete(missionControl, 'Set Up the Receiver for SAR-1');
   });

@@ -186,6 +186,10 @@ test.describe('nats-eu Scenario 14 Full Completion', () => {
     } else {
       await waitForObjectiveComplete(missionControl, 'Decode the Collect from Shetland', 60000);
       await advanceMissionClockToUtc(page, '2027-04-02T11:17:00Z');
+      // Phase 27 B7: the fade quiz opens once the read rows hold (GW-01
+      // selected, tracking, C/N under 5 dB on its RX Analysis)
+      await missionControl.selectGroundStation('GW-01');
+      await missionControl.selectTab('rx-analysis');
       await answerPendingQuizFrom(page, [FADE_QUIZ]);
       await finishFade();
     }

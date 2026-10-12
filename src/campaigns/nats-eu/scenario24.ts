@@ -482,7 +482,7 @@ export const natsEuScenario24Data: ScenarioData = {
       id: 'galway-rx-ready',
       nice: ['S0421', 'K0773'],
       title: 'Galway Ready for SAR-1',
-      description: 'RX modem 1 on 1414 MHz, analyzer centred on 1414 with a 40 MHz span. The carrier that followed the plan on the 14th will be in this band if it comes.',
+      description: 'RX modem 1 on 1414 MHz, analyzer centred on 1414 with a 60 MHz span. The carrier that followed the plan on the 14th will be in this band if it comes.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['galway-dashboard-sweep'],
       timeLimitSeconds: 3 * 60,
@@ -492,18 +492,24 @@ export const natsEuScenario24Data: ScenarioData = {
           type: 'rx-modem-frequency-set',
           description: 'GW-01 RX 1414 MHz',
           params: { modemNumber: 1, frequency: 1414e6, frequencyTolerance: 100e3 },
+          // Staged on 1414 already: a confirm row (phase 27 B1)
+          requiresChange: false,
           mustMaintain: true,
         },
         {
           type: 'speca-center-frequency',
           description: 'GW-01 Analyzer Centre 1414 MHz',
           params: { centerFrequency: 1414e6, centerFrequencyTolerance: 100e3 },
+          // Staged on 1414 already: a confirm row (phase 27 B1)
+          requiresChange: false,
           mustMaintain: true,
         },
         {
           type: 'speca-span-set',
-          description: 'GW-01 Analyzer Span 40 MHz',
-          params: { span: 40e6, frequencyTolerance: 5e6 },
+          description: 'GW-01 Analyzer Span 60 MHz',
+          params: { span: 60e6, frequencyTolerance: 5e6 },
+          // The station default frame (1414 / 60 MHz): a confirm row (phase 27 B1)
+          requiresChange: false,
           mustMaintain: true,
         },
       ],
@@ -919,7 +925,8 @@ export const natsEuScenario24Data: ScenarioData = {
       id: 'acquire-sar3',
       nice: ['S0421', 'K1032'],
       title: 'Acquire SAR-3 Through the Sleet',
-      description: 'SAR-3 rises 03:52:00 from azimuth 023. Program-track it on a heated feed and confirm the 1315 MHz beacon on RX analysis.',
+      description:
+        'SAR-3 rises 03:52:00 from azimuth 023. Program-track it on a heated feed, centre the analyzer on the 1315 MHz beacon (2 MHz span) and confirm it on RX analysis.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['arm-galway-for-sar3'],
       conditions: [

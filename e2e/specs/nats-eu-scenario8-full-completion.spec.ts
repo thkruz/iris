@@ -63,10 +63,17 @@ async function answerObjectiveQuiz(
     if (!(await missionControl.objectivesChecklist.isVisible().catch(() => false))) {
       await missionControl.openChecklist();
     }
-    const button = page.locator(`.condition-quiz-btn[data-objective-id="${objectiveId}"]`);
-    if ((await button.count()) === 0) {
-      return; // already answered
+    const quizAnswered = await page.evaluate((id) => {
+      const hook = (window as unknown as { debugObjective: (id: string) => { conditions?: Array<{ type: string; isSatisfied: boolean }> } }).debugObjective;
+      return (hook(id).conditions ?? []).filter((c) => c.type === 'status-check').every((c) => c.isSatisfied);
+    }, objectiveId);
+    if (quizAnswered) {
+      return;
     }
+    // Phase 27 B7: the quiz button appears once the objective's other rows
+    // are met, so it can lag the action that met them
+    const button = page.locator(`.condition-quiz-btn[data-objective-id="${objectiveId}"]`);
+    await expect(button.first()).toBeAttached({ timeout: 15000 });
     await domClick(page, `.condition-quiz-btn[data-objective-id="${objectiveId}"]`);
   }
   await answerPendingQuizFrom(page, answers);

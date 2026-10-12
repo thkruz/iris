@@ -424,6 +424,8 @@ export const natsEuScenario16Data: ScenarioData = {
           type: 'rx-modem-frequency-set',
           description: 'GW-01 RX 1414 MHz',
           params: { modemNumber: 1, frequency: 1414e6, frequencyTolerance: 100e3 },
+          // RX modem 1 stays on 1414 (staged): a confirm row (phase 27 B1)
+          requiresChange: false,
           mustMaintain: true,
         },
         {

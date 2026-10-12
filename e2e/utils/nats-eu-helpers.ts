@@ -192,6 +192,9 @@ export async function setSwitch(page: Page, selector: string, wanted: boolean): 
   const el = page.locator(selector);
   await expect(el).toBeVisible({ timeout: 10000 });
   if ((await el.isChecked()) !== wanted) {
+    // A switch can be locked out for a while (the TX modem disables Transmit
+    // while it boots after power-on); a DOM click on a disabled input is a no-op
+    await expect(el).toBeEnabled({ timeout: 15000 });
     await domClick(page, selector);
   }
   if (wanted) {

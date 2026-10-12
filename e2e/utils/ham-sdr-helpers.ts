@@ -64,7 +64,18 @@ export async function waitForObjectiveComplete(missionControl: MissionControlPag
   if (!(await missionControl.objectivesChecklist.isVisible().catch(() => false))) {
     await missionControl.openChecklist();
   }
-  await expect(objectiveItem(missionControl, title)).toHaveClass(/completed/, { timeout });
+  try {
+    await expect(objectiveItem(missionControl, title)).toHaveClass(/completed/, { timeout });
+  } catch (error) {
+    // Name the rows still open: "not completed" alone cannot tell a stuck
+    // action from a requiresChange row or an off-screen signal
+    const open = await objectiveItem(missionControl, title)
+      .locator('.condition-item.incomplete .condition-text')
+      .allInnerTexts()
+      .catch(() => [] as string[]);
+    throw new Error(`'${title}' not completed; open rows: ${open.join(' | ') || '(none shown)'}
+${String(error)}`);
+  }
 }
 
 /** Read the SDR console carrier-offset readout ("+4300 Hz"), NaN when idle. */

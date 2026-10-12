@@ -1,7 +1,7 @@
 import type { GroundStationConfig } from '@app/assets/ground-station/ground-station-state';
 import { Character, Emotion } from '@app/modal/character-enum';
 import type { ScenarioData } from '@app/ScenarioData';
-import type { dBm, MHz } from '@app/types';
+import type { dBm, Hertz, MHz } from '@app/types';
 import type { Degrees, TleLine1, TleLine2 } from 'ootk';
 import { galwayGroundStation, shetlandGroundStation } from './ground-stations';
 import { createMeridianSar1, type MeridianTle } from './satellites';
@@ -76,6 +76,9 @@ galwayDots.receivers![0].modems![0] = {
   ...galwayDots.receivers![0].modems![0],
   frequency: 1370 as MHz,
 };
+// The analyzer is still framed on that SAR-2 job (1370 MHz, 60 MHz span):
+// the SAR-1 framing is the player's to do (phase 27 B1)
+galwayDots.spectrumAnalyzers![0] = { ...galwayDots.spectrumAnalyzers![0], centerFrequency: 1370e6 as Hertz };
 galwayDots.rfFrontEnds[0].buc = { ...galwayDots.rfFrontEnds[0].buc, isMuted: true };
 
 export const natsEuScenario22Data: ScenarioData = {
@@ -463,7 +466,7 @@ export const natsEuScenario22Data: ScenarioData = {
       id: 'rx-chain-ready',
       nice: ['S0421', 'K0773'],
       title: 'Set Up the Receiver for SAR-1',
-      description: 'The desk waits for the sky. Retune RX modem 1 to 1414 MHz and frame the analyzer on 1414 with a 40 MHz span for the 14:30 pass.',
+      description: 'The desk waits for the sky. Retune RX modem 1 to 1414 MHz and frame the analyzer on 1414 with a 60 MHz span for the 14:30 pass.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['build-the-timeline'],
       timeLimitSeconds: 3 * 60,
@@ -483,8 +486,10 @@ export const natsEuScenario22Data: ScenarioData = {
         },
         {
           type: 'speca-span-set',
-          description: 'Analyzer Span 40 MHz',
-          params: { span: 40e6, frequencyTolerance: 5e6 },
+          description: 'Analyzer Span 60 MHz',
+          params: { span: 60e6, frequencyTolerance: 5e6 },
+          // 60 MHz is the station's default span: the centre row is the action (phase 27 B1)
+          requiresChange: false,
           mustMaintain: true,
         },
       ],

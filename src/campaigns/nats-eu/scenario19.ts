@@ -395,7 +395,7 @@ export const natsEuScenario19Data: ScenarioData = {
       id: 'rx-chain-ready',
       nice: ['S0421', 'K0773'],
       title: 'Set Up the Receiver for SAR-2',
-      description: 'Retune RX modem 1 to 1370 MHz and frame the analyzer on 1370 with a 40 MHz span. The uplink is the story today, but the downlink is how you see it.',
+      description: 'Retune RX modem 1 to 1370 MHz and frame the analyzer on 1370 with a 60 MHz span. The uplink is the story today, but the downlink is how you see it.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['key-check'],
       timeLimitSeconds: 3 * 60,
@@ -415,8 +415,10 @@ export const natsEuScenario19Data: ScenarioData = {
         },
         {
           type: 'speca-span-set',
-          description: 'Analyzer Span 40 MHz',
-          params: { span: 40e6, frequencyTolerance: 5e6 },
+          description: 'Analyzer Span 60 MHz',
+          params: { span: 60e6, frequencyTolerance: 5e6 },
+          // 60 MHz is the station's default span: the centre row is the action (phase 27 B1)
+          requiresChange: false,
           mustMaintain: true,
         },
       ],

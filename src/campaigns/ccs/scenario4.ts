@@ -407,6 +407,8 @@ export const ccsScenario4Data: ScenarioData = {
           type: 'tx-modem-frequency-set',
           description: 'Modem 1 on 1200 MHz (8200 MHz RF)',
           params: { modemNumber: 1, frequency: 1200e6, frequencyTolerance: 100e3 },
+          // Staged on 1200 MHz (the description says so): a confirm row (phase 27 B1)
+          requiresChange: false,
           mustMaintain: true,
         },
         {

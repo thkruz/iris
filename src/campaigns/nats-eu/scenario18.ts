@@ -304,7 +304,7 @@ export const natsEuScenario18Data: ScenarioData = {
       nice: ['S0421', 'K0773'],
       title: 'Set Up the Receiver for SAR-2',
       description:
-        'Modem 1 is on the 1414 MHz SAR-1 carrier from the morning. Retune it to SAR-2’s 1370 MHz and frame the analyzer on 1370 with a 40 MHz span: video, the 1397 beacon, the Doppler, and room to see anything that is not yours.',
+        'Modem 1 is on the 1414 MHz SAR-1 carrier from the morning. Retune it to SAR-2’s 1370 MHz and frame the analyzer on 1370 with a 60 MHz span: video, the 1397 beacon, the Doppler, and room to see anything that is not yours.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['reference-check'],
       timeLimitSeconds: 3 * 60,
@@ -324,8 +324,10 @@ export const natsEuScenario18Data: ScenarioData = {
         },
         {
           type: 'speca-span-set',
-          description: 'Analyzer Span 40 MHz',
-          params: { span: 40e6, frequencyTolerance: 5e6 },
+          description: 'Analyzer Span 60 MHz',
+          params: { span: 60e6, frequencyTolerance: 5e6 },
+          // 60 MHz is the station's default span: the centre row is the action (phase 27 B1)
+          requiresChange: false,
           mustMaintain: true,
         },
       ],
@@ -648,7 +650,7 @@ export const natsEuScenario18Data: ScenarioData = {
       id: 'rx-chain-ready-sar1',
       nice: ['S0421', 'K0773'],
       title: 'Set Up the Receiver for SAR-1',
-      description: 'SAR-1 rises at 10:40:00 from azimuth 136. Retune modem 1 to 1414 MHz and the analyzer to 1414 with the 40 MHz span. Leave notch 0 where it is.',
+      description: 'SAR-1 rises at 10:40:00 from azimuth 136. Retune modem 1 to 1414 MHz and the analyzer to 1414 with the 60 MHz span. Leave notch 0 where it is.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['log-the-first-event'],
       timeLimitSeconds: 3 * 60,
@@ -829,7 +831,7 @@ export const natsEuScenario18Data: ScenarioData = {
             options: [
               'The export is live: they know every IF on the station. Pre-stage a notch for every planned downlink before AOS, and treat the plan as known to them until Rotterdam changes it',
               'Both decodes completed and the notches worked; the procedure held and no change is needed beyond keeping the report current',
-              'The analyzer should be left on a 2 MHz span at all times; the 40 MHz framing delayed the read of the carrier by a minute',
+              'The analyzer should be left on a 2 MHz span at all times; the 60 MHz framing delayed the read of the carrier by a minute',
               'The second pass should have been flown from Shetland; the interferer cannot reach SH-02, so Galway should stand down on SAR passes',
             ],
             correctIndex: 0,

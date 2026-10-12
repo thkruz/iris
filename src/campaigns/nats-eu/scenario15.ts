@@ -691,7 +691,7 @@ export const natsEuScenario15Data: ScenarioData = {
       nice: ['S0421', 'K0773', 'K1032'],
       title: 'Tune for SAR-2 and the Uplink',
       description:
-        'Modem 1 to the 1370 MHz SAR-2 carrier, analyzer centred on 1370 MHz; TX modem 1 from 1405 MHz to the 1435 MHz SAR-2 telecommand IF (14035 MHz at the BUC). The tracker is wherever SAR-1 left it; program-track slews to the 07:34 rise at azimuth 190.',
+        'Modem 1 to the 1370 MHz SAR-2 carrier, analyzer centred on the 1397 MHz SAR-2 beacon; TX modem 1 from 1405 MHz to the 1435 MHz SAR-2 telecommand IF (14035 MHz at the BUC). The tracker is wherever SAR-1 left it; program-track slews to the 07:34 rise at azimuth 190.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['re-key-the-payload-crypto'],
       timeLimitSeconds: 3 * 60,
@@ -705,8 +705,10 @@ export const natsEuScenario15Data: ScenarioData = {
         },
         {
           type: 'speca-center-frequency',
-          description: 'GW-01 Analyzer Centre 1370 MHz',
-          params: { centerFrequency: 1370e6, centerFrequencyTolerance: 100e3 },
+          // On the beacon, as for SAR-1: the acquisition row reads the CW
+          // beacon on this frame (phase 27 B2)
+          description: 'GW-01 Analyzer Centre 1397 MHz',
+          params: { centerFrequency: 1397e6, centerFrequencyTolerance: 100e3 },
           mustMaintain: true,
         },
         {

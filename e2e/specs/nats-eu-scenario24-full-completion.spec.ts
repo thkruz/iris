@@ -165,7 +165,7 @@ test.describe('nats-eu Scenario 24 Full Completion', () => {
   test('[galway-rx-ready] frames Galway on 1414 for SAR-1', async () => {
     await setRxModemFrequency(page, missionControl, 1414);
     await fillAndChange(page, '#sa-center-freq', '1414');
-    await fillAndChange(page, '#sa-span', '40');
+    await fillAndChange(page, '#sa-span', '60');
     await dismissDialogIfPresent(page);
     await waitForObjectiveComplete(missionControl, 'Galway Ready for SAR-1');
   });
@@ -268,6 +268,9 @@ test.describe('nats-eu Scenario 24 Full Completion', () => {
     await advanceMissionClockToUtc(page, '2027-04-27T03:52:40Z');
     await programTrack(page, missionControl, '61703');
     await missionControl.selectTab('rx-analysis');
+    // Phase 27 B2: the beacon counts only when it is on the screen
+    await fillAndChange(page, '#sa-center-freq', '1315');
+    await fillAndChange(page, '#sa-span', '2');
     await dismissDialogIfPresent(page);
     await waitForObjectiveComplete(missionControl, 'Acquire SAR-3 Through the Sleet', 60000);
   });

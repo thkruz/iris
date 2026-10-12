@@ -185,7 +185,7 @@ test.describe('nats-eu Scenario 15 Full Completion', () => {
 
   test('[tune-for-sar2-and-the-uplink] retunes the receiver, the analyzer and the transmit modem', async () => {
     await setRxModemFrequency(page, missionControl, 1370);
-    await fillAndChange(page, '#sa-center-freq', '1370');
+    await fillAndChange(page, '#sa-center-freq', '1397');
     await setTxModemFrequency(page, missionControl, 1435);
     await dismissDialogIfPresent(page);
     await waitForObjectiveComplete(missionControl, 'Tune for SAR-2 and the Uplink');

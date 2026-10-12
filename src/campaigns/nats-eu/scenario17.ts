@@ -1,7 +1,7 @@
 import type { GroundStationConfig } from '@app/assets/ground-station/ground-station-state';
 import { Character, Emotion } from '@app/modal/character-enum';
 import type { ScenarioData } from '@app/ScenarioData';
-import type { dBm, MHz } from '@app/types';
+import type { dBm, Hertz, MHz } from '@app/types';
 import type { Degrees, TleLine1, TleLine2 } from 'ootk';
 import { galwayGroundStation, shetlandGroundStation } from './ground-stations';
 import { createMeridianSar1, createMeridianSar2, type MeridianTle } from './satellites';
@@ -45,8 +45,8 @@ import { createMeridianSar1, createMeridianSar2, type MeridianTle } from './sate
  * objective quizzes. Shetland never hears it.
  *
  * Staged state (scenario-local clone of GW-01): RX modem 1 on the 1370 MHz
- * SAR-2 carrier from the evening's last contact; analyzer at its 1414 / 60 MHz
- * default; tracker parked where the evening left it. Receive only: no
+ * SAR-2 carrier from the evening's last contact; analyzer still framed on that
+ * carrier (1370 / 60 MHz); tracker parked where the evening left it. Receive only: no
  * commanding, no HPA work.
  *
  * NICE Framework Alignment:
@@ -89,6 +89,9 @@ galwayNight.receivers![0].modems![0] = {
   ...galwayNight.receivers![0].modems![0],
   frequency: 1370 as MHz,
 };
+// The analyzer is still framed on that SAR-2 job (1370 MHz, 60 MHz span):
+// the SAR-1 framing is the player's to do (phase 27 B1)
+galwayNight.spectrumAnalyzers![0] = { ...galwayNight.spectrumAnalyzers![0], centerFrequency: 1370e6 as Hertz };
 
 export const natsEuScenario17Data: ScenarioData = {
   id: 'nats-eu-scenario17',
@@ -355,7 +358,7 @@ export const natsEuScenario17Data: ScenarioData = {
       nice: ['S0421', 'K0773'],
       title: 'Set Up the Receiver for SAR-1',
       description:
-        'Modem 1 is still on the 1370 MHz SAR-2 carrier from the 23:52 contact. Retune it to 1414 MHz and frame the analyzer on 1414 with a 40 MHz span, wide enough to hold the video, the 1389 beacon and the Doppler.',
+        'Modem 1 is still on the 1370 MHz SAR-2 carrier from the 23:52 contact. Retune it to 1414 MHz and frame the analyzer on 1414 with a 60 MHz span, wide enough to hold the video, the 1389 beacon and the Doppler.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['reference-check'],
       timeLimitSeconds: 3 * 60,
@@ -375,8 +378,10 @@ export const natsEuScenario17Data: ScenarioData = {
         },
         {
           type: 'speca-span-set',
-          description: 'Analyzer Span 40 MHz',
-          params: { span: 40e6, frequencyTolerance: 5e6 },
+          description: 'Analyzer Span 60 MHz',
+          params: { span: 60e6, frequencyTolerance: 5e6 },
+          // 60 MHz is the station's default span: the centre row is the action (phase 27 B1)
+          requiresChange: false,
           mustMaintain: true,
         },
       ],
@@ -820,7 +825,7 @@ export const natsEuScenario17Data: ScenarioData = {
       nice: ['S0421', 'K0773'],
       title: 'Retune for SAR-2',
       description:
-        'MERIDIAN-SAR-2 rises at 02:40:01 from azimuth 137. Retune modem 1 to its 1370 MHz carrier and the analyzer to 1370 with the 40 MHz span, and let the tracker take it.',
+        'MERIDIAN-SAR-2 rises at 02:40:01 from azimuth 137. Retune modem 1 to its 1370 MHz carrier and the analyzer to 1370 with the 60 MHz span, and let the tracker take it.',
       groundStation: 'GW-01',
       prerequisiteObjectiveIds: ['harden-the-service-account'],
       timeLimitSeconds: 3 * 60,
@@ -893,7 +898,7 @@ export const natsEuScenario17Data: ScenarioData = {
             options: [
               'A decommissioned account was still active for three months: every decommission gets a disable on the day, checked at the monthly baseline',
               'Both passes decoded above 8 dB and nothing was lost: no change to the procedure, the incident record covers the rest',
-              'The analyzer should stay on 2 MHz spans: the carrier would have been seen earlier on a narrow span than on 40 MHz',
+              'The analyzer should stay on 2 MHz spans: the carrier would have been seen earlier on a narrow span than on 60 MHz',
               'Night shifts should not run receive passes alone: the carrier and the export needed two people to handle at once',
             ],
             correctIndex: 0,
