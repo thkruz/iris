@@ -31,8 +31,8 @@ importers:
         specifier: ^3.4.4
         version: 3.4.4
       ootk:
-        specifier: ^5.1.1
-        version: 5.1.1
+        specifier: ^7.1.0
+        version: 7.1.0
       uuid:
         specifier: ^13.0.0
         version: 13.0.2
@@ -1776,8 +1776,9 @@ packages:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
     engines: {node: '>= 0.8'}
 
-  ootk@5.1.1:
-    resolution: {integrity: sha512-ZKERCit0ZFYDhu+BXyKqjU9C0pU1+zj53zBaboDK4c7Qvs+Fota/N/sQICoCX4cVZ7s5FSkRfuzU/svRkSuVeQ==}
+  ootk@7.1.0:
+    resolution: {integrity: sha512-BHrPKjqwYYVpzQ166G5w+Tvu5CPdnbFTRVVQMBL/tfI7XFl88/wWPsvrR6ASimY13B0Euk9t6eb2CSMbSuj16w==}
+    engines: {node: '>=20.0.0'}
 
   parse5@8.0.0:
     resolution: {integrity: sha512-9m4m5GSgXjL4AjumKzq1Fgfp3Z8rsvjRNbnkVwfu2ImRqE5D0LnY2QfDen18FSY9C573YU5XxSapdHZTZ2WolA==}
@@ -3820,7 +3821,7 @@ snapshots:
     dependencies:
       ee-first: 1.1.1
 
-  ootk@5.1.1: {}
+  ootk@7.1.0: {}
 
   parse5@8.0.0:
     dependencies:

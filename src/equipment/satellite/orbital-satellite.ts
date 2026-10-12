@@ -30,7 +30,7 @@
 import { slantRangeKmAt } from '@app/simulation/geo-geometry';
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
 import { Hertz, RfFrequency, RfSignal } from '@app/types';
-import { Degrees, EciVec3, GroundObject, Kilometers, KilometersPerSecond, LlaVec3, Satellite as OotkSatellite, TleLine1, TleLine2, Vec3 } from 'ootk';
+import { Degrees, GroundObject, GroundStation, Kilometers, KilometersPerSecond, LlaVec3, Satellite as OotkSatellite, TemeVec3, TleLine1, TleLine2, Vec3 } from 'ootk';
 import { Satellite, SatelliteState } from './satellite';
 
 /** Geodetic location of the ground station observing this satellite. */
@@ -94,7 +94,7 @@ export function groundObjectFor(observer: OrbitalObserver): GroundObject {
   const key = observerKey_(observer);
   let ground = groundObjects_.get(key);
   if (!ground) {
-    ground = new GroundObject({
+    ground = new GroundStation({
       name: observer.name ?? 'Ground Station',
       lat: observer.lat,
       lon: observer.lon,
@@ -139,7 +139,7 @@ export class OrbitalSatellite extends Satellite {
   private readonly predictionCache_ = new Map<string, { atMs: number; az: Degrees; el: Degrees }>();
 
   /** Current ECI position (km), null until first successful propagation */
-  eciPosition: EciVec3<Kilometers> | null = null;
+  eciPosition: TemeVec3<Kilometers> | null = null;
   /** Current ECI velocity (km/s), null until first successful propagation */
   eciVelocity: Vec3<KilometersPerSecond> | null = null;
   /** Current geodetic position, null until first successful propagation */
@@ -163,7 +163,7 @@ export class OrbitalSatellite extends Satellite {
     });
     this.predictionSat_ = this.ootkSat_;
     this.observerConfig_ = orbitalConfig.observer;
-    this.observer_ = new GroundObject({
+    this.observer_ = new GroundStation({
       name: orbitalConfig.observer.name ?? 'Ground Station',
       lat: orbitalConfig.observer.lat,
       lon: orbitalConfig.observer.lon,
