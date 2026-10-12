@@ -57,24 +57,7 @@ import { c1TransponderPhysics, ses10Satellite, tidemark1Satellite, VERMONT_LOOK_
 const tidemark2DriftingSatellite = new Satellite(
   'TIDEMARK-2',
   61526,
-  [
-    {
-      signalId: 'TIDEMARK-2-TDMA-Composite',
-      serverId: 1,
-      noradId: 61526,
-      frequency: 6017e6 as RfFrequency,
-      polarization: 'H',
-      power: 101.2 as dBm, // as in satellites.ts (phase 19.3 uplink EIRP)
-      bandwidth: 36e6 as Hertz,
-      modulation: 'QPSK' as ModulationType,
-      fec: '3/4' as FECType,
-      feed: '',
-      isDegraded: false,
-      origin: SignalOrigin.SATELLITE_RX,
-      noiseFloor: null,
-      gainInPath: 0 as dBi,
-    },
-  ],
+  [], // No stand-in: TM-2's hub carrier is ME-02's own uplink (phase 27)
   [],
   {
     az: 219.7 as Degrees,
@@ -88,7 +71,6 @@ const tidemark2DriftingSatellite = new Satellite(
     ephemerisErrorAz: 0.32 as Degrees,
     ephemerisErrorEl: 0.26 as Degrees,
     lookAnglesFrom: VERMONT_LOOK_ANGLE_SITE,
-    standIns: { 'TIDEMARK-2-TDMA-Composite': 'TIDEMARK-2-Teleport' },
     orbitType: 'geosynchronous',
     geosyncConfig: {
       minAz: 218.4 as Degrees, // Growing figure-8: ±1.3° and widening daily
@@ -194,12 +176,14 @@ export const scenario18Data: ScenarioData = {
         ],
         spectrumAnalyzers: [
           {
-            referenceLevel: -91 as dBm,
+            referenceLevel: -91 as dBm, // Engineering-mode field; S4 checks it stays at the beacon preset
             centerFrequency: 1070e6 as Hertz, // TM-2 beacon IF
             span: 2e3 as Hertz,
-            rbw: 1e3 as Hertz,
-            minAmplitude: -95 as dBm,
-            maxAmplitude: -75 as dBm,
+            rbw: null, // Auto (3 Hz at 2 kHz): the CW line stands ~55 dB over the floor
+            // Phase 27: the TIDEMARK beacon reads -54 to -59 dBm at the RX IF tap
+            // (ledger), the floor ~-114 dBm in 3 Hz: both on screen, 10 dB/div
+            minAmplitude: -140 as dBm,
+            maxAmplitude: -40 as dBm,
             scaleDbPerDiv: 10 as dB,
             screenMode: 'both',
             inputUnit: 'MHz',
@@ -507,7 +491,7 @@ export const scenario18Data: ScenarioData = {
       // back to ~34 dB in 40-60 s (nats-s18-F3; nats-step-track-validation.test.ts)
       title: 'Beacon Recovery',
       description:
-        'Watch the ACU beacon C/N while step-track hunts: it steps the dish a fraction of a beamwidth at a time and keeps whichever way reads higher. Hold here until the beacon is back to 32 dB or better for 10 s - about a minute of stepping.',
+        'Watch the ACU beacon C/N while step-track hunts: it steps the dish a fraction of a beamwidth at a time and keeps whichever way reads higher. Hold here until the beacon is back to 32 dB or better for 10 s - about half a minute of stepping.',
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['enable-step-track'],
       timeLimitSeconds: 3 * 60,
@@ -528,7 +512,10 @@ export const scenario18Data: ScenarioData = {
       id: 'verify-carrier-recovery',
       nice: ['T0153', 'T1314'],
       title: 'Carrier Recovery',
-      description: 'Open RX Analysis and confirm the customer carrier is back: locked with C/N at least 12 dB, held for 15 s. On the stale ephemeris it sat near 9.',
+      // Ledger (nats-scenario18.json): ME-02's own TM-2 carrier reads 7.2 dB
+      // on the stale ephemeris; step-track wins back ~6 dB (beacon 28 -> 34)
+      description:
+        'Open RX Analysis and confirm the customer carrier is back: locked with C/N at least 12 dB, held for 15 s. On the stale ephemeris it sat near 7, about 3 dB above the lock point.',
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['acquire-stable-beacon'],
       timeLimitSeconds: 3 * 60,
@@ -598,13 +585,24 @@ export const scenario18Data: ScenarioData = {
     {
       id: 'sustained-hold',
       nice: ['T0153', 'T1314'],
-      title: 'Hold Through the Drift',
-      description: 'Sustain the recovered link while the figure-8 wanders - this is the new normal until Halifax fixes the vehicle.',
+      title: 'Watch the Link Through the Drift',
+      description:
+        'Stay on ACU Control and watch step-track keep the beacon for 30 s while the figure-8 wanders - this is the new normal until Halifax fixes the vehicle. The hold counts only while you are on ACU Control.',
       groundStation: 'ME-02',
+      // A watch: beacon, step-track and carrier are meant to stay as they are
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['no-manual-chase-quiz'],
       timeLimitSeconds: 4 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
+        {
+          // B3: the 30 s hold accrues only while the player is watching
+          type: 'tab-active',
+          hidden: true,
+          description: 'ACU Control Open',
+          params: { tab: 'acu-control' },
+          mustMaintain: true,
+        },
         {
           type: 'antenna-beacon-locked',
           description: 'Beacon Held',

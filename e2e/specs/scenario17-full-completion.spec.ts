@@ -86,7 +86,9 @@ const SCENARIO_17_OBJECTIVES: Scenario17Objective[] = [
   {
     id: 'baseline-rx-check',
     title: 'Baseline RX Snapshot',
-    type: 'auto',
+    // Phase 27 Q3: the observation rows latch on RX Analysis, then the C/N read
+    type: 'quiz',
+    correctAnswer: 'About 13 dB',
   },
   {
     id: 'why-not-handover-quiz',
@@ -106,17 +108,18 @@ const SCENARIO_17_OBJECTIVES: Scenario17Objective[] = [
   // PHASE 2: THE WINDOW
   // ============================================================
   {
-    id: 'observe-onset-quiz',
-    title: 'Confirm Predicted Onset (quiz)',
-    type: 'quiz',
-    correctAnswer: 'Confidence this is the predicted transit, not a coincidental fault - the alarm tracking the sheet IS the diagnosis',
-  },
-  {
+    // Phase 27 B7: the onset quiz waits for the sky-noise row listed before it
     id: 'observe-onset-wait',
     title: 'Wait for Sky Noise Onset',
     type: 'wait-sky-noise',
     skyNoise: { above: 2 },
     waitTimeoutSeconds: 420,
+  },
+  {
+    id: 'observe-onset-quiz',
+    title: 'Confirm Predicted Onset (quiz)',
+    type: 'quiz',
+    correctAnswer: 'Confidence this is the predicted transit, not a coincidental fault - the alarm tracking the sheet IS the diagnosis',
   },
   {
     // ride-through-peak completes on its own at >6 dB as long as the spec

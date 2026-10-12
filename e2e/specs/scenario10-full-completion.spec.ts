@@ -21,7 +21,7 @@ import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForS
  * - 'configure-hpa-backoff': HPA backoff field + Apply button
  * - 'ops-log': Type an entry into the Operations Log
  */
-type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'auto' | 'set-tracking-mode' | 'configure-hpa-backoff' | 'ops-log';
+type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'auto' | 'set-tracking-mode' | 'configure-hpa-backoff' | 'ops-log' | 'objective-skip';
 
 interface Scenario10Objective {
   id: string;
@@ -157,19 +157,23 @@ const SCENARIO_10_OBJECTIVES: Scenario10Objective[] = [
   },
 
   // ============================================================
-  // PHASE 4: SUSTAINED MARGIN MONITORING
+  // PHASE 4: THE PASS WINDOW (Phase 27 Q4: standby and window are skips)
   // ============================================================
   {
+    id: 'stand-by-for-window',
+    title: 'Stand By for the 10:00 Window',
+    type: 'objective-skip',
+  },
+  {
     id: 'sustain-rx-margin',
-    title: 'Sustain Customer Downlink Margin',
+    title: 'Window Open: Customer Downlink Margin',
     type: 'auto',
     autoWaitSeconds: 35,
   },
   {
     id: 'sustain-beacon-track',
-    title: 'Sustain Step-Track Through the Pass',
-    type: 'auto',
-    autoWaitSeconds: 25,
+    title: 'Hold Through the Window',
+    type: 'objective-skip',
   },
 
   // ============================================================
@@ -310,6 +314,15 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
     case 'auto':
       await page.waitForTimeout((objective.autoWaitSeconds ?? 2) * 1000);
       break;
+
+    case 'objective-skip': {
+      // The objective's wait is offered as a command-bar skip once it is ready
+      const skip = page.locator('#objective-skip-control');
+      await expect(skip).toBeVisible({ timeout: 20000 });
+      await skip.click();
+      await page.waitForTimeout(6000);
+      break;
+    }
 
     case 'ops-log':
       await typeOpsLogEntry(page, objective.logText!);

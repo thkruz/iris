@@ -165,8 +165,8 @@ test.describe('Campaign chrome identity', () => {
       } else {
         expect(probe.commandBarMirrored).toBe(false);
         expect(probe.satellitesAboveStations).toBe(false);
-        // `15 MAR 2027 22:05:15`
-        expect(probe.clock).toMatch(/^\d{2} [A-Z]{3} \d{4} \d{2}:\d{2}:\d{2}$/);
+        // `MON 15 MAR 2027 22:05:15` (weekday since phase 27: briefs open with "Wednesday, 1430")
+        expect(probe.clock).toMatch(/^[A-Z]{3} \d{2} [A-Z]{3} \d{4} \d{2}:\d{2}:\d{2}$/u);
         expect(probe.objectiveTimerLabel).toBe('OBJECTIVE');
         expect(probe.panelBorderWidth).toBe('1px');
         expect(probe.classificationTop).toBeNull();

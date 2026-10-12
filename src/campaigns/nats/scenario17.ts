@@ -288,6 +288,7 @@ export const scenario17Data: ScenarioData = {
       description:
         'RX Analysis: document the healthy link before the window - beacon present, receiver locked, C/N at baseline (at least 10 dB). Read the C/N off the panel; you will want it for the impact record.',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['transit-predictability-quiz'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
@@ -319,9 +320,26 @@ export const scenario17Data: ScenarioData = {
         {
           type: 'receiver-snr-threshold',
           description: 'Baseline C/N ≥ 10 dB',
-          // 5 s on the panel: long enough to actually read the baseline (nats-s17-F3)
-          params: { minCNRatio: 10, requiresObservation: true, observationTab: 'rx-analysis', observationDwellSeconds: 5 },
+          params: { minCNRatio: 10, requiresObservation: true, observationTab: 'rx-analysis' },
           mustMaintain: true,
+        },
+        {
+          // The baseline-C/N read the audit asked for (s17-F3, Phase 27 Q3):
+          // ledger 13.0 dB raw C/N on VT-01's own TIDEMARK-1 carrier
+          // (nats-scenario17.json), 8.7 dB over the lock point
+          type: 'status-check',
+          description: 'Baseline C/N Read',
+          params: {
+            character: Character.SYSTEM,
+            question: 'What C/N does RX modem 1 show on the TIDEMARK-1 carrier before the window opens?',
+            options: ['About 13 dB', 'About 8 dB', 'About 4 dB', 'About 29 dB'],
+            correctIndex: 0,
+            explanation:
+              'About 13 dB, with the demodulator locking near 4 dB. A 16 dB noise rise at the peak is more than that margin, which is why the carrier will drop for a couple of minutes - and why the impact record starts from this number.',
+            pointPenalty: 5,
+            documentLine: 'Baseline before transit: RX modem 1 locked, C/N about 13 dB',
+          },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -365,8 +383,7 @@ export const scenario17Data: ScenarioData = {
       id: 'notify-customer-quiz',
       nice: ['T1020', 'S0593'],
       title: 'Pre-Event Notification',
-      description:
-        'Send the customer notice BEFORE the window opens - the notification is the SLA action. Timed: running out fails the shift (a notice after window-open voids the SLA exclusion).',
+      description: 'Send the customer notice BEFORE the window opens - the notification is the SLA action (a notice after window-open voids the SLA exclusion).',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['why-not-handover-quiz'],
       timeLimitSeconds: 2 * 60,
@@ -449,6 +466,8 @@ export const scenario17Data: ScenarioData = {
       description:
         'Sky noise is approaching peak and the demod will drop. Hold the configuration: uplink stays exactly as it is, no RX changes, no panic. No action needed - wait it out.',
       groundStation: 'VT-01',
+      // A watch: the uplink and tracking rows are meant to stay as they are
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['observe-onset'],
       timeLimitSeconds: 5 * 60,
       timerStartTrigger: 'on-activate',
@@ -464,22 +483,27 @@ export const scenario17Data: ScenarioData = {
         {
           type: 'tx-modem-transmitting',
           description: 'Uplink Untouched - Modem Transmitting',
+          // Keep it so (Q2): never move these to tick them
+          requiresChange: false,
           mustMaintain: true,
         },
         {
           type: 'buc-unmuted',
           description: 'BUC Stays Unmuted',
+          requiresChange: false,
           mustMaintain: true,
         },
         {
           type: 'hpa-enabled',
           description: 'HPA Stays Enabled',
+          requiresChange: false,
           mustMaintain: true,
         },
         {
           type: 'antenna-tracking-mode-set',
           description: 'Program-Track Held (no chasing)',
           params: { trackingMode: 'program-track' },
+          requiresChange: false,
           mustMaintain: true,
         },
       ],
@@ -529,6 +553,8 @@ export const scenario17Data: ScenarioData = {
       title: 'Verify Self-Recovery',
       description: 'The Sun is moving off boresight. Confirm the link recovers to baseline with zero operator action - wait for sky noise to clear and the receiver to relock.',
       groundStation: 'VT-01',
+      // Waits on the Sun, confirms a recovery the player does not make
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['peak-behavior-quiz'],
       timeLimitSeconds: 6 * 60,
       timerStartTrigger: 'on-activate',

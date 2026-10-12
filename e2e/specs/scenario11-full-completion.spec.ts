@@ -86,10 +86,16 @@ const SCENARIO_11_OBJECTIVES: Scenario11Objective[] = [
     correctAnswer: 'It records what the link looked like healthy, so any anomaly after the transfer can be attributed',
   },
   {
-    id: 'vt-confirm-tm1-locked',
-    title: 'Confirm VT-01 Owns TIDEMARK-1',
+    id: 'vt-confirm-tm1-locked-tab',
+    title: 'Open ACU Control',
     type: 'click-tab',
     tabId: 'acu-control',
+  },
+  {
+    id: 'vt-confirm-tm1-locked',
+    title: 'Confirm VT-01 Owns TIDEMARK-1',
+    type: 'quiz',
+    correctAnswer: 'Current target TIDEMARK-1, beacon LOCKED, program-track',
   },
 
   // ============================================================
@@ -108,10 +114,16 @@ const SCENARIO_11_OBJECTIVES: Scenario11Objective[] = [
     tabId: 'acu-control',
   },
   {
-    id: 'me-verify-beacon-and-rx',
-    title: 'ME-02 Receive Chain Hot',
+    id: 'me-verify-beacon-and-rx-tab',
+    title: 'Open RX Analysis (ME-02)',
     type: 'click-tab',
     tabId: 'rx-analysis',
+  },
+  {
+    id: 'me-verify-beacon-and-rx',
+    title: 'Verify ME-02 Receive Chain Hot',
+    type: 'quiz',
+    correctAnswer: '12 to 14 dB - locked with good margin',
   },
 
   // ============================================================
@@ -223,8 +235,8 @@ const SCENARIO_11_OBJECTIVES: Scenario11Objective[] = [
     logText: 'Planned TM-1 handover to ME-02 complete. VT-01 safed, antenna at maintenance position for the crew.',
   },
   {
-    id: 'log-handover-entry',
-    title: 'Log the Handover',
+    id: 'log-handover-quiz',
+    title: 'Check the Log Line',
     type: 'quiz',
     correctAnswer: '1000 - Planned TM-1 handover to ME-02 complete. VT-01 safed, antenna at maintenance position, crew on-site. Return to service after crew sign-off.',
   },

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
+import { setSwitch } from '../utils/nats-eu-helpers';
 import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
@@ -11,7 +12,17 @@ import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForS
  * beacon tune, step-track, verify) interleaved with the card quizzes, then
  * verifies the Working Document panel actually contains the card lines.
  */
-type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'repoint-program-track' | 'configure-speca' | 'set-step-track' | 'tune-rx-modem' | 'verify-working-doc' | 'auto';
+type ObjectiveType =
+  | 'quiz'
+  | 'select-station'
+  | 'click-tab'
+  | 'repoint-program-track'
+  | 'configure-speca'
+  | 'set-step-track'
+  | 'bring-uplink-up'
+  | 'tune-rx-modem'
+  | 'verify-working-doc'
+  | 'auto';
 
 interface Scenario19Objective {
   id: string;
@@ -108,10 +119,11 @@ const SCENARIO_19_OBJECTIVES: Scenario19Objective[] = [
     correctAnswer: 'Step-track RIDES program-track - engage it on an acquired beacon, never from MANUAL (the loop needs a beacon to optimize)',
   },
   {
+    // 20 s beacon hold, accrued while ACU Control stays open
     id: 'hold-beacon',
     title: 'Fly It: Hold the Figure-8',
     type: 'auto',
-    autoWaitSeconds: 30,
+    autoWaitSeconds: 60,
   },
   {
     id: 'healthy-track-quiz',
@@ -127,6 +139,13 @@ const SCENARIO_19_OBJECTIVES: Scenario19Objective[] = [
   },
 
   // PHASE 3: VERIFY
+  {
+    // Phase 27: VT-01 starts off the air; the AURORA-7 carrier the RX modem
+    // locks to is VT-01's own uplink, so key it first
+    id: 'key-aurora-uplink',
+    title: 'Fly It: Bring the Uplink Up',
+    type: 'bring-uplink-up',
+  },
   {
     id: 'verify-receiver-tab',
     title: 'Open RX Analysis',
@@ -229,7 +248,32 @@ async function configureSpeca(page: import('@playwright/test').Page, centerFrequ
   await expect(centerFreqInput).toBeVisible({ timeout: 5000 });
   await centerFreqInput.fill(centerFrequencyMhz.toString());
   await centerFreqInput.press('Tab');
+  await page.waitForTimeout(200);
+
+  // A weak CW line needs a narrow span (~2 kHz; the input is in MHz). The
+  // beacon must be on screen for 'AURORA-7 Beacon Detected' (Phase 27 B2)
+  const spanInput = page.locator('#sa-span');
+  await expect(spanInput).toBeVisible({ timeout: 5000 });
+  await spanInput.fill('0.002');
+  await spanInput.press('Tab');
   await page.waitForTimeout(500);
+}
+
+/**
+ * Key the staged AURORA-7 uplink on TX Chain: modem on air, BUC unmuted,
+ * then the HPA (never an enabled HPA on a muted BUC).
+ */
+async function bringUplinkUp(page: import('@playwright/test').Page, missionControlPage: MissionControlPage): Promise<void> {
+  await missionControlPage.selectTab('tx-chain');
+  await page.waitForTimeout(1200);
+  await setSwitch(page, '#tx-power-switch', true);
+  await page.waitForTimeout(200);
+  await setSwitch(page, '#tx-transmit-switch', true);
+  await page.waitForTimeout(200);
+  await setSwitch(page, '#buc-mute', false);
+  await page.waitForTimeout(500);
+  await setSwitch(page, '#hpa-enable', true);
+  await page.waitForTimeout(2000);
 }
 
 /** Retune RX modem 1 to the AURORA-7 carrier (1422 MHz / 24 MHz) and wait for lock + observation. */
@@ -281,6 +325,18 @@ async function verifyWorkingDocument(page: import('@playwright/test').Page): Pro
   }
 }
 
+/** Wait until the objective reports complete, via the debugObjective dev hook. */
+async function waitForObjectiveDone(page: import('@playwright/test').Page, objectiveId: string, timeout: number): Promise<void> {
+  await page.waitForFunction(
+    (id) => {
+      const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;
+      return typeof hook === 'function' && hook(id)?.isCompleted === true;
+    },
+    objectiveId,
+    { timeout, polling: 500 }
+  );
+}
+
 async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario19Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
@@ -312,8 +368,14 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
       await setStepTrack(page);
       break;
 
+    case 'bring-uplink-up':
+      await bringUplinkUp(page, missionControlPage);
+      await waitForObjectiveDone(page, objective.id, 20000);
+      break;
+
     case 'tune-rx-modem':
       await tuneRxModemToAurora(page);
+      await waitForObjectiveDone(page, objective.id, 60000);
       break;
 
     case 'verify-working-doc':
@@ -321,7 +383,7 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
       break;
 
     case 'auto':
-      await page.waitForTimeout((objective.autoWaitSeconds ?? 5) * 1000);
+      await waitForObjectiveDone(page, objective.id, (objective.autoWaitSeconds ?? 30) * 1000);
       break;
   }
 

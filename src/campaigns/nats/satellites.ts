@@ -18,7 +18,11 @@ export const VERMONT_LOOK_ANGLE_SITE = { latitude: 44.5588, longitude: -72.5778,
  * its pre-19.3 downlink (TIDEMARK 27, SES-10 30, AURORA-7 25 dBW). VT-01's
  * own carrier at its authored operating point (HPA 50 dBm, 10 dB back-off
  * from P1dB) arrives about 3 dB under single-carrier saturation, the
- * operating point the composite stand-ins are uplinked at too.
+ * operating point.
+ *
+ * Phase 27: the TDMA-composite stand-ins are gone. The downlink at the hub
+ * carrier's frequency is only what VT-01 or ME-02 actually radiates; a bird
+ * nobody is uplinking shows its beacon and third-party carriers only.
  */
 export const C1_SFD_DBW_M2 = -88.5;
 export function c1TransponderPhysics(satEirpDbw: number): Partial<TransponderPhysics> {
@@ -28,25 +32,7 @@ export function c1TransponderPhysics(satEirpDbw: number): Partial<TransponderPhy
 export const tidemark1Satellite = new Satellite(
   'TIDEMARK-1',
   61525,
-  [
-    // Uplink signals - routed to transponders based on frequency and polarization
-    {
-      signalId: 'TIDEMARK-1-TDMA-Composite',
-      serverId: 1,
-      noradId: 61525,
-      frequency: 5943e6 as RfFrequency,
-      polarization: 'H',
-      power: 101.2 as dBm, // uplink EIRP of the hub carrier this composite stands in for (phase 19.3 migration: was 20 dBm 'at the transponder input'; keeps the 26.5 dBW downlink)
-      bandwidth: 36e6 as Hertz,
-      modulation: 'QPSK' as ModulationType,
-      fec: '3/4' as FECType,
-      feed: '',
-      isDegraded: false,
-      origin: SignalOrigin.SATELLITE_RX,
-      noiseFloor: null,
-      gainInPath: 0 as dBi,
-    },
-  ],
+  [], // No authored uplinks: the hub carrier is whatever VT-01 / ME-02 radiates (phase 27)
   [], // Beacons now defined in transponderConfigs
   {
     az: 161.8 as Degrees,
@@ -57,7 +43,6 @@ export const tidemark1Satellite = new Satellite(
     ephemerisErrorAz: 0.12 as Degrees,
     ephemerisErrorEl: 0.08 as Degrees,
     lookAnglesFrom: VERMONT_LOOK_ANGLE_SITE,
-    standIns: { 'TIDEMARK-1-TDMA-Composite': 'TIDEMARK-1-Teleport' }, // the station's own carrier replaces the stand-in (phase 19.3)
     transponderConfigs: [
       {
         id: 'TP-1',
@@ -72,7 +57,7 @@ export const tidemark1Satellite = new Satellite(
           serverId: 1,
           noradId: 61525,
           power: 30 as dBm,
-          bandwidth: 1e3 as Hertz,
+          bandwidth: 10 as Hertz, // CW: short-term linewidth (oscillator stability + Doppler), far under any RBW
           modulation: 'CW' as ModulationType,
           fec: 'null' as FECType,
           polarization: 'V',
@@ -99,25 +84,7 @@ export const tidemark1Satellite = new Satellite(
 export const tidemark2Satellite = new Satellite(
   'TIDEMARK-2',
   61526,
-  [
-    // Uplink signals - routed to transponders based on frequency and polarization
-    {
-      signalId: 'TIDEMARK-2-TDMA-Composite',
-      serverId: 1,
-      noradId: 61526,
-      frequency: 6017e6 as RfFrequency,
-      polarization: 'H',
-      power: 101.2 as dBm, // uplink EIRP of the hub carrier this composite stands in for (phase 19.3 migration: was 20 dBm 'at the transponder input'; keeps the 26.5 dBW downlink)
-      bandwidth: 36e6 as Hertz,
-      modulation: 'QPSK' as ModulationType,
-      fec: '3/4' as FECType,
-      feed: '',
-      isDegraded: false,
-      origin: SignalOrigin.SATELLITE_RX,
-      noiseFloor: null,
-      gainInPath: 0 as dBi,
-    },
-  ],
+  [], // No authored uplinks: the hub carrier is whatever VT-01 / ME-02 radiates (phase 27)
   [], // Beacons now defined in transponderConfigs
   {
     az: 219.7 as Degrees,
@@ -128,7 +95,6 @@ export const tidemark2Satellite = new Satellite(
     ephemerisErrorAz: 0.1 as Degrees,
     ephemerisErrorEl: 0.06 as Degrees,
     lookAnglesFrom: VERMONT_LOOK_ANGLE_SITE,
-    standIns: { 'TIDEMARK-2-TDMA-Composite': 'TIDEMARK-2-Teleport' }, // the station's own carrier replaces the stand-in
     transponderConfigs: [
       {
         id: 'TP-1',
@@ -143,7 +109,7 @@ export const tidemark2Satellite = new Satellite(
           serverId: 1,
           noradId: 61526,
           power: 31 as dBm,
-          bandwidth: 1e3 as Hertz,
+          bandwidth: 10 as Hertz, // CW: short-term linewidth (oscillator stability + Doppler), far under any RBW
           modulation: 'CW' as ModulationType,
           fec: 'null' as FECType,
           polarization: 'V',
@@ -188,25 +154,7 @@ export const tidemark2Satellite = new Satellite(
 export const tidemark3Satellite = new Satellite(
   'TIDEMARK-3',
   61527,
-  [
-    // Uplink signals - routed to transponders based on frequency and polarization
-    {
-      signalId: 'TIDEMARK-3-TDMA-Composite',
-      serverId: 1,
-      noradId: 61527,
-      frequency: 5985e6 as RfFrequency,
-      polarization: 'H',
-      power: 101.2 as dBm, // uplink EIRP of the hub carrier this composite stands in for (phase 19.3 migration: was 20 dBm 'at the transponder input'; keeps the 26.5 dBW downlink)
-      bandwidth: 36e6 as Hertz,
-      modulation: 'QPSK' as ModulationType,
-      fec: '3/4' as FECType,
-      feed: '',
-      isDegraded: false,
-      origin: SignalOrigin.SATELLITE_RX,
-      noiseFloor: null,
-      gainInPath: 0 as dBi,
-    },
-  ],
+  [], // No authored uplinks: the hub carrier is whatever VT-01 / ME-02 radiates (phase 27)
   [], // Beacons defined in transponderConfigs
   {
     az: 140.5 as Degrees,
@@ -217,7 +165,6 @@ export const tidemark3Satellite = new Satellite(
     ephemerisErrorAz: 0.1 as Degrees,
     ephemerisErrorEl: 0.07 as Degrees,
     lookAnglesFrom: VERMONT_LOOK_ANGLE_SITE,
-    standIns: { 'TIDEMARK-3-TDMA-Composite': 'TIDEMARK-3-Teleport' }, // the station's own carrier replaces the stand-in
     transponderConfigs: [
       {
         id: 'TP-1',
@@ -232,7 +179,7 @@ export const tidemark3Satellite = new Satellite(
           serverId: 1,
           noradId: 61527,
           power: 30 as dBm,
-          bandwidth: 1e3 as Hertz,
+          bandwidth: 10 as Hertz, // CW: short-term linewidth (oscillator stability + Doppler), far under any RBW
           modulation: 'CW' as ModulationType,
           fec: 'null' as FECType,
           polarization: 'V',
@@ -293,7 +240,7 @@ export const ses10Satellite = new Satellite(
           serverId: 1,
           noradId: 42432,
           power: 31 as dBm,
-          bandwidth: 1e3 as Hertz,
+          bandwidth: 10 as Hertz, // CW: short-term linewidth (oscillator stability + Doppler), far under any RBW
           modulation: 'CW' as ModulationType,
           fec: 'null' as FECType,
           polarization: 'V',
@@ -341,25 +288,7 @@ export const ses10Satellite = new Satellite(
 export const aurora7Satellite = new Satellite(
   'AURORA-7',
   28899, // Fictional NORAD ID
-  [
-    // Uplink signal - routed to transponder based on frequency and polarization
-    {
-      signalId: 'AURORA-7-TDMA-Composite',
-      serverId: 1,
-      noradId: 28899,
-      frequency: 6053e6 as RfFrequency,
-      polarization: 'H',
-      power: 101.2 as dBm, // uplink EIRP of the hub carrier (phase 19.3 migration: was 18 dBm at the transponder input; keeps the 24.5 dBW downlink of this legacy bird)
-      bandwidth: 24e6 as Hertz, // Narrower bandwidth
-      modulation: 'QPSK' as ModulationType,
-      fec: '3/4' as FECType,
-      feed: '',
-      isDegraded: false,
-      origin: SignalOrigin.SATELLITE_RX,
-      noiseFloor: null,
-      gainInPath: 0 as dBi,
-    },
-  ],
+  [], // No authored uplinks: the hub carrier is whatever VT-01 / ME-02 radiates (phase 27)
   [], // Beacons defined in transponderConfigs
   {
     az: 190 as Degrees, // Center position
@@ -370,7 +299,6 @@ export const aurora7Satellite = new Satellite(
     ephemerisErrorAz: 0.2 as Degrees,
     ephemerisErrorEl: 0.15 as Degrees,
     lookAnglesFrom: VERMONT_LOOK_ANGLE_SITE,
-    standIns: { 'AURORA-7-TDMA-Composite': 'AURORA-7-Uplink' }, // the station's own carrier replaces the stand-in
     orbitType: 'geosynchronous',
     geosyncConfig: {
       minAz: 187 as Degrees, // ±3° azimuth drift
@@ -392,7 +320,7 @@ export const aurora7Satellite = new Satellite(
           serverId: 1,
           noradId: 28899,
           power: 6 as dBm, // Slightly weaker beacon (aging satellite)
-          bandwidth: 1e3 as Hertz,
+          bandwidth: 10 as Hertz, // CW: short-term linewidth (oscillator stability + Doppler), far under any RBW
           modulation: 'CW' as ModulationType,
           fec: 'null' as FECType,
           polarization: 'V',

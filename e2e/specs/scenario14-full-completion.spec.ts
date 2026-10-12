@@ -18,7 +18,7 @@ import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForS
  * - 'auto': Auto-satisfied by simulation state (signal locks, HPA nominal,
  *   sustained-monitor objectives whose conditions are already met)
  */
-type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'toggle-switch' | 'auto';
+type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'toggle-switch' | 'auto' | 'objective-skip';
 
 interface Scenario14Objective {
   id: string;
@@ -29,6 +29,8 @@ interface Scenario14Objective {
   stationId?: string;
   switchId?: string;
   switchState?: boolean;
+  /** Wait (ms) for the objective to report complete after its action */
+  waitDoneMs?: number;
 }
 
 const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
@@ -107,7 +109,9 @@ const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
   {
     id: 'baseline-beacon-and-lock',
     title: 'Baseline Beacon and Lock',
-    type: 'auto',
+    // Phase 27 Q3: the observation rows latch on RX Analysis, then the C/N read
+    type: 'quiz',
+    correctAnswer: 'About 13 dB',
   },
   {
     id: 'baseline-margin-quiz',
@@ -122,7 +126,9 @@ const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
   {
     id: 'monitor-during-fade',
     title: 'Monitor Through the Fade',
+    // C/N >= 7 dB held 20 s, accrued only while RX Analysis is open
     type: 'auto',
+    waitDoneMs: 90000,
   },
   {
     id: 'agc-behavior-quiz',
@@ -155,7 +161,9 @@ const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
   {
     id: 'verify-hpa-still-nominal',
     title: 'Verify HPA Still Nominal',
-    type: 'auto',
+    // Phase 27 Q3: the HPA rows latch on TX Chain, then the panel read
+    type: 'quiz',
+    correctAnswer: 'Output 50 dBm (100 W), back-off 10 dB, IM3 about -43 dBc, Overdrive Normal',
   },
 
   // ============================================================
@@ -179,8 +187,11 @@ const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
   // ============================================================
   {
     id: 'sustained-monitor',
-    title: 'Hold Through the Peak',
-    type: 'auto',
+    title: 'Hold Through the Cell',
+    // Phase 27 Q4: the 20-min rain cell is a command-bar skip, offered once
+    // the lock / C/N hold rows are met; the objective ends with the weather event
+    type: 'objective-skip',
+    waitDoneMs: 120000,
   },
 
   // ============================================================
@@ -197,7 +208,7 @@ const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
     title: 'Log the Hold',
     type: 'quiz',
     correctAnswer:
-      'Heavy rain cell over VT-01, under 1 dB of C/N lost (mostly sky noise). Held TM-1 per customer SLA preference; AGC moved under 1 dB, modem lock maintained, no handover.',
+      'Heavy rain cell over VT-01, under 1 dB of C/N lost (mostly sky noise). Held TM-1 per customer SLA preference; AGC far from max, modem lock maintained, no handover.',
   },
 ];
 
@@ -241,6 +252,18 @@ async function toggleSwitch(page: import('@playwright/test').Page, switchId: str
   await page.waitForTimeout(200);
 }
 
+/** Wait until the objective reports complete, via the debugObjective dev hook. */
+async function waitForObjectiveDone(page: import('@playwright/test').Page, objectiveId: string, timeout: number): Promise<void> {
+  await page.waitForFunction(
+    (id) => {
+      const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;
+      return typeof hook === 'function' && hook(id)?.isCompleted === true;
+    },
+    objectiveId,
+    { timeout, polling: 500 }
+  );
+}
+
 /**
  * Execute an objective based on its type.
  */
@@ -272,6 +295,18 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
       // engine a beat to confirm the objective transitioned to complete.
       await page.waitForTimeout(2000);
       break;
+
+    case 'objective-skip': {
+      // The skip is offered on the command bar once its rows are met
+      const skip = page.locator('#objective-skip-control');
+      await expect(skip).toBeVisible({ timeout: 90000 });
+      await skip.click({ timeout: 90000 });
+      break;
+    }
+  }
+
+  if (objective.waitDoneMs) {
+    await waitForObjectiveDone(page, objective.id, objective.waitDoneMs);
   }
 
   await dismissDialogIfPresent(page);
@@ -323,7 +358,7 @@ test.describe('Scenario 14 Full Completion', () => {
       // Monitor-during-fade and sustained-monitor wait for the simulation
       // to advance through the rain event. Give them more runway.
       if (objective.id === 'monitor-during-fade' || objective.id === 'sustained-monitor') {
-        test.setTimeout(180000);
+        test.setTimeout(240000);
       }
       await executeObjective(page, missionControlPage, objective);
     });

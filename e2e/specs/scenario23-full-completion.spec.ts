@@ -27,6 +27,8 @@ interface Scenario23Objective {
   centerFrequencyMhz?: number;
   autoWaitSeconds?: number;
   logText?: string;
+  /** For quiz: how long to wait for it (rows listed before it must hold first) */
+  quizWaitMs?: number;
 }
 
 const SCENARIO_23_OBJECTIVES: Scenario23Objective[] = [
@@ -109,9 +111,9 @@ const SCENARIO_23_OBJECTIVES: Scenario23Objective[] = [
   {
     id: 'prove-carrier',
     title: 'Prove the Carrier',
-    type: 'auto',
-    // Receiver reads latch after a 5 s observation dwell on RX Analysis
-    autoWaitSeconds: 7,
+    // Phase 27 Q3: the lock / C/N rows latch, then the read quiz
+    type: 'quiz',
+    correctAnswer: 'Locked, C/N about 15 dB - the same healthy link the automation left behind',
   },
   {
     id: 'instruments-not-feel-quiz',
@@ -124,8 +126,10 @@ const SCENARIO_23_OBJECTIVES: Scenario23Objective[] = [
   {
     id: 'sustained-manual-hold',
     title: 'Hold Under Manual Control',
-    type: 'auto',
-    autoWaitSeconds: 40,
+    // The quiz follows the 30 s carrier hold on RX Analysis
+    type: 'quiz',
+    correctAnswer: 'Nothing worth a correction: beacon steady on the analyzer, modem locked at about 15 dB throughout',
+    quizWaitMs: 75000,
   },
   {
     id: 'geo-feasibility-quiz',
@@ -182,6 +186,13 @@ async function configureSpeca(page: import('@playwright/test').Page, centerFrequ
   await expect(centerFreqInput).toBeVisible({ timeout: 5000 });
   await centerFreqInput.fill(centerFrequencyMhz.toString());
   await centerFreqInput.press('Tab');
+  await page.waitForTimeout(200);
+
+  // Narrow onto the CW beacon (input in MHz) so it stands clear of the floor
+  const spanInput = page.locator('#sa-span');
+  await expect(spanInput).toBeVisible({ timeout: 5000 });
+  await spanInput.fill('0.01');
+  await spanInput.press('Tab');
   await page.waitForTimeout(500);
 }
 
@@ -206,7 +217,7 @@ async function typeOpsLogEntry(page: import('@playwright/test').Page, text: stri
 async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario23Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
-      await waitForQuizToAppear(page);
+      await waitForQuizToAppear(page, objective.quizWaitMs);
       await answerQuizByText(page, objective.correctAnswer!);
       break;
 
@@ -288,8 +299,8 @@ test.describe('Scenario 23 Full Completion', () => {
 
   for (const objective of SCENARIO_23_OBJECTIVES) {
     test(`[${objective.id}] ${objective.title}`, async () => {
-      if (objective.type === 'auto' && (objective.autoWaitSeconds ?? 0) >= 30) {
-        test.setTimeout(120000);
+      if ((objective.quizWaitMs ?? 0) > 30000) {
+        test.setTimeout(objective.quizWaitMs! + 60000);
       }
       await executeObjective(page, missionControlPage, objective);
     });

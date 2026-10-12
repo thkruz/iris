@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { MissionControlPage } from '../pages/mission-control.page';
+import { setSwitch } from '../utils/nats-eu-helpers';
 import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForSimulationReady } from '../utils/simulation-helpers';
 
 /**
@@ -11,7 +12,17 @@ import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForS
  * verifies the report content in the Working Document before the final quizzes
  * (the Mission Complete modal overlays the sidebar afterward).
  */
-type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'repoint-program-track' | 'set-step-track' | 'configure-speca' | 'verify-working-doc' | 'ops-log' | 'auto';
+type ObjectiveType =
+  | 'quiz'
+  | 'select-station'
+  | 'click-tab'
+  | 'repoint-program-track'
+  | 'set-step-track'
+  | 'configure-speca'
+  | 'bring-uplink-up'
+  | 'verify-working-doc'
+  | 'ops-log'
+  | 'auto';
 
 interface Scenario22Objective {
   id: string;
@@ -54,9 +65,11 @@ const SCENARIO_22_OBJECTIVES: Scenario22Objective[] = [
     satelliteNoradId: '28899',
   },
   {
+    // Step-track on, then the beacon peaked and held 15 s on ACU Control
     id: 'engage-step-track',
     title: 'Step-Track for the Weak Beacon',
     type: 'set-step-track',
+    autoWaitSeconds: 90,
   },
   {
     id: 'measure-beacon-tab',
@@ -69,6 +82,31 @@ const SCENARIO_22_OBJECTIVES: Scenario22Objective[] = [
     title: "Measure Today's Beacon",
     type: 'configure-speca',
     centerFrequencyMhz: 1085,
+  },
+  {
+    // Phase 27: the read quiz on the Peak readout (asserted in configureSpeca)
+    id: 'measure-beacon-quiz',
+    title: "Measure Today's Beacon (read)",
+    type: 'quiz',
+    correctAnswer: 'About -67 dBm: about 4 dB under the reference, in line with the -4.0 dB monthly median in the log',
+  },
+  {
+    // Phase 27: VT-01 starts off the air; key the staged AURORA-7 test carrier
+    id: 'key-aurora-uplink',
+    title: 'Bring the Test Carrier Up',
+    type: 'bring-uplink-up',
+  },
+  {
+    id: 'verify-carrier-tab',
+    title: 'Open RX Analysis',
+    type: 'click-tab',
+    tabId: 'rx-analysis',
+  },
+  {
+    id: 'verify-carrier',
+    title: 'Prove the Carrier',
+    type: 'quiz',
+    correctAnswer: 'About 14 dB',
   },
   {
     id: 'record-data-point-quiz',
@@ -102,7 +140,7 @@ const SCENARIO_22_OBJECTIVES: Scenario22Objective[] = [
     id: 'sunset-window-quiz',
     title: 'Report: the Recommendation',
     type: 'quiz',
-    correctAnswer: 'Begin migration now; sunset in one to two quarters, reviewed monthly, with a firm trigger at the step-track floor',
+    correctAnswer: 'Begin migration now and have customers moved inside two quarters; floor in two to three, reviewed monthly, firm trigger at the step-track floor',
   },
   {
     id: 'assumptions-quiz',
@@ -135,13 +173,13 @@ const SCENARIO_22_OBJECTIVES: Scenario22Objective[] = [
     id: 'log-delivery',
     title: 'Deliver and Log',
     type: 'quiz',
-    correctAnswer: 'AURORA-7 EOL assessment to board: beacon -4.0 dB, trend accelerating; migrate now, sunset ~1-2 quarters, trigger at tracking floor',
+    correctAnswer: 'AURORA-7 EOL assessment to board: beacon -4.0 dB, trend accelerating; migrate now (inside 2 quarters), floor in 2-3, trigger at tracking floor',
   },
   {
     id: 'log-delivery-typed',
     title: 'Deliver and Log: typed Ops Log entry',
     type: 'ops-log',
-    logText: 'AURORA-7 EOL assessment to board: migrate now, sunset 1-2 quarters, trigger at step-track floor',
+    logText: 'AURORA-7 EOL assessment to board: migrate now (inside 2 quarters), floor in 2-3, trigger at step-track floor',
   },
 ];
 
@@ -201,8 +239,60 @@ async function configureSpeca(page: import('@playwright/test').Page, centerFrequ
   await expect(centerFreqInput).toBeVisible({ timeout: 5000 });
   await centerFreqInput.fill(centerFrequencyMhz.toString());
   await centerFreqInput.press('Tab');
-  // The carrier lock / C/N reads latch after a 5 s observation dwell
-  await page.waitForTimeout(6000);
+  await page.waitForTimeout(200);
+
+  // Narrow span for the weak CW beacon (input in MHz): it must be on screen
+  // for 'AURORA-7 Beacon Captured' (Phase 27 B2)
+  const spanInput = page.locator('#sa-span');
+  await expect(spanInput).toBeVisible({ timeout: 5000 });
+  await spanInput.fill('0.002');
+  await spanInput.press('Tab');
+  await page.waitForTimeout(4000);
+
+  // The quiz asks for the level off the Peak readout: read it from the
+  // screen first (about -67 dBm, ~4 dB under the -63 dBm reference)
+  await page.locator('#sa-peak-search').click();
+  const readout = page.locator('#sa-peak-readout');
+  await expect
+    .poll(
+      async () => {
+        const match = /@\s*(-?\d+(?:\.\d+)?)\s*dBm/u.exec((await readout.textContent()) ?? '');
+        return match ? Number.parseFloat(match[1]) : Number.NaN;
+      },
+      { timeout: 15000 }
+    )
+    .toBeGreaterThan(-70.5);
+  const peakDbm = Number.parseFloat(/@\s*(-?\d+(?:\.\d+)?)\s*dBm/u.exec((await readout.textContent()) ?? '')?.[1] ?? 'NaN');
+  expect(peakDbm).toBeLessThan(-63.5);
+}
+
+/**
+ * Key the staged AURORA-7 test carrier on TX Chain: modem on air, BUC
+ * unmuted, then the HPA (never an enabled HPA on a muted BUC).
+ */
+async function bringUplinkUp(page: import('@playwright/test').Page, missionControlPage: MissionControlPage): Promise<void> {
+  await missionControlPage.selectTab('tx-chain');
+  await page.waitForTimeout(1200);
+  await setSwitch(page, '#tx-power-switch', true);
+  await page.waitForTimeout(200);
+  await setSwitch(page, '#tx-transmit-switch', true);
+  await page.waitForTimeout(200);
+  await setSwitch(page, '#buc-mute', false);
+  await page.waitForTimeout(500);
+  await setSwitch(page, '#hpa-enable', true);
+  await page.waitForTimeout(2000);
+}
+
+/** Wait until the objective reports complete, via the debugObjective dev hook. */
+async function waitForObjectiveDone(page: import('@playwright/test').Page, objectiveId: string, timeout: number): Promise<void> {
+  await page.waitForFunction(
+    (id) => {
+      const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;
+      return typeof hook === 'function' && hook(id)?.isCompleted === true;
+    },
+    objectiveId,
+    { timeout, polling: 500 }
+  );
 }
 
 /**
@@ -269,6 +359,12 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
 
     case 'set-step-track':
       await setStepTrack(page);
+      await waitForObjectiveDone(page, objective.id, (objective.autoWaitSeconds ?? 30) * 1000);
+      break;
+
+    case 'bring-uplink-up':
+      await bringUplinkUp(page, missionControlPage);
+      await waitForObjectiveDone(page, objective.id, 20000);
       break;
 
     case 'configure-speca':
@@ -284,7 +380,7 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
       break;
 
     case 'auto':
-      await page.waitForTimeout((objective.autoWaitSeconds ?? 5) * 1000);
+      await waitForObjectiveDone(page, objective.id, (objective.autoWaitSeconds ?? 30) * 1000);
       break;
   }
 

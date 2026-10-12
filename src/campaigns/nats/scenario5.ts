@@ -52,7 +52,7 @@ export const scenario5Data: ScenarioData = {
   title: 'Interference Hunt',
   subtitle: 'Spectrum Analysis and Mitigation',
   duration: '20-25 min',
-  difficulty: 'beginner',
+  difficulty: 'intermediate',
   missionType: 'Troubleshooting',
   description: `Customer reports degraded service on TIDEMARK-1. The C/N ratio has dropped significantly, causing packet errors.<br><br>The spectrum analyzer is currently configured for beacon tracking - you'll need to reconfigure it to investigate the main signal. Something's causing interference, and you'll need to find it, understand what's happening, and apply the right mitigation.<br><br>Charlie will guide you through the troubleshooting process and provide hints along the way.`,
   equipment: ['9-meter C-band Antenna', 'RF Front End', 'Spectrum Analyzer', 'Notch Filter'],
@@ -63,25 +63,13 @@ export const scenario5Data: ScenarioData = {
     groundStations: [
       {
         ...vermontGroundStation,
-        // Find the spike by hand: AUTO-TUNE would jump straight to it (nats-s05-F3)
-        spectrumAnalyzers: vermontGroundStation.spectrumAnalyzers.map((sa) => ({ ...sa, isAutoTuneAvailable: false })),
-        transmitters: [
-          {
-            ...vermontGroundStation.transmitters[0],
-            modems: [
-              {
-                ...vermontGroundStation.transmitters[0].modems[0],
-                // Receive-only shift (phase 19.5): the lesson is the customer's
-                // TM-1 composite under a cross-pol carrier. Since 19.3 VT-01's
-                // own TP-1 carrier would replace that stand-in at about its
-                // level (DEV-XPDR-07), so the shift stays receive-only to keep
-                // the composite the carrier on the air
-                isTransmitting: false,
-                isTransmittingSwitchUp: false,
-              },
-            ],
-          },
-        ],
+        // Find the spike by hand: AUTO-TUNE would jump straight to it (nats-s05-F3).
+        // The morning's pointing check left a manual 10 Hz RBW on the beacon;
+        // putting it back on Auto for the wide view is a real step (phase 27)
+        spectrumAnalyzers: vermontGroundStation.spectrumAnalyzers.map((sa) => ({ ...sa, isAutoTuneAvailable: false, rbw: 10 as Hertz })),
+        // VT-01 carries the SeaLink TM-1 hub carrier as every shift (phase 27:
+        // the stand-in composite is gone, so the carrier the customer is on is
+        // VT-01's own TP-1 uplink, the default TX chain)
       },
       maineGroundStation,
     ],
@@ -96,22 +84,6 @@ export const scenario5Data: ScenarioData = {
         [
           // Uplink signals - routed to transponders based on frequency and polarization
           {
-            signalId: 'TIDEMARK-1-TDMA-Composite',
-            serverId: 1,
-            noradId: 61525,
-            frequency: 5943e6 as RfFrequency,
-            polarization: 'H',
-            power: 100.1 as dBm, // uplink EIRP: with the cross-pol carrier on, the 26.5 dBW downlink of satellites.ts (phase 19.3)
-            bandwidth: 36e6 as Hertz,
-            modulation: 'QPSK' as ModulationType,
-            fec: '3/4' as FECType,
-            feed: '',
-            isDegraded: false,
-            origin: SignalOrigin.SATELLITE_RX,
-            noiseFloor: null,
-            gainInPath: 0 as dBi,
-          },
-          {
             // Cross-pol interference: 1 MHz spike within TP-1's 36 MHz passband
             // 5960 MHz uplink = 17 MHz above TP-1 center (5943 MHz)
             // Falls within TP-1's passband (5925-5961 MHz)
@@ -121,12 +93,17 @@ export const scenario5Data: ScenarioData = {
             noradId: 61525,
             frequency: 5960e6 as RfFrequency,
             polarization: 'H',
-            // Phase 19.5: the modem locks on Es/N0 now, so the spike is set for the
-            // customer's story - degraded, not down: C/(N+I) about 5.5 dB Es/N0,
-            // half a dB over the QPSK 3/4 threshold (5.0 dB), "Degraded margin".
-            // At 26 dBm (before 19.5) it buried the carrier (-5.9 dB) and the
-            // modem would have lost lock outright (nats-s05-F1).
-            power: 93.0 as dBm,
+            // Phase 27 (plan Q8): set against VT-01's own TP-1 carrier (the
+            // stand-in composite is gone) for the customer's story - degraded,
+            // not down: 0.3-0.8 dB of Es/N0 lock margin (mean ~0.45 dB) over the
+            // QPSK 3/4 threshold. At that margin the hub's own LDPC decode is
+            // still error-free (PER ~1e-11: the payload panel reads BER < 1e-12,
+            // 0 CRC errors); the customer's small ship terminals, with far less
+            // G/T, are past the waterfall (the S5 quiz teaches the difference).
+            // The notch takes it back to ~4.7 dB (the spike's share of
+            // the transponder output stays). At 26 dBm (before 19.5) it buried
+            // the carrier and the modem lost lock outright (nats-s05-F1).
+            power: 95.0 as dBm,
             bandwidth: 1e6 as Hertz, // Narrowband spike
             modulation: 'QPSK' as ModulationType,
             fec: '3/4' as FECType,
@@ -144,7 +121,6 @@ export const scenario5Data: ScenarioData = {
           rotation: 14 as Degrees,
           frequencyOffset: 2.225e9 as Hertz, // Legacy fallback
           lookAnglesFrom: VERMONT_LOOK_ANGLE_SITE,
-          standIns: { 'TIDEMARK-1-TDMA-Composite': 'TIDEMARK-1-Teleport' },
           // The spike and the carrier fade independently; at the default +/-1 dB
           // their ratio would swing the half-dB lock margin across the lock
           // threshold. A calm +/-0.25 dB keeps the story "degraded, still locked".
@@ -292,7 +268,7 @@ export const scenario5Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'C/N is around 5.5 dB against a nominal 14+ dB. The modem still holds lock - QPSK 3/4 needs Es/N0 5.0 dB (about 4.2 dB of C/N in the 36 MHz channel) - but with under 1 dB of margin it reads "Degraded margin". That is the customer complaint: degraded, not down. One more dB and the link is gone.',
+              'C/N is around 5 dB against a nominal 14+ dB. The modem still holds lock - QPSK 3/4 needs Es/N0 5.0 dB (about 4.2 dB of C/N in the 36 MHz channel) - but with under 1 dB of margin it reads "Degraded margin". At the hub that is degraded, not down; one more dB and our own receiver loses it too.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -305,7 +281,7 @@ export const scenario5Data: ScenarioData = {
       id: 'verify-receiver-state-quiz',
       nice: ['K0740', 'T0081'], // K0740: Knowledge of network performance parameters, T0081: Analyze anomalies in network traffic
       title: 'Assess Full Impact',
-      description: 'Consider what other indicators might show this degradation.',
+      description: "Check the Payload Data Integrity card on RX Analysis (BER, CRC errors) and square it with the customer's packet errors.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['phase-1-observe-degradation'],
       conditions: [
@@ -313,18 +289,18 @@ export const scenario5Data: ScenarioData = {
           type: 'status-check',
           description: 'Understand Degradation Indicators',
           params: {
-            question: 'Besides low C/N ratio, what other symptoms would you expect to see with this type of degradation?',
+            question:
+              "VT-01's own receiver still decodes this carrier cleanly: the Payload Data Integrity card shows BER at about 1e-12 and 0 CRC errors. Yet SeaLink's ships report packet errors. Why?",
             options: [
-              'Elevated BER (Bit Error Rate) and increased packet retransmissions',
-              'Elevated TX power (uplink EIRP) and increased modem drive level',
-              'Elevated tracking error (az/el) and increased ACU step corrections',
-              'Elevated LNB temperature (thermal alarm) and increased noise figure',
+              'The ships have much smaller dishes: the interference that leaves our 9 m dish just above threshold pushes them below it',
+              "The errors are in the ships' own equipment: a clean BER at VT-01 proves the satellite link is healthy",
+              'The payload card lags the modem by several minutes, so the errors have not reached it yet',
+              'The ships listen on a different transponder from the one VT-01 is monitoring',
             ],
             correctIndex: 0,
             explanation:
-              'When C/N degrades, the demodulator makes more bit errors. This increases BER and causes more packet retransmissions, which is exactly what the customer is reporting - packet errors and degraded throughput.',
+              'The interference rides through the transponder to every receiver in the beam, but each receiver adds its own noise. Our 9 m hub dish has a G/T near 30 dB/K; a 1-2 m maritime terminal has 15-20 dB less, so its C/N was always far closer to threshold. An LDPC-coded carrier decodes error-free until it is within a fraction of a dB of threshold, then falls off a cliff: we are just above the cliff (Degraded margin, BER still clean), the ships are over it (packet errors). Watch margin, not BER: by the time the hub shows CRC errors the remotes are down.',
             pointPenalty: 5,
-            preserveOptionOrder: true,
           },
           mustMaintain: false,
         },
@@ -381,7 +357,7 @@ export const scenario5Data: ScenarioData = {
       nice: ['K0737', 'S0421', 'T0153', 'K1032'], // K0737: Knowledge of RF spectrum characteristics, S0421: Skill in using test equipment, T0153: Monitor network capacity and performance, K1032: Knowledge of RF propagation
       title: 'Configure Spectrum View',
       description:
-        'The spectrum analyzer is currently configured for beacon observation. Reconfigure it to see the full wideband signal - widen the span and center on the downlink IF frequency.',
+        'The spectrum analyzer is currently configured for beacon observation. Reconfigure it to see the full wideband signal - widen the span (50-100 MHz), center on the downlink IF frequency, RBW Auto, and set the amplitude window to Min -100 dBm / Max -30 dBm so both the noise floor and the carrier show.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['verify-speca-initial-state'],
       timeLimitSeconds: 3 * 60,
@@ -418,7 +394,8 @@ export const scenario5Data: ScenarioData = {
           description: 'Min amplitude set just below noise floor',
           params: {
             minAmplitude: -100 as dBm,
-            minAmplitudeTolerance: 20 as dBm,
+            // Tight: the -140 preset must not count (phase 27, r2-s05)
+            minAmplitudeTolerance: 3 as dBm,
           },
           mustMaintain: true,
         },
@@ -427,7 +404,7 @@ export const scenario5Data: ScenarioData = {
           description: 'Max amplitude set just above signal peak',
           params: {
             maxAmplitude: -30 as dBm,
-            maxAmplitudeTolerance: 20 as dBm,
+            maxAmplitudeTolerance: 3 as dBm,
           },
           mustMaintain: true,
         },
@@ -743,7 +720,7 @@ export const scenario5Data: ScenarioData = {
       id: 'phase-9-verify-restoration',
       nice: ['K0740', 'T0153'], // K0740: Knowledge of network performance parameters, T0153: Monitor network capacity and performance
       title: 'Verify Service Restored',
-      description: 'Confirm the notch filter has restored normal C/N ratio.',
+      description: 'Read the receiver modem C/N with the notch on and judge it against the 8 dB service minimum and the 14 dB nominal.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['verify-spectrum-cleared'],
       timeLimitSeconds: 2 * 60,
@@ -755,14 +732,14 @@ export const scenario5Data: ScenarioData = {
           params: {
             question: 'After applying the notch filter, what happened to the signal?',
             options: [
-              'C/N restored to normal levels - the spike is notched out and AGC normalized',
-              'C/N unchanged from before - the notch filter had no effect on the AGC',
+              'C/N back above the 8 dB service minimum (about 9-10 dB), short of the 14 dB nominal',
+              'C/N back at the full 14 dB nominal - the notch removed every trace of the interference',
+              'C/N unchanged from before - the notch filter had no effect on the carrier',
               'Signal lock lost entirely - the notch filter blocked our own carrier',
-              'C/N dropped even further - the filter settings notched the wrong frequency',
             ],
             correctIndex: 0,
             explanation:
-              'The notch filter blocks the interference spike while passing the rest of our wideband signal. With the spike removed, the AGC no longer sees the excess power and allows proper gain. C/N returns to normal.',
+              "The notch removes the spike from our receive chain, so C/N climbs back above the 8 dB service minimum, to about 9-10 dB, and the modem reads good margin again. It does not reach the 14 dB nominal: the spike is still in the transponder, taking its share of the output power and adding intermod, and the notch also takes a sliver of our own carrier's edge. A ground notch is a workaround; the full 14 dB comes back only when the other operator fixes their polarization.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -870,7 +847,7 @@ export const scenario5Data: ScenarioData = {
           That C/N is well below where it should be. The customer's complaint is definitely legitimate - we've got a real problem here, not a false alarm.
         </p>
         <p>
-          Now we need to understand the full impact. A degraded C/N doesn't happen in isolation - it affects the entire receive chain. Think about what other symptoms you'd expect to see when the demodulator is struggling with a poor signal.
+          Now look at the Payload Data Integrity card, just below. Our own decode is still clean - and the customer's ships are dropping packets anyway. Work out why.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -880,7 +857,7 @@ export const scenario5Data: ScenarioData = {
       'verify-receiver-state-quiz': {
         text: `
         <p>
-          Exactly right. Degraded C/N means the demodulator is making bit errors because it can't clearly distinguish the signal from the noise. Those bit errors propagate up the stack as packet errors, which is exactly what the customer is seeing.
+          Exactly right. Our big dish is riding just above the cliff; the ships, with a fraction of our G/T, have gone over it. Those are the packet errors the customer is seeing.
         </p>
         <p>
           But to fix this, we need to understand what's causing the C/N to drop. Time to look at the spectrum. The spectrum analyzer is currently set up for beacon observation, so you'll need to reconfigure it to see our main carrier.
@@ -1035,7 +1012,7 @@ export const scenario5Data: ScenarioData = {
       'phase-9-verify-restoration': {
         text: `
         <p>
-          C/N is back to normal operating levels. The AGC is no longer being fooled by the interference spike, so it's setting the gain correctly for our wanted signal. The customer should see their packet errors clear up immediately.
+          C/N is back above the 8 dB service minimum - about 9 or 10 dB, good margin on the modem. Not the full 14: the spike's still in the transponder eating its share of power. But it's enough for the ships, and their packet errors should clear up right away.
         </p>
         <p>
           Nice work. You diagnosed a non-obvious interference problem, understood the mechanism behind it, and applied the right mitigation. That's the kind of systematic troubleshooting that separates good operators from great ones.

@@ -1,7 +1,8 @@
+import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { Character, Emotion } from '@app/modal/character-enum';
 import type { Objective } from '@app/objectives/objective-types';
 import type { ScenarioData } from '@app/ScenarioData';
-import type { dBm, MHz } from '@app/types';
+import type { dB, dBm, FECType, Hertz, IfFrequency, MHz, ModulationType } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import { vermontGroundStation } from './ground-stations';
 import { aurora7Satellite, tidemark1Satellite } from './satellites';
@@ -43,6 +44,11 @@ import { aurora7Satellite, tidemark1Satellite } from './satellites';
  *     the final ops run (the beacon is weak - end-of-life). The data-collection
  *     phase is real (beacon present at 1085 MHz IF, modem 1 locked on the
  *     1422 MHz carrier); the rest is analysis quizzes that build the report.
+ *   - Phase 27 (stand-ins gone): VT-01 starts off the air (TIDEMARK-1
+ *     traffic on ME-02 for the run) with its TX chain staged for AURORA-7
+ *     (BUC LO 7500, modem 1447 MHz / 24 MHz). The beacon is measured with
+ *     nothing of ours on the bird; then the player keys the AURORA-7 test
+ *     carrier and the RX modem locks to it coming back down.
  */
 
 export const scenario22Data: ScenarioData = {
@@ -64,6 +70,56 @@ export const scenario22Data: ScenarioData = {
     groundStations: [
       {
         ...vermontGroundStation,
+        rfFrontEnds: [
+          createRfFrontEnd(vermontGroundStation.rfFrontEnds[0], {
+            buc: {
+              isPowered: true,
+              isMuted: true,
+              isLoopback: false,
+              loFrequency: 7500 as MHz,
+              isExtRefLocked: true,
+              gain: 23 as dB,
+            },
+            hpa: {
+              isPowered: true,
+              isHpaEnabled: false,
+              isHpaSwitchEnabled: false,
+              backOff: 10,
+            },
+          }),
+        ],
+        spectrumAnalyzers: [
+          {
+            ...vermontGroundStation.spectrumAnalyzers[0],
+            // VT-01 is off-air at shift start, so the AGC sees only noise and
+            // beacons and lifts the TIDEMARK-1 beacon to about -44 dBm
+            minAmplitude: -120 as dBm,
+            maxAmplitude: -30 as dBm,
+          },
+        ],
+        transmitters: [
+          {
+            ...vermontGroundStation.transmitters[0],
+            activeModem: 1,
+            modems: [
+              {
+                ...vermontGroundStation.transmitters[0].modems[0],
+                isTransmitting: false,
+                isTransmittingSwitchUp: false,
+                ifSignal: {
+                  ...vermontGroundStation.transmitters[0].modems[0].ifSignal,
+                  signalId: 'AURORA-7-Uplink',
+                  noradId: 28899,
+                  frequency: 1447e6 as IfFrequency, // 7500 - 6053
+                  bandwidth: 24e6 as Hertz,
+                  modulation: 'QPSK' as ModulationType,
+                  fec: '3/4' as FECType,
+                  power: -7 as dBm,
+                },
+              },
+            ],
+          },
+        ],
         receivers: [
           {
             activeModem: 1,
@@ -175,12 +231,9 @@ export const scenario22Data: ScenarioData = {
           params: { tab: 'acu-control' },
           mustMaintain: true,
         },
-        {
-          type: 'antenna-tracking-mode-set',
-          description: 'Program-Track Mode',
-          params: { trackingMode: 'program-track' },
-          mustMaintain: true,
-        },
+        // No separate Program-Track row: VT-01 is already in program-track on
+        // TIDEMARK-1, so it ticked before the player acted. Lock on AURORA-7
+        // needs the retarget and the slew.
         {
           type: 'antenna-locked',
           description: 'Locked on AURORA-7',
@@ -196,12 +249,20 @@ export const scenario22Data: ScenarioData = {
       nice: ['S0421', 'K1032'],
       title: 'Step-Track for the Weak Beacon',
       description:
-        'Engage step-track - the beacon is 4 dB down from its prime and needs every bit of pointing accuracy. Watch the ACU beacon C/N climb from about 7 dB on program-track to about 8.8 dB as step-track finds the peak; the step-track floor is the 6.5 dB beacon lock.',
+        'Engage step-track on ACU Control - the beacon is 4 dB down from its prime and needs every bit of pointing accuracy. Watch the ACU beacon C/N climb from about 7 dB on program-track to about 9 dB as step-track finds the peak; the step-track floor is the 6.5 dB beacon lock.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['acquire-aurora'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
+        {
+          // B3: the 15 s hold counts while the player watches the ACU
+          type: 'tab-active',
+          hidden: true,
+          description: 'ACU Control Open',
+          params: { tab: 'acu-control' },
+          mustMaintain: true,
+        },
         {
           type: 'antenna-tracking-mode-set',
           description: 'Step-Track Engaged',
@@ -210,10 +271,12 @@ export const scenario22Data: ScenarioData = {
         },
         {
           // Phase 19.4: a real climb (~40 s of stepping), then a hold above
-          // the floor (nats-s22-F6; nats-step-track-validation.test.ts)
+          // the floor (nats-s22-F6; nats-step-track-validation.test.ts).
+          // Headless 2026-10-07: 7.3 dB program-track -> 9.1 dB step-track.
+          // AURORA-7's beacon, not the TIDEMARK-1 lock VT-01 starts with
           type: 'antenna-beacon-locked',
           description: 'Beacon Peaked and Held (≥ 8.3 dB)',
-          params: { minBeaconCn: 8.3 },
+          params: { minBeaconCn: 8.3, noradId: 28899 },
           mustMaintain: true,
           maintainDuration: 15,
         },
@@ -226,7 +289,7 @@ export const scenario22Data: ScenarioData = {
       nice: ['T1429', 'K0773'],
       title: "Measure Today's Beacon",
       description:
-        'On RX Analysis, center the spectrum analyzer on the AURORA-7 beacon at 1085 MHz IF and confirm it is there, then confirm receiver modem 1 is locked on the carrier (1422 MHz IF) with C/N of at least 8 dB. The -4.0 dB trend point is the monthly median from the beacon log.',
+        'On RX Analysis, center the spectrum analyzer on the AURORA-7 beacon at 1085 MHz IF with a narrow span, then read its level off the Peak readout (Peak Search) and compare it with the reference in the brief. Measure it now, with nothing of ours on the bird: that is how the log is kept.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['engage-step-track'],
       timeLimitSeconds: 3 * 60,
@@ -257,19 +320,121 @@ export const scenario22Data: ScenarioData = {
           },
           mustMaintain: true,
         },
+        {
+          // s22-F5: the player's Peak readout makes the measurement real.
+          // Headless 2026-10-07: step-tracked, carrier off (AGC on noise
+          // alone), the beacon reads -67.2 dBm at the RX IF tap the
+          // analyzer shows (-69.1 on program-track). The brief's 24-month
+          // reference is -63.2, so today reads 4.0 dB down. With our own
+          // carrier keyed the AGC backs off ~12 dB and it would read ~-79.
+          type: 'status-check',
+          description: 'Beacon Level Read',
+          params: {
+            character: Character.SYSTEM,
+            question:
+              "Read the beacon off the analyzer's Peak readout. Against the brief's 24-month reference (about -63 dBm, logged the same way), what does today's reading say?",
+            options: [
+              'About -67 dBm: about 4 dB under the reference, in line with the -4.0 dB monthly median in the log',
+              'About -63 dBm: level with the reference - no decline this month, the log median is wrong',
+              'About -57 dBm: about 6 dB above the reference - the decline has reversed',
+              'About -73 dBm: about 10 dB under the reference - already past the step-track floor',
+            ],
+            correctIndex: 0,
+            explanation:
+              "About -67 dBm against about -63 dBm is 4 dB down: today's spot reading agrees with the monthly median. A single reading wanders a few tenths with pointing and noise, which is why the trend is built from medians, but it is your own measurement and it matches.",
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
+        },
+      ],
+      conditionLogic: 'AND',
+      points: 10,
+    },
+    {
+      id: 'key-aurora-uplink',
+      nice: ['T1567', 'S0421'],
+      title: 'Bring the Test Carrier Up',
+      description:
+        'TX Chain: the chain is staged for AURORA-7 (BUC LO 7500, TX modem 1447 MHz / 24 MHz) and off the air. Bring it up drive first: TX modem transmitting, then unmute the BUC, then enable the HPA.',
+      groundStation: 'VT-01',
+      prerequisiteObjectiveIds: ['measure-beacon'],
+      timeLimitSeconds: 3 * 60,
+      timerStartTrigger: 'on-activate',
+      conditions: [
+        {
+          type: 'tab-active',
+          hidden: true,
+          description: 'TX Chain Open',
+          params: { tab: 'tx-chain' },
+          mustMaintain: true,
+        },
+        {
+          type: 'tx-modem-transmitting',
+          description: 'TX Modem Transmitting',
+          mustMaintain: true,
+        },
+        {
+          type: 'buc-unmuted',
+          description: 'BUC Unmuted',
+          mustMaintain: true,
+        },
+        {
+          type: 'hpa-enabled',
+          description: 'HPA Enabled',
+          mustMaintain: true,
+        },
+      ],
+      conditionLogic: 'AND',
+      points: 10,
+    },
+    {
+      id: 'verify-carrier',
+      nice: ['T1429', 'K0740'],
+      title: 'Prove the Carrier',
+      description:
+        'Back on RX Analysis: confirm receiver modem 1 is locked on the carrier at 1422 MHz IF (your test carrier coming back down through AURORA-7) and read its C/N for the report.',
+      groundStation: 'VT-01',
+      intent: 'confirm',
+      prerequisiteObjectiveIds: ['key-aurora-uplink'],
+      timeLimitSeconds: 3 * 60,
+      timerStartTrigger: 'on-activate',
+      conditions: [
+        {
+          type: 'tab-active',
+          hidden: true,
+          description: 'RX Analysis Open',
+          params: { tab: 'rx-analysis' },
+          mustMaintain: true,
+        },
         // Backs the report's "carrier C/N above demod threshold" line, which
         // had no step behind it (nats-s22-F5)
         {
           type: 'receiver-signal-locked',
           description: 'Carrier Locked (modem 1, 1422 MHz)',
-          params: { modemNumber: 1, requiresObservation: true, observationTab: 'rx-analysis', observationDwellSeconds: 5 },
+          params: { modemNumber: 1 },
           mustMaintain: true,
         },
         {
           type: 'receiver-snr-threshold',
           description: 'Carrier C/N ≥ 8 dB',
-          params: { minCNRatio: 8, requiresObservation: true, observationTab: 'rx-analysis', observationDwellSeconds: 5 },
+          params: { minCNRatio: 8 },
           mustMaintain: true,
+        },
+        {
+          // Headless 2026-10-07: 14.1 dB C/N, 9.9 dB lock margin, at 10 dB
+          // HPA back-off with step-track on
+          type: 'status-check',
+          description: 'Carrier C/N Read',
+          params: {
+            character: Character.SYSTEM,
+            question: 'What C/N does RX modem 1 show on the AURORA-7 carrier?',
+            options: ['About 14 dB', 'About 6 dB', 'About 2 dB, flickering in and out of lock', 'About 27 dB'],
+            correctIndex: 0,
+            explanation:
+              'About 14 dB, nearly 10 dB over the 4.2 dB demod threshold. The transponder is fine: what is fading is the beacon, and with it the ability to track an inclined bird. That is the point the report has to make.',
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -281,7 +446,7 @@ export const scenario22Data: ScenarioData = {
       title: "Report: Today's Measurement",
       description: "Record today's data point in the assessment.",
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['measure-beacon'],
+      prerequisiteObjectiveIds: ['verify-carrier'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -441,19 +606,19 @@ export const scenario22Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'What is the responsible recommendation?',
             options: [
-              'Begin migration now; sunset in one to two quarters, reviewed monthly, with a firm trigger at the step-track floor',
+              'Begin migration now and have customers moved inside two quarters; floor in two to three, reviewed monthly, firm trigger at the step-track floor',
               'Retire immediately; the risk is unacceptable at -4.0 dB, migration forced this month, with no window for the customers to plan',
               'Take no action for a year; the link still works today, reviewed at the next budget cycle, with a decision then if the beacon fades',
-              'Set a retirement date 8 months out; the board can budget against a date, migration scheduled backward from it, with no review points',
+              'Set a retirement date 12 months out; the board can budget against a date, migration scheduled backward from it, with no review points',
             ],
             correctIndex: 0,
             explanation:
-              'A window plus tripwires, not a date: it gives customers runway while protecting against the accelerating curve. "Begin migration now, decide at the trackability floor" is defensible because it is tied to a measurable event, not a guess.',
+              'A window plus tripwires, not a date. At the last six months\' rate (1.6 dB) the 2.3 dB to the floor lasts about three quarters; the curve is steepening, so plan for less and move customers inside two. "Begin migration now, decide at the trackability floor" is defensible because it is tied to a measurable event, not a guess. Twelve months is past where the trend says the floor is.',
             pointPenalty: 10,
             preserveOptionOrder: true,
             documentSection: 'Recommendation',
             documentLine:
-              'Begin customer migration NOW. Target sunset ~1-2 quarters, monthly data review, firm trigger = beacon crosses step-track floor. Window with tripwires, not a fixed date.',
+              'Begin customer migration NOW, customers moved inside two quarters. Floor expected in two to three quarters (sooner if the slope steepens), monthly data review, firm trigger = beacon crosses step-track floor. Window with tripwires, not a fixed date.',
           },
           mustMaintain: false,
         },
@@ -585,7 +750,7 @@ export const scenario22Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Which log entry closes the tasking?',
             options: [
-              'AURORA-7 EOL assessment to board: beacon -4.0 dB, trend accelerating; migrate now, sunset ~1-2 quarters, trigger at tracking floor',
+              'AURORA-7 EOL assessment to board: beacon -4.0 dB, trend accelerating; migrate now (inside 2 quarters), floor in 2-3, trigger at tracking floor',
               'AURORA-7 EOL report to Francis: beacon -4.0 dB, trend linear; no action this year, review at next budget cycle, retire when it fails',
               'AURORA-7 retirement recommended: beacon -4.0 dB, trend accelerating; retire immediately, migration forced, date set 8 months out',
               'AURORA-7 data run complete: beacon -4.0 dB, step-track held; analysis pending, trend to be characterized, board note to follow',

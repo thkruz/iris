@@ -111,12 +111,14 @@ export const scenario7Data: ScenarioData = {
             modems: [
               {
                 ...vermontGroundStation.transmitters[0].modems[0],
+                // Left on the maintenance crew's narrow test carrier: the
+                // student sets the TIDEMARK-1 plan (1057 / 36 MHz / QPSK 3/4 / -7)
                 ifSignal: {
-                  frequency: 950e6 as IfFrequency, // Incorrect - needs to be set to 1057 MHz
-                  bandwidth: 36e6 as Hertz,
+                  frequency: 950e6 as IfFrequency,
+                  bandwidth: 9e6 as Hertz,
                   power: -10 as dBm,
-                  modulation: 'QPSK',
-                  fec: '3/4',
+                  modulation: 'BPSK',
+                  fec: '1/2',
                   signalId: 'VT-01-TX-Modem-1-IF',
                   serverId: 1,
                   noradId: null,
@@ -136,7 +138,10 @@ export const scenario7Data: ScenarioData = {
         spectrumAnalyzers: [
           {
             ...vermontGroundStation.spectrumAnalyzers[0],
-            centerFrequency: 950e6 as Hertz, // Not tuned to beacon - player must configure
+            // Left on the crew's wide sweep of the test carrier, not the beacon:
+            // the player sets centre and span for the beacon
+            centerFrequency: 950e6 as Hertz,
+            span: 100e6 as Hertz,
           },
         ],
       },
@@ -272,7 +277,7 @@ export const scenario7Data: ScenarioData = {
             options: ['BUC has been on for a few hours and is overheating', 'BUC gain is set too high', 'External reference is unlocked', 'BUC temperature is too low'],
             correctIndex: 1,
             explanation:
-              "The BUC gain is set to 50 dB; the station standard is 23 dB. The modem's -10 dBm plus 50 dB asks for 40 dBm from a BUC whose 1 dB compression point is 28 dBm: it would sit at about 30 dBm, 10 dB into compression, draw about 5 A and trip the high-current alarm. The maintenance crew likely forgot to mute it after testing.",
+              "The BUC gain is set to 50 dB; the station standard is 23 dB. The modem's current -10 dBm plus 50 dB asks for 40 dBm from a BUC whose 1 dB compression point is 28 dBm: it would sit at about 30 dBm, 10 dB into compression, draw about 5 A and trip the high-current alarm. The maintenance crew likely forgot to mute it after testing.",
             pointPenalty: 10,
             character: Character.DANA_TORRES,
           },
@@ -407,6 +412,7 @@ export const scenario7Data: ScenarioData = {
       title: 'Verify LNB Operational',
       description: 'Navigate to the RX Analysis tab, verify LNB operational status, and confirm your understanding of the displayed parameters.',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['verify-antenna-status'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
@@ -422,6 +428,8 @@ export const scenario7Data: ScenarioData = {
           description: 'LNB Powered',
           params: { equipment: 'lnb', requiresObservation: true, observationTab: 'rx-analysis' },
           maintainUntilObjectiveComplete: true,
+          // A read of the running LNB: confirm it, never cycle it
+          requiresChange: false,
         },
         {
           type: 'lnb-thermally-stable',
@@ -464,7 +472,8 @@ export const scenario7Data: ScenarioData = {
       // K1032: Knowledge of satellite communication systems
       nice: ['K0773', 'K1032'],
       title: 'Acquire TIDEMARK-1 Beacon',
-      description: 'Configure the spectrum analyzer (center frequency, span, and amplitude range) to properly display and identify the satellite beacon.',
+      description:
+        'Configure the spectrum analyzer for the TIDEMARK-1 beacon: Center 1074.5 MHz, Span 0.002 MHz (2 kHz), Min Amp -100 dBm, Max Amp -30 dBm. The beacon reads about -49 dBm.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['verify-lnb-operational'],
       timeLimitSeconds: 3 * 60,
@@ -504,10 +513,10 @@ export const scenario7Data: ScenarioData = {
         },
         {
           type: 'speca-max-amplitude',
-          description: 'Max Amplitude: around -50 dBm',
+          description: 'Max Amplitude: around -30 dBm',
           params: {
-            maxAmplitude: -50 as dBm,
-            maxAmplitudeTolerance: 20,
+            maxAmplitude: -30 as dBm,
+            maxAmplitudeTolerance: 5,
           },
           maintainUntilObjectiveComplete: true,
         },
@@ -700,7 +709,8 @@ export const scenario7Data: ScenarioData = {
       // S0582: Skill in troubleshooting system performance
       nice: ['S0582'],
       title: 'Reduce BUC Gain for Loopback',
-      description: 'Lower the BUC gain to prevent overloading the receive chain during loopback testing.',
+      description:
+        'Set the BUC gain to 20 dB before loopback. The test loop couples the BUC output into the LNB about 66 dB down. At the standard 23 dB the -7 dBm modem drive puts +16 dBm out and -50 dBm into the LNB: its input compression point at 60 dB gain (0.7 dB compressed, "LNB input overload"). 20 dB puts -53 dBm in, 3 dB under it, so the loop carrier you measure is linear.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['configure-tx-modem'],
       timeLimitSeconds: 2 * 60,
@@ -782,7 +792,7 @@ export const scenario7Data: ScenarioData = {
       nice: ['T1313'],
       title: 'Verify Loopback Signal',
       description:
-        'Configure the spectrum analyzer and LNB to view the loopback signal. Set the LNB LO to 7000 MHz to match the BUC LO for direct IF comparison, then tune to the TX IF frequency.',
+        'Configure the spectrum analyzer and LNB to view the loopback signal. Set the LNB LO to 7000 MHz to match the BUC LO for direct IF comparison, then tune to the TX IF frequency: Center 1057 MHz, Span 50 MHz, Min Amp -100 dBm, Max Amp -20 dBm, RBW Auto. The AGC levels the loop carrier like any other, so it reads around -55 dBm per RBW.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['enable-loopback'],
       timeLimitSeconds: 5 * 60,
@@ -836,14 +846,6 @@ export const scenario7Data: ScenarioData = {
           params: {
             maxAmplitude: -20,
             maxAmplitudeTolerance: 5,
-          },
-          maintainUntilObjectiveComplete: true,
-        },
-        {
-          type: 'speca-rbw-set',
-          description: 'RBW Set to Auto',
-          params: {
-            rbw: null as unknown as number,
           },
           maintainUntilObjectiveComplete: true,
         },
@@ -915,6 +917,7 @@ export const scenario7Data: ScenarioData = {
       title: 'Verify Encryption Status',
       description: 'Confirm link security configuration before transmission.',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['quiz-loopback-purpose'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
@@ -959,8 +962,8 @@ export const scenario7Data: ScenarioData = {
       // S0421: Skill in operating network equipment
       // T1567: Equipment configuration happens throughout
       nice: ['S0421', 'T1567'],
-      title: 'Disable Loopback Mode',
-      description: 'Disable loopback to prepare for HPA enable.',
+      title: 'Disable Loopback, Restore BUC Gain',
+      description: 'Disable loopback and set the BUC gain back to the station standard 23 dB (the 20 dB loopback setting would leave the HPA 3 dB short of drive).',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['quiz-encryption-status'],
       timeLimitSeconds: 2 * 60,
@@ -975,6 +978,15 @@ export const scenario7Data: ScenarioData = {
         {
           type: 'buc-loopback-disabled',
           description: 'BUC Loopback Disabled',
+          maintainUntilObjectiveComplete: true,
+        },
+        {
+          type: 'buc-gain-set',
+          description: 'BUC Gain Restored to 23 dB',
+          params: {
+            gain: 23 as dB,
+            gainTolerance: 0.5 as dB,
+          },
           maintainUntilObjectiveComplete: true,
         },
       ],
@@ -1209,7 +1221,7 @@ export const scenario7Data: ScenarioData = {
       'reduce-buc-gain': {
         text: `
         <p>
-          Before you loop back, drop the BUC gain to 20 dB or you'll overload the receive chain. At the 50 dB maintenance left, the modem would drive it straight into saturation.
+          Before you loop back, drop the BUC gain to 20 dB. The test loop takes the BUC output about 66 dB down into the LNB: at our normal 23 dB that's right at the LNB's compression point, and a compressed loop carrier tells you nothing clean. Twenty keeps the LNB linear. And at the 50 dB maintenance left, the modem would drive the BUC itself straight into saturation.
         </p>
         `,
         character: Character.DANA_TORRES,

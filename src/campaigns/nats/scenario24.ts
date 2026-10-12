@@ -52,6 +52,13 @@ import { aurora7Satellite, ses10Satellite, tidemark1Satellite, tidemark2Satellit
  *   - VT-01: TIDEMARK-1, storm inbound (weather event at T+240, heater off so
  *     the operator must enable it proactively - S14 discipline). AURORA-7 also
  *     visible/usable from VT-01 for the pass.
+ *   - Phase 27: VT-01's TM-1 carrier is keyed at the start (TM-1 service
+ *     through the storm). Before the dish leaves TIDEMARK-1 for the AURORA-7
+ *     pass the player takes it off the air (HPA output off, then BUC mute):
+ *     a carrier keyed through a slew sweeps every satellite on the arc.
+ *     SeaLink's backup hub carries the TM-1 trunk for the AURORA-7 window
+ *     (booked with the pass). The AURORA-7 carrier is SeaLink's, up at 0800
+ *     (brief), after this shift's setup, so nothing of ours is keyed on it.
  *   - ME-02: TIDEMARK-2, BUC over-gain/hot (S13 signature) - de-rate to clear.
  *   - The Working Document accumulates the incident-command log from the
  *     triage/decision/board quizzes.
@@ -130,12 +137,14 @@ export const scenario24Data: ScenarioData = {
         ],
         spectrumAnalyzers: [
           {
-            referenceLevel: -91 as dBm,
+            referenceLevel: -91 as dBm, // Engineering-mode field; S4 checks it stays at the beacon preset
             centerFrequency: 1070e6 as Hertz,
             span: 2e3 as Hertz,
-            rbw: 1e3 as Hertz,
-            minAmplitude: -95 as dBm,
-            maxAmplitude: -75 as dBm,
+            rbw: null, // Auto (3 Hz at 2 kHz): the CW line stands ~55 dB over the floor
+            // Phase 27: the TIDEMARK beacon reads -54 to -59 dBm at the RX IF tap
+            // (ledger), the floor ~-114 dBm in 3 Hz: both on screen, 10 dB/div
+            minAmplitude: -140 as dBm,
+            maxAmplitude: -40 as dBm,
             scaleDbPerDiv: 10 as dB,
             screenMode: 'both',
             inputUnit: 'MHz',
@@ -294,7 +303,7 @@ export const scenario24Data: ScenarioData = {
               'The storm has the nearest fixed deadline and the cheapest protection (one heater switch). Start it, then work the bendable BUC trend, then stage the pass before its window. Sequence by deadline and cost, not by volume.',
             pointPenalty: 10,
             documentSection: 'Command',
-            documentLine: 'Sequence: (1) VT-01 heater before front, (2) ME-02 BUC de-rate, (3) AURORA pass setup before 0800.',
+            documentLine: 'PLAN - sequence: (1) VT-01 heater before front, (2) ME-02 BUC de-rate, (3) AURORA pass setup before 0800.',
           },
           mustMaintain: false,
         },
@@ -383,7 +392,7 @@ export const scenario24Data: ScenarioData = {
       id: 'recognize-buc-signature',
       nice: ['T0531', 'S0807'],
       title: 'Recognize the Signature',
-      description: 'You have seen this BUC before. Name it.',
+      description: "Open ME-02's TX Chain tab and read the BUC panel (gain, temperature, trend, current). You have seen this BUC before. Name it.",
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['select-maine'],
       timeLimitSeconds: 2 * 60,
@@ -444,11 +453,6 @@ export const scenario24Data: ScenarioData = {
           params: { gain: 23, gainTolerance: 2 },
           mustMaintain: true,
         },
-        {
-          type: 'hpa-not-overdriven',
-          description: 'HPA Still Linear',
-          mustMaintain: true,
-        },
       ],
       conditionLogic: 'AND',
       points: 15,
@@ -458,12 +462,20 @@ export const scenario24Data: ScenarioData = {
       nice: ['T0153', 'T0531'],
       title: 'Confirm the Trend Bends',
       description:
-        'On TX Chain, confirm the de-rate took: BUC current draw at or under 3.5 A and temperature at or under 65 °C, out of saturation, and the TM-2 carrier still locked.',
+        'On TX Chain, read the BUC and HPA panels after the de-rate: current draw, temperature and its Trend, P1dB Margin, HPA linear, and the TM-2 carrier still locked.',
       groundStation: 'ME-02',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['derate-buc'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
+        {
+          type: 'tab-active',
+          hidden: true,
+          description: 'TX Chain Open',
+          params: { tab: 'tx-chain' },
+          mustMaintain: true,
+        },
         {
           type: 'receiver-signal-locked',
           description: 'TM-2 Carrier Still Locked',
@@ -475,19 +487,40 @@ export const scenario24Data: ScenarioData = {
           description: 'BUC Out of Saturation Risk',
           mustMaintain: true,
         },
-        // The trend itself, read off the TX Chain panel (nats-s24-F5): both
-        // were true the instant gain hit 23 dB with nothing to read
         {
-          type: 'buc-current-normal',
-          description: 'BUC Current ≤ 3.5 A',
-          params: { maxCurrentDraw: 3.5, requiresObservation: true, observationTab: 'tx-chain', observationDwellSeconds: 5 },
+          type: 'hpa-not-overdriven',
+          description: 'HPA Still Linear',
           mustMaintain: true,
         },
         {
-          type: 'buc-temperature-normal',
-          description: 'BUC Temperature ≤ 65 °C',
-          params: { maxTemperature: 65, requiresObservation: true, observationTab: 'tx-chain', observationDwellSeconds: 5 },
+          type: 'buc-current-normal',
+          description: 'BUC Current ≤ 3.5 A',
+          params: { maxCurrentDraw: 3.5 },
           mustMaintain: true,
+        },
+        {
+          // The trend itself, read off the TX Chain panel (nats-s24-F5): the
+          // rows were true the instant gain hit 23 dB with nothing to read.
+          // Same unit as S13: 3.1 A at 23 dB at once; from 63 degC the target
+          // drops to 55.5 degC (10 min time constant), so the Trend readout
+          // turns negative while the temperature still reads ~62 after a minute
+          type: 'status-check',
+          description: 'BUC Panel Read',
+          params: {
+            character: Character.SYSTEM,
+            question: 'What does the ME-02 BUC panel show a minute after the de-rate?',
+            options: [
+              'Current about 3.1 A, temperature still in the low 60s but the Trend now negative, P1dB Margin about 12 dB - the curve has turned',
+              'Current still about 4.0 A, temperature climbing - the gain change has not reached the module yet',
+              'Current about 3.1 A, temperature already back in the 40s - the BUC cools as fast as the current drops',
+              'Current about 1 A, BUC output gone - the de-rate muted the carrier',
+            ],
+            correctIndex: 0,
+            explanation:
+              'Current answers in seconds, temperature lags behind the thermal mass: the reading barely moves in a minute, but the Trend has turned over and the curve is heading for the mid-50s. That, plus 12 dB of P1dB margin and the TM-2 carrier still locked, is the de-rate taking.',
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -518,12 +551,45 @@ export const scenario24Data: ScenarioData = {
       points: 5,
     },
     {
+      id: 'inhibit-tm1-tx',
+      nice: ['S0593', 'T1567'],
+      title: 'Take TM-1 Off the Air',
+      description:
+        "Before the dish leaves TIDEMARK-1, take VT-01's TM-1 carrier off the air on TX Chain: disable the HPA output first, then mute the BUC. A carrier keyed through a slew sweeps every satellite on the arc. SeaLink's backup hub carries the TM-1 trunk for the AURORA-7 window (booked with the pass).",
+      groundStation: 'VT-01',
+      prerequisiteObjectiveIds: ['return-vermont-for-pass'],
+      timeLimitSeconds: 2 * 60,
+      timerStartTrigger: 'on-activate',
+      conditions: [
+        {
+          type: 'tab-active',
+          hidden: true,
+          description: 'TX Chain Open',
+          params: { tab: 'tx-chain' },
+          mustMaintain: true,
+        },
+        {
+          type: 'hpa-disabled',
+          description: 'HPA Output Disabled',
+          mustMaintain: true,
+        },
+        {
+          type: 'buc-muted',
+          description: 'BUC Muted',
+          mustMaintain: true,
+        },
+      ],
+      conditionLogic: 'AND',
+      points: 10,
+    },
+    {
       id: 'acquire-aurora',
       nice: ['S0421', 'K1032'],
       title: 'Acquire AURORA-7',
-      description: 'In ACU Control, select AURORA-7 (NORAD 28899) as the target and Move to Target on program-track for the SeaLink pass.',
+      description:
+        'In ACU Control, select AURORA-7 (NORAD 28899) as the target and Move to Target on program-track for the SeaLink pass. The slew takes about a minute; the lock comes once the dish arrives.',
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['return-vermont-for-pass'],
+      prerequisiteObjectiveIds: ['inhibit-tm1-tx'],
       timeLimitSeconds: 4 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -534,12 +600,8 @@ export const scenario24Data: ScenarioData = {
           params: { tab: 'acu-control' },
           mustMaintain: true,
         },
-        {
-          type: 'antenna-tracking-mode-set',
-          description: 'Program-Track Mode',
-          params: { trackingMode: 'program-track' },
-          mustMaintain: true,
-        },
+        // No separate Program-Track row: VT-01 is already in program-track on
+        // TIDEMARK-1, so it ticked before the player acted
         {
           type: 'antenna-locked',
           description: 'Locked on AURORA-7',
@@ -554,12 +616,20 @@ export const scenario24Data: ScenarioData = {
       id: 'step-track-weak-beacon',
       nice: ['S0421', 'K1032'],
       title: 'Step-Track the Weak Beacon',
-      description: 'Engage step-track - on an end-of-life beacon, every bit of pointing accuracy counts.',
+      description: 'Engage step-track on ACU Control and watch it hold the beacon - on an end-of-life beacon, every bit of pointing accuracy counts.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['acquire-aurora'],
       timeLimitSeconds: 3 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
+        {
+          // B3: the 15 s hold counts while the player watches the ACU
+          type: 'tab-active',
+          hidden: true,
+          description: 'ACU Control Open',
+          params: { tab: 'acu-control' },
+          mustMaintain: true,
+        },
         {
           type: 'antenna-tracking-mode-set',
           description: 'Step-Track Engaged',
@@ -567,8 +637,10 @@ export const scenario24Data: ScenarioData = {
           mustMaintain: true,
         },
         {
+          // AURORA-7's beacon, not the TIDEMARK-1 lock VT-01 starts with
           type: 'antenna-beacon-locked',
           description: 'Beacon Held',
+          params: { noradId: 28899 },
           mustMaintain: true,
           maintainDuration: 15,
         },
@@ -603,7 +675,7 @@ export const scenario24Data: ScenarioData = {
               'Honest go: the link supports the pass now, the operator says so, and flags the EOL reality (tying back to the sunset recommendation already with the board). Communication timing matters - the caveat before the window, not an excuse during it, and never mid-pass.',
             pointPenalty: 5,
             documentSection: 'VT-01 / AURORA-7',
-            documentLine: 'Pass GO (caveat: thin margin, EOL beacon per sunset rec). Step-track holding. Marcus briefed pre-window.',
+            documentLine: 'DECISION - pass GO (caveat: thin margin, EOL beacon per sunset rec); step-track holding. Brief Marcus before the 0800 window.',
           },
           mustMaintain: false,
         },
@@ -632,7 +704,7 @@ export const scenario24Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'James wants status on TM-1 (storm) and TM-2 (BUC). What do you give him, and how often?',
             options: [
-              'Per-trunk cause/action/next-update, thirty seconds each: TM-1 protected (heater on), TM-2 stabilized (BUC de-rated, no impact)',
+              'Per-trunk cause/action/next-update, thirty seconds each: TM-1 on its booked backup for the window (VT-01 feed heated), TM-2 stabilized (BUC de-rated)',
               'A full technical briefing on both faults now: TM-1 storm dynamics (radar, ice rate), TM-2 BUC thermals (gain, current, dissipation)',
               'Nothing until both are resolved: TM-1 still under the front (heater on), TM-2 still cooling (BUC de-rated) - he waits for the all-clear',
               'A hand-off to Dana for both trunks: TM-1 storm status (her call), TM-2 BUC status (her call) - customer comms sit above command',
@@ -642,7 +714,7 @@ export const scenario24Data: ScenarioData = {
               'Command keeps the customer channel short and scheduled: cause, action, next update. A committed next-update time converts an escalating caller into a manageable one - he stops calling, you keep working, and your attention stays on the tracks.',
             pointPenalty: 5,
             documentSection: 'Customer (SeaLink/James)',
-            documentLine: 'James briefed per-trunk: TM-1 storm-protected (heater on), TM-2 BUC de-rated (no impact). Next update committed.',
+            documentLine: 'PLAN - James per trunk: TM-1 on booked backup for the AURORA window, VT-01 feed heated; TM-2 BUC de-rated, no impact. Commit the next update time.',
           },
           mustMaintain: false,
         },
@@ -665,9 +737,9 @@ export const scenario24Data: ScenarioData = {
           description: 'Storm Posture',
           params: {
             character: Character.SYSTEM,
-            question: 'The front is over Vermont now. Because you enabled the heater early, what is the situation?',
+            question: 'The front is over Vermont now, with the dish on AURORA-7 for the pass. Because you enabled the heater early, what is the situation?',
             options: [
-              'The feed stays clear as fast as ice tries to form - no accumulation, link holding; the outage never happens, monitor only',
+              'The feed stays clear as fast as ice tries to form - no accumulation, the weak beacon keeps every tenth of a dB; monitor the ACU ice reading only',
               'The feed is icing faster than the heater can clear it - accumulation building, link sagging; an emergency handover to ME-02 is due',
               'The feed is clear and the front is overhead - heater no longer needed, power to save; cycle it off until the ice actually starts',
               'The feed is clear but the sky is not - rain fade on TM-1, margin dropping; a repoint to a clearer-sky satellite is the next move',
@@ -677,7 +749,7 @@ export const scenario24Data: ScenarioData = {
               'The whole point of beating the fixed clock: protection in place before the threat means the threat never becomes an incident - the proactive heater turned a potential outage into a non-event you only have to monitor. This is the heater-before-the-front habit paying its dividend under maximum load.',
             pointPenalty: 5,
             documentSection: 'VT-01 / TM-1',
-            documentLine: 'Front over VT-01, heater on: no ice building, TM-1 holding, monitor-only.',
+            documentLine: 'Front over VT-01, heater on: watch the ACU ice reading; feed clear for the AURORA pass and for TM-1 coming back after the window.',
           },
           mustMaintain: false,
         },

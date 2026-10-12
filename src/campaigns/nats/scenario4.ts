@@ -71,6 +71,15 @@ export const scenario4Data: ScenarioData = {
             hpa: { isHpaEnabled: false },
           }),
         ],
+        spectrumAnalyzers: [
+          {
+            ...vermontGroundStation.spectrumAnalyzers[0],
+            // VT-01 is off-air at shift start, so the AGC sees only noise and
+            // beacons and lifts the TIDEMARK-1 beacon to about -44 dBm
+            minAmplitude: -120 as dBm,
+            maxAmplitude: -30 as dBm,
+          },
+        ],
         receivers: [
           {
             ...vermontGroundStation.receivers[0],
@@ -308,14 +317,6 @@ export const scenario4Data: ScenarioData = {
       timerStartTrigger: 'on-activate',
       conditions: [
         {
-          type: 'antenna-tracking-mode-set',
-          description: 'Program Track Mode Active',
-          params: {
-            trackingMode: 'program-track',
-          },
-          mustMaintain: false,
-        },
-        {
           type: 'antenna-position',
           description: 'Antenna at TIDEMARK-2 Position',
           params: {
@@ -442,12 +443,12 @@ export const scenario4Data: ScenarioData = {
       // K0773: Knowledge of telecommunications principles and practices - selecting appropriate
       // span and RBW for CW beacon observation
       // S0421: Skill in operating network equipment - configuring spectrum analyzer parameters
-      // including center frequency, span, RBW, and reference level
+      // including center frequency, span and the amplitude window
       // T1567: Equipment configuration happens throughout
       nice: ['K0773', 'S0421', 'T1567'],
       title: 'Configure Spectrum Analyzer for TIDEMARK-2 Beacon',
       description:
-        'Set the spectrum analyzer for the TIDEMARK-2 beacon: Center 1070 MHz, Span 0.01 MHz (10 kHz), RBW 1 kHz. The reference level stays at the -91 dBm beacon preset.',
+        'Set the spectrum analyzer for the TIDEMARK-2 beacon: Center 1070 MHz, Span 0.01 MHz (10 kHz), Min Amp -100 dBm, Max Amp -20 dBm. Leave RBW on Auto: at a 10 kHz span it settles near 30 Hz, and a narrow RBW pulls the noise floor down under the CW beacon.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['understand-frequency-calculation'],
       timeLimitSeconds: 3 * 60,
@@ -472,20 +473,20 @@ export const scenario4Data: ScenarioData = {
           mustMaintain: true,
         },
         {
-          type: 'speca-rbw-set',
-          description: 'RBW: 1 kHz',
+          type: 'speca-min-amplitude',
+          description: 'Min Amp: -100 dBm',
           params: {
-            rbw: 1000 as Hertz,
-            frequencyTolerance: 500,
+            minAmplitude: -100 as dBm,
+            minAmplitudeTolerance: 5,
           },
           mustMaintain: true,
         },
         {
-          type: 'speca-reference-level-set',
-          description: 'Reference Level Near -90 dBm (preset)',
+          type: 'speca-max-amplitude',
+          description: 'Max Amp: -20 dBm',
           params: {
-            referenceLevel: -90,
-            referenceLevelTolerance: 5,
+            maxAmplitude: -20 as dBm,
+            maxAmplitudeTolerance: 5,
           },
           mustMaintain: true,
         },
@@ -500,9 +501,10 @@ export const scenario4Data: ScenarioData = {
       // K1032: Knowledge of satellite-based communication systems - understanding the role
       // of beacon signals in satellite link establishment and health monitoring
       nice: ['T0153', 'K1032'],
-      title: 'Acquire TIDEMARK-2 Beacon',
-      description: 'Verify beacon signal appears on spectrum analyzer at the calculated IF frequency.',
+      title: 'Confirm the TIDEMARK-2 Beacon',
+      description: 'Find the beacon line at 1,070 MHz on the spectrum analyzer and read its level (the Peak readout under the plot, or Peak Search).',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['configure-speca-beacon'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
@@ -513,6 +515,8 @@ export const scenario4Data: ScenarioData = {
           params: {
             signalId: 'TIDEMARK-2-Beacon',
             minPower: -95 as dBm,
+            requiresObservation: true,
+            observationTab: 'rx-analysis',
           },
           mustMaintain: false,
         },
@@ -521,9 +525,33 @@ export const scenario4Data: ScenarioData = {
           description: 'Beacon Level Stable',
           params: {
             signalId: 'TIDEMARK-2-Beacon',
-            minPower: -95 as dBm,
+            // On-axis the beacon reads about -50 to -44 dBm; sidelobe pickup
+            // while the dish is elsewhere is far below this
+            minPower: -60 as dBm,
+            requiresObservation: true,
+            observationTab: 'rx-analysis',
           },
           mustMaintain: true,
+        },
+        {
+          type: 'status-check',
+          description: 'Read the Beacon Level',
+          params: {
+            question: 'What level does the TIDEMARK-2 beacon line read on the analyzer?',
+            options: [
+              'Between -60 and -40 dBm, standing far above the noise floor',
+              'Below -90 dBm, barely clear of the noise floor',
+              'Above -25 dBm, pinned against the top of the screen',
+              'No line at 1,070 MHz: the beacon is not on screen',
+            ],
+            correctIndex: 0,
+            // Ledger: -49.7 dBm at the RX IF with VT-01 off-air (the AGC lifts
+            // the beacon a few dB when there is no carrier in its passband)
+            explanation:
+              'The beacon reads around -50 to -45 dBm, more than 60 dB over the noise floor in a 30 Hz RBW. VT-01 is not transmitting yet and nobody else uplinks to a brand-new bird, so the beacon and noise are all the AGC sees, and it lifts the beacon a few dB. A strong, steady line at the calculated IF proves the pointing and the LNB setup.',
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -613,7 +641,8 @@ export const scenario4Data: ScenarioData = {
       // T1567: Equipment configuration happens throughout
       nice: ['K0773', 'S0421', 'T1567'],
       title: 'Configure RX Modem Frequency',
-      description: 'Set receiver modem to TIDEMARK-2 downlink IF frequency (1458 MHz). This is calculated from the transponder downlink RF and the LNB LO.',
+      description:
+        'Set receiver modem to TIDEMARK-2 downlink IF frequency (1458 MHz), calculated from the transponder downlink RF (3,792 MHz) and the LNB LO. Bandwidth stays 36 MHz: TIDEMARK-2 runs the same 36 MHz carrier plan.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['verify-beacon-chain-quiz'],
       timeLimitSeconds: 3 * 60,
@@ -625,15 +654,6 @@ export const scenario4Data: ScenarioData = {
           params: {
             frequency: 1458e6,
             frequencyTolerance: 1e6,
-          },
-          maintainUntilObjectiveComplete: true,
-        },
-        {
-          type: 'rx-modem-bandwidth-set',
-          description: 'RX Bandwidth: 36 MHz',
-          params: {
-            bandwidth: 36e6,
-            bandwidthTolerance: 1e6,
           },
           maintainUntilObjectiveComplete: true,
         },
@@ -649,20 +669,13 @@ export const scenario4Data: ScenarioData = {
       // T1567: Equipment configuration happens throughout
       nice: ['K0773', 'T1567'],
       title: 'Configure RX Modem Modulation',
-      description: 'Set receiver modem modulation and FEC to match TIDEMARK-2 signal format.',
+      description:
+        "Set the receiver modem FEC to 3/4 for TIDEMARK-2's carrier plan (modulation stays QPSK). Don't expect lock yet: TIDEMARK-2 is new and nobody uplinks to it, so the carrier this modem waits for is VT-01's own, once the transmit side is up.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['configure-rx-frequency'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
-        {
-          type: 'rx-modem-modulation-set',
-          description: 'Modulation: QPSK',
-          params: {
-            modulation: 'QPSK',
-          },
-          maintainUntilObjectiveComplete: true,
-        },
         {
           type: 'rx-modem-fec-set',
           description: 'FEC: 3/4',
@@ -670,81 +683,6 @@ export const scenario4Data: ScenarioData = {
             fec: '3/4',
           },
           maintainUntilObjectiveComplete: true,
-        },
-      ],
-      conditionLogic: 'AND',
-      points: 10,
-    },
-    {
-      id: 'verify-rx-lock',
-      // T0153: Analyze network traffic to identify anomalous activity - verifying receiver
-      // lock status and monitoring signal-to-noise ratio for link quality assessment
-      // K0740: Knowledge of system performance indicators - understanding SNR thresholds
-      // required for reliable QPSK demodulation and what constitutes healthy link margin
-      nice: ['T0153', 'K0740'],
-      title: 'Verify RX Signal Lock',
-      description: 'Confirm receiver has locked to TIDEMARK-2 downlink with acceptable SNR.',
-      groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['configure-rx-modulation'],
-      timeLimitSeconds: 3 * 60,
-      timerStartTrigger: 'on-activate',
-      conditions: [
-        {
-          type: 'receiver-signal-locked',
-          description: 'Receiver Locked',
-          params: {
-            modemNumber: 1,
-            requiresObservation: true,
-            observationTab: 'rx-analysis',
-          },
-          maintainUntilObjectiveComplete: true,
-        },
-        {
-          type: 'receiver-snr-threshold',
-          description: 'SNR Above 10 dB',
-          params: {
-            minCNRatio: 10,
-            modemNumber: 1,
-            requiresObservation: true,
-            observationTab: 'rx-analysis',
-          },
-          maintainUntilObjectiveComplete: true,
-          maintainDuration: 30,
-        },
-      ],
-      conditionLogic: 'AND',
-      points: 20,
-    },
-    {
-      id: 'verify-rx-margin-quiz',
-      // K0740: Knowledge of system performance indicators - understanding the difference
-      // between achieving lock and having adequate operating margin
-      // K0773: Knowledge of telecommunications principles - understanding FEC thresholds
-      nice: ['K0740', 'K0773'],
-      title: 'Understand Link Margin',
-      description: 'Understand why we verify C/N margin, not just lock status.',
-      groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['verify-rx-lock'],
-      timeLimitSeconds: 2 * 60,
-      timerStartTrigger: 'on-activate',
-      conditions: [
-        {
-          type: 'status-check',
-          description: 'Understand Link Margin',
-          params: {
-            question: 'The modem shows "Locked" with C/N above 10 dB. Why do we check the C/N value and not just the lock indicator?',
-            options: [
-              'Lock can occur at C/N as low as about 4.2 dB, with no fade margin left - we need margin',
-              'The lock indicator is unreliable, often showing false positives - we need a second check',
-              '10 dB is the hardware minimum, below it the modem will not run - we need it to function',
-              'The C/N value sets the data rate, higher is faster - we need to know the throughput',
-            ],
-            correctIndex: 0,
-            explanation:
-              'QPSK with FEC 3/4 locks at Es/N0 5.0 dB - about 4.2 dB of C/N in the 36 MHz channel (RX Analysis shows it as Required Es/N0). At threshold it still decodes cleanly, but the next 1 dB fade drops lock. With 10+ dB of C/N there is about 6 dB of margin - the link stays solid even if weather degrades it. Lock without margin is asking for trouble during the first rain fade.',
-            pointPenalty: 5,
-          },
-          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -762,7 +700,7 @@ export const scenario4Data: ScenarioData = {
       title: 'Open TX Chain Tab',
       description: 'Click the TX Chain tab to access the transmitter modem, BUC, and HPA controls.',
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['verify-rx-margin-quiz'],
+      prerequisiteObjectiveIds: ['configure-rx-modulation'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -833,7 +771,8 @@ export const scenario4Data: ScenarioData = {
       // T1567: Equipment configuration happens throughout
       nice: ['K0773', 'S0421', 'T1567'],
       title: 'Configure TX Modem',
-      description: 'Set transmitter modem parameters for the TIDEMARK-2 uplink (TP-1, 6,017 MHz RF): 983 MHz IF, 36 MHz bandwidth, -7 dBm, QPSK, FEC 3/4, transmitting.',
+      description:
+        'Retune the transmitter modem to the TIDEMARK-2 uplink (TP-1, 6,017 MHz RF): 983 MHz IF, then set it transmitting. 36 MHz, -7 dBm and QPSK 3/4 carry over from TIDEMARK-1. The BUC is still muted, so nothing radiates yet.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['verify-tx-initial-state'],
       timeLimitSeconds: 3 * 60,
@@ -845,40 +784,6 @@ export const scenario4Data: ScenarioData = {
           params: {
             frequency: 983e6, // TM-2 TP-1: 7000 - 983 = 6017 MHz (LSB)
             frequencyTolerance: 1e6,
-          },
-          maintainUntilObjectiveComplete: true,
-        },
-        {
-          type: 'tx-modem-bandwidth-set',
-          description: 'TX Bandwidth: 36 MHz',
-          params: {
-            bandwidth: 36e6,
-            bandwidthTolerance: 1e6,
-          },
-          maintainUntilObjectiveComplete: true,
-        },
-        {
-          type: 'tx-modem-power-set',
-          description: 'TX Power: -7 dBm',
-          params: {
-            power: -7,
-            powerTolerance: 1,
-          },
-          maintainUntilObjectiveComplete: true,
-        },
-        {
-          type: 'tx-modem-modulation-set',
-          description: 'TX Modulation: QPSK',
-          params: {
-            modulation: 'QPSK',
-          },
-          maintainUntilObjectiveComplete: true,
-        },
-        {
-          type: 'tx-modem-fec-set',
-          description: 'TX FEC: 3/4',
-          params: {
-            fec: '3/4',
           },
           maintainUntilObjectiveComplete: true,
         },
@@ -965,6 +870,81 @@ export const scenario4Data: ScenarioData = {
       points: 10,
     },
     {
+      id: 'verify-rx-lock',
+      // T0153: Analyze network traffic to identify anomalous activity - verifying receiver
+      // lock status and monitoring signal-to-noise ratio for link quality assessment
+      // K0740: Knowledge of system performance indicators - understanding SNR thresholds
+      // required for reliable QPSK demodulation and what constitutes healthy link margin
+      nice: ['T0153', 'K0740'],
+      title: 'Verify RX Signal Lock',
+      description: "Back on RX Analysis: confirm the receiver modem has locked to VT-01's own carrier coming back down from TIDEMARK-2, with C/N above 10 dB.",
+      groundStation: 'VT-01',
+      prerequisiteObjectiveIds: ['enable-transmit-path'],
+      timeLimitSeconds: 3 * 60,
+      timerStartTrigger: 'on-activate',
+      conditions: [
+        {
+          type: 'receiver-signal-locked',
+          description: 'Receiver Locked',
+          params: {
+            modemNumber: 1,
+            requiresObservation: true,
+            observationTab: 'rx-analysis',
+          },
+          maintainUntilObjectiveComplete: true,
+        },
+        {
+          type: 'receiver-snr-threshold',
+          description: 'SNR Above 10 dB',
+          params: {
+            minCNRatio: 10,
+            modemNumber: 1,
+            requiresObservation: true,
+            observationTab: 'rx-analysis',
+          },
+          maintainUntilObjectiveComplete: true,
+          maintainDuration: 30,
+        },
+      ],
+      conditionLogic: 'AND',
+      points: 20,
+    },
+    {
+      id: 'verify-rx-margin-quiz',
+      // K0740: Knowledge of system performance indicators - understanding the difference
+      // between achieving lock and having adequate operating margin
+      // K0773: Knowledge of telecommunications principles - understanding FEC thresholds
+      nice: ['K0740', 'K0773'],
+      title: 'Understand Link Margin',
+      description: 'Understand why we verify C/N margin, not just lock status.',
+      groundStation: 'VT-01',
+      prerequisiteObjectiveIds: ['verify-rx-lock'],
+      timeLimitSeconds: 2 * 60,
+      timerStartTrigger: 'on-activate',
+      conditions: [
+        {
+          type: 'status-check',
+          description: 'Understand Link Margin',
+          params: {
+            question: 'The modem shows "Locked" with C/N above 10 dB. Why do we check the C/N value and not just the lock indicator?',
+            options: [
+              'Lock can occur at C/N as low as about 4.2 dB, with no fade margin left - we need margin',
+              'The lock indicator is unreliable, often showing false positives - we need a second check',
+              '10 dB is the hardware minimum, below it the modem will not run - we need it to function',
+              'The C/N value sets the data rate, higher is faster - we need to know the throughput',
+            ],
+            correctIndex: 0,
+            explanation:
+              'QPSK with FEC 3/4 locks at Es/N0 5.0 dB - about 4.2 dB of C/N in the 36 MHz channel (RX Analysis shows it as Required Es/N0). At threshold it still decodes cleanly, but the next 1 dB fade drops lock. With 10+ dB of C/N there is about 6 dB of margin - the link stays solid even if weather degrades it. Lock without margin is asking for trouble during the first rain fade.',
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
+        },
+      ],
+      conditionLogic: 'AND',
+      points: 10,
+    },
+    {
       id: 'verify-full-duplex-quiz',
       // K1032: Knowledge of satellite-based communication systems - understanding
       // full duplex operation through bent-pipe transponder
@@ -974,7 +954,7 @@ export const scenario4Data: ScenarioData = {
       title: 'Verify Full Duplex Operation',
       description: 'Confirm you understand what full duplex operation means for this link.',
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['enable-transmit-path'],
+      prerequisiteObjectiveIds: ['verify-rx-margin-quiz'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -1160,7 +1140,7 @@ export const scenario4Data: ScenarioData = {
       'configure-speca-beacon': {
         text: `
         <p>
-          Spectrum analyzer's configured correctly. 1,070 MHz center, narrow span for the CW beacon, tight RBW to see it clearly above the noise, and the reference level still sits right for a weak beacon.
+          Spectrum analyzer's configured correctly. 1,070 MHz center, narrow span for the CW beacon, and RBW on Auto - at ten kilohertz of span it drops to about thirty hertz, which pulls the noise floor way down under the beacon. The amplitude window's wide open so the line sits on screen.
         </p>
         <p>
           The antenna should be on target by now. Watch the display - if everything's aligned, the beacon should appear right at center frequency. A clean spike above the noise floor.
@@ -1231,10 +1211,10 @@ export const scenario4Data: ScenarioData = {
       'configure-rx-modulation': {
         text: `
         <p>
-          Modulation parameters are set. The modem should start searching for lock now. Watch the lock indicator and the C/N display.
+          Modem's set. Don't expect lock yet. TIDEMARK-2 is brand new and nobody's uplinking to it, so all that's on its downlink is the beacon. The carrier this modem is waiting for is ours.
         </p>
         <p>
-          We need to see a stable lock with at least 10 dB carrier-to-noise before we consider the receive path complete. Lock alone isn't enough - we need margin.
+          So we bring up the transmit side, and the modem locks on our own signal coming back down. Go to the TX Chain tab.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -1244,10 +1224,10 @@ export const scenario4Data: ScenarioData = {
       'verify-rx-lock': {
         text: `
         <p>
-          Catherine here from ME-02. I'm seeing your receiver come online on the network status display. Looks like you've got good lock on TIDEMARK-2's downlink.
+          Catherine here from ME-02. I'm seeing your receiver come online on the network status display. You've got lock on TIDEMARK-2 - that's your own carrier coming back down through the bird.
         </p>
         <p>
-          We're holding steady on TIDEMARK-1 over here - all customers are happy, no impact from your switchover work. Take your time getting the transmit side configured.
+          We're holding steady on TIDEMARK-1 over here - all customers are happy, no impact from your switchover work.
         </p>
         <p>
           C/N on your link looks healthy from what I can see on the dashboard. Good margin there.
@@ -1263,7 +1243,7 @@ export const scenario4Data: ScenarioData = {
           Exactly. A modem can technically lock at much lower C/N, but the bit error rate would be high. With 10 dB or more, we have comfortable margin - enough headroom to handle rain fade, aging equipment, or any other factor that might degrade the link slightly.
         </p>
         <p>
-          Receive path is solid. Now let's configure the transmitter. Go to the TX Chain tab.
+          And that lock is on our own uplink, relayed by TIDEMARK-2. Both directions are up.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -1347,7 +1327,7 @@ export const scenario4Data: ScenarioData = {
           That's right. Full duplex confirmed by: receiver locked with margin - downlink working. HPA enabled with proper backoff - uplink active. No alarms anywhere - everything in spec.
         </p>
         <p>
-          TIDEMARK-2 is a bent-pipe transponder - it just relays what it receives. It doesn't send acknowledgments or confirmations. Marcus seeing our carrier on the payload side is the uplink proof; we can't see it ourselves without a loopback. He's just called it from Halifax: full duplex established, switchover complete.
+          TIDEMARK-2 is a bent-pipe transponder - it just relays what it receives. It doesn't send acknowledgments or confirmations. Marcus sees our carrier on the payload side, and our receiver is locked on that same carrier coming back down - that's the round trip. He's just called it from Halifax: full duplex established, switchover complete.
         </p>
         <p>
           Well done. VT-01 is now fully operational on TIDEMARK-2. Grab yourself a coffee - you've earned it.

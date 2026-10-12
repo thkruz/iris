@@ -72,7 +72,7 @@ const SCENARIO_5_OBJECTIVES: Scenario5Objective[] = [
     id: 'verify-receiver-state-quiz',
     title: 'Assess Full Impact',
     type: 'quiz',
-    correctAnswer: 'Elevated BER (Bit Error Rate) and increased packet retransmissions',
+    correctAnswer: 'The ships have much smaller dishes: the interference that leaves our 9 m dish just above threshold pushes them below it',
   },
 
   // ============================================================
@@ -179,7 +179,7 @@ const SCENARIO_5_OBJECTIVES: Scenario5Objective[] = [
     id: 'phase-9-verify-restoration',
     title: 'Verify Service Restored',
     type: 'quiz',
-    correctAnswer: 'C/N restored to normal levels - the spike is notched out and AGC normalized',
+    correctAnswer: 'C/N back above the 8 dB service minimum (about 9-10 dB), short of the 14 dB nominal',
   },
 
   // ============================================================

@@ -32,8 +32,8 @@ interface Scenario4Objective {
     // For configure-speca type
     centerFrequency: number; // MHz
     span: number; // kHz
-    rbw: number; // Hz
-    referenceLevel: number; // dBm
+    minAmplitude: number; // dBm
+    maxAmplitude: number; // dBm
   };
   rxModemConfig?: {
     // For configure-rx-modem type
@@ -125,15 +125,16 @@ const SCENARIO_4_OBJECTIVES: Scenario4Objective[] = [
     type: 'configure-speca',
     specaConfig: {
       centerFrequency: 1070, // MHz
-      span: 10, // kHz
-      rbw: 1000, // Hz
-      referenceLevel: -90, // dBm
+      span: 10, // kHz (RBW stays on Auto, ~30 Hz)
+      minAmplitude: -100, // dBm
+      maxAmplitude: -20, // dBm
     },
   },
   {
     id: 'acquire-beacon',
-    title: 'Acquire TIDEMARK-2 Beacon',
-    type: 'auto', // signal-detected condition is auto-satisfied
+    title: 'Confirm the TIDEMARK-2 Beacon',
+    type: 'quiz', // observation rows latch on the RX tab, then the level read
+    correctAnswer: 'Between -60 and -40 dBm, standing far above the noise floor',
   },
   {
     id: 'verify-beacon-acquisition',
@@ -156,8 +157,7 @@ const SCENARIO_4_OBJECTIVES: Scenario4Objective[] = [
     title: 'Configure RX Modem Frequency',
     type: 'configure-rx-modem',
     rxModemConfig: {
-      frequency: 1458, // MHz
-      bandwidth: 36, // MHz
+      frequency: 1458, // MHz (bandwidth stays 36 MHz)
     },
   },
   {
@@ -165,20 +165,8 @@ const SCENARIO_4_OBJECTIVES: Scenario4Objective[] = [
     title: 'Configure RX Modem Modulation',
     type: 'configure-rx-modem',
     rxModemConfig: {
-      modulation: 'QPSK',
-      fec: '3/4',
+      fec: '3/4', // modulation stays QPSK
     },
-  },
-  {
-    id: 'verify-rx-lock',
-    title: 'Verify RX Signal Lock',
-    type: 'auto', // receiver-signal-locked condition is auto-satisfied once modem is configured
-  },
-  {
-    id: 'verify-rx-margin-quiz',
-    title: 'Understand Link Margin',
-    type: 'quiz',
-    correctAnswer: 'Lock can occur at C/N as low as about 4.2 dB, with no fade margin left - we need margin',
   },
 
   // ============================================================
@@ -221,6 +209,18 @@ const SCENARIO_4_OBJECTIVES: Scenario4Objective[] = [
     type: 'toggle-switch',
     switchId: 'buc-mute', // First unmute BUC, then enable HPA
     switchState: false, // Unmute = unchecked
+  },
+  {
+    // TIDEMARK-2 carries no carrier until VT-01 uplinks: RX locks on its own carrier
+    id: 'verify-rx-lock',
+    title: 'Verify RX Signal Lock',
+    type: 'auto',
+  },
+  {
+    id: 'verify-rx-margin-quiz',
+    title: 'Understand Link Margin',
+    type: 'quiz',
+    correctAnswer: 'Lock can occur at C/N as low as about 4.2 dB, with no fade margin left - we need margin',
   },
   {
     id: 'verify-full-duplex-quiz',
@@ -364,7 +364,7 @@ async function waitForAntennaMovement(page: import('@playwright/test').Page, tim
  */
 async function configureSpectrumAnalyzer(
   page: import('@playwright/test').Page,
-  config: { centerFrequency: number; span: number; rbw: number; referenceLevel: number }
+  config: { centerFrequency: number; span: number; minAmplitude: number; maxAmplitude: number }
 ): Promise<void> {
   // Configure center frequency (in MHz)
   const centerFreqInput = page.locator('#sa-center-freq');
@@ -382,17 +382,17 @@ async function configureSpectrumAnalyzer(
   await spanInput.press('Tab');
   await page.waitForTimeout(100);
 
-  // Configure RBW - this is a select dropdown with values in MHz
-  // config.rbw is in Hz: 1000 Hz = 1 kHz = 0.001 MHz
-  const rbwSelect = page.locator('#sa-rbw');
-  await expect(rbwSelect).toBeVisible();
-  const rbwInMHz = config.rbw / 1e6; // Convert Hz to MHz
-  await rbwSelect.selectOption({ value: rbwInMHz.toString() });
+  // RBW stays on Auto (about 30 Hz at a 10 kHz span). Amplitude window:
+  const minAmpInput = page.locator('#sa-min-amp');
+  await expect(minAmpInput).toBeVisible();
+  await minAmpInput.fill(config.minAmplitude.toString());
+  await minAmpInput.press('Tab');
   await page.waitForTimeout(100);
-
-  // Reference level is in hidden engineering controls - skip configuring it
-  // Vermont's spectrum analyzer is already configured with referenceLevel: -91 dBm
-  // which is within the tolerance of -90 ± 5 dBm
+  const maxAmpInput = page.locator('#sa-max-amp');
+  await expect(maxAmpInput).toBeVisible();
+  await maxAmpInput.fill(config.maxAmplitude.toString());
+  await maxAmpInput.press('Tab');
+  await page.waitForTimeout(100);
 
   await page.waitForTimeout(300);
 }
@@ -787,7 +787,7 @@ test.describe('Scenario 4 Full Completion', () => {
     await executeObjective(page, missionControlPage, objective);
   });
 
-  test('Objective: Acquire TIDEMARK-2 Beacon', async () => {
+  test('Objective: Confirm the TIDEMARK-2 Beacon', async () => {
     const objective = SCENARIO_4_OBJECTIVES.find((o) => o.id === 'acquire-beacon')!;
     await executeObjective(page, missionControlPage, objective);
   });
@@ -813,17 +813,6 @@ test.describe('Scenario 4 Full Completion', () => {
 
   test('Objective: Configure RX Modem Modulation', async () => {
     const objective = SCENARIO_4_OBJECTIVES.find((o) => o.id === 'configure-rx-modulation')!;
-    await executeObjective(page, missionControlPage, objective);
-  });
-
-  test('Objective: Verify RX Signal Lock', async () => {
-    test.setTimeout(90000); // RX lock can take time
-    const objective = SCENARIO_4_OBJECTIVES.find((o) => o.id === 'verify-rx-lock')!;
-    await executeObjective(page, missionControlPage, objective);
-  });
-
-  test('Objective: Understand Link Margin', async () => {
-    const objective = SCENARIO_4_OBJECTIVES.find((o) => o.id === 'verify-rx-margin-quiz')!;
     await executeObjective(page, missionControlPage, objective);
   });
 
@@ -853,6 +842,19 @@ test.describe('Scenario 4 Full Completion', () => {
 
   test('Objective: Enable Transmit Path', async () => {
     const objective = SCENARIO_4_OBJECTIVES.find((o) => o.id === 'enable-transmit-path')!;
+    await executeObjective(page, missionControlPage, objective);
+  });
+
+  test('Objective: Verify RX Signal Lock', async () => {
+    test.setTimeout(90000); // RX lock on VT-01's own carrier, then a 30 s C/N hold
+    // The observation rows latch on RX Analysis
+    await missionControlPage.selectTab('rx-analysis');
+    const objective = SCENARIO_4_OBJECTIVES.find((o) => o.id === 'verify-rx-lock')!;
+    await executeObjective(page, missionControlPage, objective);
+  });
+
+  test('Objective: Understand Link Margin', async () => {
+    const objective = SCENARIO_4_OBJECTIVES.find((o) => o.id === 'verify-rx-margin-quiz')!;
     await executeObjective(page, missionControlPage, objective);
   });
 

@@ -308,6 +308,18 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
 
     case 'wait-ice-melt':
       await waitForIceMelt(page);
+      // Phase 27: then C/N >= 10 dB held 10 s before the objective completes.
+      // C/N reads ~10-11 dB (±1 dB jitter) at 1 dB of ice and 12-13 dB once the
+      // heater clears the last of it, about a minute after the 2 dB mark, so the
+      // hold may restart a few times first
+      await page.waitForFunction(
+        (id) => {
+          const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;
+          return typeof hook === 'function' && hook(id)?.isCompleted === true;
+        },
+        objective.id,
+        { timeout: 180000, polling: 500 }
+      );
       break;
 
     case 'auto':
@@ -362,7 +374,7 @@ test.describe('Scenario 20 Full Completion', () => {
     test(`[${objective.id}] ${objective.title}`, async () => {
       // The melt wait runs on the weather clock
       if (objective.type === 'wait-ice-melt') {
-        test.setTimeout(480000);
+        test.setTimeout(660000);
       }
       await executeObjective(page, missionControlPage, objective);
     });

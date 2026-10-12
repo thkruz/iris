@@ -248,6 +248,7 @@ export const scenario1Data: ScenarioData = {
       title: 'Verify LNB Status',
       description: 'Check that the LNB is powered, thermally stable, and noise temperature is within spec.',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['navigate-rx-analysis'],
       timeLimitSeconds: 5 * 60,
       timerStartTrigger: 'on-activate',
@@ -263,6 +264,8 @@ export const scenario1Data: ScenarioData = {
           description: 'LNB Powered',
           params: { equipment: 'lnb', requiresObservation: true, observationTab: 'rx-analysis' },
           mustMaintain: true,
+          // A read of the running LNB: the player confirms it, never cycles it
+          requiresChange: false,
         },
         {
           type: 'lnb-thermally-stable',
@@ -413,11 +416,13 @@ export const scenario1Data: ScenarioData = {
           type: 'status-check',
           description: 'Verify Spectrum Analyzer Configuration',
           params: {
-            question: 'What center frequency and span are set on the spectrum analyzer?',
+            // Asks for the brief's beacon settings, not the live screen: an
+            // AUTO-TUNE or a retune before this quiz must not change the answer
+            question: 'Your brief lists the analyzer beacon settings (also what the preset shows). What center frequency and span does it specify?',
             options: ['1074.5 MHz center, 0.002 MHz span', '1532 MHz center, 2 kHz span', '0.002 MHz center, 1074.5 MHz span', '1074.5 MHz center, 2 MHz span'],
             correctIndex: 0,
             explanation:
-              'The spectrum analyzer is set to 1074.5 MHz (beacon IF frequency for TIDEMARK-1 after LNB downconversion) with a 2 kHz (0.002 MHz) span. This narrow span allows you to clearly see the beacon signal above the noise floor.',
+              'The beacon settings are 1074.5 MHz (beacon IF frequency for TIDEMARK-1 after LNB downconversion) with a 2 kHz (0.002 MHz) span. AUTO-TUNE on the beacon settles on the same 2 kHz. This narrow span, with RBW on Auto, shows the CW beacon as a clean spike far above the noise floor.',
             pointPenalty: 10,
           },
           mustMaintain: false,

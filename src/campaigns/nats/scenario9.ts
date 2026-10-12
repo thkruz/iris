@@ -7,7 +7,7 @@ import type { ScenarioData } from '@app/ScenarioData';
 import type { dB, dBm, Hertz, MHz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
-import { vermontGroundStation } from './ground-stations';
+import { ME02_TM2_TRANSMITTER, vermontGroundStation } from './ground-stations';
 import { ses10Satellite, tidemark1Satellite, tidemark2Satellite, tidemark3Satellite } from './satellites';
 
 /**
@@ -103,10 +103,9 @@ export const scenario9Data: ScenarioData = {
         ],
         rfFrontEnds: [
           createRfFrontEnd(vermontGroundStation.rfFrontEnds[0], {
-            // Inherits VT-01 LNB LO 5250 MHz so the TM-2 beacon comes out at 1070 MHz IF
-            // Maine TX is muted - we're not transmitting from ME-02 in this scenario
-            buc: { isMuted: true },
-            hpa: { isHpaEnabled: false, isHpaSwitchEnabled: false },
+            // ME-02 mirrors VT-01's LNB LO so the TM-2 beacon comes out at 1070 MHz IF.
+            // Maine carries TIDEMARK-2 (its own hub carrier, phase 27): chain hot,
+            // BUC unmuted, HPA on at its operating back-off
           }),
         ],
         spectrumAnalyzers: [
@@ -117,9 +116,12 @@ export const scenario9Data: ScenarioData = {
             // made the beacon check complete on opening the tab)
             centerFrequency: 1074.5e6 as Hertz,
             span: 2e3 as Hertz,
-            rbw: 1e3 as Hertz,
-            minAmplitude: -95 as dBm,
-            maxAmplitude: -75 as dBm,
+            rbw: null, // Auto (3 Hz at 2 kHz)
+            // Phase 27: TIDEMARK beacons read -44 to -59 dBm at the RX IF tap
+            // (ledger; higher when the AGC sees no carrier), the floor ~-114
+            // dBm in 3 Hz
+            minAmplitude: -120 as dBm,
+            maxAmplitude: -30 as dBm,
             scaleDbPerDiv: 10 as dB,
             screenMode: 'both',
             inputUnit: 'MHz',
@@ -132,7 +134,8 @@ export const scenario9Data: ScenarioData = {
             selectedTrace: 1,
           },
         ],
-        transmitters: [],
+        // ME-02's TM-2 hub carrier keyed (phase 27)
+        transmitters: [ME02_TM2_TRANSMITTER],
         // RX modem on the TM-2 carrier so the payload spot-check reads a healthy
         // link (nats-s09-F6: the factory default sat at 1400 MHz, NO LOCK)
         receivers: [
@@ -304,9 +307,10 @@ export const scenario9Data: ScenarioData = {
     {
       id: 'vt-rx-beacon-check',
       nice: ['T0153', 'K1032', 'K0773'],
-      title: 'VT-01 RX Chain Spot Check',
-      description: 'Confirm the TIDEMARK-1 beacon is present and the receiver is locked with good C/N.',
+      title: 'Verify VT-01 RX Chain',
+      description: 'Confirm the TIDEMARK-1 beacon is present and the receiver is locked, and read the C/N the receiver modem shows.',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['vt-gpsdo-spot-check'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
@@ -336,6 +340,26 @@ export const scenario9Data: ScenarioData = {
           params: { modemNumber: 1, requiresObservation: true, observationTab: 'rx-analysis', observationDwellSeconds: 5 },
           mustMaintain: true,
         },
+        {
+          type: 'status-check',
+          description: 'Read the TIDEMARK-1 C/N',
+          params: {
+            character: Character.SYSTEM,
+            question: 'What C/N does the VT-01 receiver modem show on the TIDEMARK-1 carrier?',
+            options: [
+              '12 to 14 dB - locked with good margin',
+              '4 to 6 dB - locked, degraded margin',
+              '8 to 9 dB - just above the service minimum',
+              'No C/N reading - the modem is not locked',
+            ],
+            correctIndex: 0,
+            // Ledger: VT-01's own TP-1 carrier, 13.1 dB at shift start
+            explanation:
+              'About 13 dB: the TP-1 carrier VT-01 uplinks, coming back down through TIDEMARK-1, with some 9 dB over the 4.2 dB QPSK 3/4 threshold. That is the clear-sky baseline to compare against on the next shift.',
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
+        },
       ],
       conditionLogic: 'AND',
       points: 10,
@@ -343,9 +367,10 @@ export const scenario9Data: ScenarioData = {
     {
       id: 'vt-tx-hpa-check',
       nice: ['T0431', 'K0740'],
-      title: 'VT-01 TX Chain Spot Check',
-      description: 'Open TX Chain and verify the HPA is enabled and not overdriven.',
+      title: 'Verify VT-01 TX Chain',
+      description: 'Open TX Chain, confirm the HPA is enabled and not overdriven, and read its output power.',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['vt-rx-beacon-check'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
@@ -362,12 +387,27 @@ export const scenario9Data: ScenarioData = {
           description: 'HPA Output Enabled',
           params: { requiresObservation: true, observationTab: 'tx-chain' },
           mustMaintain: true,
+          // Q2: a read of the running uplink, never a toggle
+          requiresChange: false,
         },
         {
           type: 'hpa-not-overdriven',
           description: 'HPA Within Operating Limits',
           params: { requiresObservation: true, observationTab: 'tx-chain' },
           mustMaintain: true,
+        },
+        {
+          type: 'status-check',
+          description: 'Read the HPA Output',
+          params: {
+            character: Character.SYSTEM,
+            question: 'What output power does the VT-01 HPA panel show?',
+            options: ['About 50 dBm (100 W)', 'About 60 dBm (1 kW)', 'About 40 dBm (10 W)', 'About 57 dBm (500 W)'],
+            correctIndex: 0,
+            explanation: '16 dBm of drive from the BUC plus 34 dB of HPA gain: 50 dBm, 100 W, 10 dB under the 1 kW P1dB.',
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -500,6 +540,7 @@ export const scenario9Data: ScenarioData = {
           description: 'LNB Powered',
           params: { equipment: 'lnb', requiresObservation: true, observationTab: 'rx-analysis' },
           mustMaintain: true,
+          requiresChange: false,
         },
         {
           type: 'lnb-thermally-stable',
@@ -633,12 +674,42 @@ export const scenario9Data: ScenarioData = {
       points: 5,
     },
     {
+      // Phase 27: never slew a keyed dish. The carrier would sweep ~100 W
+      // across the GEO arc, and the sister teleport takes over the TM-1
+      // carrier: two uplinks on one carrier interfere
+      id: 'inhibit-vt-tx',
+      nice: ['S0421', 'K0741'],
+      title: 'Inhibit TX Before Repointing',
+      description:
+        "The sister teleport is taking TIDEMARK-1's carrier for the check. On TX Chain, disable VT-01's HPA output before the dish moves: a keyed dish sweeping off TIDEMARK-1 would paint the neighbouring satellites, and two stations on one carrier interfere.",
+      groundStation: 'VT-01',
+      prerequisiteObjectiveIds: ['switch-to-vermont'],
+      timeLimitSeconds: 2 * 60,
+      timerStartTrigger: 'on-activate',
+      conditions: [
+        {
+          type: 'tab-active',
+          hidden: true,
+          description: 'TX Chain Open',
+          params: { tab: 'tx-chain' },
+          mustMaintain: true,
+        },
+        {
+          type: 'hpa-disabled',
+          description: 'HPA Output Disabled (TX Inhibited)',
+          mustMaintain: true,
+        },
+      ],
+      conditionLogic: 'AND',
+      points: 5,
+    },
+    {
       id: 'repoint-to-tidemark3',
       nice: ['S0421', 'K1032', 'T1567'],
       title: 'Repoint VT-01 to TIDEMARK-3',
-      description: 'Command program-track to TIDEMARK-3 (NORAD 61527) at Az 140.5°, El 37.8°. TM-1 traffic is briefly handed to the sister teleport for this check.',
+      description: 'With TX inhibited, command program-track to TIDEMARK-3 (NORAD 61527) at Az 140.5°, El 37.8°.',
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['switch-to-vermont'],
+      prerequisiteObjectiveIds: ['inhibit-vt-tx'],
       timeLimitSeconds: 3 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -650,9 +721,8 @@ export const scenario9Data: ScenarioData = {
           mustMaintain: true,
         },
         {
-          type: 'antenna-tracking-mode-set',
-          description: 'Program-Track Mode',
-          params: { trackingMode: 'program-track' },
+          type: 'hpa-disabled',
+          description: 'TX Still Inhibited',
           mustMaintain: true,
         },
         {
@@ -768,6 +838,33 @@ export const scenario9Data: ScenarioData = {
       points: 10,
     },
 
+    {
+      id: 'restore-vt-tx',
+      nice: ['S0421', 'K0741'],
+      title: 'Take TIDEMARK-1 Back',
+      description: 'Back on TIDEMARK-1 and locked: the sister teleport drops the carrier, and VT-01 takes it back. On TX Chain, enable the HPA output again.',
+      groundStation: 'VT-01',
+      prerequisiteObjectiveIds: ['return-to-tidemark1'],
+      timeLimitSeconds: 2 * 60,
+      timerStartTrigger: 'on-activate',
+      conditions: [
+        {
+          type: 'tab-active',
+          hidden: true,
+          description: 'TX Chain Open',
+          params: { tab: 'tx-chain' },
+          mustMaintain: true,
+        },
+        {
+          type: 'hpa-enabled',
+          description: 'HPA Output Enabled',
+          mustMaintain: true,
+        },
+      ],
+      conditionLogic: 'AND',
+      points: 5,
+    },
+
     // ============================================================
     // SHIFT WRAP
     // ============================================================
@@ -777,7 +874,7 @@ export const scenario9Data: ScenarioData = {
       title: 'Final Alarm Sweep',
       description: 'Do a final dashboard sweep before logging the shift summary.',
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['return-to-tidemark1'],
+      prerequisiteObjectiveIds: ['restore-vt-tx'],
       timeLimitSeconds: 1 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -834,7 +931,7 @@ export const scenario9Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Which line correctly records this shift in the operations log?',
             options: [
-              '0700 - Morning rounds complete. VT-01/TM-1, ME-02/TM-2, TM-3 beacon verified via VT-01 spot-check. No anomalies.',
+              '0700 - Morning rounds complete. VT-01/TM-1, ME-02/TM-2, TM-3 beacon verified via VT-01 spot-check (TM-1 on the sister teleport meanwhile). No anomalies.',
               '0700 - Morning rounds incomplete. VT-01/TM-1, ME-02/TM-2 checked, TM-3 spot-check deferred to next shift. No anomalies.',
               '0700 - Morning rounds complete. VT-01/TM-1, ME-02/TM-2 checked, multiple alarms cleared on VT-01. See trouble ticket.',
               '0700 - Morning rounds complete. VT-01 repointed to TM-3 for spot-check, TM-1 traffic dropped during the check. No anomalies.',

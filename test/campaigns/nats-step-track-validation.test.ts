@@ -65,13 +65,17 @@ function station(scenario: ScenarioData, id: string): GroundStationConfig {
 }
 
 /** One station's antenna + front end + receiver, wired as GroundStation does, flying `sat` */
-function chain(scenario: ScenarioData, stationId: string, sat: Satellite) {
+function chain(scenario: ScenarioData, stationId: string, sat: Satellite, txModems?: unknown[]) {
   EventBus.destroy();
   SimClock.reset();
   document.body.innerHTML = '<div id="st-fe"></div><div id="st-rx"></div>';
   const gs = station(scenario, stationId);
   simSatellites = scenario.settings.satellites as Satellite[];
-  for (const s of simSatellites) (s as unknown as { health: number }).health = 1;
+  for (const s of simSatellites) {
+    (s as unknown as { health: number }).health = 1;
+    // Module-singleton satellites: drop the last test's arrivals (phase 27)
+    s.rxSignal = [];
+  }
 
   const state = { ...(gs.antennasState?.[0] ?? {}), isPowered: true, isOperational: true };
   const antenna = createAntenna('st-ant', 'headless', gs.antennaConfigKey ?? gs.antennas[0], state, gs.teamId ?? 1) as AntennaCore;
@@ -81,8 +85,11 @@ function chain(scenario: ScenarioData, stationId: string, sat: Satellite) {
   antenna.attachRfFrontEnd(frontEnd);
   const receiver = new Receiver('st-rx', [antenna], gs.receivers?.[0], gs.teamId ?? 1);
   receiver.connectRfFrontEnd(frontEnd);
-  // No uplink in these checks: the station's own carrier would sit on the payload
-  frontEnd.bucModule.state.isMuted = true;
+  // The station's own uplink (authored, or the test's): since phase 27 there
+  // is no stand-in, so the carrier on the payload is the one it radiates, and
+  // a pointing error costs it on the way up and on the way down
+  const modems = txModems ?? ((gs.transmitters?.[0]?.modems ?? []) as unknown[]);
+  frontEnd.connectTransmitter({ state: { modems }, isModemInIntermittentDropout: () => false } as never);
 
   antenna.handleTrackingModeChange('program-track');
   antenna.handleTargetSatelliteChange(sat.noradId);
@@ -119,7 +126,7 @@ function chain(scenario: ScenarioData, stationId: string, sat: Satellite) {
     return n > 0 ? sum / n : -Infinity;
   };
 
-  return { antenna, receiver, fly, lossToSat, carrierCn };
+  return { antenna, frontEnd, receiver, fly, lossToSat, carrierCn };
 }
 
 describe('C1 step-track lessons (phase 19.4)', () => {
@@ -167,7 +174,16 @@ describe('C1 step-track lessons (phase 19.4)', () => {
 
   it('S22: AURORA-7 under step-track sits a measurable margin above the step-track floor', () => {
     const sat = (scenario22Data.settings.satellites as Satellite[]).find((s) => s.name === 'AURORA-7')!;
-    const { antenna, fly, lossToSat, carrierCn } = chain(scenario22Data, 'VT-01', sat);
+    // VT-01 starts off the air with its chain staged for AURORA-7 (TP-1 6053
+    // MHz = BUC LO 7500 - IF 1447, phase 27); the player keys it after the
+    // beacon measurement. With no stand-in it is the only carrier there
+    const vt = (scenario22Data.settings.groundStations as GroundStationConfig[]).find((g) => g.id === 'VT-01')!;
+    const base = (vt.transmitters?.[0]?.modems?.[0] ?? {}) as { ifSignal?: object };
+    const aurora = { ...base, isTransmitting: true, isTransmittingSwitchUp: true };
+    const { antenna, frontEnd, fly, lossToSat, carrierCn } = chain(scenario22Data, 'VT-01', sat, [aurora]);
+    // The player's bring-up: drive first, then the amplifier
+    frontEnd.bucModule.handleMuteToggle(false);
+    frontEnd.hpaModule.handleHpaToggle();
 
     fly(120_000);
     const ptBeacon = antenna.state.beaconCN!;

@@ -8,7 +8,7 @@ import type { ScenarioData } from '@app/ScenarioData';
 import type { dB, dBm, Hertz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
-import { vermontGroundStation } from './ground-stations';
+import { ME02_TM2_TRANSMITTER, vermontGroundStation } from './ground-stations';
 import { ses10Satellite, tidemark1Satellite, tidemark2Satellite } from './satellites';
 
 /**
@@ -109,21 +109,21 @@ export const scenario14Data: ScenarioData = {
         ],
         rfFrontEnds: [
           createRfFrontEnd(vermontGroundStation.rfFrontEnds[0], {
-            // ME-02 mirrors VT-01's LNB LO so TM-2 beacon comes out at 1070 MHz IF.
-            // ME-02 TX is active on its own TIDEMARK-2 traffic; player should
-            // not touch it during this scenario.
-            buc: { isMuted: true },
-            hpa: { isHpaEnabled: false, isHpaSwitchEnabled: false },
+            // ME-02 mirrors VT-01's LNB LO so the TM-2 beacon comes out at 1070 MHz IF.
+            // Maine carries TIDEMARK-2 (its own hub carrier, phase 27): chain hot,
+            // BUC unmuted, HPA on at its operating back-off
           }),
         ],
         spectrumAnalyzers: [
           {
-            referenceLevel: -91 as dBm,
+            referenceLevel: -91 as dBm, // Engineering-mode field; S4 checks it stays at the beacon preset
             centerFrequency: 1070e6 as Hertz,
             span: 2e3 as Hertz,
-            rbw: 1e3 as Hertz,
-            minAmplitude: -95 as dBm,
-            maxAmplitude: -75 as dBm,
+            rbw: null, // Auto (3 Hz at 2 kHz): the CW line stands ~55 dB over the floor
+            // Phase 27: the TIDEMARK beacon reads -54 to -59 dBm at the RX IF tap
+            // (ledger), the floor ~-114 dBm in 3 Hz: both on screen, 10 dB/div
+            minAmplitude: -140 as dBm,
+            maxAmplitude: -40 as dBm,
             scaleDbPerDiv: 10 as dB,
             screenMode: 'both',
             inputUnit: 'MHz',
@@ -136,7 +136,8 @@ export const scenario14Data: ScenarioData = {
             selectedTrace: 1,
           },
         ],
-        transmitters: [],
+        // ME-02's TM-2 hub carrier keyed (phase 27)
+        transmitters: [ME02_TM2_TRANSMITTER],
         receivers: [Receiver.getDefaultState()],
       },
     ],
@@ -430,6 +431,22 @@ export const scenario14Data: ScenarioData = {
           params: { minCNRatio: 10, requiresObservation: true, observationTab: 'rx-analysis' },
           mustMaintain: true,
         },
+        {
+          // Write the baseline down (Phase 27 Q3): the ledger reads 13.1 dB
+          // raw C/N on VT-01's own TIDEMARK-1 carrier before the rain
+          // (nats-scenario14.json), 8.9 dB over the QPSK 3/4 lock point
+          type: 'status-check',
+          description: 'Baseline C/N Read',
+          params: {
+            character: Character.SYSTEM,
+            question: 'What C/N does RX modem 1 show on the TIDEMARK-1 carrier before the rain?',
+            options: ['About 13 dB', 'About 7 dB', 'About 4 dB', 'About 25 dB'],
+            correctIndex: 0,
+            explanation: 'About 13 dB, with the demodulator locking near 4 dB: roughly 9 dB of margin. That is the number to compare against when the cell is overhead.',
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
+        },
       ],
       conditionLogic: 'AND',
       points: 10,
@@ -453,7 +470,7 @@ export const scenario14Data: ScenarioData = {
             options: [
               'It defines how much fade the link can absorb before reaching the demodulation threshold',
               'It tells the customer how much uplink power we are spending to hold their carrier',
-              'It calibrates the spectrum analyzer reference level before the rain shifts the noise floor',
+              'It sets the spectrum analyzer Max Amp / Min Amp before the rain shifts the noise floor',
               'It is required by the modem firmware before it will hold lock through a fade',
             ],
             correctIndex: 0,
@@ -475,7 +492,8 @@ export const scenario14Data: ScenarioData = {
       id: 'monitor-during-fade',
       nice: ['T0153', 'S0675'],
       title: 'Monitor Through the Fade',
-      description: 'Hold position on the RX Analysis tab as the front passes. Confirm the link stays above threshold.',
+      description:
+        "Stay on RX Analysis as the front arrives (within seconds of this step opening) and watch the C/N for 20 s. At C-band the dip is under a dB, about the size of the readout's normal wander; the ACU Environmental card shows Precipitation ACTIVE while the cell is overhead.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['baseline-margin-quiz'],
       timeLimitSeconds: 6 * 60,
@@ -526,7 +544,7 @@ export const scenario14Data: ScenarioData = {
           description: 'AGC Compensation',
           params: {
             character: Character.SYSTEM,
-            question: 'The rain cell is over the dish: C/N dipped by well under a dB and the post-AGC output level is steady. What does that tell you?',
+            question: 'The rain cell is over the dish: C/N dipped by under a dB and the post-AGC output level is steady. What does that tell you?',
             options: [
               'AGC is compensating - the demodulator still sees a usable signal, and the gain stage still has headroom',
               'The fade is over - the rain has already passed and the input level will climb back within a minute',
@@ -559,7 +577,8 @@ export const scenario14Data: ScenarioData = {
           description: 'AGC Headroom Interpretation',
           params: {
             character: Character.SYSTEM,
-            question: 'The AGC gain has moved well under a dB through the cell. What does that say about the decision to hold?',
+            question:
+              'Through the cell the AGC gain wanders by about a dB, as it did before the rain, and stays far below its maximum. What does that say about the decision to hold?',
             options: [
               'Plenty of headroom remaining - link is comfortable, hold is justified',
               'Headroom is already spent - any non-zero AGC value means hand over now',
@@ -568,7 +587,7 @@ export const scenario14Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'AGC near floor = wide cushion. The handover trigger is not AGC active - it is AGC near max with continued fade, or modem unlock. We are nowhere near either.',
+              "The rain moves the input level by a few tenths of a dB, less than the AGC's normal wander, so the gain reading cannot even show it: the cushion is untouched. The handover trigger is not AGC active - it is AGC near max with continued fade, or modem unlock. We are nowhere near either.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -639,8 +658,9 @@ export const scenario14Data: ScenarioData = {
       id: 'verify-hpa-still-nominal',
       nice: ['T0431', 'S0675'],
       title: 'Verify HPA Still Nominal',
-      description: 'Confirm the HPA remains within operating limits with backoff unchanged.',
+      description: 'On TX Chain, read the HPA panel: Output, Back-off, IM3 and Overdrive. Back-off stays where it is.',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['hpa-backoff-decision-quiz'],
       timeLimitSeconds: 1 * 60,
       timerStartTrigger: 'on-activate',
@@ -655,13 +675,36 @@ export const scenario14Data: ScenarioData = {
         {
           type: 'hpa-enabled',
           description: 'HPA Output Enabled',
-          params: { requiresObservation: true, observationTab: 'tx-chain' },
+          // Keep it so: the HPA has carried the customer since shift start (Q2)
+          requiresChange: false,
           mustMaintain: true,
         },
         {
           type: 'hpa-not-overdriven',
           description: 'HPA Within Operating Limits',
           mustMaintain: true,
+        },
+        {
+          // Read quiz in place of the dwell (Phase 27 Q3). Ledger
+          // (nats-scenario14.json): 16 dBm drive, 50.0 dBm out, back-off 10
+          // dB under the 60 dBm P1dB, IM3 -43 dBc
+          type: 'status-check',
+          description: 'HPA Panel Read',
+          params: {
+            character: Character.SYSTEM,
+            question: 'What does the HPA panel read with the cell overhead?',
+            options: [
+              'Output 50 dBm (100 W), back-off 10 dB, IM3 about -43 dBc, Overdrive Normal',
+              'Output 53 dBm (200 W), back-off 7 dB, IM3 about -37 dBc - the ALC pushed power up for the fade',
+              'Output 50 dBm, back-off 10 dB, Overdrive OVERDRIVE - the rain is reflecting power back into the HPA',
+              'Output 40 dBm (10 W), back-off 20 dB - the HPA has de-rated itself for the weather',
+            ],
+            correctIndex: 0,
+            explanation:
+              'Nothing on the uplink moved: 50 dBm out, 10 dB under P1dB, IM3 about -43 dBc. An HPA does not react to downlink weather on its own, and the brief says to leave it alone.',
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -743,12 +786,17 @@ export const scenario14Data: ScenarioData = {
     {
       id: 'sustained-monitor',
       nice: ['T0153', 'S0675'],
-      title: 'Hold Through the Peak',
-      description: 'Maintain the link through the heaviest part of the front. Lock and C/N must stay above threshold.',
+      title: 'Hold Through the Cell',
+      description:
+        'Keep VT-01 on TIDEMARK-1 until the rain cell has passed (about 20 minutes from its arrival): lock held, C/N above 7 dB, antenna on TIDEMARK-1, heater on. Wait it out, or once the hold rows are green use Skip 20 min in the command bar.',
       groundStation: 'VT-01',
+      // A watch: every row but the weather is meant to stay as it is
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['decision-hold'],
-      timeLimitSeconds: 8 * 60,
+      // Long enough to wait the whole cell out in real time (Phase 27 Q4)
+      timeLimitSeconds: 22 * 60,
       timerStartTrigger: 'on-activate',
+      timeSkip: { minutes: 20, label: 'rain cell', availableAfterConditions: true },
       conditions: [
         {
           type: 'receiver-signal-locked',
@@ -773,6 +821,12 @@ export const scenario14Data: ScenarioData = {
           type: 'feed-heater-enabled',
           description: 'Feed Heater Still Enabled',
           mustMaintain: true,
+        },
+        {
+          type: 'weather-event-ended',
+          description: 'Rain Cell Passed',
+          params: { weatherEventId: 'vermont-rain-front' },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -832,8 +886,8 @@ export const scenario14Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Which entry correctly logs this event for the next shift?',
             options: [
-              'Heavy rain cell over VT-01, under 1 dB of C/N lost (mostly sky noise). Held TM-1 per customer SLA preference; AGC moved under 1 dB, modem lock maintained, no handover.',
-              'Heavy rain cell over VT-01, under 1 dB of C/N lost. Handed TM-1 to ME-02 at fade onset; AGC moved under 1 dB, customer notified, service restored.',
+              'Heavy rain cell over VT-01, under 1 dB of C/N lost (mostly sky noise). Held TM-1 per customer SLA preference; AGC far from max, modem lock maintained, no handover.',
+              'Heavy rain cell over VT-01, under 1 dB of C/N lost. Handed TM-1 to ME-02 at fade onset; AGC far from max, customer notified, service restored.',
               'Heavy rain cell over VT-01, under 1 dB of C/N lost. Lost lock on TM-1 near peak; AGC at max, modem re-locked after the cell cleared.',
               'Light rain over VT-01, no measurable fade. Held TM-1 as routine; AGC at floor, modem lock maintained, no customer contact.',
             ],

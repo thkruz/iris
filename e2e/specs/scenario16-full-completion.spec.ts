@@ -154,17 +154,12 @@ const SCENARIO_16_OBJECTIVES: Scenario16Objective[] = [
     correctAnswer: 'Power cycle the LNB to clear the sticky reference lock fault',
   },
   {
+    // "LNB Powered Off" latches first; then reference lock and the VT-01
+    // LNB's 90 s warm-up (Phase 27) before the objective completes
     id: 'power-cycle-lnb',
     title: 'Power Cycle the LNB',
     type: 'lnb-power-cycle',
-  },
-
-  // verify-rx-locked is auto-satisfied once LNB stabilizes after power cycle
-  {
-    id: 'verify-rx-locked',
-    title: 'Verify Receiver Locked',
-    type: 'auto',
-    waitForSeconds: 15,
+    waitForSeconds: 180,
   },
 
   // ============================================================
@@ -195,6 +190,21 @@ const SCENARIO_16_OBJECTIVES: Scenario16Objective[] = [
     title: 'Restore HPA Output - Confirm Spectrum Posture',
     type: 'quiz',
     correctAnswer: 'Clean - IMD products are back below coordination limits and we are no longer interfering',
+  },
+
+  // Phase 27: the receiver locks on VT-01's own carrier, so it is verified
+  // only after the uplink is restored
+  {
+    id: 'verify-rx-locked-tab',
+    title: 'Open RX Analysis',
+    type: 'click-tab',
+    tabId: 'rx-analysis',
+  },
+  {
+    id: 'verify-rx-locked',
+    title: 'Verify Receiver Locked',
+    type: 'auto',
+    waitForSeconds: 60,
   },
 
   // ============================================================
@@ -365,6 +375,15 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
 
     case 'lnb-power-cycle':
       await powerCycleLnb(page);
+      // Stay on RX Analysis until the reference lock and warm-up complete it
+      await page.waitForFunction(
+        (id) => {
+          const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;
+          return typeof hook === 'function' && hook(id)?.isCompleted === true;
+        },
+        objective.id,
+        { timeout: (objective.waitForSeconds ?? 90) * 1000, polling: 500 }
+      );
       break;
 
     case 'auto':
@@ -429,7 +448,7 @@ test.describe('Scenario 16 Full Completion', () => {
   for (const objective of SCENARIO_16_OBJECTIVES) {
     test(`[${objective.id}] ${objective.title}`, async () => {
       // Thermal cooldown can take several minutes of sim time
-      if (objective.type === 'auto' && (objective.waitForSeconds ?? 0) > 60) {
+      if ((objective.waitForSeconds ?? 0) > 30) {
         test.setTimeout((objective.waitForSeconds! + 60) * 1000);
       }
       await executeObjective(page, missionControlPage, objective);

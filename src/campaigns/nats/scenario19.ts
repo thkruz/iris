@@ -1,7 +1,8 @@
+import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { Character, Emotion } from '@app/modal/character-enum';
 import type { Objective } from '@app/objectives/objective-types';
 import type { ScenarioData } from '@app/ScenarioData';
-import type { dBm } from '@app/types';
+import type { dB, dBm, FECType, Hertz, IfFrequency, MHz, ModulationType } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import { vermontGroundStation } from './ground-stations';
 import { aurora7Satellite, tidemark1Satellite } from './satellites';
@@ -67,6 +68,70 @@ export const scenario19Data: ScenarioData = {
         // player retunes it to AURORA-7 in 'Prove the Link' instead of finding
         // it pre-tuned and locked (nats-s19-F4)
         ...vermontGroundStation,
+        // The analyzer starts wide on the TIDEMARK-1 carrier IF, so 'Fly It:
+        // Find the Beacon' is the player's retune and narrowing, not a
+        // pre-set screen (phase 27, r2-s19). The window holds a carrier's
+        // density (~-55 dBm in 100 kHz) and, once narrowed, the AURORA-7
+        // beacon (~-80 dBm) over its ~-113 dBm floor
+        //
+        // Off the air (phase 27): VT-01's TIDEMARK-1 traffic is on ME-02 this
+        // afternoon, so nothing is keyed while the dish leaves TIDEMARK-1.
+        // The TX chain is staged for AURORA-7 (BUC LO 7500, modem 1447 MHz /
+        // 24 MHz) and the player brings it up after acquisition: with the
+        // C1 stand-ins gone, the AURORA-7 carrier the RX modem locks to is
+        // VT-01's own uplink (S10 ledger: ~10 dB C/N at 10 dB back-off).
+        rfFrontEnds: [
+          createRfFrontEnd(vermontGroundStation.rfFrontEnds[0], {
+            buc: {
+              isPowered: true,
+              isMuted: true,
+              isLoopback: false,
+              loFrequency: 7500 as MHz,
+              isExtRefLocked: true,
+              gain: 23 as dB,
+            },
+            hpa: {
+              isPowered: true,
+              isHpaEnabled: false,
+              isHpaSwitchEnabled: false,
+              backOff: 10,
+            },
+          }),
+        ],
+        transmitters: [
+          {
+            ...vermontGroundStation.transmitters[0],
+            activeModem: 1,
+            modems: [
+              {
+                ...vermontGroundStation.transmitters[0].modems[0],
+                isTransmitting: false,
+                isTransmittingSwitchUp: false,
+                ifSignal: {
+                  ...vermontGroundStation.transmitters[0].modems[0].ifSignal,
+                  signalId: 'AURORA-7-Uplink',
+                  noradId: 28899,
+                  frequency: 1447e6 as IfFrequency, // 7500 - 6053
+                  bandwidth: 24e6 as Hertz,
+                  modulation: 'QPSK' as ModulationType,
+                  fec: '3/4' as FECType,
+                  power: -7 as dBm,
+                },
+              },
+            ],
+          },
+        ],
+        spectrumAnalyzers: [
+          {
+            ...vermontGroundStation.spectrumAnalyzers[0],
+            centerFrequency: 1532e6 as Hertz,
+            span: 50e6 as Hertz,
+            rbw: null,
+            referenceLevel: -30 as dBm,
+            minAmplitude: -120 as dBm,
+            maxAmplitude: -30 as dBm,
+          },
+        ],
       },
     ],
     satellites: [aurora7Satellite, tidemark1Satellite],
@@ -176,7 +241,7 @@ export const scenario19Data: ScenarioData = {
       id: 'repoint-to-aurora',
       nice: ['S0421', 'K1032'],
       title: 'Fly It: Acquire AURORA-7',
-      description: 'Program-track to AURORA-7 (NORAD 28899) - the live half of the lesson.',
+      description: 'ACU Control: retarget program-track to AURORA-7 (NORAD 28899) and let it slew and lock - the live half of the lesson.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['card-scope-quiz'],
       timeLimitSeconds: 4 * 60,
@@ -189,12 +254,9 @@ export const scenario19Data: ScenarioData = {
           params: { tab: 'acu-control' },
           mustMaintain: true,
         },
-        {
-          type: 'antenna-tracking-mode-set',
-          description: 'Program-Track Mode',
-          params: { trackingMode: 'program-track' },
-          mustMaintain: true,
-        },
+        // No separate Program-Track row: the dish is already in program-track
+        // on TIDEMARK-1, so it ticked before the player acted (s19-F4). Lock
+        // on AURORA-7 needs the retarget and the slew.
         {
           type: 'antenna-locked',
           description: 'Locked on AURORA-7',
@@ -426,12 +488,22 @@ export const scenario19Data: ScenarioData = {
       id: 'hold-beacon',
       nice: ['T0153', 'K1032'],
       title: 'Fly It: Hold the Figure-8',
-      description: 'Hold beacon lock for 20 s while the bird wanders - no input needed. Watch what "healthy" looks like on ACU Control so you can describe it.',
+      description: 'Stay on ACU Control and hold beacon lock for 20 s while the bird wanders - no input needed. Watch what "healthy" looks like so you can describe it.',
       groundStation: 'VT-01',
+      // A watch: the lock is meant to be there already
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['step-track-rule-quiz'],
       timeLimitSeconds: 3 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
+        {
+          // B3: the 20 s accrue only while the player is watching ACU Control
+          type: 'tab-active',
+          hidden: true,
+          description: 'ACU Control Open',
+          params: { tab: 'acu-control' },
+          mustMaintain: true,
+        },
         {
           type: 'antenna-beacon-locked',
           description: 'Beacon Lock Held',
@@ -517,13 +589,50 @@ export const scenario19Data: ScenarioData = {
     // PHASE 3: VERIFY (and teach the proof chain)
     // ============================================================
     {
+      id: 'key-aurora-uplink',
+      nice: ['T1567', 'S0421'],
+      title: 'Fly It: Bring the Uplink Up',
+      description:
+        'TX Chain: the chain is staged for AURORA-7 (BUC LO 7500, TX modem 1447 MHz / 24 MHz) and off the air. With the dish tracking the beacon, bring it up drive first: TX modem transmitting, then unmute the BUC, then enable the HPA.',
+      groundStation: 'VT-01',
+      prerequisiteObjectiveIds: ['mistake-chase-quiz'],
+      timeLimitSeconds: 3 * 60,
+      timerStartTrigger: 'on-activate',
+      conditions: [
+        {
+          type: 'tab-active',
+          hidden: true,
+          description: 'TX Chain Open',
+          params: { tab: 'tx-chain' },
+          mustMaintain: true,
+        },
+        {
+          type: 'tx-modem-transmitting',
+          description: 'TX Modem Transmitting',
+          mustMaintain: true,
+        },
+        {
+          type: 'buc-unmuted',
+          description: 'BUC Unmuted',
+          mustMaintain: true,
+        },
+        {
+          type: 'hpa-enabled',
+          description: 'HPA Enabled',
+          mustMaintain: true,
+        },
+      ],
+      conditionLogic: 'AND',
+      points: 10,
+    },
+    {
       id: 'verify-receiver',
       nice: ['T0153', 'S0421'],
       title: 'Fly It: Prove the Link',
       description:
-        'RX Analysis: tune receiver modem 1 to the AURORA-7 carrier (1422 MHz IF, 24 MHz bandwidth) and Apply, then prove lock with C/N at least 8 dB - the proof chain the card must teach.',
+        'RX Analysis: tune receiver modem 1 to the AURORA-7 carrier (1422 MHz IF, 24 MHz bandwidth) and Apply, then prove lock with C/N at least 8 dB - your own uplink coming back down through AURORA-7, and the proof chain the card must teach.',
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['mistake-chase-quiz'],
+      prerequisiteObjectiveIds: ['key-aurora-uplink'],
       timeLimitSeconds: 3 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -586,7 +695,7 @@ export const scenario19Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'Ordered, numeric, and explains what each check proves - the morning-rounds rule (beacon proves RF, lock proves data, margin proves durability) compressed to one card line. Each link proves something the others do not, and the order matters: no margin without lock, no lock without pointing. 1447 is the TX IF, not the receive carrier; a green dashboard proves nothing by itself.',
+              'Ordered, numeric, and explains what each check proves - the rule from your first qualified rounds (beacon proves RF, lock proves data, margin proves durability) compressed to one card line. Each link proves something the others do not, and the order matters: no margin without lock, no lock without pointing. 1447 is the TX IF, not the receive carrier; a green dashboard proves nothing by itself.',
             pointPenalty: 5,
             documentSection: 'Verify',
             documentLine: 'Proof chain: beacon 1085 (pointing+LO) → RX locked 1422 / 24 MHz (carrier) → C/N ≥ 8 (margin)',
@@ -615,13 +724,13 @@ export const scenario19Data: ScenarioData = {
             question: 'Last warning slot on the card - which one?',
             options: [
               'Carrier "gone" but beacon fine? Widen the span - a 24 MHz carrier is invisible at the 2 kHz span you used for the beacon',
-              'Carrier "gone" but beacon fine? Check the reference level - a 24 MHz carrier hides under a level set for a narrow CW beacon line',
+              'Carrier "gone" but beacon fine? Check Max Amp / Min Amp - a 24 MHz carrier hides under a window set for a narrow CW beacon line',
               'Carrier "gone" but beacon fine? Check the operations bulletin - AURORA-7 is near retirement and its transponder may be off',
               'Carrier "gone" but beacon fine? Re-acquire in program-track - the dish has drifted off the transponder beam but not the beacon',
             ],
             correctIndex: 0,
             explanation:
-              'The span trap is the natural sequel to the card\'s own beacon advice ("use 2 kHz span") - a good card warns about the mistakes its own instructions set up. An operator here once declared an outage over it. Beacon and carrier ride the same beam, so pointing is already proven; the reference level moves the trace, not the carrier.',
+              'The span trap is the natural sequel to the card\'s own beacon advice ("use 2 kHz span") - a good card warns about the mistakes its own instructions set up. An operator here once declared an outage over it. Beacon and carrier ride the same beam, so pointing is already proven; Max Amp / Min Amp move the window, not the carrier.',
             pointPenalty: 5,
             documentSection: 'Watch Out',
             documentLine: 'Carrier "gone" but beacon fine? WIDEN THE SPAN - 24 MHz won\'t show at the beacon\'s 2 kHz',
@@ -636,7 +745,7 @@ export const scenario19Data: ScenarioData = {
       id: 'tx-numbers-quiz',
       nice: ['T1411', 'K0773'],
       title: 'Card Line: the TX Number',
-      description: "The card needs the transmit-side number even though today's run was receive-only.",
+      description: 'You keyed the AURORA-7 uplink today. Put its number on the card with the trap that goes with it.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['mistake-span-quiz'],
       timeLimitSeconds: 2 * 60,

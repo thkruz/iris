@@ -136,7 +136,9 @@ const SCENARIO_15_OBJECTIVES: Scenario15Objective[] = [
   {
     id: 'verify-hpa-still-online',
     title: 'Verify HPA Still Online',
-    type: 'auto',
+    // Phase 27 Q3: the HPA rows latch on TX Chain, then the panel read
+    type: 'quiz',
+    correctAnswer: 'Output 50 dBm (100 W), back-off 10 dB, IM3 about -43 dBc, Overdrive Normal',
   },
 
   // ============================================================
@@ -293,9 +295,9 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
       break;
 
     case 'auto':
-      // verify-hpa-still-online and verify-receiver-locked are reads of
-      // state that is already true, gated on a 5 s observation dwell on the
-      // tab we are already on. Wait for the objective itself.
+      // verify-receiver-locked reads state that is already true, gated on a
+      // 5 s observation dwell on the tab we are already on. Wait for the
+      // objective itself.
       await page.waitForFunction(
         (id) => {
           const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;

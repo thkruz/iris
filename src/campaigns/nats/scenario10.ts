@@ -134,10 +134,12 @@ export const scenario10Data: ScenarioData = {
             // Pre-tuned on AURORA-7 beacon at 1085 MHz IF
             centerFrequency: 1085e6 as Hertz,
             span: 100e3 as Hertz,
-            rbw: 1e3 as Hertz,
-            referenceLevel: -90 as dBm,
-            minAmplitude: -100 as dBm,
-            maxAmplitude: -70 as dBm,
+            rbw: null, // Auto (300 Hz at 100 kHz)
+            referenceLevel: -60 as dBm,
+            // Phase 27: the AURORA-7 beacon reads -76 to -81 dBm (ledger), the
+            // floor ~-90 dBm in 300 Hz
+            minAmplitude: -120 as dBm,
+            maxAmplitude: -60 as dBm,
           },
         ],
         receivers: [
@@ -455,12 +457,15 @@ export const scenario10Data: ScenarioData = {
           description: 'BUC Unmuted',
           params: { requiresObservation: true, observationTab: 'tx-chain' },
           mustMaintain: true,
+          // Q2: a read of the running uplink, never a toggle
+          requiresChange: false,
         },
         {
           type: 'hpa-enabled',
           description: 'HPA Enabled',
           params: { requiresObservation: true, observationTab: 'tx-chain' },
           mustMaintain: true,
+          requiresChange: false,
         },
         {
           type: 'hpa-not-overdriven',
@@ -591,15 +596,37 @@ export const scenario10Data: ScenarioData = {
     },
 
     // ============================================================
-    // PHASE 4: SUSTAINED MARGIN MONITORING
+    // PHASE 4: THE PASS WINDOW (10:00-10:30)
     // ============================================================
+    {
+      // Q4 (r2-s10-F1): the setup finishes around 09:50; the window opens at
+      // 10:00. A real wait, offered as a skip once the station is ready
+      id: 'stand-by-for-window',
+      nice: ['T0153', 'K1032'],
+      title: 'Stand By for the 10:00 Window',
+      description:
+        'The station is in pass configuration and the SeaLink window opens at 10:00. Keep the beacon locked on step-track until then: wait it out, or use Skip 10 min in the command bar.',
+      groundStation: 'VT-01',
+      prerequisiteObjectiveIds: ['imd-tradeoff-check'],
+      timeSkip: { minutes: 10, label: 'standby until the 10:00 window', availableAfterConditions: true },
+      conditions: [
+        {
+          type: 'antenna-beacon-locked',
+          description: 'Beacon Held on Standby (10 min)',
+          mustMaintain: true,
+          maintainDuration: 10 * 60,
+        },
+      ],
+      conditionLogic: 'AND',
+      points: 5,
+    },
     {
       id: 'sustain-rx-margin',
       nice: ['T1580', 'T0153'],
-      title: 'Sustain Customer Downlink Margin',
-      description: 'Hold receive C/N above the 9 dB customer threshold while the window runs (a 30 s hold stands in for the pass; Marcus calls the close).',
+      title: 'Window Open: Customer Downlink Margin',
+      description: '10:00, the window is open. Hold receive C/N above the 9 dB customer threshold while Marcus confirms the payload on his side.',
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['imd-tradeoff-check'],
+      prerequisiteObjectiveIds: ['stand-by-for-window'],
       timeLimitSeconds: 3 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -617,18 +644,25 @@ export const scenario10Data: ScenarioData = {
     {
       id: 'sustain-beacon-track',
       nice: ['K1032', 'T0153'],
-      title: 'Sustain Step-Track Through the Pass',
-      description: 'Beacon stays locked under step-track as the satellite drifts.',
+      title: 'Hold Through the Window',
+      description:
+        'Hold the link to 10:30: beacon locked on step-track as AURORA-7 drifts, C/N above 9 dB. Watch it through, or use Skip 30 min in the command bar to run the window; Marcus calls the close.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['sustain-rx-margin'],
-      timeLimitSeconds: 2 * 60,
-      timerStartTrigger: 'on-activate',
+      timeSkip: { minutes: 30, label: 'SeaLink pass window to 10:30', availableAfterConditions: true },
       conditions: [
         {
           type: 'antenna-beacon-locked',
           description: 'Beacon Stays Locked',
           mustMaintain: true,
-          maintainDuration: 20,
+          maintainDuration: 29 * 60,
+        },
+        {
+          type: 'receiver-snr-threshold',
+          description: 'C/N Held Above 9 dB',
+          params: { modemNumber: 1, minCNRatio: 9 },
+          mustMaintain: true,
+          maintainDuration: 29 * 60,
         },
         {
           type: 'antenna-tracking-mode-set',

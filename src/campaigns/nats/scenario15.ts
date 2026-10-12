@@ -368,6 +368,7 @@ export const scenario15Data: ScenarioData = {
       title: 'Verify TX Modem Configuration',
       description: 'Confirm the TX modem is on the expected TIDEMARK-3 uplink IF.',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['open-tx-chain'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
@@ -386,6 +387,8 @@ export const scenario15Data: ScenarioData = {
             frequency: 1015e6,
             frequencyTolerance: 1e6,
           },
+          // Read, not set: the customer carrier is already on this slot
+          requiresChange: false,
           mustMaintain: true,
         },
         {
@@ -395,6 +398,7 @@ export const scenario15Data: ScenarioData = {
             bandwidth: 36e6,
             bandwidthTolerance: 1e6,
           },
+          requiresChange: false,
           mustMaintain: true,
         },
         {
@@ -569,8 +573,9 @@ export const scenario15Data: ScenarioData = {
       id: 'verify-hpa-still-online',
       nice: ['T0431', 'K0740'],
       title: 'Verify HPA Still Online',
-      description: 'Read the HPA panel on TX Chain for a few seconds after the change: HPA enabled, not overdriven, and the TX modem still transmitting.',
+      description: 'Read the HPA panel on TX Chain after the change: Output, Back-off, IM3 (2-tone) and Overdrive, with the TX modem still transmitting.',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['increase-hpa-backoff'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
@@ -582,25 +587,47 @@ export const scenario15Data: ScenarioData = {
           params: { tab: 'tx-chain' },
           mustMaintain: true,
         },
-        // All already true after the back-off step, so the 5 s reads on the
-        // panel are the action (nats-s15-F5)
+        // Keep it so (Q2): the change was the back-off, not these
         {
           type: 'hpa-enabled',
           description: 'HPA Enabled',
-          params: { requiresObservation: true, observationTab: 'tx-chain', observationDwellSeconds: 5 },
+          requiresChange: false,
           mustMaintain: true,
         },
         {
           type: 'hpa-not-overdriven',
           description: 'HPA Operating Linearly',
-          params: { requiresObservation: true, observationTab: 'tx-chain', observationDwellSeconds: 5 },
           mustMaintain: true,
         },
         {
           type: 'tx-modem-transmitting',
           description: 'Customer Traffic Still Flowing',
-          params: { isTransmitting: true, requiresObservation: true, observationTab: 'tx-chain', observationDwellSeconds: 5 },
+          params: { isTransmitting: true },
+          requiresChange: false,
           mustMaintain: true,
+        },
+        {
+          // Read quiz in place of the 5 s dwell (Phase 27 Q3, s15-F5).
+          // Ledger (nats-scenario15.json) at 5 dB: 55.0 dBm out, IM3 -33.0
+          // dBc. At 10 dB the ALC holds 50.0 dBm and IM3 reads about -43 dBc
+          // (2 dB per dB of back-off), as in S14 at the same setting.
+          type: 'status-check',
+          description: 'HPA Panel Read',
+          params: {
+            character: Character.SYSTEM,
+            question: 'What does the HPA panel read now that the back-off is 10 dB?',
+            options: [
+              'Output 50 dBm (100 W), back-off 10 dB, IM3 about -43 dBc, Overdrive Normal',
+              'Output 55 dBm (316 W), back-off 5 dB, IM3 about -33 dBc - the change has not taken',
+              'Output 50 dBm (100 W), back-off 10 dB, IM3 still about -33 dBc - back-off moves power, not IMD',
+              'Output -- dBm, HPA disabled - raising the back-off took the amplifier offline',
+            ],
+            correctIndex: 0,
+            explanation:
+              'The ALC dropped the output 5 dB to 50 dBm and the IM3 readout fell about 10 dB, from about -33 to -43 dBc: third-order products fall about 2 dB for every dB of back-off. The HPA is still on and still carrying SeaLink.',
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -636,7 +663,7 @@ export const scenario15Data: ScenarioData = {
       nice: ['K0737', 'S0421'],
       title: 'Tune Spectrum to TIDEMARK-3 Downlink',
       description:
-        "Reconfigure the spectrum analyzer to view the TIDEMARK-3 downlink IF region: center 1490 MHz (LNB LO 5250 minus downlink RF 3760), span about 75 MHz so RedSky's adjacent slot is visible too, RBW Auto, amplitude scale -100 to -30 dBm.",
+        "Reconfigure the spectrum analyzer to view the TIDEMARK-3 downlink IF region: center 1490 MHz (LNB LO 5250 minus downlink RF 3760), span about 75 MHz so RedSky's adjacent slot is visible too, RBW left on Auto (the beacon preset already uses it), amplitude scale -100 to -30 dBm.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['open-rx-analysis'],
       timeLimitSeconds: 3 * 60,
@@ -668,12 +695,6 @@ export const scenario15Data: ScenarioData = {
           maintainUntilObjectiveComplete: true,
         },
         {
-          type: 'speca-rbw-set',
-          description: 'RBW Auto',
-          params: { rbw: null as unknown as number },
-          maintainUntilObjectiveComplete: true,
-        },
-        {
           type: 'speca-min-amplitude',
           description: 'Min Amplitude near -100 dBm',
           params: {
@@ -687,7 +708,8 @@ export const scenario15Data: ScenarioData = {
           description: 'Max Amplitude near -30 dBm',
           params: {
             maxAmplitude: -30 as dBm,
-            maxAmplitudeTolerance: 15,
+            // The beacon preset tops out at -40: the player moves it up
+            maxAmplitudeTolerance: 5,
           },
           maintainUntilObjectiveComplete: true,
         },

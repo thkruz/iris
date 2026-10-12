@@ -37,6 +37,8 @@ interface Scenario24Objective {
   satelliteNoradId?: string;
   autoWaitSeconds?: number;
   logText?: string;
+  /** For quiz: how long to wait for it (rows listed before it must hold first) */
+  quizWaitMs?: number;
 }
 
 const SCENARIO_24_OBJECTIVES: Scenario24Objective[] = [
@@ -102,9 +104,10 @@ const SCENARIO_24_OBJECTIVES: Scenario24Objective[] = [
   {
     id: 'verify-buc-trending-down',
     title: 'Confirm the Trend Bends',
-    type: 'auto',
-    // BUC current / temperature read latch after a 5 s dwell on TX Chain
-    autoWaitSeconds: 9,
+    // Phase 27 Q3: the current / linearity rows latch on TX Chain, then the panel read
+    type: 'quiz',
+    correctAnswer: 'Current about 3.1 A, temperature still in the low 60s but the Trend now negative, P1dB Margin about 12 dB - the curve has turned',
+    quizWaitMs: 60000,
   },
 
   // TRACK 3: AURORA-7 PASS
@@ -113,6 +116,29 @@ const SCENARIO_24_OBJECTIVES: Scenario24Objective[] = [
     title: 'Back to VT-01 for the Pass',
     type: 'select-station',
     stationId: 'VT-01',
+  },
+  // Phase 27: never slew a keyed dish off TIDEMARK-1 - HPA down first, then
+  // mute the BUC (an enabled HPA on a muted BUC is an RF-safety failure)
+  {
+    id: 'inhibit-tm1-tx-tab',
+    title: 'Open TX Chain',
+    type: 'click-tab',
+    tabId: 'tx-chain',
+  },
+  {
+    id: 'inhibit-tm1-tx-hpa',
+    title: 'Take TM-1 Off the Air: HPA',
+    type: 'toggle-switch',
+    switchId: 'hpa-enable',
+    switchState: false,
+  },
+  {
+    id: 'inhibit-tm1-tx',
+    title: 'Take TM-1 Off the Air',
+    type: 'toggle-switch',
+    switchId: 'buc-mute',
+    switchState: true,
+    autoWaitSeconds: 20,
   },
   {
     id: 'acquire-aurora-tab',
@@ -127,9 +153,11 @@ const SCENARIO_24_OBJECTIVES: Scenario24Objective[] = [
     satelliteNoradId: '28899',
   },
   {
+    // Step-track on, then the beacon held 15 s on ACU Control
     id: 'step-track-weak-beacon',
     title: 'Step-Track the Weak Beacon',
     type: 'set-step-track',
+    autoWaitSeconds: 90,
   },
   {
     id: 'pass-go-nogo-quiz',
@@ -143,13 +171,13 @@ const SCENARIO_24_OBJECTIVES: Scenario24Objective[] = [
     id: 'customer-escalation-quiz',
     title: 'Manage the Customer Channel',
     type: 'quiz',
-    correctAnswer: 'Per-trunk cause/action/next-update, thirty seconds each: TM-1 protected (heater on), TM-2 stabilized (BUC de-rated, no impact)',
+    correctAnswer: 'Per-trunk cause/action/next-update, thirty seconds each: TM-1 on its booked backup for the window (VT-01 feed heated), TM-2 stabilized (BUC de-rated)',
   },
   {
     id: 'storm-hold-check',
     title: 'Storm Holding',
     type: 'quiz',
-    correctAnswer: 'The feed stays clear as fast as ice tries to form - no accumulation, link holding; the outage never happens, monitor only',
+    correctAnswer: 'The feed stays clear as fast as ice tries to form - no accumulation, the weak beacon keeps every tenth of a dB; monitor the ACU ice reading only',
   },
   {
     id: 'board-note-quiz',
@@ -277,7 +305,7 @@ async function verifyWorkingDocument(page: import('@playwright/test').Page): Pro
   const docBox = page.locator('#draggable-html-box-working-document');
   await expect(docBox).toBeVisible({ timeout: 5000 });
 
-  // 8 documentLine quizzes passed by this point
+  // 7 documentLine quizzes passed by this point
   await expect(docBox).toContainText('7 entries');
   await expect(docBox).toContainText('Command');
   await expect(docBox).toContainText('Board Note');
@@ -308,10 +336,22 @@ async function typeOpsLogEntry(page: import('@playwright/test').Page, text: stri
   await page.waitForTimeout(300);
 }
 
+/** Wait until the objective reports complete, via the debugObjective dev hook. */
+async function waitForObjectiveDone(page: import('@playwright/test').Page, objectiveId: string, timeout: number): Promise<void> {
+  await page.waitForFunction(
+    (id) => {
+      const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;
+      return typeof hook === 'function' && hook(id)?.isCompleted === true;
+    },
+    objectiveId,
+    { timeout, polling: 500 }
+  );
+}
+
 async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario24Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
-      await waitForQuizToAppear(page);
+      await waitForQuizToAppear(page, objective.quizWaitMs);
       await answerQuizByText(page, objective.correctAnswer!);
       break;
 
@@ -329,6 +369,9 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
 
     case 'toggle-switch':
       await toggleSwitch(page, objective.switchId!, objective.switchState!);
+      if (objective.autoWaitSeconds) {
+        await waitForObjectiveDone(page, objective.id, objective.autoWaitSeconds * 1000);
+      }
       break;
 
     case 'configure-buc-gain':
@@ -341,6 +384,7 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
 
     case 'set-step-track':
       await setStepTrack(page);
+      await waitForObjectiveDone(page, objective.id, (objective.autoWaitSeconds ?? 30) * 1000);
       break;
 
     case 'verify-working-doc':
@@ -352,7 +396,7 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
       break;
 
     case 'auto':
-      await page.waitForTimeout((objective.autoWaitSeconds ?? 5) * 1000);
+      await waitForObjectiveDone(page, objective.id, (objective.autoWaitSeconds ?? 30) * 1000);
       break;
   }
 
@@ -403,6 +447,9 @@ test.describe('Scenario 24 Full Completion', () => {
     test(`[${objective.id}] ${objective.title}`, async () => {
       if (objective.type === 'repoint-program-track') {
         test.setTimeout(240000);
+      }
+      if ((objective.quizWaitMs ?? 0) > 30000 || (objective.autoWaitSeconds ?? 0) > 60) {
+        test.setTimeout(180000);
       }
       await executeObjective(page, missionControlPage, objective);
     });

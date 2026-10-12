@@ -47,8 +47,13 @@ import { ses10Satellite, tidemark1Satellite, tidemark2Satellite } from './satell
  * Sim notes:
  *   - VT-01: 'snow'/severe weather event from T=0; heater OFF (vermont
  *     default) so ice accumulates (~10 dB max, tau 720 s). Heater ON melts
- *     at 1 dB/min. Starts with ~6 dB already on the feed (the front came
+ *     at 1 dB/min. Starts with 2.5 dB already on the feed (the front came
  *     overnight). Ice recovery checked via custom evaluator.
+ *   - Phase 27 (stand-ins gone): the TM-1 carrier VT-01 receives is its own
+ *     uplink, so feed ice costs both directions (uplink EIRP, downlink loss
+ *     and the lossy ice's noise). Headless run 2026-10-07: 2.7 dB of ice ->
+ *     C/N 5.0 (locked, 0.8 dB margin); 3.7 dB -> 3.8 (unlocked); 1.7 dB ->
+ *     7.4; melted, under the snow, 12.5-13.5 dB.
  *   - ME-02: HPA backOff 1 -> 59 dBm (794 W), isOverdriven, IM3 ~-25 dBc,
  *     case temperature ~62 degC (about 44 degC at 10 dB). The HPA
  *     over-temperature alarm is > 85 degC, which a healthy amplifier never
@@ -94,12 +99,15 @@ export const scenario20Data: ScenarioData = {
     scenarioStartWallTime: '07:12:00',
     groundStations: [
       // VT-01: storm overhead, heater OFF (the inherited failure), ice building.
-      // The front arrived overnight: ~6 dB of ice is already on the feed (the
-      // composite ~7 dB C/N, still locked), so the heater's 1 dB/min melt
-      // takes minutes and "Verify the Melt" is a real wait (nats-s20-F7)
+      // The front arrived overnight: 2.5 dB of ice is already on the feed, the
+      // TM-1 carrier about 5 dB C/N and a dB above the lock point, still
+      // locked. Unheated, the ice grows ~0.6 dB/min, so the carrier drops
+      // lock about a minute in: "bleeding toward the demod floor" is real.
+      // With 6 dB (before phase 27) the own-uplink link was already unlocked
+      // at load. The melt back to a healthy C/N takes 2-4 min of heater.
       {
         ...vermontGroundStation,
-        antennasState: [{ ...vermontGroundStation.antennasState[0], iceAccumulation_dB: 6 }],
+        antennasState: [{ ...vermontGroundStation.antennasState[0], iceAccumulation_dB: 2.5 }],
       },
       // ME-02: carrying TIDEMARK-2; HPA back-off drifted to 1 dB - overdriven
       // and running hot (~62 degC). BUC unmuted (traffic flowing).
@@ -145,12 +153,14 @@ export const scenario20Data: ScenarioData = {
         ],
         spectrumAnalyzers: [
           {
-            referenceLevel: -91 as dBm,
+            referenceLevel: -91 as dBm, // Engineering-mode field; S4 checks it stays at the beacon preset
             centerFrequency: 1070e6 as Hertz,
             span: 2e3 as Hertz,
-            rbw: 1e3 as Hertz,
-            minAmplitude: -95 as dBm,
-            maxAmplitude: -75 as dBm,
+            rbw: null, // Auto (3 Hz at 2 kHz): the CW line stands ~55 dB over the floor
+            // Phase 27: the TIDEMARK beacon reads -54 to -59 dBm at the RX IF tap
+            // (ledger), the floor ~-114 dBm in 3 Hz: both on screen, 10 dB/div
+            minAmplitude: -140 as dBm,
+            maxAmplitude: -40 as dBm,
             scaleDbPerDiv: 10 as dB,
             screenMode: 'both',
             inputUnit: 'MHz',
@@ -664,7 +674,8 @@ export const scenario20Data: ScenarioData = {
       id: 'vt-verify-recovery',
       nice: ['S0671', 'T0153'],
       title: 'Verify the Melt',
-      description: 'Confirm the heater is winning: ice below 2 dB and the receiver healthy again.',
+      description:
+        'Confirm the heater is winning: ice below 2 dB and the receiver healthy again - locked, with C/N back above 10 dB for 10 s. A melted feed under the snow reads about 12-13 dB.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['return-to-vermont'],
       timeLimitSeconds: 8 * 60,
@@ -690,9 +701,12 @@ export const scenario20Data: ScenarioData = {
           mustMaintain: true,
         },
         {
+          // r2-s20-F1: measured post-melt C/N under the snow is 12.5-13.5 dB
+          // (headless, 2026-10-07); 10 dB held 10 s is the melted feed, not
+          // a passing frame on the way down from the ice
           type: 'receiver-snr-threshold',
-          description: 'C/N Recovered (≥ 9 dB)',
-          params: { minCNRatio: 9 },
+          description: 'C/N Recovered (≥ 10 dB, held 10 s)',
+          params: { minCNRatio: 10, cnHoldSeconds: 10 },
           mustMaintain: true,
         },
       ],

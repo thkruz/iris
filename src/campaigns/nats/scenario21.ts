@@ -145,12 +145,12 @@ export const scenario21Data: ScenarioData = {
             modems: [
               {
                 ...vermontGroundStation.transmitters[0].modems[0],
-                // Receive-only shift: ME-02's uplink is off for the incident.
-                // On TP-1 it would land co-channel with the TM-2 composite the
-                // receiver demodulates (and on TP-2 it showed as a decoy
-                // plateau at IF 1477-1513, nats-s21-F6).
-                isTransmitting: false,
-                isTransmittingSwitchUp: false,
+                // ME-02 carries TM-2 (phase 27): its own TP-1 hub carrier is the
+                // downlink the jammer rides on (the stand-in composite it used
+                // to keep receive-only for is gone; on TP-2 it showed as a
+                // decoy plateau at IF 1477-1513, nats-s21-F6)
+                isTransmitting: true,
+                isTransmittingSwitchUp: true,
                 ifSignal: {
                   ...vermontGroundStation.transmitters[0].modems[0].ifSignal,
                   signalId: 'TIDEMARK-2-Teleport',
@@ -196,9 +196,11 @@ export const scenario21Data: ScenarioData = {
         // takes its share of the transponder output and adds IM), so
         // the modem flickers into "Degraded margin" as the carrier and the
         // jammer fade - the training point is mitigation, not a hard outage.
-        // The notch (1470/8/30) takes the jammer ~24 dB down and costs the
-        // carrier only the energy in that 8 MHz slice (~0.6 dB): lock margin
-        // ~1.5 dB with the jammer on -> ~8 dB with the notch (phase 19.6).
+        // The notch (1470/8/30) takes most of the jammer out and costs the
+        // carrier the energy in that 8 MHz slice. Headless, phase 27
+        // (2026-10-07), ME-02 on its own TM-2 carrier: clean 12.9 dB C/N;
+        // jammer on 6.1 dB (lock margin 1.4); jammer on + notch 9.0 dB
+        // (margin 4.7); jammer off + notch 11.8 dB (margin 7.5).
         power: 92.9, // uplink EIRP, 8.3 dB under the TM-2 composite's uplink (phase 19.3: was 12.7 dBm at the transponder input; a dB lower because it now also takes its share of the transponder output and adds IM)
         polarization: 'H',
         startTime: 20,
@@ -322,7 +324,7 @@ export const scenario21Data: ScenarioData = {
       id: 'duty-cycle-quiz',
       nice: ['K0926', 'S0648'],
       title: 'Characterize the Duty Cycle',
-      description: 'The interferer is on, then off, then on, in a regular pattern. Interpret it.',
+      description: 'Stay on the 40 MHz view and watch a full on/off cycle of the shelf on the top edge of the carrier. Time it (the HUD clock is enough), then interpret it.',
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['open-spectrum'],
       timeLimitSeconds: 2 * 60,
@@ -333,12 +335,12 @@ export const scenario21Data: ScenarioData = {
           description: 'Duty Cycle Read',
           params: {
             character: Character.SYSTEM,
-            question: 'The interferer runs a regular cycle - roughly ninety seconds on, a minute off, repeating. What does that timing argue?',
+            question: 'You timed a full cycle of the interferer. What cadence did you measure, and what does it argue?',
             options: [
-              'Against accident, toward deliberation: accidents are continuous or random; a clean minute-scale on/off cadence implies a switch',
-              'Toward radar, away from intent: rotating antennas sweep past on a fixed period; a minute-scale on/off cadence is a scan rate',
-              "Toward a failing supply on a neighbor's uplink: a dying regulator cycles as it heats; a minute-scale cadence is thermal",
-              "Toward nothing: duty cycle is not diagnostic; on/off timing depends on the receiver's AGC, not on the source of the noise",
+              'About 90 s on, 60 s off, repeating - against accident, toward deliberation: a clean minute-scale on/off cadence implies a switch',
+              'About 90 s on, 60 s off, repeating - toward radar: rotating antennas sweep past on a fixed period, and this is a scan rate',
+              "About 90 s on, 60 s off, repeating - toward a failing supply on a neighbor's uplink: a dying regulator cycles as it heats",
+              "No cadence - on and off at random, which says nothing: duty cycle depends on the receiver's AGC, not on the source",
             ],
             correctIndex: 0,
             explanation:
@@ -366,10 +368,10 @@ export const scenario21Data: ScenarioData = {
           description: 'The Locality Test',
           params: {
             character: Character.SYSTEM,
-            question: 'You confirm VT-01 and Halifax see the same interferer on TM-2 TP-1. What does that establish?',
+            question: 'Halifax reports the same interferer on TM-2 TP-1 at their site, on the same cadence you timed at Maine. What does seeing it at both sites establish?',
             options: [
-              'It is in the UPLINK - the satellite relays it to every station, so the source is transmitting at the bird, not local to Maine',
-              'It is LOCAL terrestrial - all three sites sit under the same radar and 5G footprint, so each is hearing its own ground source',
+              'It is in the UPLINK - the satellite relays it to both sites, so the source is transmitting at the bird, not local to Maine',
+              'It is LOCAL terrestrial - both sites sit under the same radar and 5G footprint, so each is hearing its own ground source',
               'It is the TRANSPONDER - a failing payload puts noise on every downlink, so the satellite itself is the source, not an uplink',
               'It is EXPECTED - every station on the bird sees every signal the bird relays, so cross-station visibility tells you nothing',
             ],
@@ -591,17 +593,48 @@ export const scenario21Data: ScenarioData = {
       id: 'verify-carrier-survives',
       nice: ['T0153', 'S0593'],
       title: 'Confirm the Customer Survives',
-      description: 'Verify the TM-2 carrier is still locked after the notch - mitigation must not cost the customer the link.',
+      description:
+        'On RX Analysis, read RX modem 1 with the notch in: still locked, and the C/N while the interferer is keyed (watch through a burst) - mitigation must not cost the customer the link.',
       groundStation: 'ME-02',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['configure-notch'],
       timeLimitSeconds: 3 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
         {
+          type: 'tab-active',
+          hidden: true,
+          description: 'RX Analysis Open',
+          params: { tab: 'rx-analysis' },
+          mustMaintain: true,
+        },
+        {
           type: 'receiver-signal-locked',
           description: 'Receiver Still Locked',
-          params: { modemNumber: 1, requiresObservation: true, observationTab: 'rx-analysis' },
+          params: { modemNumber: 1 },
           mustMaintain: true,
+        },
+        {
+          // Read quiz in place of the dwell (Phase 27 Q3, r2-s21-F1).
+          // Headless 2026-10-07: jammer on 6.1 dB unnotched, 9.0 dB notched;
+          // off periods 11.8 dB notched (12.9 clean)
+          type: 'status-check',
+          description: 'Post-Notch C/N Read',
+          params: {
+            character: Character.SYSTEM,
+            question: 'With the notch applied, what does RX modem 1 show while the interferer is keyed?',
+            options: [
+              'Locked at about 9 dB C/N, up from about 6 dB unnotched; about 12 dB in the off periods',
+              'Locked at about 13 dB C/N - the notch removed the interferer completely and cost the carrier nothing',
+              'Unlocked below 4 dB C/N - the notch cut the middle out of the customer carrier',
+              'Locked at about 6 dB C/N, the same as before the notch - the notch is not acting on the interferer',
+            ],
+            correctIndex: 0,
+            explanation:
+              'The notch takes most of the interferer out: lock margin goes from about 1.5 dB to about 5 dB during the bursts. The notched 8 MHz slice costs the carrier about a dB, which is why the off periods read about 12 dB instead of the clean 13. The customer is up with margin to spare.',
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -727,7 +760,7 @@ export const scenario21Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Which entry records this correctly?',
             options: [
-              'TM-2 TP-1 interference: noise ~1470 MHz IF, 90s/60s duty, uplink-confirmed (VT-01 + Halifax); crypto intact - RF denial, notched',
+              'TM-2 TP-1 interference: noise ~1470 MHz IF, 90s/60s duty, uplink-confirmed (Maine + Halifax); crypto intact - RF denial, notched',
               'TM-2 TP-1 interference: noise ~1470 MHz IF, 90s/60s duty, local source suspected (Maine only); LNB power-cycled - RX issue, cleared',
               'TM-2 TP-1 interference: hostile jamming confirmed, actor named, burned through (HPA raised); link saved - regulator not needed',
               'TM-2 TP-1 interference: some noise near the carrier, intermittent, source unknown (not chased); notch applied - fixed, no follow-up',

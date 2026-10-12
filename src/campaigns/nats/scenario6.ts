@@ -123,10 +123,14 @@ export const scenario6Data: ScenarioData = {
             ...vermontGroundStation.spectrumAnalyzers[0],
             centerFrequency: 1085e6 as Hertz, // Pre-set near beacon IF
             span: 100e3 as Hertz, // Narrow span for beacon
-            rbw: 1e3 as Hertz,
-            referenceLevel: -90 as dBm,
-            minAmplitude: -100 as dBm,
-            maxAmplitude: -70 as dBm,
+            // Set by hand for the beacon (the auto value at 100 kHz); the wide
+            // downlink view needs it back on Auto (phase 27)
+            rbw: 300 as Hertz,
+            referenceLevel: -60 as dBm,
+            // Phase 27: the AURORA-7 beacon reads -76 to -81 dBm (ledger), the
+            // floor ~-90 dBm in 300 Hz
+            minAmplitude: -120 as dBm,
+            maxAmplitude: -60 as dBm,
           },
         ],
         receivers: [
@@ -135,10 +139,12 @@ export const scenario6Data: ScenarioData = {
             modems: [
               {
                 ...vermontGroundStation.receivers[0].modems[0],
-                frequency: 1200 as MHz, // Wrong - student must configure
-                bandwidth: 24 as MHz,
-                modulation: 'QPSK',
-                fec: '3/4',
+                // Parked from a test carrier: the student sets the AURORA-7
+                // plan (1422 / 24 MHz / QPSK 3/4), so no row ticks pre-staged
+                frequency: 1200 as MHz,
+                bandwidth: 36 as MHz,
+                modulation: 'BPSK',
+                fec: '1/2',
               },
             ],
           },
@@ -151,6 +157,10 @@ export const scenario6Data: ScenarioData = {
                 ...vermontGroundStation.transmitters[0].modems[0],
                 ifSignal: {
                   ...vermontGroundStation.transmitters[0].modems[0].ifSignal,
+                  // AURORA-7's carrier, keyed into a muted BUC: nothing radiates
+                  // until the player brings the chain up (phase 27)
+                  signalId: 'AURORA-7-Uplink',
+                  noradId: 28899,
                   frequency: 1050e6 as IfFrequency, // Wrong - student must calculate TX IF
                   bandwidth: 24e6 as Hertz,
                   power: -7 as dBm,
@@ -281,12 +291,6 @@ export const scenario6Data: ScenarioData = {
       timeLimitSeconds: 3 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
-        {
-          type: 'antenna-tracking-mode-set',
-          description: 'Program Track Mode',
-          params: { trackingMode: 'program-track' },
-          maintainUntilObjectiveComplete: true,
-        },
         {
           type: 'antenna-locked',
           description: 'Locked on AURORA-7',
@@ -424,7 +428,8 @@ export const scenario6Data: ScenarioData = {
       // T1567: Equipment configuration happens throughout
       nice: ['K0773', 'S0421', 'T1567'],
       title: 'Configure Spectrum Analyzer for Downlink',
-      description: 'Reconfigure the spectrum analyzer to view the main downlink signal at IF 1422 MHz.',
+      description:
+        "Reconfigure the spectrum analyzer for AURORA-7's carrier slot at IF 1422 MHz: Span 50 MHz, Min Amp -90 dBm, Max Amp -30 dBm, RBW Auto. Expect an empty band: VT-01 is off-air and nobody else uplinks on that slot, so the carrier appears only once you transmit.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['acquire-beacon-lock'],
       timeLimitSeconds: 3 * 60,
@@ -450,18 +455,21 @@ export const scenario6Data: ScenarioData = {
         },
         {
           type: 'speca-max-amplitude',
-          description: 'Max Amplitude: -20 dBm',
+          // The 24 MHz composite (~-29 dBm total) reads ~-52 dBm in the 100 kHz
+          // auto RBW, its floor ~-66 dBm: -90/-30 shows both (phase 27; the
+          // old -50/-20 window put the carrier under Min Amp)
+          description: 'Max Amplitude: -30 dBm',
           params: {
-            maxAmplitude: -20 as dBm,
+            maxAmplitude: -30 as dBm,
             amplitudeTolerance: 5 as dB,
           },
           mustMaintain: true,
         },
         {
           type: 'speca-min-amplitude',
-          description: 'Min Amplitude: -50 dBm',
+          description: 'Min Amplitude: -90 dBm',
           params: {
-            minAmplitude: -50 as dBm,
+            minAmplitude: -90 as dBm,
             amplitudeTolerance: 5 as dB,
           },
           mustMaintain: true,
@@ -485,7 +493,8 @@ export const scenario6Data: ScenarioData = {
       // T1567: Equipment configuration happens throughout
       nice: ['K0773', 'S0421', 'T1567'],
       title: 'Configure RX Modem',
-      description: 'Set the receiver modem to the AURORA-7 downlink IF frequency (1422 MHz) with correct bandwidth and modulation.',
+      description:
+        'Set the receiver modem to the AURORA-7 downlink: 1422 MHz IF, 24 MHz bandwidth, QPSK, FEC 3/4 (it is parked from a test carrier). It will not lock yet: the carrier it waits for is your own.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['configure-speca-downlink'],
       timeLimitSeconds: 3 * 60,
@@ -525,43 +534,23 @@ export const scenario6Data: ScenarioData = {
           },
           maintainUntilObjectiveComplete: true,
         },
-      ],
-      conditionLogic: 'AND',
-      points: 15,
-    },
-    {
-      id: 'verify-rx-lock',
-      // T0153: Monitor network capacity and performance
-      // K0740: Knowledge of system performance indicators
-      nice: ['T0153', 'K0740'],
-      title: 'Verify RX Signal Lock',
-      description: 'Confirm receiver has locked to AURORA-7 downlink with acceptable SNR.',
-      groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['configure-rx-modem'],
-      timeLimitSeconds: 3 * 60,
-      timerStartTrigger: 'on-activate',
-      conditions: [
         {
-          type: 'receiver-signal-locked',
-          description: 'Receiver Locked',
+          type: 'status-check',
+          description: 'Why No Lock Yet',
           params: {
-            modemNumber: 1,
-            requiresObservation: true,
-            observationTab: 'rx-analysis',
+            question: 'The modem is set to the AURORA-7 plan, but it shows no lock and the analyzer shows only noise at 1422 MHz. Why?',
+            options: [
+              'Nobody is uplinking on that slot: the carrier this modem waits for is our own, once VT-01 transmits',
+              'Step-track has not peaked the antenna yet, so the carrier is still below the noise',
+              'The modem needs the beacon at 1085 MHz to lock before it can find the carrier',
+              'AURORA-7 is in eclipse, so its transponder is switched off',
+            ],
+            correctIndex: 0,
+            explanation:
+              "A bent-pipe transponder relays only what is uplinked into it. AURORA-7's beacon is the satellite's own (you see it at 1085 MHz), but the 24 MHz slot at 1422 MHz IF carries traffic only while a ground station transmits into it, and that station is us. Bring the transmit path up and our carrier comes back down through the transponder; the modem locks on it.",
+            pointPenalty: 5,
           },
-          maintainUntilObjectiveComplete: true,
-        },
-        {
-          type: 'receiver-snr-threshold',
-          description: 'SNR Above 8 dB',
-          params: {
-            minCNRatio: 8,
-            modemNumber: 1,
-            requiresObservation: true,
-            observationTab: 'rx-analysis',
-          },
-          maintainUntilObjectiveComplete: true,
-          maintainDuration: 15,
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -578,7 +567,7 @@ export const scenario6Data: ScenarioData = {
       title: 'Verify Encryption Understanding',
       description: "Before we enable transmission, let's verify you understand the encryption configuration. Look at the Encryption card on the TX Chain tab.",
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['verify-rx-lock'],
+      prerequisiteObjectiveIds: ['configure-rx-modem'],
       timeLimitSeconds: 3 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -692,6 +681,44 @@ export const scenario6Data: ScenarioData = {
       conditionLogic: 'AND',
       points: 15,
     },
+    {
+      id: 'verify-rx-lock',
+      // T0153: Monitor network capacity and performance
+      // K0740: Knowledge of system performance indicators
+      nice: ['T0153', 'K0740'],
+      title: 'Verify RX Signal Lock',
+      description: 'Back on RX Analysis: confirm the receiver modem has locked to your own carrier coming back down from AURORA-7, with C/N above 8 dB.',
+      groundStation: 'VT-01',
+      prerequisiteObjectiveIds: ['enable-transmit-path'],
+      timeLimitSeconds: 3 * 60,
+      timerStartTrigger: 'on-activate',
+      conditions: [
+        {
+          type: 'receiver-signal-locked',
+          description: 'Receiver Locked',
+          params: {
+            modemNumber: 1,
+            requiresObservation: true,
+            observationTab: 'rx-analysis',
+          },
+          maintainUntilObjectiveComplete: true,
+        },
+        {
+          type: 'receiver-snr-threshold',
+          description: 'SNR Above 8 dB',
+          params: {
+            minCNRatio: 8,
+            modemNumber: 1,
+            requiresObservation: true,
+            observationTab: 'rx-analysis',
+          },
+          maintainUntilObjectiveComplete: true,
+          maintainDuration: 15,
+        },
+      ],
+      conditionLogic: 'AND',
+      points: 15,
+    },
 
     // ============================================================
     // PHASE 6: FINAL VERIFICATION
@@ -703,7 +730,7 @@ export const scenario6Data: ScenarioData = {
       title: 'Full Duplex Established',
       description: 'Verify your understanding of the complete step-track link.',
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['enable-transmit-path'],
+      prerequisiteObjectiveIds: ['verify-rx-lock'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -849,7 +876,7 @@ export const scenario6Data: ScenarioData = {
       'configure-speca-downlink': {
         text: `
         <p>
-          Good, you can see the downlink signal on the spectrum analyzer. Now configure the receiver modem to match - 1,422 megahertz center frequency, 24 megahertz bandwidth, QPSK modulation, 3/4 FEC.
+          That's AURORA-7's carrier slot - and it's empty. Nobody's uplinking there until we do. Set up the receiver modem anyway - 1,422 megahertz, 24 megahertz bandwidth, QPSK, 3/4 FEC - so it's ready when our own carrier comes back down.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -859,7 +886,7 @@ export const scenario6Data: ScenarioData = {
       'configure-rx-modem': {
         text: `
         <p>
-          Receiver is configured. Watch for lock and check the signal-to-noise ratio.
+          Receiver's set. No lock yet, and that's expected - the carrier it's waiting for is ours. Before we transmit, check the encryption. TX Chain tab, the Encryption card.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -869,10 +896,10 @@ export const scenario6Data: ScenarioData = {
       'verify-rx-lock': {
         text: `
         <p>
-          Receiver locked with good SNR. We're halfway there - receiving from AURORA-7.
+          Receiver locked with good SNR. That's our own carrier - up to AURORA-7 and back down. Full duplex.
         </p>
         <p>
-          Before we enable transmission, I want to make sure you understand the encryption and payload systems. Look at the TX Chain tab - you'll see the Encryption and Payload cards I pre-configured.
+          One final check - let's make sure you understand the complete link configuration.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -915,10 +942,7 @@ export const scenario6Data: ScenarioData = {
       'enable-transmit-path': {
         text: `
         <p>
-          Transmit path is active. Full duplex established with AURORA-7.
-        </p>
-        <p>
-          One final check - let's make sure you understand the complete link configuration.
+          Transmit path is active. Now go back to RX Analysis and watch the receiver. Our carrier should come back down through AURORA-7 and the modem should lock onto it.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,

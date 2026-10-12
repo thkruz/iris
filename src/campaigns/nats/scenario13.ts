@@ -4,7 +4,7 @@ import type { Objective } from '@app/objectives/objective-types';
 import type { ScenarioData } from '@app/ScenarioData';
 import type { dB, dBm, MHz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
-import { maineGroundStation, vermontGroundStation } from './ground-stations';
+import { maineGroundStationOperational, vermontGroundStation } from './ground-stations';
 import { tidemark1Satellite, tidemark2Satellite } from './satellites';
 
 /**
@@ -49,7 +49,7 @@ export const scenario13Data: ScenarioData = {
   duration: '25-30 min',
   difficulty: 'intermediate',
   missionType: 'Trend Assessment',
-  description: `Mid-shift on VT-01. TIDEMARK-1 carrying normal customer traffic. The BUC temperature trend flagged something ten minutes ago (TX Chain shows it: Trend, 10 min ago, and the 30-minute curve): BUC temperature has climbed from 57°C to 62°C and is still rising, now about a third of a degree per minute. No over-temperature alarm yet, just a cooling-fault warning on the BUC fan.<br><br>Nothing else has moved. GPSDO locked, RX beacon clean, HPA in backoff. The question is whether to act now, schedule a swap and keep going, switch to backup, or hold and monitor.<br><br>The right answer is judgment, not a checklist. Read the trend, pick a course of action, and execute it without putting the customer in the dark.`,
+  description: `Mid-shift on VT-01. TIDEMARK-1 carrying normal customer traffic. The BUC temperature trend flagged at 0953 with the BUC at 57°C; at 1003 it reads 62°C and is still rising, now about a third of a degree per minute. TX Chain shows the curve: Trend, the 30-minute sparkline, and a rolling 10 min ago readout (it reads 57°C at 1003 and moves up with the clock). No over-temperature alarm yet, just a cooling-fault warning on the BUC fan.<br><br>Nothing else has moved. GPSDO locked, RX beacon clean, HPA in backoff. The question is whether to act now, schedule a swap and keep going, switch to backup, or hold and monitor.<br><br>The right answer is judgment, not a checklist. Read the trend, pick a course of action, and execute it without putting the customer in the dark.`,
   equipment: ['9-meter C-band Antenna', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'ME-02: Operational'],
   timeLimitSeconds: 30 * 60,
   settings: {
@@ -89,7 +89,7 @@ export const scenario13Data: ScenarioData = {
           }),
         ],
       },
-      { ...maineGroundStation, isOperational: true },
+      maineGroundStationOperational,
     ],
     satellites: [tidemark1Satellite, tidemark2Satellite],
     missionBriefUrl: 'https://docs.signalrange.space/campaign-1/scenario-13?content-only=true&dark=true',
@@ -304,8 +304,10 @@ export const scenario13Data: ScenarioData = {
       id: 'cross-check-spectrum',
       nice: ['T0153', 'K0773'],
       title: 'Rule Out an RX-Side Fault',
-      description: 'Open RX Analysis and watch the TIDEMARK-1 beacon for a few seconds. If the RX side is clean, the trend is isolated to the TX chain.',
+      description:
+        'Open RX Analysis and read the receive side: the TIDEMARK-1 beacon on the analyzer and the RX modem lock and C/N for your own carrier. If the RX side is clean, the trend is isolated to the TX chain.',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['check-current-draw'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
@@ -318,17 +320,27 @@ export const scenario13Data: ScenarioData = {
           mustMaintain: true,
         },
         {
-          type: 'signal-detected',
-          description: 'TIDEMARK-1 Beacon Still Present',
+          // Read quiz in place of the 5 s dwell (Phase 27 Q3, s13-F3). Own
+          // carrier on TIDEMARK-1 reads 14.0 dB raw C/N in the ledger
+          // (nats-scenario13.json), locked with ~9.7 dB Es/N0 margin; the
+          // BUC heat does not touch the receive chain.
+          type: 'status-check',
+          description: 'RX Side Read',
           params: {
-            signalId: 'TIDEMARK-1-Beacon',
-            minPower: -100 as dBm,
-            requiresObservation: true,
-            observationTab: 'rx-analysis',
-            // A look, not a glance: the beacon must read clean for 5 s (nats-s13-F3)
-            observationDwellSeconds: 5,
+            character: Character.SYSTEM,
+            question: 'What does the receive side show on RX Analysis right now?',
+            options: [
+              'Beacon steady on the analyzer, RX modem locked at about 14 dB C/N - the receive chain is clean',
+              'Beacon steady, but the RX modem is unlocked below 5 dB C/N - the BUC heat is already reaching the customer',
+              'Beacon gone from the analyzer, RX modem locked at about 14 dB - the antenna has drifted off TIDEMARK-1',
+              'Beacon steady, RX modem locked at about 3 dB C/N - the link is one fade away from dropping',
+            ],
+            correctIndex: 0,
+            explanation:
+              'The beacon is where it always is and your own carrier comes back through TIDEMARK-1 locked at about 14 dB C/N, nearly 10 dB above what QPSK 3/4 needs. Nothing on the receive side moved: the trend is a TX-chain story, and the customer is not feeling it.',
+            pointPenalty: 5,
           },
-          mustMaintain: true,
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -507,25 +519,54 @@ export const scenario13Data: ScenarioData = {
       id: 'verify-hpa-headroom',
       nice: ['T0431', 'K0740'],
       title: 'Verify HPA Still Linear',
-      description:
-        'Stay on TX Chain and read the HPA and BUC panels after the change: HPA output and back-off unchanged (the ALC raised its gain by 10 dB), HPA not overdriven, BUC output below saturation.',
+      description: 'Stay on TX Chain and read the BUC and HPA panels after the change: BUC Output and P1dB Margin, HPA Output, Back-off and Overdrive.',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['reduce-buc-gain'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
         {
+          type: 'tab-active',
+          hidden: true,
+          description: 'TX Chain Open',
+          params: { tab: 'tx-chain' },
+          mustMaintain: true,
+        },
+        {
           type: 'hpa-not-overdriven',
           description: 'HPA Within Linear Region',
-          // Read on the panel, not inferred: both were already true (nats-s13-F3)
-          params: { requiresObservation: true, observationTab: 'tx-chain', observationDwellSeconds: 5 },
+          params: {},
           mustMaintain: true,
         },
         {
           type: 'buc-not-saturated',
           description: 'BUC Output Not Saturated',
-          params: { requiresObservation: true, observationTab: 'tx-chain', observationDwellSeconds: 5 },
+          params: {},
           mustMaintain: true,
+        },
+        {
+          // Read quiz in place of the 5 s dwell (Phase 27 Q3, s13-F3). Ledger
+          // (nats-scenario13.json): -7 dBm into the BUC, 33 dB -> 25.7 dBm out
+          // (P1dB 28, margin 2.3 dB). At 23 dB: ~15.7-16.0 dBm, margin
+          // ~12.0-12.3 dB. The HPA ALC holds 52.0 dBm at 8.0 dB back-off.
+          type: 'status-check',
+          description: 'TX Chain Read',
+          params: {
+            character: Character.SYSTEM,
+            question: 'What do the BUC and HPA panels read now that the gain is back at 23 dB?',
+            options: [
+              'BUC output about 16 dBm, P1dB margin about 12 dB; HPA output still 52 dBm at 8 dB back-off, Overdrive Normal',
+              'BUC output about 26 dBm, P1dB margin about 2 dB; HPA output 52 dBm - the gain change has not taken',
+              'BUC output about 16 dBm, P1dB margin about 12 dB; HPA output down to 42 dBm at 18 dB back-off - the customer lost 10 dB',
+              'BUC output about 16 dBm, P1dB margin about 12 dB; HPA in OVERDRIVE - the ALC is at its gain limit',
+            ],
+            correctIndex: 0,
+            explanation:
+              'The BUC dropped 10 dB, from about 2 dB under its P1dB to about 12 dB under it: no saturation risk and 10 dB less to dissipate. The HPA ALC raised its own gain by the same 10 dB, so its output, back-off and IM3 did not move. The customer EIRP is unchanged.',
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -544,7 +585,7 @@ export const scenario13Data: ScenarioData = {
       conditions: [
         // The curve has to actually bend on the panel (nats-s13-F3): the
         // de-rate drops the thermal target to ~56 degC, so from ~62-64 degC
-        // the reading passes 61 within about 1.5-3 minutes
+        // the reading passes 61 within about 2-3 minutes (r2 replay: ~3 min)
         {
           type: 'buc-temperature-normal',
           description: 'BUC Temperature Below 61°C',
@@ -564,7 +605,7 @@ export const scenario13Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'How do you know the de-rate worked before you log the shift?',
             options: [
-              'Watch a few minutes: current drops to about 3.1 A at once, temperature turns down and passes 61°C in about 2 minutes, carrier still locked',
+              'Watch a few minutes: current drops to about 3.1 A at once, temperature turns down and passes 61°C in 2-3 minutes, carrier still locked',
               'Trust the first reading: current drops the moment the gain changes, so the temperature needs no watching',
               'Check the setpoint: gain reads 23 dB, HPA output unchanged, no thermal verification is needed beyond that',
               'Mute and re-measure: carrier off for a minute, cold-start temperature recorded, then unmute and compare readings',
@@ -572,7 +613,7 @@ export const scenario13Data: ScenarioData = {
             correctIndex: 0,
             preserveOptionOrder: true,
             explanation:
-              'Current answers in seconds; temperature lags behind the thermal mass (about a 10-minute time constant). It turns down at once and needs about 2 minutes to pass 61°C, then keeps easing toward the mid-50s. Watch the curve, not a single reading.',
+              'Current answers in seconds; temperature lags behind the thermal mass (about a 10-minute time constant). It turns down at once and needs 2-3 minutes to pass 61°C, then keeps easing toward the mid-50s. Watch the curve, not a single reading.',
             pointPenalty: 5,
           },
           mustMaintain: false,

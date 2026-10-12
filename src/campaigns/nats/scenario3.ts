@@ -131,12 +131,14 @@ export const scenario3Data: ScenarioData = {
             selectedTrace: 1,
           },
         ],
+        // ME-02's modems sit parked from their last use (r2-s03-F3): the
+        // player sets them to match Vermont, so nothing ticks pre-staged
         transmitters: [
           {
             activeModem: 1,
             modems: [
               {
-                isPowered: true,
+                isPowered: false,
                 antenna_id: 1,
                 modem_number: 1,
                 isFaulted: false,
@@ -155,17 +157,23 @@ export const scenario3Data: ScenarioData = {
                   origin: SignalOrigin.TRANSMITTER,
                   noiseFloor: null,
                   gainInPath: 0 as dBi,
-                  frequency: 1057e6 as IfFrequency, // TM-1 TP-1: 7000 - 1057 = 5943 MHz (LSB)
-                  power: -7 as dBm,
-                  bandwidth: 36e6 as Hertz,
-                  modulation: 'QPSK' as ModulationType,
+                  // Parked: the player sets 1,057 MHz (TM-1 TP-1: 7000 - 1057 = 5943 MHz), -7 dBm, 36 MHz, QPSK 3/4
+                  frequency: 983e6 as IfFrequency,
+                  power: -20 as dBm,
+                  bandwidth: 9e6 as Hertz,
+                  modulation: 'BPSK' as ModulationType,
                   fec: '1/2' as FECType,
                 },
               },
             ],
           },
         ],
-        receivers: [Receiver.getDefaultState()],
+        receivers: [
+          {
+            ...Receiver.getDefaultState(),
+            modems: Receiver.getDefaultState().modems.map((modem) => (modem.modemNumber === 1 ? { ...modem, modulation: 'BPSK' as ModulationType } : modem)),
+          },
+        ],
       },
     ],
     satellites: [tidemark1Satellite, ses10Satellite],
@@ -178,6 +186,13 @@ export const scenario3Data: ScenarioData = {
         startTime: 5, // 5 seconds into scenario - urgency!
         duration: 7200, // 2 hours
         linkMarginDegradation: 8, // dB - exceeds acceptable threshold
+        // Q5: wet snow at 2+ in/h in 25-40 mph wind outpaces the feed heater
+        // (sized for about 1 in/h; the wind strips its heat). With the heater
+        // on, ice still builds toward 10 - 0.4 x 12 = 5.2 dB; lock goes near
+        // 4 dB (12.7 dB clear-sky C/N, 4.2 dB threshold), about 13-15 min
+        // after the heater comes on. The heater buys time; the handover is
+        // still needed.
+        heaterMeltDbPerMin: 0.4,
       },
     ],
     trafficOwnership: [
@@ -290,7 +305,8 @@ export const scenario3Data: ScenarioData = {
       // protection as critical to maintaining system availability
       nice: ['S0421', 'K0741'],
       title: 'Enable Feed Heater',
-      description: 'Enable the feed heater on VT-01 to prevent ice accumulation on the waveguide and feed assembly.',
+      description:
+        "Enable the feed heater on VT-01. At this storm's peak the snow loads the feed faster than the heater melts it, so it slows the ice down and protects the feed; it does not save the link.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['navigate-acu-vt01-heater'],
       timeLimitSeconds: 2 * 60,
@@ -373,7 +389,7 @@ export const scenario3Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'Without the heater, ice would accumulate on the feed horn and waveguide. This causes signal attenuation (making the weather degradation even worse) and can physically damage the feed assembly. The heater prevents ice from forming on these critical RF components.',
+              'Without the heater, ice would build on the feed horn and waveguide several times faster. Ice attenuates the carrier and, being wet and lossy, adds its own noise, so C/N falls fast; it can also physically damage the feed assembly. Even with the heater on, this storm loads the feed faster than the heater melts it: the heater slows the buildup and buys time, it does not stop it.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -671,8 +687,8 @@ export const scenario3Data: ScenarioData = {
     {
       id: 'verify-gpsdo-weather-quiz',
       // K0773: Knowledge of telecommunications principles and practices -
-      // understanding that GPS signals are not affected by weather like
-      // C-band satellite signals
+      // understanding that the C-band loss is ice on the feed, not the snow in
+      // the air, and the GPS patch antenna has no feed to ice
       nice: ['K0773'],
       title: 'Understand Weather Impact on GPSDO',
       description: 'Understand why the GPSDO is unaffected by the snow at Vermont.',
@@ -685,16 +701,16 @@ export const scenario3Data: ScenarioData = {
           type: 'status-check',
           description: 'Understand GPSDO Weather Independence',
           params: {
-            question: "The snow is degrading Vermont's TIDEMARK-1 link. Why isn't the snow affecting Vermont's GPSDO?",
+            question: "The snow is degrading Vermont's TIDEMARK-1 link. Why is Vermont's GPSDO still locked?",
             options: [
-              'GPS uses L-band frequencies (~1.5 GHz) which are less affected by precipitation than C-band',
-              'The GPSDO antenna is indoors (in the equipment rack) and sheltered from precipitation',
-              'GPS satellites sit in a different part of the sky (nearly overhead) than TIDEMARK-1',
-              'The GPSDO has a backup battery (holdover) that keeps it locked through the weather',
+              'The loss is ice loading the dish feed - the GPS patch antenna sits under a radome with no feed to ice',
+              'GPS is L-band, and L-band punches through snow that blocks C-band signals',
+              'The GPS antenna is indoors in the equipment rack, out of the snow',
+              'The GPSDO is in holdover, so it reads locked whatever the sky does',
             ],
             correctIndex: 0,
             explanation:
-              'GPS operates at L-band (~1.5 GHz), which experiences much less rain/snow attenuation than C-band (~4-6 GHz). The TIDEMARK-1 link uses C-band, which is more susceptible to precipitation fade. This is why the GPSDO remains locked even as the satellite link degrades.',
+              "Snow in the air costs well under 1 dB at both L-band (GPS, 1.575 GHz) and C-band (3.7-4.2 GHz), so neither band is blocked by the falling snow. Vermont's damage is snow and ice loading the dish feed: a wet, lossy layer right in front of the LNB that weakens the carrier and adds noise. The GPS antenna is a small sealed patch under a radome with no horn or waveguide to load, so the GPSDO stays GNSS-locked (not in holdover) while the satellite link fades.",
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -955,7 +971,7 @@ export const scenario3Data: ScenarioData = {
       nice: ['S0421', 'K0773'],
       title: 'Configure Spectrum Analyzer',
       description:
-        'Set the spectrum analyzer to observe the TIDEMARK-1 beacon: Center frequency 1,074.5 MHz, Span 0.002 MHz (2 kHz; the field is in MHz), Min Amp -65 dBm, Max Amp -50 dBm.',
+        'Set the spectrum analyzer to observe the TIDEMARK-1 beacon: Center frequency 1,074.5 MHz, Span 0.002 MHz (2 kHz; the field is in MHz), Min Amp -100 dBm, Max Amp -30 dBm. The beacon reads around -55 to -45 dBm.',
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['verify-lnb-config-quiz'],
       timeLimitSeconds: 3 * 60,
@@ -987,19 +1003,19 @@ export const scenario3Data: ScenarioData = {
         },
         {
           type: 'speca-min-amplitude',
-          description: 'Minimum Amplitude Set to -65 dBm',
+          description: 'Minimum Amplitude Set to -100 dBm',
           params: {
-            minAmplitude: -65 as dBm,
-            minAmplitudeTolerance: 2,
+            minAmplitude: -100 as dBm,
+            minAmplitudeTolerance: 5,
           },
           maintainUntilObjectiveComplete: true,
         },
         {
           type: 'speca-max-amplitude',
-          description: 'Maximum Amplitude Set to -50 dBm',
+          description: 'Maximum Amplitude Set to -30 dBm',
           params: {
-            maxAmplitude: -50 as dBm,
-            maxAmplitudeTolerance: 2,
+            maxAmplitude: -30 as dBm,
+            maxAmplitudeTolerance: 5,
           },
           maintainUntilObjectiveComplete: true,
         },
@@ -1064,7 +1080,7 @@ export const scenario3Data: ScenarioData = {
             options: [
               'Beacon proves the whole receive chain works - antenna, feed, LNB, cables, analyzer',
               'Program-track needs the beacon to engage - the ACU, once locked, holds the pointing',
-              'The beacon calibrates the analyzer - reference level, span, and center frequency',
+              'The beacon calibrates the analyzer - amplitude scale, span, and center frequency',
               'Company policy requires a visual check - checklist item, sign-off, nothing technical',
             ],
             correctIndex: 0,
@@ -1290,7 +1306,8 @@ export const scenario3Data: ScenarioData = {
       // S0421: Skill in operating network equipment - executing TX modem configuration
       nice: ['K0792', 'S0421'],
       title: 'Configure Transmitter Modem',
-      description: 'Configure the transmitter modem to match Vermont: Frequency 1,057 MHz, Power -7 dBm, Bandwidth 36 MHz, QPSK modulation, FEC 3/4. Enable transmission.',
+      description:
+        'Power on the transmitter modem (it is parked from its last job) and configure it to match Vermont: Frequency 1,057 MHz, Power -7 dBm, Bandwidth 36 MHz, QPSK modulation, FEC 3/4. Enable transmission. The BUC stays muted and the HPA off until the handover brings them up.',
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['navigate-tx-maine'],
       timeLimitSeconds: 4 * 60,
@@ -1375,7 +1392,7 @@ export const scenario3Data: ScenarioData = {
       // dashboard for traffic handover execution
       nice: ['S0421'],
       title: 'Open Satellite Dashboard',
-      description: 'Click on TIDEMARK-1 in the map to access the traffic handover controls.',
+      description: 'Select TIDEMARK-1 in the asset tree to open its satellite page and the traffic handover controls.',
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['configure-maine-tx-modem'],
       timeLimitSeconds: 2 * 60,
@@ -1412,14 +1429,14 @@ export const scenario3Data: ScenarioData = {
           params: {
             question: 'What happens when you execute the traffic handover from Vermont to Maine?',
             options: [
-              "Maine's transmitter comes up while Vermont's is disabled - avoiding a dual uplink",
+              "Vermont's uplink drops and Maine's comes up in the same step - never a dual uplink",
               'Both stations transmit at once - the satellite selects the stronger of the two uplinks',
               'Customer connections are dropped - each one is re-established through Maine',
               "Vermont's antenna is slewed away from the satellite - pointing prevents a dual uplink",
             ],
             correctIndex: 0,
             explanation:
-              "The handover process coordinates the transition: Maine's uplink chain (BUC, HPA) is fully enabled while Vermont's is disabled in a controlled sequence. This prevents dual uplinks (two ground stations transmitting on the same frequency to the same satellite), which would cause interference. The satellite transponder doesn't care which ground station is transmitting - it just relays what it receives.",
+              "The handover is break-before-make: Vermont's uplink (HPA off, BUC muted) drops and Maine's (BUC unmuted, HPA on) comes up in the same step. Two stations radiating the same carrier into one transponder would arrive on the downlink at about equal level and wreck each other's C/N. The transponder doesn't care which ground station is transmitting - it just relays what it receives, so the customers' modems see the same carrier at the same frequency and level.",
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -1449,14 +1466,6 @@ export const scenario3Data: ScenarioData = {
             sourceStation: 'VT-01',
             targetStation: 'ME-02',
             satelliteId: 61525, // TIDEMARK-1
-          },
-          mustMaintain: false,
-        },
-        {
-          type: 'service-continuity',
-          description: 'Service Continuity Maintained',
-          params: {
-            maxPacketLoss: 0.1,
           },
           mustMaintain: false,
         },
@@ -1889,7 +1898,7 @@ export const scenario3Data: ScenarioData = {
       'verify-gpsdo-weather-quiz': {
         text: `
         <p>
-          Different frequencies, different physics. GPS punches through weather that kills C-band. That's why the GPSDO stays locked even when the satellite link is degrading.
+          Right. The snow in the air barely touches either band - it's the ice loading our feed that's killing the link. The GPS antenna is a sealed little patch under a radome. Nothing to load. That's why the GPSDO stays locked while the satellite link degrades.
         </p>
         <p>
           Now let's point the antenna. ACU Control tab.
@@ -1966,7 +1975,7 @@ export const scenario3Data: ScenarioData = {
           Exactly. Same LO means same IF. Makes everything downstream identical between sites. Less to think about, fewer mistakes.
         </p>
         <p>
-          Now let's verify we're actually seeing the satellite. Configure the spectrum analyzer - center frequency 1,074.5 MHz, span 0.002 MHz, Min Amp -65 and Max Amp -50 dBm.
+          Now let's verify we're actually seeing the satellite. Configure the spectrum analyzer - center frequency 1,074.5 MHz, span 0.002 MHz, Min Amp -100 and Max Amp -30 dBm.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,

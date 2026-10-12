@@ -2,7 +2,7 @@ import { createRfFrontEnd } from '@app/campaigns/rf-front-end-factory';
 import { Character, Emotion } from '@app/modal/character-enum';
 import type { Objective } from '@app/objectives/objective-types';
 import type { ScenarioData } from '@app/ScenarioData';
-import type { dBm, Hertz, MHz } from '@app/types';
+import type { dB, dBm, Hertz, MHz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
 import { maineGroundStation, vermontGroundStation } from './ground-stations';
@@ -71,6 +71,9 @@ export const scenario2Data: ScenarioData = {
         rfFrontEnds: [
           createRfFrontEnd(vermontGroundStation.rfFrontEnds[0], {
             hpa: { isHpaEnabled: true, isHpaSwitchEnabled: true },
+            // Operating gain 60 dB; the LNB powers up at its 65 dB factory
+            // default, so the restore has to set it again (Q6, r2-s02-F1)
+            lnb: { gain: 60 as dB, powerOnGain: 65 as dB },
           }),
         ],
         spectrumAnalyzers: [
@@ -690,13 +693,24 @@ export const scenario2Data: ScenarioData = {
       // K0645: Knowledge of standard operating procedures (SOPs) - understanding
       // documentation requirements during maintenance windows
       nice: ['K0645'],
-      title: 'Maintenance Window Complete',
-      description: 'The maintenance crew has completed their work. Acknowledge to begin service restoration.',
+      title: 'Hold for the Maintenance Window',
+      description:
+        'The crew is on the feed for about 15 minutes. Keep the antenna parked at the maintenance position until Mike calls the work complete: wait it out, or use Skip 15 min in the command bar.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['verify-maintenance-position-quiz'],
-      timeLimitSeconds: 3 * 60,
-      timerStartTrigger: 'on-activate',
+      // No countdown: the wait is the crew's, not the operator's (Q4, r2-s02-F3)
+      timeSkip: { minutes: 15, label: 'crew maintenance window', availableAfterConditions: true },
       conditions: [
+        {
+          type: 'antenna-position',
+          description: 'Antenna Held at Maintenance Position (15 min crew window)',
+          params: {
+            elevation: 5 as Degrees,
+            tolerance: 0.5,
+          },
+          mustMaintain: true,
+          maintainDuration: 15 * 60,
+        },
         {
           type: 'status-check',
           description: 'Acknowledge Maintenance Complete',
@@ -804,10 +818,12 @@ export const scenario2Data: ScenarioData = {
       // K0792: Knowledge of network configurations - setting correct LO frequency and gain
       nice: ['T1567', 'S0421', 'K0792'],
       title: 'Restore LNB',
-      description: 'Power on the LNB and configure: LO 5,250 MHz, Gain 60 dB, then Apply Changes. The panel reads 65 dB after the power cycle, so step the gain down to 60.',
+      description:
+        'Power on the LNB and configure: LO 5,250 MHz, Gain 60 dB, then Apply Changes. The panel reads 65 dB after the power cycle, so step the gain down to 60. The LNB needs about 90 seconds to warm up and lock before it reads stable.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['navigate-rx-analysis-restore'],
-      timeLimitSeconds: 2 * 60,
+      // 90 s warm-up after the power cycle, plus the configuration
+      timeLimitSeconds: 4 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
         {

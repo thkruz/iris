@@ -4,13 +4,15 @@
  * VT-01 radiates TIDEMARK-1-Teleport into TM-1 TP-1 through the uplink path
  * (FSPL, pattern) and the transponder (SFD, G/T, TWTA), and receives it back:
  *
- * - its carrier replaces the authored TDMA composite it stands in for, at
- *   about the composite's level (IBO ~3 dB, C/N ~13 dB; it decoded itself at
- *   43.5 dB while the uplink had no path loss, DEV-XPDR-01);
+ * - its carrier is the only one in TP-1 (IBO ~3 dB, C/N ~13 dB; it decoded
+ *   itself at 43.5 dB while the uplink had no path loss, DEV-XPDR-01);
  * - the C/N it reports is the composite of the uplink and downlink terms;
  * - more HPA power runs the transponder into saturation (a fraction of a dB
  *   more downlink for 6 dB more uplink);
- * - muting the transmit chain hands the transponder back to the stand-in.
+ * - muting the transmit chain leaves TP-1 empty: since phase 27 there is no
+ *   stand-in composite, the downlink is only what a station radiates;
+ * - two sites radiating the hub carrier at once interfere; a break-before-make
+ *   handover keeps the link (phase 27, DEV-XPDR-07 closed).
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -41,6 +43,9 @@ vi.mock('@app/simulation/simulation-manager', () => ({
 
 import type { GroundStationConfig } from '@app/assets/ground-station/ground-station-state';
 import { scenario1Data } from '@app/campaigns/nats/scenario1';
+import { scenario6Data } from '@app/campaigns/nats/scenario6';
+import { scenario8Data } from '@app/campaigns/nats/scenario8';
+import { scenario11Data } from '@app/campaigns/nats/scenario11';
 import type { AntennaCore } from '@app/equipment/antenna/antenna-core';
 import { createAntenna } from '@app/equipment/antenna/antenna-factory';
 import { Receiver } from '@app/equipment/receiver/receiver';
@@ -49,38 +54,84 @@ import type { Satellite } from '@app/equipment/satellite/satellite';
 import { combineCn0DbHz } from '@app/equipment/satellite/transponder-model';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
+import { SignalOrigin } from '@app/signal-origin';
 import { Rng } from '@app/simulation/rng';
 import { FIXED_STEP_MS, SimClock } from '@app/simulation/sim-clock';
+import type { dBi, dBm, FECType, Hertz, IfFrequency, ModulationType } from '@app/types';
 
 const TM1 = 61525;
 
-function vt01Chain() {
+interface ChainOptions {
+  scenario?: { settings: { groundStations?: unknown; satellites?: unknown } };
+  stationId?: string;
+  target?: number;
+  /** Replace the station's TX modems (the player's configuration) */
+  txModems?: unknown[];
+  /** Front-end overrides applied after the scenario's own (a muted BUC, an HPA switched on) */
+  prep?: (frontEnd: ReturnType<typeof createRFFrontEnd>) => void;
+  /** Receiver modem 1 tuning, MHz */
+  rx?: { frequency: number; bandwidth: number };
+  /** A second station flown in the same sky (its TX only): a handover partner */
+  partner?: { stationId: string; scenario?: ChainOptions['scenario']; txModems: unknown[]; prep?: ChainOptions['prep'] };
+}
+
+function stationChain(opts: ChainOptions = {}) {
   EventBus.destroy();
   SimClock.reset();
   Rng.setSeed(1234);
   document.body.innerHTML = '<div id="tv-fe"></div><div id="tv-rx"></div><div id="tv-tx"></div>';
-  const gs = (scenario1Data.settings.groundStations as GroundStationConfig[]).find((s) => s.id === 'VT-01') as GroundStationConfig;
-  simSatellites = scenario1Data.settings.satellites as Satellite[];
+  const data = opts.scenario ?? scenario1Data;
+  const stationId = opts.stationId ?? 'VT-01';
+  const target = opts.target ?? TM1;
+  const gs = (data.settings.groundStations as GroundStationConfig[]).find((s) => s.id === stationId) as GroundStationConfig;
+  simSatellites = data.settings.satellites as Satellite[];
   for (const s of simSatellites) {
     (s as unknown as { health: number }).health = 1;
     s.rxSignal = [];
     s.configureDegradation({ powerVariation: false });
   }
-  const sat = simSatellites.find((s) => s.noradId === TM1) as Satellite;
+  const sat = simSatellites.find((s) => s.noradId === target) as Satellite;
 
   const state = { ...(gs.antennasState?.[0] ?? {}), isPowered: true, isOperational: true };
   const antenna = createAntenna('tv-ant', 'headless', gs.antennaConfigKey ?? gs.antennas[0], state, gs.teamId ?? 1) as AntennaCore;
   antenna.attachStationLocation(gs.location.latitude, gs.location.longitude, gs.location.elevation);
   const frontEnd = createRFFrontEnd('tv-fe', gs.rfFrontEnds[0], 'standard');
+  opts.prep?.(frontEnd);
   frontEnd.connectAntenna(antenna);
   antenna.attachRfFrontEnd(frontEnd);
   const receiver = new Receiver('tv-rx', [antenna], gs.receivers?.[0], gs.teamId ?? 1);
+  if (opts.rx) {
+    receiver.state.modems[0].frequency = opts.rx.frequency as never;
+    receiver.state.modems[0].bandwidth = opts.rx.bandwidth as never;
+  }
   receiver.connectRfFrontEnd(frontEnd);
-  const modems = (gs as unknown as { transmitters: Array<{ modems: unknown[] }> }).transmitters[0].modems;
+  const modems = opts.txModems ?? (gs as unknown as { transmitters: Array<{ modems: unknown[] }> }).transmitters[0].modems;
   frontEnd.connectTransmitter({ state: { modems }, isModemInIntermittentDropout: () => false } as never);
 
   antenna.handleTrackingModeChange('program-track');
-  antenna.handleTargetSatelliteChange(TM1);
+  antenna.handleTargetSatelliteChange(target);
+
+  let partnerFrontEnd: ReturnType<typeof createRFFrontEnd> | null = null;
+  if (opts.partner) {
+    const pdata = opts.partner.scenario ?? data;
+    const pgs = (pdata.settings.groundStations as GroundStationConfig[]).find((s) => s.id === opts.partner?.stationId) as GroundStationConfig;
+    const pAntenna = createAntenna(
+      'tv-ant-2',
+      'headless',
+      pgs.antennaConfigKey ?? pgs.antennas[0],
+      { ...(pgs.antennasState?.[0] ?? {}), isPowered: true, isOperational: true },
+      1
+    ) as AntennaCore;
+    pAntenna.attachStationLocation(pgs.location.latitude, pgs.location.longitude, pgs.location.elevation);
+    document.body.insertAdjacentHTML('beforeend', '<div id="tv-fe-2"></div>');
+    partnerFrontEnd = createRFFrontEnd('tv-fe-2', pgs.rfFrontEnds[0], 'standard');
+    opts.partner.prep?.(partnerFrontEnd);
+    partnerFrontEnd.connectAntenna(pAntenna);
+    pAntenna.attachRfFrontEnd(partnerFrontEnd);
+    partnerFrontEnd.connectTransmitter({ state: { modems: opts.partner.txModems }, isModemInIntermittentDropout: () => false } as never);
+    pAntenna.handleTrackingModeChange('program-track');
+    pAntenna.handleTargetSatelliteChange(target);
+  }
 
   const fly = (ms: number) => {
     const steps = Math.round(ms / FIXED_STEP_MS);
@@ -94,8 +145,43 @@ function vt01Chain() {
   const read = () => receiver.getSignalsInBandwidth(receiver.state.modems[0]);
   const tp = () => sat.operatingPoint('TP-1');
 
-  return { sat, antenna, frontEnd, receiver, fly, read, tp };
+  return { sat, antenna, frontEnd, receiver, fly, read, tp, partnerFrontEnd };
 }
+
+const vt01Chain = () => stationChain();
+
+/** A modem's IF carrier as the player configures it (phase 27 P1 cases) */
+function txModem(modemNumber: number, signalId: string, frequencyHz: number, bandwidthHz: number, noradId: number, isTransmitting = true) {
+  return {
+    isPowered: true,
+    antenna_id: 1,
+    modem_number: modemNumber,
+    id: modemNumber,
+    isFaulted: false,
+    isLoopback: false,
+    isTransmitting,
+    isTransmittingSwitchUp: isTransmitting,
+    isFaultSwitchUp: false,
+    ifSignal: {
+      signalId,
+      serverId: 1,
+      noradId,
+      polarization: 'V',
+      feed: '',
+      isDegraded: false,
+      origin: SignalOrigin.TRANSMITTER,
+      noiseFloor: null,
+      gainInPath: 0 as dBi,
+      frequency: frequencyHz as IfFrequency,
+      power: -7 as dBm,
+      bandwidth: bandwidthHz as Hertz,
+      modulation: 'QPSK' as ModulationType,
+      fec: '3/4' as FECType,
+    },
+  };
+}
+
+const relayedIds = (sat: Satellite) => sat.txSignal.filter((s) => s.upstreamCn0DbHz !== undefined).map((s) => s.signalId);
 
 describe('C1 transponder (phase 19.3)', () => {
   beforeEach(() => {
@@ -108,7 +194,7 @@ describe('C1 transponder (phase 19.3)', () => {
     vi.restoreAllMocks();
   });
 
-  it("VT-01's own carrier replaces the composite stand-in, ~3 dB under saturation, at the composite's C/N", () => {
+  it("VT-01's own carrier is TP-1's only carrier, ~3 dB under saturation, ~13 dB C/N", () => {
     const { fly, read, tp } = vt01Chain();
     fly(60_000);
 
@@ -161,8 +247,8 @@ describe('C1 transponder (phase 19.3)', () => {
     expect(hot - nominal).toBeGreaterThan(-1.5);
   });
 
-  it('muting the transmit chain hands TP-1 back to the authored stand-in', () => {
-    const { sat, frontEnd, fly, read, tp } = vt01Chain();
+  it('muting the transmit chain leaves TP-1 empty: no stand-in, no carrier (phase 27)', () => {
+    const { sat, frontEnd, fly, read } = vt01Chain();
     fly(30_000);
     expect(read().targetSignalId).toBe('TIDEMARK-1-Teleport');
 
@@ -170,11 +256,99 @@ describe('C1 transponder (phase 19.3)', () => {
     fly(5_000);
 
     // A muted BUC's noise still leaves the HPA, far under the transponder's
-    // own noise: it loads TP-1 but is not relayed, and the stand-in is back
-    const relayed = sat.txSignal.filter((s) => s.upstreamCn0DbHz !== undefined).map((s) => s.signalId);
-    expect(relayed).toEqual(['TIDEMARK-1-TDMA-Composite']);
-    expect(tp()?.carriers.map((c) => c.signalId)).toContain('TIDEMARK-1-TDMA-Composite');
-    expect(read().targetSignalId).toBe('TIDEMARK-1-TDMA-Composite');
-    expect(read().cnRatio_dB).toBeGreaterThan(12);
+    // own noise: it loads TP-1 but is not relayed, and nothing else is up
+    expect(relayedIds(sat)).toEqual([]);
+    expect(read().hasLock).toBe(false);
+  });
+});
+
+/**
+ * Phase 27: the C1 stand-in composites are gone. A station's downlink is only
+ * what a TX chain radiates, and two sites on one carrier interfere.
+ */
+describe('hub carriers are what the stations radiate (phase 27)', () => {
+  const AURORA7 = 28899;
+
+  beforeEach(() => {
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(() => Promise.resolve());
+  });
+
+  afterEach(() => {
+    for (const s of simSatellites) s.configureDegradation({ powerVariation: true });
+    EventBus.destroy();
+    vi.restoreAllMocks();
+  });
+
+  it('S6 starts off-air on AURORA-7 (modem keyed into a muted BUC): no carrier until the player brings the chain up', () => {
+    const chain = stationChain({ scenario: scenario6Data, target: AURORA7, rx: { frequency: 1422, bandwidth: 24 } });
+    chain.fly(30_000);
+    expect(relayedIds(chain.sat)).toEqual([]);
+    expect(chain.read().hasLock).toBe(false);
+
+    // Player: TX IF 1447, BUC unmuted, HPA on
+    const modem = (chain.frontEnd.transmitters[0] as unknown as { state: { modems: Array<{ ifSignal: { frequency: number } }> } }).state.modems[0];
+    modem.ifSignal.frequency = 1447e6;
+    chain.frontEnd.bucModule.state.isMuted = false;
+    chain.frontEnd.hpaModule.state.isHpaEnabled = true;
+    chain.frontEnd.hpaModule.state.isHpaSwitchEnabled = true;
+    chain.fly(30_000);
+    expect(relayedIds(chain.sat)).toEqual(['AURORA-7-Uplink']);
+    expect(chain.read().cnRatio_dB).toBeGreaterThan(9);
+  });
+
+  it('S8: Modem 2 (default signal id) is the AURORA-7 carrier once keyed', () => {
+    const { sat, fly, read } = stationChain({
+      scenario: scenario8Data,
+      target: AURORA7,
+      txModems: [txModem(1, 'AURORA-7-Uplink', 1047e6, 24e6, AURORA7, false), txModem(2, 'gs-vt01-tx1-2-default', 1047e6, 24e6, AURORA7)],
+      // The LNB's sticky reference fault is the S8 fault the player clears first
+      prep: (fe) => {
+        fe.lnbModule.state.isExtRefLocked = true;
+        (fe.lnbModule.state as { hasRefLockFault?: boolean }).hasRefLockFault = false;
+      },
+    });
+    fly(60_000);
+    expect(relayedIds(sat)).toEqual(['gs-vt01-tx1-2-default']);
+    expect(read().cnRatio_dB).toBeGreaterThan(9);
+    expect(read().cnRatio_dB).toBeLessThan(16);
+  });
+
+  const me02Hot = (fe: ReturnType<typeof createRFFrontEnd>) => {
+    fe.bucModule.state.isMuted = false;
+    fe.hpaModule.state.isHpaEnabled = true;
+    fe.hpaModule.state.isHpaSwitchEnabled = true;
+  };
+
+  it('a sloppy S11 handover (VT-01 and ME-02 both at full power on TM-1) is real co-channel interference', () => {
+    const solo = stationChain({ scenario: scenario11Data });
+    solo.fly(30_000);
+    const clean = solo.read().cnRatio_dB;
+
+    const both = stationChain({
+      scenario: scenario11Data,
+      partner: { stationId: 'ME-02', txModems: [txModem(1, 'TIDEMARK-1-Teleport', 1057e6, 36e6, TM1)], prep: me02Hot },
+    });
+    both.fly(30_000);
+    expect(relayedIds(both.sat)).toEqual(['TIDEMARK-1-Teleport', 'TIDEMARK-1-Teleport#2']);
+    // Two copies on one frequency: the weaker is co-channel I on the stronger
+    expect(clean).toBeGreaterThan(12);
+    expect(clean - both.read().cnRatio_dB).toBeGreaterThan(6);
+  });
+
+  it('a break-before-make S11 handover keeps the link: ME-02 alone carries TM-1 at the same C/N', () => {
+    const chain = stationChain({
+      scenario: scenario11Data,
+      partner: { stationId: 'ME-02', txModems: [txModem(1, 'TIDEMARK-1-Teleport', 1057e6, 36e6, TM1)] },
+    });
+    chain.fly(30_000);
+    const before = chain.read().cnRatio_dB;
+    // VT-01 drops, ME-02 comes up in the same step (TrafficControlManager.executeHandover)
+    chain.frontEnd.hpaModule.state.isHpaEnabled = false;
+    chain.frontEnd.bucModule.state.isMuted = true;
+    if (chain.partnerFrontEnd) me02Hot(chain.partnerFrontEnd);
+    chain.fly(10_000);
+    expect(relayedIds(chain.sat)).toEqual(['TIDEMARK-1-Teleport']);
+    expect(chain.read().hasLock).toBe(true);
+    expect(Math.abs(chain.read().cnRatio_dB - before)).toBeLessThan(1.5);
   });
 });

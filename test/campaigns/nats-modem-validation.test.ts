@@ -72,6 +72,8 @@ function chain(scenario: ScenarioData, stationId: string, sat: Satellite) {
   document.body.innerHTML = '<div id="mv-fe"></div><div id="mv-rx"></div>';
   const gs = station(scenario, stationId);
   simSatellites = scenario.settings.satellites as Satellite[];
+  // Module-singleton satellites: drop the last test's arrivals (phase 27, no merge)
+  for (const s of simSatellites) s.rxSignal = [];
   for (const s of simSatellites) (s as unknown as { health: number }).health = 1;
 
   const state = { ...(gs.antennasState?.[0] ?? {}), isPowered: true, isOperational: true };
@@ -82,8 +84,10 @@ function chain(scenario: ScenarioData, stationId: string, sat: Satellite) {
   antenna.attachRfFrontEnd(frontEnd);
   const receiver = new Receiver('mv-rx', [antenna], gs.receivers?.[0], gs.teamId ?? 1);
   receiver.connectRfFrontEnd(frontEnd);
-  // No uplink in these checks: the station's own carrier would sit on the payload
-  frontEnd.bucModule.state.isMuted = true;
+  // The station's own uplink as authored: since phase 27 (no stand-in
+  // composites) it is the carrier on the payload
+  const txModems = (gs.transmitters?.[0]?.modems ?? []) as unknown[];
+  frontEnd.connectTransmitter({ state: { modems: txModems }, isModemInIntermittentDropout: () => false } as never);
 
   antenna.handleTrackingModeChange('program-track');
   antenna.handleTargetSatelliteChange(sat.noradId);
@@ -149,8 +153,10 @@ describe('C1 modem lessons (phase 19.5)', () => {
     // The customer's story: degraded service, not an outage
     expect(w.lockedFraction).toBe(1);
     expect(w.degradedFraction).toBe(1);
-    expect(w.minMargin).toBeGreaterThan(-0.5);
-    expect(w.maxMargin).toBeLessThan(1.5);
+    // Plan Q8 (phase 27): ~0-0.5 dB of margin, so the payload panel shows the CRC errors
+    expect(w.minMargin).toBeGreaterThan(0);
+    expect(w.meanMargin).toBeLessThan(0.6);
+    expect(w.maxMargin).toBeLessThan(1);
   });
 
   it('S5: with the notch on the spike (1515 MHz IF, 1 MHz, 40 dB) the link is back to a good margin', () => {
@@ -166,7 +172,10 @@ describe('C1 modem lessons (phase 19.5)', () => {
 
     expect(w.lockedFraction).toBe(1);
     expect(w.degradedFraction).toBe(0);
-    expect(w.minMargin).toBeGreaterThan(5);
+    // Phase 27: VT-01's own carrier, not the stand-in. The spike still takes
+    // its share of the transponder output and IM, which a ground notch cannot
+    // give back: ~4.7 dB of margin, comfortably out of "degraded"
+    expect(w.minMargin).toBeGreaterThan(4.5);
   });
 
   it('S21: the jammer stands above the carrier on the analyzer and costs it most of its margin, without an outage', () => {
@@ -200,7 +209,7 @@ describe('C1 modem lessons (phase 19.5)', () => {
     // Spectral density at the IF: the jammer is above the carrier where they overlap
     const outputs = frontEnd.agcModule.outputSignals;
     const jammer = outputs.find((s) => s.signalId === 'mv-jammer');
-    const carrier = outputs.find((s) => s.signalId === 'TIDEMARK-2-TDMA-Composite');
+    const carrier = outputs.find((s) => s.signalId === 'TIDEMARK-2-Teleport');
     expect(jammer, 'jammer reaches the receiver').toBeDefined();
     expect(carrier).toBeDefined();
     const density = (s: { power: number; bandwidth: number }) => s.power - 10 * Math.log10(s.bandwidth);

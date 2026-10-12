@@ -151,9 +151,9 @@ const SCENARIO_12_OBJECTIVES: Scenario12Objective[] = [
   {
     id: 'verify-rx-modem-lock',
     title: 'Verify RX Modem Lock',
-    type: 'auto',
-    // observationDwellSeconds: 5 on the lock and C/N reads
-    waitAfterMs: 4000,
+    // observationDwellSeconds: 5 on the lock and C/N reads, then the C/N read quiz
+    type: 'quiz',
+    correctAnswer: '12 to 14 dB - locked with good margin',
   },
 
   // ============================================================

@@ -191,12 +191,14 @@ export const scenario12Data: ScenarioData = {
         ],
         spectrumAnalyzers: [
           {
-            referenceLevel: -91 as dBm,
+            referenceLevel: -91 as dBm, // Engineering-mode field; S4 checks it stays at the beacon preset
             centerFrequency: 1074.5e6 as Hertz,
             span: 2e3 as Hertz,
-            rbw: 1e3 as Hertz,
-            minAmplitude: -95 as dBm,
-            maxAmplitude: -75 as dBm,
+            rbw: null, // Auto (3 Hz at 2 kHz): the CW line stands ~55 dB over the floor
+            // Phase 27: the TIDEMARK beacon reads -54 to -59 dBm at the RX IF tap
+            // (ledger), the floor ~-114 dBm in 3 Hz: both on screen, 10 dB/div
+            minAmplitude: -140 as dBm,
+            maxAmplitude: -40 as dBm,
             scaleDbPerDiv: 10 as dB,
             screenMode: 'both',
             inputUnit: 'MHz',
@@ -465,8 +467,9 @@ export const scenario12Data: ScenarioData = {
       id: 'verify-rx-modem-lock',
       nice: ['T0153', 'K0740'],
       title: 'Verify RX Modem Lock',
-      description: 'Confirm the receiver modem regains lock on the carrier with healthy C/N margin.',
+      description: "Confirm the receiver modem regains lock on TIDEMARK-1's carrier (ME-02's uplink, for now) with healthy C/N margin, and read the C/N.",
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['acquire-tm1-beacon'],
       timeLimitSeconds: 3 * 60,
       timerStartTrigger: 'on-activate',
@@ -482,6 +485,27 @@ export const scenario12Data: ScenarioData = {
           description: 'C/N ≥ 10 dB',
           params: { minCNRatio: 10, requiresObservation: true, observationTab: 'rx-analysis', observationDwellSeconds: 5 },
           maintainUntilObjectiveComplete: true,
+        },
+        {
+          type: 'status-check',
+          description: 'Read the C/N',
+          params: {
+            character: Character.SYSTEM,
+            question: 'What C/N does the VT-01 receiver modem show on the TIDEMARK-1 carrier?',
+            options: [
+              '12 to 14 dB - locked with good margin',
+              '4 to 6 dB - locked, degraded margin',
+              '8 to 9 dB - just under the 10 dB return margin',
+              'No C/N reading - the modem is not locked',
+            ],
+            correctIndex: 0,
+            // Ledger: ME-02's own TP-1 carrier reads 12.4 dB; VT-01, the same
+            // dish class a few hundred km away, sees the same within a few tenths
+            explanation:
+              "About 12 to 13 dB. VT-01 is receiving the TP-1 carrier ME-02 is uplinking, through the same transponder: with the LNB warm and the dish back on TIDEMARK-1, Vermont's receive side reads what Maine's does. Over the 10 dB return margin.",
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -792,12 +816,6 @@ export const scenario12Data: ScenarioData = {
             targetStation: 'VT-01',
             satelliteId: 61525,
           },
-          mustMaintain: false,
-        },
-        {
-          type: 'service-continuity',
-          description: 'Service Continuity Maintained',
-          params: { maxPacketLoss: 0.1 },
           mustMaintain: false,
         },
       ],

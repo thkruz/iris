@@ -91,7 +91,9 @@ const SCENARIO_13_OBJECTIVES: Scenario13Objective[] = [
   {
     id: 'cross-check-spectrum',
     title: 'Rule Out an RX-Side Fault',
-    type: 'auto',
+    // Phase 27 Q3: the receive-side read is a quiz on what RX Analysis shows
+    type: 'quiz',
+    correctAnswer: 'Beacon steady on the analyzer, RX modem locked at about 14 dB C/N - the receive chain is clean',
   },
   {
     id: 'record-baseline-readings',
@@ -140,13 +142,15 @@ const SCENARIO_13_OBJECTIVES: Scenario13Objective[] = [
   {
     id: 'verify-hpa-headroom',
     title: 'Verify HPA Still Linear',
-    type: 'auto',
+    // Phase 27 Q3: the linearity rows latch on TX Chain, then the panel read
+    type: 'quiz',
+    correctAnswer: 'BUC output about 16 dBm, P1dB margin about 12 dB; HPA output still 52 dBm at 8 dB back-off, Overdrive Normal',
   },
   {
     id: 'verify-trend-stabilizing',
     title: 'Confirm the Trend Is Bending',
     type: 'quiz',
-    correctAnswer: 'Watch a few minutes: current drops to about 3.1 A at once, temperature turns down and passes 61°C in about 2 minutes, carrier still locked',
+    correctAnswer: 'Watch a few minutes: current drops to about 3.1 A at once, temperature turns down and passes 61°C in 2-3 minutes, carrier still locked',
     // The BUC must read below 61 degC on TX Chain: real cooling after the
     // de-rate (~1.5-3 min of sim time; advanceClock does not run physics)
     waitDoneMs: 240000,

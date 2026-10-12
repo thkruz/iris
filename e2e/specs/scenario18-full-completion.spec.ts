@@ -91,9 +91,9 @@ const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
   },
   {
     id: 'acquire-stable-beacon',
-    title: 'Beacon Lock Holds Under Step-Track',
+    title: 'Beacon Recovery',
     type: 'auto',
-    autoWaitSeconds: 25,
+    autoWaitSeconds: 120,
   },
   {
     id: 'verify-carrier-recovery-tab',
@@ -105,7 +105,7 @@ const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
     id: 'verify-carrier-recovery',
     title: 'Carrier Recovery',
     type: 'auto',
-    autoWaitSeconds: 25,
+    autoWaitSeconds: 90,
   },
   {
     id: 'no-manual-chase-quiz',
@@ -116,10 +116,17 @@ const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
 
   // PHASE 3: HOLD AND REPORT
   {
+    // Phase 27: the 30 s watch accrues only while ACU Control is open
+    id: 'sustained-hold-tab',
+    title: 'Open ACU Control',
+    type: 'click-tab',
+    tabId: 'acu-control',
+  },
+  {
     id: 'sustained-hold',
-    title: 'Hold Through the Drift',
+    title: 'Watch the Link Through the Drift',
     type: 'auto',
-    autoWaitSeconds: 40,
+    autoWaitSeconds: 90,
   },
   {
     id: 'ground-observations-quiz',
@@ -197,7 +204,16 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
       break;
 
     case 'auto':
-      await page.waitForTimeout((objective.autoWaitSeconds ?? 5) * 1000);
+      // Holds (maintainDuration) complete the objective on their own; wait
+      // for it rather than a fixed sleep
+      await page.waitForFunction(
+        (id) => {
+          const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;
+          return typeof hook === 'function' && hook(id)?.isCompleted === true;
+        },
+        objective.id,
+        { timeout: (objective.autoWaitSeconds ?? 30) * 1000, polling: 500 }
+      );
       break;
   }
 
@@ -247,7 +263,7 @@ test.describe('Scenario 18 Full Completion', () => {
   for (const objective of SCENARIO_18_OBJECTIVES) {
     test(`[${objective.id}] ${objective.title}`, async () => {
       if (objective.type === 'auto' && (objective.autoWaitSeconds ?? 0) >= 30) {
-        test.setTimeout(120000);
+        test.setTimeout((objective.autoWaitSeconds! + 30) * 1000);
       }
       await executeObjective(page, missionControlPage, objective);
     });

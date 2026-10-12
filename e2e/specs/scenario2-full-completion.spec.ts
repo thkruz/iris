@@ -175,7 +175,7 @@ const SCENARIO_2_OBJECTIVES: Scenario2Objective[] = [
   // ============================================================
   {
     id: 'maintenance-complete',
-    title: 'Maintenance Window Complete',
+    title: 'Hold for the Maintenance Window',
     type: 'quiz',
     correctAnswer: 'Confirm all personnel are clear of the antenna and feed assembly',
   },
@@ -695,8 +695,12 @@ test.describe('Scenario 2 Full Completion', () => {
   // MAINTENANCE WINDOW (SIMULATED)
   // ============================================================
 
-  test('Objective: Maintenance Window Complete', async () => {
+  test('Objective: Hold for the Maintenance Window', async () => {
     const objective = SCENARIO_2_OBJECTIVES.find((o) => o.id === 'maintenance-complete')!;
+    // Phase 27 Q4: a 15-minute hold at the maintenance position; skip the wait
+    const skip = page.locator('#objective-skip-control');
+    await skip.waitFor({ state: 'visible', timeout: 15000 });
+    await skip.click();
     await executeObjective(page, missionControlPage, objective);
   });
 
@@ -721,8 +725,19 @@ test.describe('Scenario 2 Full Completion', () => {
   });
 
   test('Objective: Restore LNB', async () => {
+    // VT-01's LNB needs its 90 s thermal warm-up (Phase 27 §2.S) before
+    // lnb-thermally-stable ticks, so the objective completes in real minutes
+    test.setTimeout(180000);
     const objective = SCENARIO_2_OBJECTIVES.find((o) => o.id === 'power-up-lnb')!;
     await executeObjective(page, missionControlPage, objective);
+    await page.waitForFunction(
+      (id) => {
+        const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;
+        return typeof hook === 'function' && hook(id)?.isCompleted === true;
+      },
+      'power-up-lnb',
+      { timeout: 150000, polling: 500 }
+    );
   });
 
   test('Objective: Verify LNB Restoration', async () => {

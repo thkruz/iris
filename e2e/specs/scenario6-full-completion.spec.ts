@@ -119,8 +119,8 @@ const SCENARIO_6_OBJECTIVES: Scenario6Objective[] = [
     specaConfig: {
       centerFrequency: 1422,
       span: 50,
-      maxAmplitude: -20,
-      minAmplitude: -50,
+      maxAmplitude: -30,
+      minAmplitude: -90,
       rbwAuto: true,
     },
   },
@@ -134,11 +134,6 @@ const SCENARIO_6_OBJECTIVES: Scenario6Objective[] = [
       modulation: 'QPSK',
       fec: '3/4',
     },
-  },
-  {
-    id: 'verify-rx-lock',
-    title: 'Verify RX Signal Lock',
-    type: 'wait-rx-lock',
   },
 
   // ============================================================
@@ -172,6 +167,12 @@ const SCENARIO_6_OBJECTIVES: Scenario6Objective[] = [
     id: 'enable-transmit-path',
     title: 'Enable Transmit Path',
     type: 'enable-tx-path',
+  },
+  {
+    // AURORA-7 carries no carrier until VT-01 uplinks: RX locks on its own carrier
+    id: 'verify-rx-lock',
+    title: 'Verify RX Signal Lock',
+    type: 'wait-rx-lock',
   },
 
   // ============================================================
@@ -704,13 +705,9 @@ test.describe('Scenario 6 Full Completion', () => {
   test('Objective: Configure RX Modem', async () => {
     const objective = SCENARIO_6_OBJECTIVES.find((o) => o.id === 'configure-rx-modem')!;
     await executeObjective(page, missionControlPage, objective);
-  });
-
-  test('Objective: Verify RX Signal Lock', async () => {
-    // RX lock with SNR threshold can take time
-    test.setTimeout(120000);
-    const objective = SCENARIO_6_OBJECTIVES.find((o) => o.id === 'verify-rx-lock')!;
-    await executeObjective(page, missionControlPage, objective);
+    // Phase 27: the "why no lock yet" quiz follows the configuration rows
+    await waitForQuizToAppear(page);
+    await answerQuizByText(page, 'Nobody is uplinking on that slot: the carrier this modem waits for is our own, once VT-01 transmits');
   });
 
   // ============================================================
@@ -738,6 +735,14 @@ test.describe('Scenario 6 Full Completion', () => {
 
   test('Objective: Enable Transmit Path', async () => {
     const objective = SCENARIO_6_OBJECTIVES.find((o) => o.id === 'enable-transmit-path')!;
+    await executeObjective(page, missionControlPage, objective);
+  });
+
+  test('Objective: Verify RX Signal Lock', async () => {
+    // RX lock on VT-01's own carrier, then a 15 s C/N hold; observed on RX Analysis
+    test.setTimeout(120000);
+    await missionControlPage.selectTab('rx-analysis');
+    const objective = SCENARIO_6_OBJECTIVES.find((o) => o.id === 'verify-rx-lock')!;
     await executeObjective(page, missionControlPage, objective);
   });
 

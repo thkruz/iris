@@ -69,6 +69,8 @@ function chain(scenario: ScenarioData, stationId: string, noradId: number) {
   document.body.innerHTML = '<div id="rv-fe"></div><div id="rv-rx"></div>';
   const gs = station(scenario, stationId);
   simSatellites = scenario.settings.satellites as Satellite[];
+  // Module-singleton satellites: drop the last test's arrivals (phase 27, no merge)
+  for (const s of simSatellites) s.rxSignal = [];
   for (const s of simSatellites) (s as unknown as { health: number }).health = 1;
   const sat = simSatellites.find((s) => s.noradId === noradId)!;
 
@@ -81,8 +83,10 @@ function chain(scenario: ScenarioData, stationId: string, noradId: number) {
   antenna.attachRfFrontEnd(frontEnd);
   const receiver = new Receiver('rv-rx', [antenna], gs.receivers?.[0], gs.teamId ?? 1);
   receiver.connectRfFrontEnd(frontEnd);
-  // Receive-only checks: the station's own uplink would sit on the payload
-  frontEnd.bucModule.state.isMuted = true;
+  // The station's own uplink as authored: since phase 27 (no stand-in
+  // composites) it is the carrier on the payload
+  const txModems = (gs.transmitters?.[0]?.modems ?? []) as unknown[];
+  frontEnd.connectTransmitter({ state: { modems: txModems }, isModemInIntermittentDropout: () => false } as never);
 
   antenna.handleTrackingModeChange('program-track');
   antenna.handleTargetSatelliteChange(sat.noradId);
@@ -134,7 +138,7 @@ describe('C1 RF-module lessons (phase 19.6)', () => {
     const { sat, fly, watch, frontEnd } = chain(scenario21Data, 'ME-02', 61526);
     fly(60_000);
     // Carrier power out of the notch filter (the AGC after it re-levels the composite)
-    const carrierPower = () => frontEnd.notchFilterModule.outputSignals.find((s) => s.signalId === 'TIDEMARK-2-TDMA-Composite')?.power ?? Number.NaN;
+    const carrierPower = () => frontEnd.notchFilterModule.outputSignals.find((s) => s.signalId === 'TIDEMARK-2-Teleport')?.power ?? Number.NaN;
 
     const event = (scenario21Data.settings as { interferenceEvents: Array<{ frequency: number; bandwidth: number; power: number; polarization: 'H' | 'V' }> })
       .interferenceEvents[0];

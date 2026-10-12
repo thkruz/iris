@@ -4,7 +4,7 @@ import type { Objective } from '@app/objectives/objective-types';
 import type { ScenarioData } from '@app/ScenarioData';
 import type { dB, dBm, MHz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
-import { maineGroundStation, vermontGroundStation } from './ground-stations';
+import { ME02_HOT_RF_FRONT_END, ME02_TM2_ANTENNA_STATE, ME02_TM2_TRANSMITTER, maineGroundStationOperational, vermontGroundStation } from './ground-stations';
 import { tidemark1Satellite, tidemark2Satellite } from './satellites';
 
 /**
@@ -114,10 +114,13 @@ export const scenario16Data: ScenarioData = {
           }),
         ],
       },
-      // ME-02 carrying TIDEMARK-2 in the background - unaffected by VT-01 faults
+      // ME-02 carrying TIDEMARK-2 in the background - unaffected by VT-01
+      // faults: on TM-2, its hub carrier keyed, chain hot (phase 27)
       {
-        ...maineGroundStation,
-        isOperational: true,
+        ...maineGroundStationOperational,
+        antennasState: [ME02_TM2_ANTENNA_STATE],
+        rfFrontEnds: [ME02_HOT_RF_FRONT_END],
+        transmitters: [ME02_TM2_TRANSMITTER],
       },
     ],
     satellites: [tidemark1Satellite, tidemark2Satellite],
@@ -273,7 +276,7 @@ export const scenario16Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'An overdriven HPA is putting a dirty signal on the spectrum and risking the amplifier. Disable the HPA output, mute the BUC for cooldown, fix the backoff, then turn to the LNB to restore the customer downlink.',
+              'An overdriven HPA is putting a dirty signal on the spectrum and risking the amplifier. Disable the HPA output, mute the BUC for cooldown, fix the backoff, then clear the LNB fault, bring the uplink back, and confirm the customer carrier comes back down through TIDEMARK-1 locked.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -556,7 +559,8 @@ export const scenario16Data: ScenarioData = {
       id: 'power-cycle-lnb',
       nice: ['S0677', 'T1567'],
       title: 'Power Cycle the LNB',
-      description: 'Power off the LNB, then power it back on. The sticky fault will clear and the LNB will re-acquire the reference.',
+      description:
+        'Power off the LNB, then power it back on. The sticky fault clears, the LNB re-acquires the reference, and it needs about 90 s to stabilize thermally after the power-on.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['diagnose-lnb-fault'],
       timeLimitSeconds: 4 * 60,
@@ -570,10 +574,14 @@ export const scenario16Data: ScenarioData = {
           mustMaintain: true,
         },
         {
-          type: 'equipment-powered',
-          description: 'LNB Powered',
+          // Latches: the cycle has to start with an off (s16 LNB Powered
+          // was ticked from the start state). No "powered on" row: the
+          // reference lock and thermal rows below can only come true with
+          // the LNB back on after the off (the sticky fault clears on power-up)
+          type: 'equipment-not-powered',
+          description: 'LNB Powered Off',
           params: { equipment: 'lnb' },
-          maintainUntilObjectiveComplete: true,
+          mustMaintain: false,
         },
         {
           type: 'lnb-reference-locked',
@@ -589,40 +597,6 @@ export const scenario16Data: ScenarioData = {
       conditionLogic: 'AND',
       points: 15,
     },
-    {
-      id: 'verify-rx-locked',
-      nice: ['T0153', 'K0740'],
-      title: 'Verify Receiver Locked',
-      description: 'Confirm the receiver has reacquired TIDEMARK-1 with a healthy C/N margin.',
-      groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['power-cycle-lnb'],
-      timeLimitSeconds: 3 * 60,
-      timerStartTrigger: 'on-activate',
-      conditions: [
-        {
-          type: 'tab-active',
-          hidden: true,
-          description: 'RX Analysis Open',
-          params: { tab: 'rx-analysis' },
-          mustMaintain: true,
-        },
-        {
-          type: 'receiver-signal-locked',
-          description: 'Receiver Locked',
-          params: { modemNumber: 1, requiresObservation: true, observationTab: 'rx-analysis' },
-          maintainUntilObjectiveComplete: true,
-        },
-        {
-          type: 'receiver-snr-threshold',
-          description: 'C/N Above Operating Threshold',
-          params: { modemNumber: 1, minCNRatio: 8, requiresObservation: true, observationTab: 'rx-analysis' },
-          maintainUntilObjectiveComplete: true,
-        },
-      ],
-      conditionLogic: 'AND',
-      points: 10,
-    },
-
     // ============================================================
     // PHASE 5: TX RESTORATION
     // ============================================================
@@ -632,7 +606,7 @@ export const scenario16Data: ScenarioData = {
       title: 'Return to TX Chain',
       description: 'Switch back to the TX Chain panel to bring the uplink back online.',
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['verify-rx-locked'],
+      prerequisiteObjectiveIds: ['power-cycle-lnb'],
       timeLimitSeconds: 1 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -669,12 +643,6 @@ export const scenario16Data: ScenarioData = {
           description: 'BUC Unmuted',
           maintainUntilObjectiveComplete: true,
         },
-        {
-          type: 'buc-temperature-normal',
-          description: 'BUC Temperature Still Normal',
-          params: { maxTemperature: 70 },
-          maintainUntilObjectiveComplete: true,
-        },
       ],
       conditionLogic: 'AND',
       points: 10,
@@ -700,6 +668,8 @@ export const scenario16Data: ScenarioData = {
           type: 'hpa-enabled',
           description: 'HPA Enabled',
           params: { requiresObservation: true, observationTab: 'tx-chain' },
+          // Disabled since the safety step, so enabling it is the change (Q2)
+          requiresChange: false,
           mustMaintain: true,
         },
         {
@@ -732,6 +702,41 @@ export const scenario16Data: ScenarioData = {
       points: 10,
     },
 
+    {
+      id: 'verify-rx-locked',
+      nice: ['T0153', 'K0740'],
+      title: 'Verify Receiver Locked',
+      description:
+        'Switch to RX Analysis. With the uplink back on the air your own carrier comes back down through TIDEMARK-1: confirm RX modem 1 has reacquired it with a healthy C/N margin (at least 8 dB) now that the LNB is locked.',
+      groundStation: 'VT-01',
+      prerequisiteObjectiveIds: ['verify-tx-output-clean'],
+      timeLimitSeconds: 3 * 60,
+      timerStartTrigger: 'on-activate',
+      conditions: [
+        {
+          type: 'tab-active',
+          hidden: true,
+          description: 'RX Analysis Open',
+          params: { tab: 'rx-analysis' },
+          mustMaintain: true,
+        },
+        {
+          type: 'receiver-signal-locked',
+          description: 'Receiver Locked',
+          params: { modemNumber: 1, requiresObservation: true, observationTab: 'rx-analysis' },
+          maintainUntilObjectiveComplete: true,
+        },
+        {
+          type: 'receiver-snr-threshold',
+          description: 'C/N Above Operating Threshold',
+          params: { modemNumber: 1, minCNRatio: 8, requiresObservation: true, observationTab: 'rx-analysis' },
+          maintainUntilObjectiveComplete: true,
+        },
+      ],
+      conditionLogic: 'AND',
+      points: 10,
+    },
+
     // ============================================================
     // PHASE 6: VERIFICATION AND CLOSE-OUT
     // ============================================================
@@ -739,9 +744,11 @@ export const scenario16Data: ScenarioData = {
       id: 'final-alarm-sweep',
       nice: ['T0153', 'K0741'],
       title: 'Final Dashboard Sweep',
-      description: 'Confirm the alarm board is clean before notifying the customer.',
+      description: 'Open the Dashboard tab and confirm the alarm board is clean before notifying the customer.',
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['verify-tx-output-clean'],
+      // A sweep: every row confirms the recovery the player just made
+      intent: 'confirm',
+      prerequisiteObjectiveIds: ['verify-rx-locked'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [

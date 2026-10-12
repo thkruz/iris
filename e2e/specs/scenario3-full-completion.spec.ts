@@ -188,7 +188,7 @@ const SCENARIO_3_OBJECTIVES: Scenario3Objective[] = [
     id: 'verify-gpsdo-weather-quiz',
     title: 'Understand Weather Impact on GPSDO',
     type: 'quiz',
-    correctAnswer: 'GPS uses L-band frequencies (~1.5 GHz) which are less affected by precipitation than C-band',
+    correctAnswer: 'The loss is ice loading the dish feed - the GPS patch antenna sits under a radome with no feed to ice',
   },
 
   // ============================================================
@@ -249,8 +249,8 @@ const SCENARIO_3_OBJECTIVES: Scenario3Objective[] = [
     specaConfig: {
       centerFrequency: 1074.5, // MHz
       span: 0.002, // MHz (2 kHz) - span input uses MHz
-      minAmplitude: -65, // dBm
-      maxAmplitude: -50, // dBm
+      minAmplitude: -100, // dBm
+      maxAmplitude: -30, // dBm
     },
   },
   {
@@ -337,7 +337,7 @@ const SCENARIO_3_OBJECTIVES: Scenario3Objective[] = [
     id: 'understand-handover-quiz',
     title: 'Understand Handover Process',
     type: 'quiz',
-    correctAnswer: "Maine's transmitter comes up while Vermont's is disabled - avoiding a dual uplink",
+    correctAnswer: "Vermont's uplink drops and Maine's comes up in the same step - never a dual uplink",
   },
   {
     id: 'execute-handover',
@@ -682,6 +682,20 @@ async function configureTxModem(
     transmitting?: boolean;
   }
 ): Promise<void> {
+  // ME-02's TX modem starts parked and powered off (r2-s03-F3): power it first
+  if (config.transmitting === true) {
+    const powerSwitch = page.locator('#tx-power-switch');
+    await expect(powerSwitch).toBeVisible({ timeout: 5000 });
+    if (!(await powerSwitch.isChecked())) {
+      await powerSwitch.click();
+      await expect(powerSwitch).toBeChecked();
+      // The modem boots for 4 s (Transmitter.handlePowerToggle) and locks the
+      // transmit switch out until it is up
+      await expect(page.locator('#tx-transmit-switch')).toBeEnabled({ timeout: 15000 });
+    }
+    await page.waitForTimeout(200);
+  }
+
   // Configure frequency (in MHz) if specified
   if (config.frequency !== undefined) {
     const freqInput = page.locator('#tx-frequency-input');

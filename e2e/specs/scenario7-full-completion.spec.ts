@@ -152,7 +152,7 @@ const SCENARIO_7_OBJECTIVES: Scenario7Objective[] = [
       centerFrequency: 1074.5,
       span: 0.002,
       minAmplitude: -100,
-      maxAmplitude: -50,
+      maxAmplitude: -30,
     },
   },
   // acquire-beacon objective has TWO status-check quizzes - Beacon Purpose appears FIRST, then Beacon Identification
@@ -287,10 +287,17 @@ const SCENARIO_7_OBJECTIVES: Scenario7Objective[] = [
   },
   {
     id: 'disable-loopback',
-    title: 'Disable Loopback Mode',
+    title: 'Disable Loopback, Restore BUC Gain',
     type: 'toggle-switch',
     switchId: 'buc-loopback',
     switchState: false,
+  },
+  {
+    // r2-s07-F3: the same objective puts the BUC back on the 23 dB standard
+    id: 'disable-loopback-gain',
+    title: 'Disable Loopback, Restore BUC Gain',
+    type: 'configure-buc-gain',
+    bucGain: 23,
   },
   {
     id: 'restore-lnb-frequency-tab',
@@ -908,6 +915,11 @@ test.describe('Scenario 7 Full Completion', () => {
 
   test('Objective: Disable Loopback Mode', async () => {
     const objective = SCENARIO_7_OBJECTIVES.find((o) => o.id === 'disable-loopback')!;
+    await executeObjective(page, missionControlPage, objective);
+  });
+
+  test('Objective: Restore BUC Gain to 23 dB', async () => {
+    const objective = SCENARIO_7_OBJECTIVES.find((o) => o.id === 'disable-loopback-gain')!;
     await executeObjective(page, missionControlPage, objective);
   });
 

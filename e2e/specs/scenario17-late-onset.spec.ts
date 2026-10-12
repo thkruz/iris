@@ -133,6 +133,8 @@ test.describe('Scenario 17 Late Onset Regression', () => {
 
     await dwell(page, 80); // baseline-rx-check: 120 s, with a maintain hold
     await missionControlPage.selectTab('rx-analysis');
+    // Phase 27 Q3: the observation rows latch, then the C/N read quiz
+    await answerQuiz(page, 'About 13 dB');
     await waitForObjectiveComplete(missionControlPage, 'Baseline RX Snapshot');
     await dwell(page, 100); // why-not-handover-quiz: 120 s
     await answerQuiz(page, 'Brief, predicted, SLA-excluded with notice - a handover costs two transfer events, and ME-02 gets its own transit anyway');
@@ -164,10 +166,11 @@ test.describe('Scenario 17 Late Onset Regression', () => {
     );
     await expect.poll(async () => (await readObjective(page, 'observe-onset'))?.isActive, { timeout: 15_000 }).toBe(true);
 
-    await answerQuiz(page, 'Confidence this is the predicted transit, not a coincidental fault - the alarm tracking the sheet IS the diagnosis');
-
     // Anchor + 20 s start, >2 dB ~40 s later: about a minute of run time
     await expect.poll(() => readSkyNoiseDb(page), { timeout: 120_000, intervals: [1000] }).toBeGreaterThan(2);
+
+    // Phase 27 B7: the onset quiz waits for the sky-noise row listed before it
+    await answerQuiz(page, 'Confidence this is the predicted transit, not a coincidental fault - the alarm tracking the sheet IS the diagnosis');
 
     // Checklist first (DOM), then engine state
     await waitForObjectiveComplete(missionControlPage, 'Confirm Predicted Onset', 30_000);

@@ -116,12 +116,15 @@ export const scenario11Data: ScenarioData = {
         ],
         spectrumAnalyzers: [
           {
-            referenceLevel: -91 as dBm,
+            referenceLevel: -91 as dBm, // Engineering-mode field; S4 checks it stays at the beacon preset
             centerFrequency: 1074.5e6 as Hertz, // TM-1 beacon IF
             span: 2e3 as Hertz,
-            rbw: 1e3 as Hertz,
-            minAmplitude: -95 as dBm,
-            maxAmplitude: -75 as dBm,
+            rbw: null, // Auto (3 Hz at 2 kHz): the CW line stands ~55 dB over the floor
+            // Phase 27: the TIDEMARK beacon reads -44 to -59 dBm at the RX IF
+            // tap (ledger; higher when the AGC sees no carrier), the floor ~-114
+            // dBm in 3 Hz: both on screen, 10 dB/div
+            minAmplitude: -120 as dBm,
+            maxAmplitude: -30 as dBm,
             scaleDbPerDiv: 10 as dB,
             screenMode: 'both',
             inputUnit: 'MHz',
@@ -306,8 +309,9 @@ export const scenario11Data: ScenarioData = {
       id: 'vt-confirm-tm1-locked',
       nice: ['T0129', 'S0421'],
       title: 'Confirm VT-01 Owns TIDEMARK-1',
-      description: 'Verify VT-01 antenna is still tracking TIDEMARK-1 and is the current traffic owner.',
+      description: 'Verify VT-01 antenna is still tracking TIDEMARK-1 and is the current traffic owner: read the ACU target and beacon status.',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['vt-pre-handover-dashboard'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
@@ -331,6 +335,24 @@ export const scenario11Data: ScenarioData = {
           // Evaluator compares the objective's groundStation against the
           // current owner of params.satelliteId.
           params: { satelliteId: 61525 },
+          mustMaintain: false,
+        },
+        {
+          type: 'status-check',
+          description: 'Read the VT-01 ACU',
+          params: {
+            character: Character.SYSTEM,
+            question: 'What target and beacon status does the VT-01 ACU show?',
+            options: [
+              'Current target TIDEMARK-1, beacon LOCKED, program-track',
+              'Current target TIDEMARK-2, beacon LOCKED, program-track',
+              'Current target TIDEMARK-1, beacon searching, step-track',
+              'No target, manual mode, beacon idle',
+            ],
+            correctIndex: 0,
+            explanation: "VT-01 is on TIDEMARK-1 with the beacon locked: the station carrying TM-1's traffic until the transfer.",
+            pointPenalty: 5,
+          },
           mustMaintain: false,
         },
       ],
@@ -391,9 +413,10 @@ export const scenario11Data: ScenarioData = {
     {
       id: 'me-verify-beacon-and-rx',
       nice: ['T0129', 'K0741'],
-      title: 'ME-02 Receive Chain Hot',
-      description: 'Verify the TIDEMARK-1 beacon is visible at ME-02 and the receiver is locked with healthy C/N margin.',
+      title: 'Verify ME-02 Receive Chain Hot',
+      description: "Verify the TIDEMARK-1 beacon is visible at ME-02 and the receiver is locked on VT-01's carrier with healthy C/N margin: read the C/N.",
       groundStation: 'ME-02',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['me-verify-antenna-on-tm1'],
       timeLimitSeconds: 3 * 60,
       timerStartTrigger: 'on-activate',
@@ -432,6 +455,27 @@ export const scenario11Data: ScenarioData = {
             observationTab: 'rx-analysis',
           },
           mustMaintain: true,
+        },
+        {
+          type: 'status-check',
+          description: 'Read the ME-02 C/N',
+          params: {
+            character: Character.SYSTEM,
+            question: "What C/N does the ME-02 receiver modem show on TIDEMARK-1's carrier?",
+            options: [
+              '12 to 14 dB - locked with good margin',
+              '4 to 6 dB - locked, degraded margin',
+              '8 to 9 dB - just under the 10 dB commit margin',
+              'No C/N reading - the modem is not locked',
+            ],
+            correctIndex: 0,
+            // VT-01's own TP-1 carrier reads ~12-13 dB at either site: same
+            // dish class, GEO slant ranges within tens of km (r2-s11-F2)
+            explanation:
+              "About 12 to 13 dB, the same as VT-01 sees: ME-02 is receiving VT-01's carrier through the same transponder, with the same class of dish a few hundred km away. Well over the 10 dB commit margin: Maine's receive side is ready.",
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -553,12 +597,6 @@ export const scenario11Data: ScenarioData = {
             targetStation: 'ME-02',
             satelliteId: 61525,
           },
-          mustMaintain: false,
-        },
-        {
-          type: 'service-continuity',
-          description: 'Service Continuity Maintained',
-          params: { maxPacketLoss: 0.1 },
           mustMaintain: false,
         },
       ],
@@ -753,7 +791,7 @@ export const scenario11Data: ScenarioData = {
       id: 'log-handover-entry',
       nice: ['K0645', 'T0129'],
       title: 'Log the Handover',
-      description: 'Type the handover into the Operations Log (log icon in the station sidebar): who has TM-1 now and the state VT-01 is left in. Then pick the matching log line.',
+      description: 'Type the handover into the Operations Log (log icon in the station sidebar): who has TM-1 now and the state VT-01 is left in.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['vt-final-rf-safety-check'],
       timeLimitSeconds: 2 * 60,
@@ -765,6 +803,19 @@ export const scenario11Data: ScenarioData = {
           params: { logKeywords: ['me-02|maine', 'safe|maintenance'], logMinLength: 20 },
           mustMaintain: false,
         },
+      ],
+      conditionLogic: 'AND',
+      points: 5,
+    },
+    {
+      // The log-line quiz follows the typed entry (it used to open before it)
+      id: 'log-handover-quiz',
+      nice: ['K0645', 'T0129'],
+      title: 'Check the Log Line',
+      description: 'Pick the log line that records the handover the way you typed it.',
+      groundStation: 'VT-01',
+      prerequisiteObjectiveIds: ['log-handover-entry'],
+      conditions: [
         {
           type: 'status-check',
           description: 'Handover Log Entry',
@@ -785,7 +836,7 @@ export const scenario11Data: ScenarioData = {
         },
       ],
       conditionLogic: 'AND',
-      points: 10,
+      points: 5,
     },
   ] as Objective[],
   dialogClips: {
@@ -823,7 +874,7 @@ export const scenario11Data: ScenarioData = {
         emotion: Emotion.NEUTRAL,
         audioUrl: getAssetUrl('/assets/campaigns/nats/11/obj-switch-to-vermont-safing.mp3'),
       },
-      'log-handover-entry': {
+      'log-handover-quiz': {
         text: `
         <p>
           Clean handover. Log it and meet me in the conference room - I want to walk through the gasket replacement procedure with you before they start.

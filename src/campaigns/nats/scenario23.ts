@@ -410,21 +410,51 @@ export const scenario23Data: ScenarioData = {
       title: 'Prove the Carrier',
       description: 'On RX Analysis, read receiver modem 1: locked on the TM-1 carrier (1532 MHz) with C/N of at least 9 dB - the link is alive under manual control.',
       groundStation: 'VT-01',
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['prove-beacon'],
       timeLimitSeconds: 3 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
         {
+          type: 'tab-active',
+          hidden: true,
+          description: 'RX Analysis Open',
+          params: { tab: 'rx-analysis' },
+          mustMaintain: true,
+        },
+        {
           type: 'receiver-signal-locked',
           description: 'Receiver Locked',
-          params: { modemNumber: 1, requiresObservation: true, observationTab: 'rx-analysis', observationDwellSeconds: 5 },
+          params: { modemNumber: 1 },
           mustMaintain: true,
         },
         {
           type: 'receiver-snr-threshold',
           description: 'C/N ≥ 9 dB',
-          params: { minCNRatio: 9, requiresObservation: true, observationTab: 'rx-analysis', observationDwellSeconds: 5 },
+          params: { minCNRatio: 9 },
           mustMaintain: true,
+        },
+        {
+          // Read quiz in place of the 5 s dwell (Phase 27 Q3, s23-F4).
+          // Ledger (nats-scenario23.json): 15.0 dB raw C/N, 10.8 dB lock
+          // margin, with the dish parked where the automation died
+          type: 'status-check',
+          description: 'Carrier C/N Read',
+          params: {
+            character: Character.SYSTEM,
+            question: 'What does RX modem 1 show on the TM-1 carrier with the dish under manual control?',
+            options: [
+              'Locked, C/N about 15 dB - the same healthy link the automation left behind',
+              'Locked, C/N about 5 dB - the dish has drifted toward the edge of the beam since the processor died',
+              'Unlocked, C/N below 0 dB - the dish is off the satellite and the beacon on the analyzer is a sidelobe',
+              'Locked, C/N about 30 dB - manual mode bypasses the LNB, so the reading is higher than normal',
+            ],
+            correctIndex: 0,
+            explanation:
+              'About 15 dB and locked, with the beacon where the sheet says: two readings from the RF chain, which never failed. The ACU lock light comes from the dead processor; this does not.',
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -471,12 +501,23 @@ export const scenario23Data: ScenarioData = {
       id: 'sustained-manual-hold',
       nice: ['S0671', 'T0153'],
       title: 'Hold Under Manual Control',
-      description: 'Sustain the link manually - TIDEMARK-1 is GEO and barely moves, so a steady manual hold is feasible for the shift.',
+      description:
+        'Stay on RX Analysis and watch the link for 30 s under manual control - TIDEMARK-1 is GEO and barely moves, so a steady manual hold is feasible for the shift. Then say what the instruments did.',
       groundStation: 'VT-01',
+      // A watch: manual mode and the lock are meant to stay as they are
+      intent: 'confirm',
       prerequisiteObjectiveIds: ['instruments-not-feel-quiz'],
       timeLimitSeconds: 4 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
+        {
+          // B3: the 30 s hold accrues only while the player watches the RF
+          type: 'tab-active',
+          hidden: true,
+          description: 'RX Analysis Open',
+          params: { tab: 'rx-analysis' },
+          mustMaintain: true,
+        },
         {
           type: 'antenna-tracking-mode-set',
           description: 'Manual Mode Held',
@@ -489,6 +530,25 @@ export const scenario23Data: ScenarioData = {
           params: { modemNumber: 1 },
           mustMaintain: true,
           maintainDuration: 30,
+        },
+        {
+          type: 'status-check',
+          description: 'Hold Read',
+          params: {
+            character: Character.SYSTEM,
+            question: 'Over the 30 s you watched, what did the beacon on the analyzer and RX modem 1 do?',
+            options: [
+              'Nothing worth a correction: beacon steady on the analyzer, modem locked at about 15 dB throughout',
+              'The beacon walked steadily down the screen and the C/N fell a dB every few seconds - a nudge is due',
+              'The modem dropped lock twice and relocked - normal for manual mode, so no action is needed',
+              'The beacon vanished and the C/N held - the analyzer lost the beacon but the link is fine',
+            ],
+            correctIndex: 0,
+            explanation:
+              'A well-kept GEO bird moves a few hundredths of a degree in hours, a tiny fraction of a 0.6 degree beam: 30 s of manual hold shows no change at all. That is why manual is a sustainable bypass here and would not be on an inclined bird.',
+            pointPenalty: 5,
+          },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -631,7 +691,7 @@ export const scenario23Data: ScenarioData = {
       'prove-carrier': {
         text: `
         <p>
-          Beacon's where the sheet says, receiver's locked - you proved it on the RF instead of taking the dead controller's lock light at its word. That's the whole skill - the automation was never magic, just bookkeeping you can do by hand when you have to.
+          Beacon's where the sheet says, receiver's locked - you read it off the RF instead of taking the dead controller's lock light at its word. That's the whole skill - the automation was never magic, just bookkeeping you can do by hand when you have to.
         </p>
         `,
         character: Character.DANA_TORRES,

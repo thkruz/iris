@@ -13,7 +13,7 @@ import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForS
  *
  * The analyzer starts parked on the TM-2 beacon (1070 MHz / 2 MHz), so the
  * spectrum step retunes it to the carrier (1458 / 40 MHz). ME-02's own uplink
- * is off for this shift.
+ * is on TM-2 (Phase 27: the carrier the RX modem locks to is ME-02's own).
  *
  * The intermittent jammer provides the authentic signature for the player;
  * objective completion hinges on the discrimination quizzes, the data-layer
@@ -65,13 +65,13 @@ const SCENARIO_21_OBJECTIVES: Scenario21Objective[] = [
     id: 'duty-cycle-quiz',
     title: 'Characterize the Duty Cycle',
     type: 'quiz',
-    correctAnswer: 'Against accident, toward deliberation: accidents are continuous or random; a clean minute-scale on/off cadence implies a switch',
+    correctAnswer: 'About 90 s on, 60 s off, repeating - against accident, toward deliberation: a clean minute-scale on/off cadence implies a switch',
   },
   {
     id: 'transponder-vs-local-quiz',
     title: 'Transponder or Local?',
     type: 'quiz',
-    correctAnswer: 'It is in the UPLINK - the satellite relays it to every station, so the source is transmitting at the bird, not local to Maine',
+    correctAnswer: 'It is in the UPLINK - the satellite relays it to both sites, so the source is transmitting at the bird, not local to Maine',
   },
   {
     id: 'signature-shape-quiz',
@@ -117,8 +117,9 @@ const SCENARIO_21_OBJECTIVES: Scenario21Objective[] = [
   {
     id: 'verify-carrier-survives',
     title: 'Confirm the Customer Survives',
-    type: 'auto',
-    autoWaitSeconds: 5,
+    // Phase 27 Q3: the lock row latches on RX Analysis, then the C/N read
+    type: 'quiz',
+    correctAnswer: 'Locked at about 9 dB C/N, up from about 6 dB unnotched; about 12 dB in the off periods',
   },
   {
     id: 'no-burn-through-quiz',
@@ -144,7 +145,7 @@ const SCENARIO_21_OBJECTIVES: Scenario21Objective[] = [
     id: 'log-incident',
     title: 'Log the Incident',
     type: 'quiz',
-    correctAnswer: 'TM-2 TP-1 interference: noise ~1470 MHz IF, 90s/60s duty, uplink-confirmed (VT-01 + Halifax); crypto intact - RF denial, notched',
+    correctAnswer: 'TM-2 TP-1 interference: noise ~1470 MHz IF, 90s/60s duty, uplink-confirmed (Maine + Halifax); crypto intact - RF denial, notched',
   },
 ];
 
@@ -245,7 +246,15 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
       break;
 
     case 'auto':
-      await page.waitForTimeout((objective.autoWaitSeconds ?? 5) * 1000);
+      // Wait for the objective itself (observation dwells latch on the tab)
+      await page.waitForFunction(
+        (id) => {
+          const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;
+          return typeof hook === 'function' && hook(id)?.isCompleted === true;
+        },
+        objective.id,
+        { timeout: Math.max(20, objective.autoWaitSeconds ?? 5) * 1000, polling: 500 }
+      );
       break;
   }
 
