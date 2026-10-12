@@ -207,6 +207,10 @@ export class BUCAdapter {
         } else if (mode === 'high') {
           sidebandStatus.textContent = 'LSB';
           sidebandStatus.className = 'status-badge status-badge-good';
+        } else if (mode === 'no-input') {
+          // No modem transmitting into the BUC: nothing to place in band yet
+          sidebandStatus.textContent = 'No IF Input';
+          sidebandStatus.className = 'status-badge status-badge-off';
         } else {
           sidebandStatus.textContent = 'Out of Band';
           sidebandStatus.className = 'status-badge status-badge-warning';
@@ -656,6 +660,9 @@ export class BUCAdapter {
    */
   private classifySeverity_(message: string): AlarmStatus['severity'] {
     const lowerMsg = message.toLowerCase();
+    if (lowerMsg.includes('acquiring')) {
+      return 'info'; // reference pull-in, a transient (phase 27)
+    }
     if (lowerMsg.includes('error') || lowerMsg.includes('fault') || lowerMsg.includes('fail')) {
       return 'error';
     }

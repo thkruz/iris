@@ -77,7 +77,7 @@ export type ConditionType =
   | 'handover-complete' // Traffic handover to target station completed
   | 'traffic-owner' // Ground station owns traffic to satellite
   | 'traffic-transferred' // Traffic transferred from source to target station
-  | 'service-continuity' // No packet loss during handover (placeholder - always passes)
+  | 'service-continuity' // PLACEHOLDER (always passes) - do not author until Phase 23.2 models packet loss
   | 'ground-station-selected' // Ground station selected in UI
   | 'satellite-selected' // Satellite selected in UI asset tree
   // UI interaction conditions
@@ -103,6 +103,7 @@ export type ConditionType =
   | 'geolocation-fix-accuracy' // Computed fix within N km of the emitter truth
   | 'geolocation-ellipse-within' // Computed fix converged with a 95% error ellipse no wider than N km (semi-major)
   | 'interference-event-ended' // A scripted interference event's envelope has closed (it ran and stopped)
+  | 'weather-event-ended' // A scheduled weather event (rain cell, storm, sun transit) has run its course
   // Electronic-attack / SATCOM denial conditions (Campaign 4)
   | 'jamming-uplink-active' // Jam waveform radiating in the target uplink band
   | 'jamming-effective' // J/S at the target transponder meets the denial threshold
@@ -238,7 +239,10 @@ export type EquipmentRef = 'antenna' | 'gpsdo' | 'buc' | 'lnb' | 'hpa' | 'filter
  * Parameters for different condition types
  */
 export interface ConditionParams {
-  /** For antenna-locked: which satellite (NORAD ID) */
+  /**
+   * For antenna-locked: which satellite (NORAD ID). For antenna-beacon-locked:
+   * the beacon must be this satellite's (the antenna's selected target)
+   */
   noradId?: number;
   /** For antenna-locked: legacy alias for noradId (kept for backwards compatibility) */
   satelliteId?: number;
@@ -416,6 +420,21 @@ export interface ConditionParams {
   documentSection?: string;
   /** For signal-detected/signal-level-correct: signal identifier to match */
   signalId?: string;
+  /**
+   * For signal-detected: count a signal wherever it is, not only inside the
+   * analyzer's displayed window (centre +/- span/2, in the domain the analyzer
+   * is tapping). Default false: "detected" means it is on the screen
+   * (Phase 27 B2).
+   */
+  anyTuning?: boolean;
+  /**
+   * For status-check: when the quiz becomes answerable (Phase 27 B7).
+   * Default (omitted): after every non-quiz condition listed BEFORE it in the
+   * objective has latched (the knowledge check follows the doing; a quiz
+   * authored first is still asked first). true: after every non-quiz
+   * condition of the objective. false: as soon as the objective activates.
+   */
+  quizAfterConditions?: boolean;
   /** For signal-detected/signal-level-correct: minimum power level in dBm */
   minPower?: number;
   /** For handover-complete/traffic-owner: target ground station ID */
@@ -464,6 +483,8 @@ export interface ConditionParams {
   maxSemiMajorKm?: number;
   /** For geolocation conditions and interference-event-ended: the interference event in question */
   interferenceEventId?: string;
+  /** For weather-event-ended: the settings.weatherEvents id that must have run its course */
+  weatherEventId?: string;
 
   // ── nats-eu (Campaign 2) condition parameters ──────────────────────────────
   /** For link-budget-computed / link-margin-met: minimum required margin in dB (default 0) */
@@ -576,9 +597,30 @@ export interface Condition {
   hidden?: boolean;
   /** Parameters specific to this condition type */
   params?: ConditionParams;
-  /** Whether this condition must be maintained (true) or just achieved once (false) */
+  /**
+   * Whether this condition must be maintained (true) or just achieved once
+   * (false). With no maintainDuration, true means "must still hold when the
+   * objective completes" (Phase 27 B8); before, it latched after one tick.
+   */
   mustMaintain: boolean;
-  /** Minimum time (in seconds) the condition must be maintained before considered complete */
+  /**
+   * Phase 27 B1: when the condition already reads true on the frame its
+   * objective activates, it counts only after the watched value changes (or
+   * the condition goes false once) after activation, so a start state that
+   * matches the target does not tick the row for the player.
+   * Default: ON for set-type conditions (SET_TYPE_CONDITIONS in
+   * condition-semantics.ts) unless an earlier objective in the chain already
+   * asked for the same setting; OFF for verify/observation/status conditions.
+   * Set false to opt out (the row confirms a state the player is not asked to
+   * make), true to force it on a verify-type row.
+   */
+  requiresChange?: boolean;
+  /**
+   * Minimum time (in seconds) the condition must be maintained before
+   * considered complete. Since Phase 27 B3 the hold accrues only while the
+   * objective's tab-active siblings are on and its observation siblings have
+   * been observed: a "watch it for 20 s" row counts only while watching.
+   */
   maintainDuration?: number;
   /**
    * If true, condition must remain satisfied until ALL conditions in the objective are complete.
@@ -628,6 +670,37 @@ export interface Objective {
   timePenalty?: TimePenalty;
   /** If true, scenario timer will not start until this objective is completed */
   freezesScenarioTimer?: boolean;
+  /**
+   * Authoring intent for the objective-intent lint
+   * (test/campaigns/nats-objective-intent.test.ts). 'confirm' marks an
+   * objective whose rows are meant to be true already (confirm a pre-staged
+   * state), so the lint does not flag them as completing before the player
+   * acts. Default: the objective asks the player to do something.
+   */
+  intent?: 'confirm';
+  /**
+   * Phase 27 Q4: a real-world wait the scenario compresses (a crew maintenance
+   * window, a pass window, a rain cell). Offers a one-shot "Skip N min"
+   * control in the command bar while this objective is active; the skip
+   * advances scenario AND run time (weather, thermal settling, sim timers and
+   * holds all progress) and is logged in the Ops Log.
+   */
+  timeSkip?: ObjectiveTimeSkip;
+}
+
+/** Objective.timeSkip */
+export interface ObjectiveTimeSkip {
+  /** Simulated minutes to advance */
+  minutes: number;
+  /** What the wait is, for the button tooltip and the Ops Log ("crew maintenance window") */
+  label?: string;
+  /**
+   * Offer the skip only once every other condition of the objective is met
+   * (everything except quizzes and clock-gated rows such as
+   * weather-event-ended): set up first, then skip the wait. Default false:
+   * offered as soon as the objective is active.
+   */
+  availableAfterConditions?: boolean;
 }
 
 /**
@@ -662,6 +735,8 @@ export interface ObjectiveState {
   timePenaltyPoints?: number;
   /** Points deducted from requesting hints (50% of objective points if any hint requested) */
   hintPenaltyPoints?: number;
+  /** The objective's one-shot timeSkip has been used (Phase 27 Q4) */
+  timeSkipUsed?: boolean;
 }
 
 /**
@@ -705,4 +780,26 @@ export interface ConditionState {
    * been continuously inside the band. Reset to 0 by a frame outside it.
    */
   heldSeconds?: number;
+  /**
+   * Phase 27 B1 (requiresChange). undefined: not evaluated since activation.
+   * false: it read true on the activation frame and has not changed since, so
+   * it does not count yet. true: free to count.
+   */
+  changeArmed?: boolean;
+  /** Phase 27 B1: the watched value on the activation frame (valueSnapshot) */
+  changeBaseline?: string;
+  /**
+   * Phase 27 B5: seconds a hidden tab-active row has been the only thing
+   * (besides quizzes) holding its objective up; the checklist names the tab
+   * once this passes TAB_HINT_DELAY_SECONDS.
+   */
+  tabHintSeconds?: number;
 }
+
+/**
+ * Phase 27 B5: how long a hidden tab-active row may be the only blocker before
+ * the checklist says which tab to open. Long enough that a qualified operator
+ * who knows where to look never sees it; short enough that a stuck one is not
+ * left guessing.
+ */
+export const TAB_HINT_DELAY_SECONDS = 15;

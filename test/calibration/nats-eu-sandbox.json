@@ -183,10 +183,10 @@
           "pass": {
             "aosS": 74.77,
             "losS": 489.61,
-            "maxEl": 23.77
+            "maxEl": 23.76
           },
           "atPeak": {
-            "elevationDeg": 23.77,
+            "elevationDeg": 23.76,
             "frequencyMHz": 11711.26,
             "gainDbi": 51.1,
             "gOverTDbPerK": 29.39,
@@ -256,7 +256,7 @@
               "modulation": "CW",
               "fec": "null",
               "samples": 464,
-              "peakCnDb": 32.05,
+              "peakCnDb": 32.06,
               "medianCnDb": 23.13,
               "peakEsN0Db": 32.82,
               "requiredEsN0Db": null,
@@ -267,8 +267,8 @@
             },
             {
               "signalId": "MERIDIAN-SAR-2-VIDEO",
-              "rfMHz": 11730.29,
-              "ifMHz": 1369.71,
+              "rfMHz": 11730.28,
+              "ifMHz": 1369.72,
               "bandwidthMHz": 36,
               "modulation": "QPSK",
               "fec": "3/4",

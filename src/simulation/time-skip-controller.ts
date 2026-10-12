@@ -21,6 +21,15 @@
  *
  * Opt-in per scenario via settings.timeSkip; campaigns that do not declare it
  * never see the control.
+ *
+ * Phase 27 Q4 adds an objective-anchored skip ("Skip 15 min"): an objective
+ * with `timeSkip` offers to fast-forward a real wait the scenario compresses
+ * (a crew maintenance window, a pass window, a rain cell). Unlike the pass
+ * skip it also advances RUN time (SimClock.advanceRun), because the station
+ * really sat through that wait: sim timers (lock delays, warm-up, LNB
+ * stabilisation) fire, weather ice integrates over it, and the objective's
+ * own timed holds earn the skipped seconds. It does not burn the anchoring
+ * objective's countdown, and it is logged in the Ops Log.
  */
 
 import { CryptoModule } from '@app/equipment/crypto';
@@ -34,6 +43,7 @@ import { PassPlannerService, scenarioMinElevation } from '@app/services/pass-pla
 import { SimClock } from '@app/simulation/sim-clock';
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
 import { SimulationManager } from '@app/simulation/simulation-manager';
+import { WeatherManager } from '@app/weather/weather-manager';
 import type { Degrees } from 'ootk';
 
 /** settings.timeSkip */
@@ -72,6 +82,13 @@ export interface SkipTarget {
   willExpireCryptoKey: boolean;
 }
 
+/** An objective-anchored skip in progress (Phase 27 Q4) */
+interface ObjectiveSkip {
+  objectiveId: string;
+  minutes: number;
+  label: string;
+}
+
 const DEFAULT_LEAD_TIME_S = 120;
 const DEFAULT_ANIMATION_MS = 2500;
 const DEFAULT_MIN_SKIP_S = 300;
@@ -88,6 +105,7 @@ export class TimeSkipController {
   private skippedMs_ = 0;
   private startedAtRealMs_ = 0;
   private animationFrameId_: number | null = null;
+  private objectiveSkip_: ObjectiveSkip | null = null;
 
   private constructor() {
     this.config_ = (ScenarioManager.getInstance().settings.timeSkip as TimeSkipConfig | undefined) ?? {};
@@ -157,6 +175,71 @@ export class TimeSkipController {
     }
 
     return null;
+  }
+
+  /**
+   * The objective wait on offer right now (Phase 27 Q4), or null. Read by the
+   * command bar each second to show or hide its "Skip N min" control.
+   */
+  findObjectiveSkip(): { objectiveId: string; minutes: number; label: string } | null {
+    if (!ObjectivesManager.hasInstance()) {
+      return null;
+    }
+
+    return ObjectivesManager.getInstance().getAvailableTimeSkip();
+  }
+
+  /**
+   * Why the objective skip cannot run now, or null when it can. Narrower than
+   * getBlockedReason(): the wait being skipped is the objective's own, so its
+   * timer and a bird overhead do not block it; another objective being timed
+   * still does.
+   */
+  getObjectiveSkipBlockedReason(objectiveId: string): string | null {
+    if (this.isSkipping_) {
+      return 'Skip already running';
+    }
+    if (!OpsLogManager.isInitialized()) {
+      return 'Scenario clock is not running';
+    }
+    if (OpsLogManager.getInstance().isPaused()) {
+      return 'Scenario clock is paused';
+    }
+    if (ObjectivesManager.hasInstance() && ObjectivesManager.getInstance().hasRunningObjectiveTimer(objectiveId)) {
+      return 'Another timed objective is running';
+    }
+
+    return null;
+  }
+
+  /**
+   * Fast-forward the active objective's wait. One shot per objective. Returns
+   * false when nothing is on offer or the skip is blocked.
+   */
+  startObjectiveSkip(): boolean {
+    const offer = this.findObjectiveSkip();
+    if (!offer || this.getObjectiveSkipBlockedReason(offer.objectiveId) !== null) {
+      return false;
+    }
+
+    const totalMs = offer.minutes * 60_000;
+    ObjectivesManager.getInstance().markTimeSkipUsed(offer.objectiveId);
+    this.objectiveSkip_ = offer;
+    this.isSkipping_ = true;
+    this.totalMs_ = totalMs;
+    this.skippedMs_ = 0;
+    this.startedAtRealMs_ = Date.now();
+
+    EventBus.getInstance().emit(Events.TIME_SKIP_STARTED, {
+      satelliteName: '',
+      label: offer.label,
+      targetMs: getSimulatedNowMs() + totalMs,
+      totalMs,
+    });
+
+    this.animationFrameId_ = requestAnimationFrame(this.frame_.bind(this));
+
+    return true;
   }
 
   /**
@@ -277,10 +360,20 @@ export class TimeSkipController {
         SimClock.skip(chunkMs);
       }
 
+      // An objective wait is time the station sat through: run time (sim
+      // timers, warm-ups, stabilisation) and weather ice move with it
+      if (this.objectiveSkip_) {
+        SimClock.advanceRun(chunkMs);
+        if (WeatherManager.hasInstance()) {
+          WeatherManager.getInstance().applyTimeSkip(chunkMs / 1000);
+        }
+      }
+
       // Countdown timers are decremented state rather than derived from a
-      // clock, so they have to be told about the skip explicitly.
+      // clock, so they have to be told about the skip explicitly. The
+      // objective whose wait this is does not pay for it.
       if (ObjectivesManager.hasInstance()) {
-        ObjectivesManager.getInstance().applyTimeSkip(chunkMs);
+        ObjectivesManager.getInstance().applyTimeSkip(chunkMs, this.objectiveSkip_?.objectiveId);
       }
 
       EventBus.getInstance().emit(Events.TIME_SKIP_PROGRESS, {
@@ -322,6 +415,14 @@ export class TimeSkipController {
     }
 
     this.isSkipping_ = false;
+
+    const objectiveSkip = this.objectiveSkip_;
+    this.objectiveSkip_ = null;
+    if (objectiveSkip && OpsLogManager.isInitialized()) {
+      const minutes = Math.round(this.skippedMs_ / 60_000);
+      const tail = isCompleted ? '' : ' (stopped early)';
+      OpsLogManager.getInstance().log(`Waited out the ${objectiveSkip.label}: clock advanced ${minutes} min${tail}`, 'system', 'Time skip');
+    }
 
     EventBus.getInstance().emit(Events.TIME_SKIP_ENDED, {
       isCompleted,

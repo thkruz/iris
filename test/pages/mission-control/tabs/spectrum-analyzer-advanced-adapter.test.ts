@@ -137,7 +137,7 @@ describe('SpectrumAnalyzerAdvancedAdapter', () => {
 
     it('should sync DOM with initial state', () => {
       const centerFreqInput = containerEl.querySelector('#sa-center-freq') as HTMLInputElement;
-      expect(centerFreqInput.value).toBe('1500.000');
+      expect(centerFreqInput.value).toBe('1500');
     });
   });
 
@@ -313,7 +313,7 @@ describe('SpectrumAnalyzerAdvancedAdapter', () => {
       }
 
       const centerFreqInput = containerEl.querySelector('#sa-center-freq') as HTMLInputElement;
-      expect(centerFreqInput.value).toBe('2000.000');
+      expect(centerFreqInput.value).toBe('2000');
     });
 
     it('should ignore state changes for different analyzer', () => {
@@ -347,5 +347,19 @@ describe('SpectrumAnalyzerAdvancedAdapter', () => {
 
       expect(mockEventBus.off).toHaveBeenCalledWith(Events.SPEC_A_CONFIG_CHANGED, expect.any(Function));
     });
+  });
+});
+
+describe('SpectrumAnalyzerAdvancedAdapter formatting (phase 27)', () => {
+  it('shows a span with the precision it needs, not toFixed(3)', () => {
+    expect(SpectrumAnalyzerAdvancedAdapter.formatMHz(2e3)).toBe('0.002');
+    expect(SpectrumAnalyzerAdvancedAdapter.formatMHz(1.1e3)).toBe('0.0011');
+    expect(SpectrumAnalyzerAdvancedAdapter.formatMHz(1074.5e6)).toBe('1074.5');
+  });
+
+  it('annotates RBW in Hz, kHz and MHz', () => {
+    expect(SpectrumAnalyzerAdvancedAdapter.formatHz(3)).toBe('3 Hz');
+    expect(SpectrumAnalyzerAdvancedAdapter.formatHz(30e3)).toBe('30 kHz');
+    expect(SpectrumAnalyzerAdvancedAdapter.formatHz(1e6)).toBe('1 MHz');
   });
 });

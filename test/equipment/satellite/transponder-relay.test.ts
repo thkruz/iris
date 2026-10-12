@@ -1,6 +1,6 @@
 /**
  * Satellite relay through the phase 19.3 transponder: what reaches a
- * transponder, what it relays, and the stand-in / handover rules.
+ * transponder, what it relays, and two stations on one carrier.
  */
 
 import { Satellite, type TransponderConfig } from '@app/equipment/satellite/satellite';
@@ -33,14 +33,13 @@ const carrier = (over: Partial<RfSignal> = {}): RfSignal => ({
 /** The isotropic input that sits `iboDb` under single-carrier saturation */
 const isoAt = (iboDb: number): dBm => (fluxToIsoPowerDbm(SFD, UPLINK_HZ) - iboDb) as dBm;
 
-function makeSat(external: RfSignal[] = [], physics: TransponderConfig['physics'] = {}, standIns?: Record<string, string>): Satellite {
+function makeSat(external: RfSignal[] = [], physics: TransponderConfig['physics'] = {}): Satellite {
   const sat = new Satellite('TEST', 1, external, [], {
     az: 180 as Degrees,
     el: 40 as Degrees,
     rotation: 0 as Degrees,
     frequencyOffset: 2.225e9 as Hertz,
     degradationConfig: { powerVariation: false, randomDropout: false },
-    standIns,
     transponderConfigs: [
       {
         id: 'TP-1',
@@ -101,27 +100,26 @@ describe('transponder relay (phase 19.3)', () => {
     expect(sat.operatingPoint('TP-1')).not.toBeNull();
   });
 
-  it('two stations radiating the same carrier are one carrier (the stronger arrival), not a collision', () => {
+  it("two stations radiating the same carrier are two carriers on one frequency: each is the other's co-channel interference (phase 27, DEV-XPDR-07 closed)", () => {
     const sat = makeSat();
     sat.rxSignal = [carrier({ power: isoAt(3) }), carrier({ power: isoAt(9) })];
     sat.update();
-    expect(relayed(sat)).toHaveLength(1);
-    expect(sat.operatingPoint('TP-1')?.iboDb).toBeCloseTo(3, 1);
+    const out = relayed(sat);
+    expect(out.map((s) => s.signalId)).toEqual(['c', 'c#2']);
+    // Both load the transponder: the total input is the two arrivals
+    expect(sat.operatingPoint('TP-1')?.iboDb).toBeLessThan(3);
+    // Same frequency, same bandwidth: C/I between them is their 6 dB power ratio
+    expect(out[0].frequency).toBe(out[1].frequency);
+    expect(out[0].power - out[1].power).toBeCloseTo(6, 0);
   });
 
-  it('an authored stand-in steps aside while the ground carrier it stands in for is on the air', () => {
-    const standIn = carrier({ signalId: 'composite', power: 100 as dBm, origin: SignalOrigin.SATELLITE_RX });
-    const sat = makeSat([standIn], {}, { composite: 'teleport' });
+  it('a break-before-make handover never has both on the air: the new arrival is the only carrier', () => {
+    const sat = makeSat();
+    sat.rxSignal = [carrier({ power: isoAt(3) })];
     sat.update();
-    expect(relayed(sat).map((s) => s.signalId)).toEqual(['composite']);
-
-    sat.rxSignal = [carrier({ signalId: 'teleport', power: isoAt(3) })];
+    sat.rxSignal = [carrier({ power: isoAt(4) })];
     sat.update();
-    expect(relayed(sat).map((s) => s.signalId)).toEqual(['teleport']);
-
-    sat.rxSignal = [];
-    sat.update();
-    expect(relayed(sat).map((s) => s.signalId)).toEqual(['composite']);
+    expect(relayed(sat).map((s) => s.signalId)).toEqual(['c']);
   });
 
   it('authored uplinks are EIRP put through the free-space loss from the reference range', () => {

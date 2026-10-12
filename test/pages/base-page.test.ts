@@ -104,6 +104,7 @@ vi.mock('../../src/modal/quiz-modal', () => ({
 vi.mock('../../src/modal/time-penalty-toast', () => ({
   TimePenaltyToast: {
     getInstance: vi.fn(),
+    dispose: vi.fn(),
   },
 }));
 
@@ -680,6 +681,26 @@ describe('BasePage', () => {
 
     it('should not throw if progressSaveManager_ is null', () => {
       expect(() => page.testDisposeProgressSaveManager()).not.toThrow();
+    });
+
+    it('destroys the bus-subscribing singletons so the next page recreates them', async () => {
+      const { TimePenaltyToast } = await import('../../src/modal/time-penalty-toast');
+      const hintModal = await import('../../src/modal/hint-modal');
+      const traffic = await import('../../src/traffic/traffic-control-manager');
+      const faults = await import('../../src/faults/fault-injector');
+      const crypto = await import('../../src/equipment/crypto/crypto-module-core');
+      const cryptoSpy = vi.spyOn(crypto.CryptoModule, 'resetInstance');
+      const hintSpy = vi.spyOn(hintModal.HintModal, 'destroy');
+      const trafficSpy = vi.spyOn(traffic.TrafficControlManager, 'destroy');
+      const faultSpy = vi.spyOn(faults.FaultInjector, 'resetInstance');
+
+      page.testDisposeProgressSaveManager();
+
+      expect(TimePenaltyToast.dispose).toHaveBeenCalled();
+      expect(hintSpy).toHaveBeenCalled();
+      expect(trafficSpy).toHaveBeenCalled();
+      expect(faultSpy).toHaveBeenCalled();
+      expect(cryptoSpy).toHaveBeenCalled();
     });
   });
 });

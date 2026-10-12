@@ -320,6 +320,19 @@ describe('HPAAdapter', () => {
       expect(backoff().value).toBe('9');
     });
 
+    it('keeps the staged back-off, disabled and still pending, while the HPA is unpowered (nats-r2-s16-F1)', () => {
+      (containerEl.querySelector('#hpa-backoff-inc-coarse') as HTMLButtonElement).click(); // 6 -> 11 staged
+      mockHpaModule.state.isPowered = false;
+
+      stateHandler()({ ...mockHpaModule.state, isPowered: false });
+
+      expect(backoff().value).toBe('11');
+      expect(backoff().disabled).toBe(true);
+      expect(backoff().classList.contains('is-pending')).toBe(true);
+      expect(backoff().title).toContain('Applied: 6 dB');
+      expect(backoff().title).toContain('power on to apply');
+    });
+
     it('shows "--" gain while the HPA is disabled', () => {
       stateHandler()({ ...mockHpaModule.state, isHpaEnabled: false, gain: 44 });
 

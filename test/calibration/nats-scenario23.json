@@ -63,8 +63,8 @@
               "peakEsN0Db": 15.81,
               "requiredEsN0Db": 5.03,
               "peakLockMarginDb": 10.78,
-              "peakRxIfDbm": -29.89,
-              "noiseIfDbm": -45.32,
+              "peakRxIfDbm": -27.33,
+              "noiseIfDbm": -42.75,
               "lockedSamples": 5
             },
             {
@@ -75,17 +75,17 @@
               "modulation": "CW",
               "fec": "null",
               "samples": 5,
-              "peakCnDb": 33.15,
-              "medianCnDb": 33.15,
-              "peakEsN0Db": 33.49,
+              "peakCnDb": 53.15,
+              "medianCnDb": 53.15,
+              "peakEsN0Db": 43.12,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
-              "peakRxIfDbm": -57.73,
-              "noiseIfDbm": -90.88,
+              "peakRxIfDbm": -55.16,
+              "noiseIfDbm": -108.32,
               "lockedSamples": 0
             }
           ],
-          "adjacentCarriers": 0,
+          "adjacentCarriers": 1,
           "transponders": [
             {
               "id": "TP-1",
@@ -108,8 +108,32 @@
           "noradId": 42432,
           "kind": "fixed",
           "pass": null,
-          "atPeak": null,
-          "carriers": [],
+          "atPeak": {
+            "elevationDeg": 34.2,
+            "frequencyMHz": 4178,
+            "gainDbi": 50.71,
+            "gOverTDbPerK": 31.12,
+            "tsysK": 82.03
+          },
+          "carriers": [
+            {
+              "signalId": "SES-10-Beacon",
+              "rfMHz": 4178,
+              "ifMHz": 1072,
+              "bandwidthMHz": 0,
+              "modulation": "CW",
+              "fec": "null",
+              "samples": 5,
+              "peakCnDb": 8.99,
+              "medianCnDb": 8.99,
+              "peakEsN0Db": 9.78,
+              "requiredEsN0Db": null,
+              "peakLockMarginDb": null,
+              "peakRxIfDbm": -102.13,
+              "noiseIfDbm": -111.11,
+              "lockedSamples": 0
+            }
+          ],
           "adjacentCarriers": 2,
           "transponders": [
             {

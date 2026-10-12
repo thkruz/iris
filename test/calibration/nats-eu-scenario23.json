@@ -190,7 +190,7 @@
           },
           "atPeak": {
             "elevationDeg": 23.14,
-            "frequencyMHz": 11711.26,
+            "frequencyMHz": 11711.25,
             "gainDbi": 51.1,
             "gOverTDbPerK": 29.37,
             "tsysK": 126.43
@@ -198,8 +198,8 @@
           "carriers": [
             {
               "signalId": "MERIDIAN-SAR-1-Beacon",
-              "rfMHz": 11711.26,
-              "ifMHz": 1388.74,
+              "rfMHz": 11711.25,
+              "ifMHz": 1388.75,
               "bandwidthMHz": 0,
               "modulation": "CW",
               "fec": "null",
@@ -276,7 +276,7 @@
               "modulation": "QPSK",
               "fec": "3/4",
               "samples": 453,
-              "peakCnDb": 16.57,
+              "peakCnDb": 16.58,
               "medianCnDb": 9.09,
               "peakEsN0Db": 17.35,
               "requiredEsN0Db": 5.03,

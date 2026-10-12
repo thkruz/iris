@@ -310,6 +310,15 @@ export interface WeatherEventData {
   rainRateMmPerHour?: number;
   /** wind/storm: sustained wind in m/s (default from severity: wind 8 / 14 / 22, storm 10 / 18 / 26); de-points the beam */
   windSpeedMps?: number;
+  /**
+   * snow/ice/hail: ice the feed heater can melt against this storm, dB per
+   * minute (Phase 27 Q5). Default: the heater outmelts any buildup
+   * (WeatherManager.MELT_RATE_DB_PER_SECOND, 1 dB/min) and no ice forms while
+   * it runs. Set lower for a storm whose wind and wet-snow rate exceed what the
+   * heater was sized for: the buildup continues with the heater on, slowed by
+   * this rate, toward max - rate x tau.
+   */
+  heaterMeltDbPerMin?: number;
   /** When set, startTime counts from this objective's activation instead of mission start */
   startAfterObjectiveId?: string;
 }
@@ -377,8 +386,10 @@ export interface SimulatedTimeTickData {
 }
 
 export interface TimeSkipStartedData {
-  /** Satellite whose AOS the skip is aiming at */
+  /** Satellite whose AOS the skip is aiming at ('' for an objective wait) */
   satelliteName: string;
+  /** Objective wait being skipped ("rain cell"), Phase 27 Q4; absent for a pass skip */
+  label?: string;
   /** Scenario-clock timestamp the skip stops at, Unix ms */
   targetMs: number;
   /** Total scenario time the skip will cover, ms */

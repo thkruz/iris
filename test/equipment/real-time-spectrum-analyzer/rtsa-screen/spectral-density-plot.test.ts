@@ -413,4 +413,52 @@ describe('SpectralDensityPlot', () => {
       expect(color).toMatch(/^#[0-9a-f]{6}$/);
     });
   });
+
+  describe('graticule (phase 27 AN)', () => {
+    beforeEach(() => {
+      plot = new SpectralDensityPlot(canvas, mockSpecA, mockDataProcessor, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+      plot.setFrequencyRange(1074.499e6 as Hertz, 1074.501e6 as Hertz);
+      vi.advanceTimersByTime(1100);
+    });
+
+    it('labels every amplitude line, Max Amp and Min Amp included, inside the plot', () => {
+      const ctx = canvas.getContext('2d')!;
+      const fillText = vi.spyOn(ctx, 'fillText');
+      plot.draw();
+
+      const texts = fillText.mock.calls.map((call) => String(call[0]));
+      expect(texts).toContain('0');
+      expect(texts).toContain('-100');
+      for (const call of fillText.mock.calls) {
+        const y = call[2] as number;
+        expect(y).toBeGreaterThanOrEqual(0);
+        expect(y).toBeLessThanOrEqual(DEFAULT_HEIGHT);
+      }
+    });
+
+    it('labels the start and stop frequencies too', () => {
+      const ctx = canvas.getContext('2d')!;
+      const fillText = vi.spyOn(ctx, 'fillText');
+      plot.draw();
+
+      const texts = fillText.mock.calls.map((call) => String(call[0]));
+      // Stop (1074.501 MHz) and start (1074.499 MHz) both drawn
+      expect(texts.some((t) => t.includes('074501'))).toBe(true);
+      expect(texts.some((t) => t.includes('074499'))).toBe(true);
+    });
+
+    it('redraws the grid at once when the amplitude window changes, without waiting for a trace', () => {
+      plot.draw();
+      const ctx = canvas.getContext('2d')!;
+      const fillText = vi.spyOn(ctx, 'fillText');
+      mockSpecA.state.minAmplitude = -140;
+      plot.draw();
+
+      expect(fillText.mock.calls.map((call) => String(call[0]))).toContain('-140');
+    });
+
+    it('uses an 11 px label font', () => {
+      expect(SpectralDensityPlot.LABEL_FONT).toBe('11px Arial');
+    });
+  });
 });

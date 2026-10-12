@@ -190,6 +190,13 @@ export class TrafficControlManager {
    * Automatically controls HPA and BUC on both ground stations:
    * - Source station: HPA off, BUC muted
    * - Target station: BUC unmuted, HPA on
+   *
+   * Break-before-make in one step (phase 27, DEV-XPDR-07 closed): the
+   * transponder no longer merges two sites radiating the same carrier, so a
+   * moment with both up is real co-channel interference (two copies at about
+   * equal level put C/(N+I) near 0 dB). The source drops first and the target
+   * comes up in the same tick, so the carrier is never doubled; the remote
+   * modems see the new site's carrier at the same frequency and level.
    * @param satelliteId - Satellite NORAD ID
    * @returns true if handover was executed
    */

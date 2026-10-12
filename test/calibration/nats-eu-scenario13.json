@@ -188,7 +188,7 @@
           },
           "atPeak": {
             "elevationDeg": 9.65,
-            "frequencyMHz": 11785.18,
+            "frequencyMHz": 11785.17,
             "gainDbi": 51.16,
             "gOverTDbPerK": 25.38,
             "tsysK": 321.07
@@ -196,8 +196,8 @@
           "carriers": [
             {
               "signalId": "MERIDIAN-SAR-3-Beacon",
-              "rfMHz": 11785.18,
-              "ifMHz": 1314.82,
+              "rfMHz": 11785.17,
+              "ifMHz": 1314.83,
               "bandwidthMHz": 0,
               "modulation": "CW",
               "fec": "null",
@@ -213,8 +213,8 @@
             },
             {
               "signalId": "MERIDIAN-SAR-3-VIDEO",
-              "rfMHz": 11760.18,
-              "ifMHz": 1339.82,
+              "rfMHz": 11760.17,
+              "ifMHz": 1339.83,
               "bandwidthMHz": 36,
               "modulation": "QPSK",
               "fec": "3/4",
@@ -334,10 +334,10 @@
           "pass": {
             "aosS": 890.39,
             "losS": 1322.11,
-            "maxEl": 27.94
+            "maxEl": 27.93
           },
           "atPeak": {
-            "elevationDeg": 27.94,
+            "elevationDeg": 27.93,
             "frequencyMHz": 11703.26,
             "gainDbi": 51.1,
             "gOverTDbPerK": 29.46,
@@ -389,10 +389,10 @@
           "pass": {
             "aosS": 3189.14,
             "losS": 3625.55,
-            "maxEl": 31.87
+            "maxEl": 31.86
           },
           "atPeak": {
-            "elevationDeg": 31.87,
+            "elevationDeg": 31.86,
             "frequencyMHz": 11785.27,
             "gainDbi": 51.16,
             "gOverTDbPerK": 29.57,
@@ -424,7 +424,7 @@
               "modulation": "QPSK",
               "fec": "3/4",
               "samples": 437,
-              "peakCnDb": 12.35,
+              "peakCnDb": 12.36,
               "medianCnDb": 8.07,
               "peakEsN0Db": 13.14,
               "requiredEsN0Db": 5.03,

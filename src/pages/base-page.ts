@@ -2,9 +2,11 @@ import { CommandingManager } from '@app/commanding/commanding-manager';
 import { BaseElement } from '@app/components/base-element';
 import { ContactScheduleManager } from '@app/contact-schedule/contact-schedule-manager';
 import { ElectronicAttackManager } from '@app/electronic-attack/electronic-attack-manager';
+import { CryptoModule } from '@app/equipment/crypto/crypto-module-core';
 import { GeolocationConsoleCore } from '@app/equipment/geolocation-console/geolocation-console-core';
 import { EventBus } from '@app/events/event-bus';
 import { DualTransmissionViolationData, Events, HpaNoiseAmplificationData, ObjectiveFailedData, ProtectedFreqViolationData, ScenarioTimeExpiredData } from '@app/events/events';
+import { FaultInjector } from '@app/faults/fault-injector';
 import { HardwareFaultManager } from '@app/faults/hardware-fault-manager';
 import { GnssThreatManager } from '@app/gnss-threat/gnss-threat-manager';
 import { InterferenceManager } from '@app/interference/interference-manager';
@@ -13,6 +15,7 @@ import { Logger } from '@app/logging/logger';
 import { DecisionModal } from '@app/modal/decision-modal';
 import { DialogHistoryManager } from '@app/modal/dialog-history-manager';
 import { DialogManager } from '@app/modal/dialog-manager';
+import { HintModal } from '@app/modal/hint-modal';
 import { LevelCompleteModal } from '@app/modal/level-complete-modal';
 import { ObjectiveFailedModal } from '@app/modal/objective-failed-modal';
 import { QuizModal } from '@app/modal/quiz-modal';
@@ -31,6 +34,7 @@ import { SimulationManager } from '@app/simulation/simulation-manager';
 import { SpaceEventManager } from '@app/space-events/space-event-manager';
 import { AppState } from '@app/sync/storage';
 import { TelemetryManager } from '@app/telemetry/telemetry-manager';
+import { TrafficControlManager } from '@app/traffic/traffic-control-manager';
 import { TransecManager } from '@app/transec/transec-manager';
 import { ProgressSaveManager } from '@app/user-account/progress-save-manager';
 import { ScenarioProgressEntry } from '@app/user-account/types';
@@ -304,6 +308,20 @@ export abstract class BasePage extends BaseElement {
 
     // Clean up scenario completion handler
     ScenarioCompletionHandler.destroy();
+
+    // Singletons that subscribe to the EventBus once, in their constructor.
+    // Page teardown replaces the bus (EventBus.destroy), so a survivor keeps
+    // a dead subscription and goes deaf in the next scenario of the same tab:
+    // the overtime toast never showed after the first scenario, a requested
+    // hint never rendered, traffic ownership kept the last scenario's owner
+    // and stopped updating, and faults stopped clearing on scenario change.
+    // Destroy them here; the next page recreates them on the new bus.
+    TimePenaltyToast.dispose();
+    HintModal.destroy();
+    TrafficControlManager.destroy();
+    FaultInjector.resetInstance();
+    // Key material (and an injected key mismatch) must not carry into the next scenario
+    CryptoModule.resetInstance();
   }
 
   /**

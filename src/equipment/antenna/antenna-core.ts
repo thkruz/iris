@@ -227,12 +227,12 @@ export abstract class AntennaCore extends BaseEquipment {
   protected stationObserver_: OrbitalObserver | null = null;
 
   /**
-   * Uplink signalIds this antenna pushed onto each satellite last frame
+   * Uplinks this antenna pushed onto each satellite last frame (the objects)
    * (fixed-gain TX path only). Lets updateTxSignals_ remove exactly its own
    * stale signals when a satellite leaves the beam, without touching other
    * stations' uplinks or injected interference.
    */
-  private readonly txFedSignalIds_ = new Map<number, Set<string>>();
+  private readonly txFedSignalIds_ = new Map<number, Set<RfSignal>>();
 
   /** Get the attached RF front-end (for signal path calculations) */
   get rfFrontEnd(): RFFrontEndCore | null {
@@ -851,6 +851,14 @@ export abstract class AntennaCore extends BaseEquipment {
     } else {
       this.state.isLocked = false;
       this.state.isAutoTrackEnabled = false;
+      this.state.isAutoTrackSwitchUp = false;
+      // Power off drops the step-track receiver: the operator re-arms it after
+      // power-up (phase 27, r2-s06-F2)
+      this.stepTrackController_.stop();
+      this.state.isStepTrackEnabled = false;
+      this.state.stepTrackAzOffset = 0 as Degrees;
+      this.state.stepTrackElOffset = 0 as Degrees;
+      this.state.isBeaconLocked = false;
       this.state.trackingMode = 'manual';
       // Sync targets to prevent movement when power is restored
       this.state.targetAzimuth = this.state.azimuth;
@@ -950,6 +958,7 @@ export abstract class AntennaCore extends BaseEquipment {
    * Also sets beacon frequency from the satellite's transponder configuration
    */
   handleTargetSatelliteChange(noradId: number | null): void {
+    const isNewTarget = noradId !== this.state.targetSatelliteId;
     this.state.targetSatelliteId = noradId;
 
     // Set beacon frequency from satellite's transponder beacon (if available)
@@ -961,7 +970,33 @@ export abstract class AntennaCore extends BaseEquipment {
       }
     }
 
+    // Offsets climbed on the old satellite mean nothing on the new one
+    if (isNewTarget) {
+      this.rearmStepTrack_();
+    }
+
     this.notifyStateChange_();
+  }
+
+  /**
+   * Restart an armed step-track from the program-track pointing (phase 27,
+   * r2-s06-F2): on a new target or a Move to Target the old offsets are
+   * stale. Nothing happens if step-track is off.
+   */
+  private rearmStepTrack_(): void {
+    if (!this.state.isStepTrackEnabled || !this.state.isPowered) {
+      return;
+    }
+    this.state.stepTrackAzOffset = 0 as Degrees;
+    this.state.stepTrackElOffset = 0 as Degrees;
+    this.state.isAutoTrackEnabled = true;
+    this.state.isAutoTrackSwitchUp = true;
+    this.stepTrackController_.start();
+  }
+
+  /** Step-track armed but no beacon to climb yet (the ACU shows SEARCHING) */
+  get isStepTrackSearching(): boolean {
+    return this.state.isStepTrackEnabled && this.stepTrackController_.isSearching;
   }
 
   /**
@@ -975,6 +1010,7 @@ export abstract class AntennaCore extends BaseEquipment {
       return;
     }
     this.moveToTargetSatellite_();
+    this.rearmStepTrack_();
   }
 
   private moveToTargetSatellite_(): void {
@@ -1653,6 +1689,22 @@ export abstract class AntennaCore extends BaseEquipment {
    * sky from this site rather than from the satellite's canonical observer
    * (phase 16, multi-station LEO work).
    */
+  /**
+   * The dish is off its operating point on purpose (phase 27, r2-s03-F2):
+   * stowed, or moving to a new position (a stow, a manual move, a program
+   * track still pulling in). Carriers sliding through the beam then are not a
+   * receive fault, so RX limit alarms (AGC at max/min gain) are inhibited, as
+   * an ACU inhibits them while the pedestal is in motion. A program track that
+   * holds its lock is not repositioning even though it moves (a LEO pass).
+   */
+  get isRepositioning(): boolean {
+    if (this.state.trackingMode === 'stow') {
+      return true;
+    }
+
+    return this.state.isSlewing && !(this.state.trackingMode === 'program-track' && this.state.isLocked);
+  }
+
   attachStationLocation(latitude: number, longitude: number, elevationM = 0): void {
     this.stationLocation_ = { latitude, longitude, elevationM };
     this.stationObserver_ = observerFromLocation({ latitude, longitude, elevation: elevationM });
@@ -2073,15 +2125,17 @@ export abstract class AntennaCore extends BaseEquipment {
 
       if (!canHear || txSignals.length === 0) {
         if (prevIds) {
-          sat.rxSignal = sat.rxSignal.filter((s) => !prevIds.has(s.signalId));
+          sat.rxSignal = sat.rxSignal.filter((s) => !prevIds.has(s));
           fedIds.delete(sat.noradId);
         }
         continue;
       }
 
       // Replace this antenna's previous contribution, keep everything else
-      sat.rxSignal = prevIds ? sat.rxSignal.filter((s) => !prevIds.has(s.signalId)) : sat.rxSignal;
-      const pushedIds = new Set<string>();
+      // By object, not signalId: another station radiating the same carrier
+      // id (a handover partner) is its own arrival (phase 27)
+      sat.rxSignal = prevIds ? sat.rxSignal.filter((s) => !prevIds.has(s)) : sat.rxSignal;
+      const pushedIds = new Set<RfSignal>();
       const rangeKm = slantRangeKm(view);
       const pathEl_deg = Math.max(1, view.el as number);
 
@@ -2093,14 +2147,15 @@ export abstract class AntennaCore extends BaseEquipment {
         // off-axis drop (capped at front-to-back for wire antennas)
         const offAxisDrop = this.antennaGain_dBi(sig.frequency) - this.patternGain_dBi_(offAxis_deg, f_Hz);
 
-        sat.rxSignal.push({
+        const arrival: RfSignal = {
           ...sig,
           frequency: (f_Hz * view.dopplerFactor) as RfFrequency,
           power: (sig.power - fspl - atmosphericLoss - offAxisDrop) as dBm,
           polarization: isWire && this.config.polType === 'circular' ? (this.state.circularHandedness ?? sig.polarization) : sig.polarization,
           origin: SignalOrigin.ANTENNA_TX,
-        });
-        pushedIds.add(sig.signalId);
+        };
+        sat.rxSignal.push(arrival);
+        pushedIds.add(arrival);
       }
 
       if (pushedIds.size > 0) {
@@ -2202,13 +2257,26 @@ export abstract class AntennaCore extends BaseEquipment {
   }
 
   /**
-   * Compute current RF metrics for display
-   * Uses midband frequency or first signal frequency if available
+   * The frequency the RF metrics are quoted at (phase 27, r2-s11-F2): the
+   * tracked beacon of the target satellite, the frequency the ACU's tracking
+   * receiver is tuned to, when it is in the receive band. Otherwise midband.
+   * It used to be whichever carrier happened to be first in rxSignalsIn.
+   */
+  get rfMetricsFrequencyHz(): Hertz {
+    const beacon = this.state.beaconFrequencyHz;
+    if (beacon > 0 && beacon >= this.config.minRxFrequency && beacon <= this.config.maxRxFrequency) {
+      return beacon as Hertz;
+    }
+
+    return ((this.config.minRxFrequency + this.config.maxRxFrequency) / 2) as Hertz;
+  }
+
+  /**
+   * Compute current RF metrics for display, at the tracked beacon frequency
+   * (or midband without one)
    */
   private computeRfMetrics_(): void {
-    // Use first signal frequency if available, otherwise use midband Rx frequency
-    const frequency =
-      this.state.rxSignalsIn.length > 0 ? (this.state.rxSignalsIn[0].frequency as Hertz) : (((this.config.minRxFrequency + this.config.maxRxFrequency) / 2) as Hertz);
+    const frequency = this.rfMetricsFrequencyHz;
 
     // Quoted at the elevation the dish is actually pointing at (datasheets use 20 deg)
     const elevation = this.state.elevation;

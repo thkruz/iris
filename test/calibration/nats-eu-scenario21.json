@@ -215,8 +215,8 @@
             },
             {
               "signalId": "MERIDIAN-SAR-1-VIDEO",
-              "rfMHz": 11686.26,
-              "ifMHz": 1413.74,
+              "rfMHz": 11686.25,
+              "ifMHz": 1413.75,
               "bandwidthMHz": 36,
               "modulation": "QPSK",
               "fec": "3/4",

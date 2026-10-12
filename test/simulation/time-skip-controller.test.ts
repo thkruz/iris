@@ -1,8 +1,10 @@
 import { vi } from 'vitest';
 import { EventBus } from '../../src/events/event-bus';
 import { Events, TimeSkipEndedData, TimeSkipStartedData } from '../../src/events/events';
+import { ObjectivesManager } from '../../src/objectives/objectives-manager';
 import { OpsLogManager } from '../../src/ops-log/ops-log-manager';
 import { getSkippedMs, missionNowMs, resetMissionClock } from '../../src/simulation/mission-clock';
+import { SimClock } from '../../src/simulation/sim-clock';
 import { getSimulatedNowMs } from '../../src/simulation/sim-time';
 import { TimeSkipController } from '../../src/simulation/time-skip-controller';
 
@@ -236,6 +238,89 @@ describe('TimeSkipController', () => {
       controller.start(target);
 
       expect(controller.start(target)).toBe(false);
+    });
+  });
+
+  describe('objective skip (Phase 27 Q4)', () => {
+    let offer: { objectiveId: string; minutes: number; label: string } | null;
+    let otherTimerRunning: boolean;
+    const objectives = {
+      getAvailableTimeSkip: vi.fn(() => offer),
+      markTimeSkipUsed: vi.fn(() => {
+        offer = null;
+      }),
+      hasRunningObjectiveTimer: vi.fn(() => otherTimerRunning),
+      applyTimeSkip: vi.fn(),
+    };
+
+    beforeEach(() => {
+      offer = { objectiveId: 'ride-out-rain', minutes: 20, label: 'rain cell' };
+      otherTimerRunning = false;
+      objectives.applyTimeSkip.mockClear();
+      vi.spyOn(ObjectivesManager, 'hasInstance').mockReturnValue(true);
+      vi.spyOn(ObjectivesManager, 'getInstance').mockReturnValue(objectives as unknown as ObjectivesManager);
+    });
+
+    it('advances scenario AND run time by the objective wait, exempting its own countdown', () => {
+      const controller = TimeSkipController.getInstance();
+      const scenarioBefore = missionNowMs();
+      const runBefore = SimClock.runMs();
+      let fired = -1;
+      SimClock.setTimeout(() => {
+        fired = SimClock.runMs();
+      }, 10 * 60_000);
+
+      expect(controller.findObjectiveSkip()).toEqual(offer);
+      expect(controller.startObjectiveSkip()).toBe(true);
+      expect(objectives.markTimeSkipUsed).toHaveBeenCalledWith('ride-out-rain');
+
+      controller.step(controller.animationMs);
+
+      expect(missionNowMs() - scenarioBefore).toBeCloseTo(20 * 60_000, 0);
+      expect(SimClock.runMs() - runBefore).toBeCloseTo(20 * 60_000, 0);
+      // A sim timer due inside the wait fired at its own due moment
+      expect(fired).toBeCloseTo(runBefore + 10 * 60_000, 0);
+      expect(objectives.applyTimeSkip).toHaveBeenCalledWith(expect.any(Number), 'ride-out-rain');
+      expect(controller.isSkipping).toBe(false);
+    });
+
+    it('logs the wait in the Ops Log', () => {
+      const controller = TimeSkipController.getInstance();
+      controller.startObjectiveSkip();
+      controller.step(controller.animationMs);
+
+      const entries = OpsLogManager.getInstance().getEntries();
+      expect(entries.some((e) => e.message.includes('Waited out the rain cell') && e.message.includes('20 min'))).toBe(true);
+    });
+
+    it('carries the wait label on TIME_SKIP_STARTED', () => {
+      const started = vi.fn();
+      EventBus.getInstance().on(Events.TIME_SKIP_STARTED, started);
+      TimeSkipController.getInstance().startObjectiveSkip();
+
+      expect(started).toHaveBeenCalledWith(expect.objectContaining({ label: 'rain cell', totalMs: 20 * 60_000 }));
+    });
+
+    it('is blocked while another objective is being timed, and never offered twice', () => {
+      const controller = TimeSkipController.getInstance();
+      otherTimerRunning = true;
+      expect(controller.getObjectiveSkipBlockedReason('ride-out-rain')).toBe('Another timed objective is running');
+      expect(controller.startObjectiveSkip()).toBe(false);
+
+      otherTimerRunning = false;
+      expect(controller.startObjectiveSkip()).toBe(true);
+      controller.step(controller.animationMs);
+      expect(controller.findObjectiveSkip()).toBeNull();
+    });
+
+    it('does not move run time for a pass skip', () => {
+      vi.mocked(ObjectivesManager.hasInstance).mockReturnValue(false);
+      const controller = TimeSkipController.getInstance();
+      const runBefore = SimClock.runMs();
+      controller.start(controller.findTarget()!);
+      controller.step(controller.animationMs);
+
+      expect(SimClock.runMs()).toBe(runBefore);
     });
   });
 });

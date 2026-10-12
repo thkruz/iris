@@ -116,7 +116,9 @@ export class SpectrumDataProcessor {
       if (!(powerMw > 0)) {
         continue;
       }
-      const occupied = Math.max(0, signal.bandwidth);
+      // A CW carrier (beacon) is a line: its width is its short-term
+      // stability, Hz, far under any RBW, so the filter's own shape is drawn
+      const occupied = (signal.modulation as string) === 'CW' ? 0 : Math.max(0, signal.bandwidth);
       const symbolRate = occupied / (1 + SpectrumDataProcessor.ROLL_OFF);
       const sigmaShape = (SpectrumDataProcessor.ROLL_OFF * symbolRate) / 2.56;
       const sigma = Math.sqrt(sigmaRbw ** 2 + sigmaShape ** 2);
@@ -167,8 +169,9 @@ export class SpectrumDataProcessor {
    */
   static rbwResponse(powerMw: number, centre: number, symbolRate: number, sigmaRbw: number, sigma: number, f: number): number {
     const d = f - centre;
-    if (symbolRate < sigma * 1e-3) {
-      // A CW line: the filter's own shape
+    if (symbolRate < sigma * 0.05) {
+      // A line well inside the filter: the filter's own shape (a rectangle
+      // under 5 % of sigma widens it by < 0.02 %)
       return powerMw * (sigmaRbw / sigma) * Math.exp(-(d * d) / (2 * sigma * sigma));
     }
     const half = symbolRate / 2;

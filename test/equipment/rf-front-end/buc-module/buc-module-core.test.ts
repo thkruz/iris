@@ -4,6 +4,7 @@ import { RFFrontEndCore } from '../../../../src/equipment/rf-front-end/rf-front-
 import { EventBus } from '../../../../src/events/event-bus';
 import { Events } from '../../../../src/events/events';
 import { SignalOrigin } from '../../../../src/signal-origin';
+import { SimClock } from '../../../../src/simulation/sim-clock';
 import type { dB, dBm, Hertz, IfSignal, MHz, RfSignal } from '../../../../src/types';
 import { advanceSimTime } from '../../../helpers/sim-time';
 
@@ -369,6 +370,40 @@ describe('BUCModuleCore', () => {
         advanceSimTime(6000);
 
         expect(bucModule.state.isExtRefLocked).toBe(true);
+      });
+
+      it('schedules one acquisition however many frames it stays unlocked, with one info line meanwhile (phase 27, r2-s02-F4)', () => {
+        bucModule.state.isPowered = true;
+        bucModule.state.isExtRefLocked = false;
+        bucModule.state.phaseNoise = -60;
+        bucModule.state.frequencyError = 200_000;
+        const spy = vi.spyOn(SimClock, 'setTimeout');
+
+        for (let i = 0; i < 30; i++) {
+          bucModule.update();
+          advanceSimTime(16);
+        }
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(bucModule.isAcquiringReference).toBe(true);
+        expect(bucModule.getAlarms()).toEqual(['BUC acquiring 10 MHz reference']);
+
+        advanceSimTime(6000);
+        bucModule.update();
+        expect(bucModule.state.isExtRefLocked).toBe(true);
+        expect(bucModule.isAcquiringReference).toBe(false);
+        expect(bucModule.getAlarms()).not.toContain('BUC acquiring 10 MHz reference');
+      });
+
+      it('does not lock if the reference goes away during the acquisition', () => {
+        const gpsdo = { isPresent: true };
+        mockRfFrontEnd = createMockRfFrontEnd();
+        (mockRfFrontEnd.gpsdoModule as unknown as { get10MhzOutput: () => unknown }).get10MhzOutput = () => ({ isPresent: gpsdo.isPresent, isWarmedUp: true });
+        bucModule = new TestBUCModule({ ...BUCModuleCore.getDefaultState(), isPowered: true, isExtRefLocked: false }, mockRfFrontEnd, 1);
+        bucModule.update();
+        gpsdo.isPresent = false;
+        advanceSimTime(6000);
+        expect(bucModule.state.isExtRefLocked).toBe(false);
+        expect(bucModule.getAlarms()).not.toContain('BUC acquiring 10 MHz reference');
       });
 
       it('should have frequency drift when external reference is not warmed up', () => {
@@ -760,11 +795,11 @@ describe('BUCModuleCore', () => {
       bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
     });
 
-    it('should return "none" when no input signals', () => {
+    it('should return "no-input" when no modem drives the IF (not "out of band"; phase 27)', () => {
       mockRfFrontEnd = createMockRfFrontEnd({}, []);
       bucModule = new TestBUCModule(BUCModuleCore.getDefaultState(), mockRfFrontEnd, 1);
 
-      expect(bucModule.getActiveInjectionMode()).toBe('none');
+      expect(bucModule.getActiveInjectionMode()).toBe('no-input');
     });
 
     it('should return "low" for upper sideband (low-side injection)', () => {

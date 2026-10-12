@@ -542,6 +542,19 @@ describe('BUCAdapter', () => {
       expect(status.className).toContain('status-badge-warning');
     });
 
+    it('should show No IF Input when no modem drives the BUC (phase 27, r2-s11-F1)', () => {
+      mockBucModule.getActiveInjectionMode.mockReturnValue('no-input');
+
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
+
+      vi.spyOn(Date, 'now').mockReturnValue(2000);
+      updateHandler();
+
+      const status = containerEl.querySelector('#buc-sideband-status') as HTMLElement;
+      expect(status.textContent).toBe('No IF Input');
+      expect(status.className).not.toContain('status-badge-warning');
+    });
+
     it('should show placeholder when powered off', () => {
       mockBucModule.state.isPowered = false;
 

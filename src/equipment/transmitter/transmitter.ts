@@ -22,6 +22,11 @@ export interface TransmitterModem {
   isFaultSwitchUp: boolean;
   isTransmitting: boolean;
   isTransmittingSwitchUp: boolean;
+  /**
+   * True while the modem firmware boots after power-on. The front panel reads
+   * BOOTING and carrier keying is locked out until the boot completes.
+   */
+  isBooting?: boolean;
   /** The active IF signal of this modem */
   ifSignal: IfSignal;
   /** Intermittent hardware fault causing periodic signal dropout (defaults to false) */
@@ -52,6 +57,15 @@ export class Transmitter extends BaseEquipment {
     ifSignal: {} as IfSignal,
   };
   private lastRenderState: TransmitterState | null = null;
+
+  /** Firmware boot time after power-on (ms of run time) */
+  static readonly BOOT_TIME_MS = 4000;
+  /** Power-down time (ms of run time) */
+  private static readonly POWER_DOWN_MS = 250;
+  /** Pending power-sequence timer per modem_number */
+  private readonly powerTimers_: Map<number, number> = new Map();
+  /** Run time each booting modem started its boot, per modem_number */
+  private readonly bootStartRunMs_: Map<number, number> = new Map();
 
   // Power management
   private readonly powerBudget = 10 as dBm; // dBm (10 mW) total power budget
@@ -163,6 +177,7 @@ export class Transmitter extends BaseEquipment {
   }
 
   update(): void {
+    this.recoverOrphanedBoots_();
     this.updateIntermittentFaultState_();
     this.checkForAlarms_();
   }
@@ -478,7 +493,9 @@ export class Transmitter extends BaseEquipment {
           severity: 'error',
         });
       }
-      if (modem.intermittentFault) {
+      // A powered-down modem reports nothing; the fault stays latched and
+      // alarms again when it is powered (phase 27, s08-F2)
+      if (modem.intermittentFault && modem.isPowered) {
         alarms.push({
           message: `Modem ${modem.modem_number} Intermittent Fault`,
           severity: 'warning',
@@ -511,24 +528,7 @@ export class Transmitter extends BaseEquipment {
   }
 
   private togglePower(isOn: boolean): void {
-    if (!isOn) {
-      // If turning off power, also stop transmission
-      this.activeModem.isTransmitting = false;
-      this.activeModem.isFaulted = false;
-    }
-
-    SimClock.setTimeout(
-      () => {
-        this.activeModem.isPowered = isOn;
-        this.emit(Events.TX_CONFIG_CHANGED, {
-          uuid: this.uuid,
-          modem: this.state.activeModem,
-          config: this.activeModem,
-        });
-        this.syncDomWithState();
-      },
-      isOn ? 4000 : 250
-    );
+    this.handlePowerToggle(isOn);
   }
 
   protected initialize_(): void {
@@ -605,24 +605,7 @@ export class Transmitter extends BaseEquipment {
   }
 
   private toggleTransmit(): void {
-    const activeModem = this.activeModem;
-    const modemIndex = this.state.modems.findIndex((m) => m.modem_number === this.state.activeModem);
-
-    if (activeModem.isPowered === false) {
-      return;
-    }
-
-    this.activeModem.isTransmittingSwitchUp = !this.activeModem.isTransmittingSwitchUp;
-    this.state.modems[modemIndex].isTransmitting = this.activeModem.isTransmittingSwitchUp;
-    this.updateTransmissionState();
-
-    this.emit(Events.TX_CONFIG_CHANGED, {
-      uuid: this.uuid,
-      modem: this.state.activeModem,
-      config: this.state.modems[this.activeModem.id],
-    });
-
-    this.syncDomWithState();
+    this.handleTransmitToggle(!this.activeModem.isTransmittingSwitchUp);
   }
 
   private toggleFaultReset(): void {
@@ -786,11 +769,27 @@ export class Transmitter extends BaseEquipment {
   /**
    * Public API for adapters - Control switches
    */
-  public handleTransmitToggle(isEnabled: boolean): void {
+  /**
+   * Key or unkey the active modem's carrier.
+   *
+   * A modem that is off or still booting cannot key its carrier: the request
+   * is refused (not queued), the switch state stays off and the DOM is
+   * re-synced so the switch snaps back. The operator keys the carrier again
+   * once the modem is up.
+   * @returns true when the request was applied
+   */
+  public handleTransmitToggle(isEnabled: boolean): boolean {
     const activeModem = this.activeModem;
     const modemIndex = this.state.modems.findIndex((m) => m.modem_number === this.state.activeModem);
 
-    if (!activeModem.isPowered) return;
+    if (isEnabled && (!activeModem.isPowered || activeModem.isBooting)) {
+      activeModem.isTransmittingSwitchUp = false;
+      // Force a re-render even though no state changed, so the switch snaps back
+      this.lastRenderState = null;
+      this.syncDomWithState();
+
+      return false;
+    }
 
     this.activeModem.isTransmittingSwitchUp = isEnabled;
     this.state.modems[modemIndex].isTransmitting = isEnabled;
@@ -803,6 +802,8 @@ export class Transmitter extends BaseEquipment {
     });
 
     this.syncDomWithState();
+
+    return true;
   }
 
   public handleFaultReset(): void {
@@ -821,25 +822,103 @@ export class Transmitter extends BaseEquipment {
     this.syncDomWithState();
   }
 
+  /**
+   * Power the active modem on or off.
+   *
+   * Power-on starts a firmware boot of BOOT_TIME_MS: the modem reports
+   * isBooting (front panel BOOTING) and refuses carrier keying until the boot
+   * completes. Powering off cancels a boot in progress.
+   */
   public handlePowerToggle(isEnabled: boolean): void {
-    if (!isEnabled) {
-      // If turning off power, also stop transmission
-      this.activeModem.isTransmitting = false;
-      this.activeModem.isFaulted = false;
+    const modem = this.activeModem;
+    const modemNumber = modem.modem_number;
+
+    if (isEnabled && modem.isBooting) {
+      return; // Already booting; a second power-on does not restart the boot
     }
 
-    SimClock.setTimeout(
-      () => {
-        this.activeModem.isPowered = isEnabled;
-        this.emit(Events.TX_CONFIG_CHANGED, {
-          uuid: this.uuid,
-          modem: this.state.activeModem,
-          config: this.activeModem,
-        });
+    // A new power command supersedes any pending power sequence
+    SimClock.clearTimer(this.powerTimers_.get(modemNumber));
+    this.powerTimers_.delete(modemNumber);
+
+    if (isEnabled) {
+      if (modem.isPowered) {
+        return; // Already up (a pending power-down, if any, is cancelled above)
+      }
+
+      modem.isBooting = true;
+      this.bootStartRunMs_.set(modemNumber, SimClock.runMs());
+      this.emitModemChanged_(modem);
+      this.syncDomWithState();
+
+      this.powerTimers_.set(
+        modemNumber,
+        SimClock.setTimeout(() => this.completeBoot_(modem), Transmitter.BOOT_TIME_MS)
+      );
+
+      return;
+    }
+
+    // Turning off power stops transmission and drops the carrier switch:
+    // after the next boot the operator must key the carrier deliberately
+    modem.isTransmitting = false;
+    modem.isTransmittingSwitchUp = false;
+    modem.isFaulted = false;
+
+    if (modem.isBooting) {
+      modem.isBooting = false;
+      this.bootStartRunMs_.delete(modemNumber);
+      this.emitModemChanged_(modem);
+      this.syncDomWithState();
+    }
+
+    this.powerTimers_.set(
+      modemNumber,
+      SimClock.setTimeout(() => {
+        this.powerTimers_.delete(modemNumber);
+        modem.isPowered = false;
+        this.emitModemChanged_(modem);
         this.syncDomWithState();
-      },
-      isEnabled ? 4000 : 250
+      }, Transmitter.POWER_DOWN_MS)
     );
+  }
+
+  /** True while the given modem (default: the active one) is booting */
+  public isModemBooting(modemNumber: number = this.state.activeModem): boolean {
+    return this.state.modems.find((m) => m.modem_number === modemNumber)?.isBooting === true;
+  }
+
+  private completeBoot_(modem: TransmitterModem): void {
+    this.powerTimers_.delete(modem.modem_number);
+    this.bootStartRunMs_.delete(modem.modem_number);
+    modem.isBooting = false;
+    modem.isPowered = true;
+    this.emitModemChanged_(modem);
+    this.syncDomWithState();
+  }
+
+  /**
+   * SimClock.reset() drops pending timers. A boot whose timer was dropped (run
+   * time went backwards) would leave the modem locked out forever, so finish it.
+   */
+  private recoverOrphanedBoots_(): void {
+    if (this.bootStartRunMs_.size === 0) return;
+
+    const now = SimClock.runMs();
+    for (const modem of this.state.modems) {
+      const startedAt = this.bootStartRunMs_.get(modem.modem_number);
+      if (modem.isBooting && startedAt !== undefined && now < startedAt) {
+        this.completeBoot_(modem);
+      }
+    }
+  }
+
+  private emitModemChanged_(modem: TransmitterModem): void {
+    this.emit(Events.TX_CONFIG_CHANGED, {
+      uuid: this.uuid,
+      modem: modem.modem_number,
+      config: modem,
+    });
   }
 
   /**

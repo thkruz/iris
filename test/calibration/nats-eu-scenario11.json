@@ -189,7 +189,7 @@
               "modulation": "QPSK",
               "fec": "3/4",
               "samples": 411,
-              "peakCnDb": 12.32,
+              "peakCnDb": 12.33,
               "medianCnDb": 8.37,
               "peakEsN0Db": 13.11,
               "requiredEsN0Db": 5.03,

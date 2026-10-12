@@ -339,6 +339,22 @@ export class WeatherManager {
           const iceDegradation = config.maxDegradation_dB * (1 - Math.exp(-newTime / config.timeConstant_s));
 
           antenna.updateIceAccumulation(iceDegradation);
+        } else if (activeIceEvent && antenna.state.isHeaterEnabled && activeIceEvent.heaterMeltDbPerMin !== undefined) {
+          // Phase 27 Q5: a storm that outpaces the heater. Snow loads the feed
+          // at the unheated rate (the exponential's slope, (max - ice) / tau)
+          // and the heater melts what it can; the ice settles where the two
+          // balance (max - melt x tau), so the heater buys time, not the link
+          const config = WeatherManager.SEVERITY_CONFIG[activeIceEvent.severity];
+          const currentIce = antenna.state.iceAccumulation_dB;
+          const loadDbPerS = (config.maxDegradation_dB - currentIce) / config.timeConstant_s;
+          const meltDbPerS = activeIceEvent.heaterMeltDbPerMin / 60;
+          const newIce = Math.min(config.maxDegradation_dB, Math.max(0, currentIce + (loadDbPerS - meltDbPerS) * dtSeconds));
+
+          if (newIce !== currentIce) {
+            antenna.updateIceAccumulation(newIce);
+          }
+          // Where an unheated buildup would resume if the heater goes off
+          this.iceAccumulationTime_.set(antennaId, WeatherManager.accumulationTimeForIce_(newIce, config));
         } else if (antenna.state.isHeaterEnabled && antenna.state.iceAccumulation_dB > 0) {
           // Ice is melting - heater ON
           const currentIce = antenna.state.iceAccumulation_dB;
@@ -381,6 +397,36 @@ export class WeatherManager {
   /** Get active ice-producing weather event for a ground station */
   private getActiveIceEvent_(groundStationId: string): WeatherEventRuntime | null {
     return this.weatherEvents_.find((e) => e.groundStationId === groundStationId && e.isActive && (e.type === 'snow' || e.type === 'ice' || e.type === 'hail')) ?? null;
+  }
+
+  /**
+   * Whether a weather event has run its course: started (anchored, if it
+   * waits on an objective) and past startTime + duration on the mission
+   * clock. Unknown ids never end. Backs the weather-event-ended condition.
+   */
+  hasEventEnded(eventId: string): boolean {
+    const event = this.weatherEvents_.find((e) => e.id === eventId);
+    if (!event || event.isAwaitingAnchor) {
+      return false;
+    }
+
+    return this.getElapsedMissionTime() >= event.startTime + event.duration;
+  }
+
+  /**
+   * An objective time skip (Phase 27 Q4) moved the clocks by `seconds` in one
+   * jump. Event windows follow the mission clock on their own; ice is
+   * integrated per update, so give it the skipped time here or a skipped wait
+   * would neither build nor melt any.
+   */
+  applyTimeSkip(seconds: number): void {
+    if (!(seconds > 0)) {
+      return;
+    }
+    const elapsedSeconds = this.getElapsedMissionTime();
+    this.anchorEvents_(elapsedSeconds);
+    this.updateWeatherEventStates_(elapsedSeconds);
+    this.updateIceAccumulation_(seconds);
   }
 
   /** Get all active weather events for a ground station */

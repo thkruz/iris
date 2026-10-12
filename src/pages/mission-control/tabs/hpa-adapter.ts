@@ -323,7 +323,9 @@ export class HPAAdapter {
     const backOffInput = this.domCache_.get('backOffInput') as HTMLInputElement;
 
     if (backOffInput && (isUserEdit || document.activeElement !== backOffInput)) {
-      backOffInput.value = isPowered ? this.stagedBackOff_.toString() : '--';
+      // Keep the staged value showing while unpowered: '--' in a number
+      // input renders blank, which read as "no back-off set" (nats-r2-s16-F1)
+      backOffInput.value = this.stagedBackOff_.toString();
     }
     if (backOffInput) {
       backOffInput.disabled = !isPowered;
@@ -337,13 +339,18 @@ export class HPAAdapter {
   /** Staged vs applied: pending style on the input and Apply, applied value in the tooltip. */
   private updatePendingIndicator_(): void {
     const appliedBackOff = this.hpaModule.state.backOff;
-    const isPending = this.hpaModule.state.isPowered && this.stagedBackOff_ !== appliedBackOff;
+    // Pending is staged vs applied, powered or not: a staged change survives
+    // a power cycle, so the input keeps saying so while the HPA is off
+    const isPending = this.stagedBackOff_ !== appliedBackOff;
+    const isPowered = this.hpaModule.state.isPowered;
     const backOffInput = this.domCache_.get('backOffInput') as HTMLInputElement;
     const applyBtn = this.domCache_.get('applyBtn') as HTMLButtonElement;
 
     if (backOffInput) {
       backOffInput.classList.toggle('is-pending', isPending);
-      backOffInput.title = `Applied: ${appliedBackOff} dB${isPending ? ' (staged change not applied)' : ''}`;
+      const pendingNote = isPending ? ' (staged change not applied)' : '';
+      const powerNote = isPowered ? '' : ' - HPA off, power on to apply';
+      backOffInput.title = `Applied: ${appliedBackOff} dB${pendingNote}${powerNote}`;
     }
     applyBtn?.classList.toggle('is-pending', isPending);
   }

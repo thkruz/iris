@@ -348,6 +348,11 @@ export abstract class RFFrontEndCore extends BaseEquipment {
     for (const alarm of moduleAlarms) {
       let severity: AlarmStatus['severity'] = 'warning';
 
+      // A reference acquisition in progress is a transient, not a fault (phase 27)
+      if (alarm.toLowerCase().includes('acquiring')) {
+        severity = 'info';
+      }
+
       // Upgrade to error for critical conditions
       if (alarm.toLowerCase().includes('over-temperature') || alarm.toLowerCase().includes('high current') || alarm.toLowerCase().includes('not operational')) {
         severity = 'error';

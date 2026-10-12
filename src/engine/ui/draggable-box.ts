@@ -102,14 +102,42 @@ export abstract class DraggableBox {
         cb();
       }
 
-      // Center the box after cb to ensure correct offsetHeight/offsetWidth
-      // Set the top based on the current position in the window (we may have scrolled  the page)
-      boxContent.style.top = `${(window.scrollY + (window.innerHeight - boxContent.offsetHeight) / 2)}px`;
-      boxContent.style.left = `${(window.innerWidth - boxContent.offsetWidth) / 2}px`;
+      // Centre on the first open only (after cb, so offsetHeight/offsetWidth
+      // are the real ones). A reopened box comes back where the player left
+      // it; re-centring on every open put the checklist and the Working
+      // Document back over the console (nats-s14-F2, s24-F5). A box that
+      // would reopen off-screen (window resized since) is centred again.
+      if (!this.hasBeenPlaced_ || !this.isOnScreen_(boxContent)) {
+        this.placeOnFirstOpen(boxContent);
+        this.hasBeenPlaced_ = true;
+      }
       this.sendToFront();
     } else {
       console.log(`Failed to open box: ${this.boxId}`);
     }
+  }
+
+  /** Set once the box has been positioned; later opens keep its (dragged) position */
+  private hasBeenPlaced_ = false;
+
+  /**
+   * Where the box goes the first time it opens. Default: centred in the
+   * window (accounting for page scroll). Override to dock it instead.
+   */
+  protected placeOnFirstOpen(boxContent: HTMLElement): void {
+    boxContent.style.top = `${window.scrollY + (window.innerHeight - boxContent.offsetHeight) / 2}px`;
+    boxContent.style.left = `${(window.innerWidth - boxContent.offsetWidth) / 2}px`;
+  }
+
+  /** Whether the box's title bar is inside the window (so the player can grab it) */
+  private isOnScreen_(boxContent: HTMLElement): boolean {
+    const left = parseFloat(boxContent.style.left);
+    const top = parseFloat(boxContent.style.top);
+    if (!Number.isFinite(left) || !Number.isFinite(top)) {
+      return false;
+    }
+
+    return left < window.innerWidth - 40 && left + Math.max(boxContent.offsetWidth, 40) > 40 && top >= window.scrollY && top < window.scrollY + window.innerHeight - 20;
   }
 
   protected getBoxTitleHtml(): string {

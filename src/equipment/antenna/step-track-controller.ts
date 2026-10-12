@@ -91,6 +91,8 @@ export class StepTrackController {
 
   /** Last averaged beacon C/N the loop measured, dB */
   private lastMeasuredCn_: number | null = null;
+  /** Armed but no beacon at the held position: re-measuring the centre until one appears */
+  private isSearching_ = false;
 
   constructor(antenna: AntennaCore) {
     this.antenna_ = antenna;
@@ -108,6 +110,7 @@ export class StepTrackController {
     this.axis_ = 'az';
     this.quietCycles_ = 0;
     this.lastMeasuredCn_ = null;
+    this.isSearching_ = false;
     this.beginCycle_();
   }
 
@@ -116,6 +119,18 @@ export class StepTrackController {
    */
   stop(): void {
     this.isActive_ = false;
+    this.isSearching_ = false;
+  }
+
+  /**
+   * Armed with no beacon to climb (phase 27, r2-s06-F2): the dish is off the
+   * satellite or the beacon is under the detection threshold. A real
+   * step-track receiver holds its last pointing and keeps integrating the
+   * centre until the beacon comes up, then climbs; it does not switch itself
+   * off.
+   */
+  get isSearching(): boolean {
+    return this.isActive_ && this.isSearching_;
   }
 
   /**
@@ -205,14 +220,18 @@ export class StepTrackController {
       state.isLocked = state.isBeaconLocked;
 
       if (cn === null || cn < this.beaconDetectableCN_) {
+        // SEARCHING: hold the pointing, dwell on the centre again (phase 27:
+        // stop() here left the toggle on with a dead controller)
         state.isBeaconLocked = false;
         state.isLocked = false;
-        this.stop();
-        state.isAutoTrackEnabled = false;
-        state.isAutoTrackSwitchUp = false;
+        this.isSearching_ = true;
+        this.isConverged_ = false;
+        this.quietCycles_ = 0;
+        this.beginCycle_();
         return;
       }
 
+      this.isSearching_ = false;
       this.centerCn_ = cn;
       this.probeDir_ = this.lastDir_[this.axis_];
       this.probesThisCycle_ = 0;
@@ -291,6 +310,7 @@ export class StepTrackController {
    */
   getState(): {
     isActive: boolean;
+    isSearching: boolean;
     isConverged: boolean;
     axis: Axis;
     phase: Phase;
@@ -304,6 +324,7 @@ export class StepTrackController {
   } {
     return {
       isActive: this.isActive_,
+      isSearching: this.isSearching,
       isConverged: this.isConverged_,
       axis: this.axis_,
       phase: this.phase_,

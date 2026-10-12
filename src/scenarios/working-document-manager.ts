@@ -7,6 +7,11 @@
  * the line is appended to the document when QUIZ_PASSED fires for it.
  *
  * Scenarios enable the panel via `settings.workingDocument: { title, description? }`.
+ *
+ * A new line does not pop the panel open: it used to open centred on the
+ * first entry, over whatever the player was working (S24's ACU Feed Heater
+ * switch, nats-r2 s14-F2/s24-F5). The sidebar icon pulses instead until the
+ * player opens the document.
  */
 
 import { EventBus } from '@app/events/event-bus';
@@ -14,6 +19,7 @@ import { Events, QuizPassedData } from '@app/events/events';
 import { DraggableHtmlBox } from '@app/modal/draggable-html-box';
 import { ScenarioManager } from '@app/scenario-manager';
 import { CampaignDocumentStore, campaignIdOf } from './campaign-document-store';
+import './working-document.css';
 
 interface DocumentEntry {
   section: string;
@@ -21,6 +27,8 @@ interface DocumentEntry {
 }
 
 const DEFAULT_SECTION = 'Notes';
+/** Sidebar icon class that pulses while the document has lines the player has not opened */
+const NEW_ENTRY_CLASS = 'has-new-entry';
 
 export class WorkingDocumentManager {
   private static instance_: WorkingDocumentManager | null = null;
@@ -49,6 +57,7 @@ export class WorkingDocumentManager {
   initialize(): void {
     this.entries_ = [];
     this.box_ = null;
+    WorkingDocumentManager.setNewEntryFlag_(false);
     CampaignDocumentStore.beginRun();
     const bus = EventBus.getInstance();
     bus.off(Events.QUIZ_PASSED, this.boundQuizPassedHandler_);
@@ -83,6 +92,19 @@ export class WorkingDocumentManager {
     this.ensureBox_();
     this.render_();
     this.box_?.open();
+    WorkingDocumentManager.setNewEntryFlag_(false);
+  }
+
+  /** Pulse (or stop pulsing) the sidebar icon */
+  private static setNewEntryFlag_(isOn: boolean): void {
+    for (const icon of document.querySelectorAll<HTMLElement>('.working-doc-icon')) {
+      icon.classList.toggle(NEW_ENTRY_CLASS, isOn);
+      if (isOn) {
+        icon.setAttribute('data-tooltip', 'Working Document - new entry');
+      } else {
+        icon.setAttribute('data-tooltip', 'Working Document');
+      }
+    }
   }
 
   /** Close the document panel if it is open (end-of-scenario modals) */
@@ -107,16 +129,15 @@ export class WorkingDocumentManager {
     // Idempotence: a re-fired event for the same line must not duplicate it
     if (this.entries_.some((e) => e.line === line && e.section === section)) return;
 
-    const isFirstEntry = this.entries_.length === 0;
     this.entries_.push({ section, line });
 
-    this.ensureBox_();
-    this.render_();
-
-    // Auto-show on the first entry so the player sees the document begin to
-    // build; afterwards only update content and let them manage the window.
-    if (isFirstEntry) {
-      this.box_?.open();
+    // Update an open document in place; otherwise flag the sidebar icon
+    // rather than opening the panel over the console. The box is not built
+    // here: constructing it shows it.
+    if (this.box_?.isOpen) {
+      this.render_();
+    } else {
+      WorkingDocumentManager.setNewEntryFlag_(true);
     }
   }
 

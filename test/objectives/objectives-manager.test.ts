@@ -132,7 +132,7 @@ let mockNotchFilterState = createMockNotchFilterState();
 let mockSpectrumAnalyzerState = createMockSpectrumAnalyzerState();
 let mockReceiverModemState = createMockReceiverModemState();
 let mockTransmitterModemState = createMockTransmitterModemState();
-let mockInputSignals: Array<{ signalId: string; power: number }> = [];
+let mockInputSignals: Array<{ signalId: string; power: number; frequency?: number; bandwidth?: number }> = [];
 let mockReceiverHasLock = false;
 let mockReceiverSnr: number | null = null;
 
@@ -270,20 +270,30 @@ describe('ObjectivesManager', () => {
     vi.clearAllMocks();
   });
 
-  const createTestObjective = (overrides: Partial<Objective> = {}): Objective => ({
-    id: 'test-objective-1',
-    title: 'Test Objective',
-    description: 'A test objective',
-    groundStation: 'gs-1',
-    conditions: [
-      {
-        type: 'mission-brief-opened',
-        description: 'Open mission brief',
-        mustMaintain: false,
-      },
-    ],
-    ...overrides,
-  });
+  /**
+   * Evaluator tests stage the target state before the objective activates.
+   * That is exactly what requiresChange (Phase 27 B1) refuses to count, so
+   * the helper opts their conditions out; the B1 suite below builds its
+   * objectives without the helper to test the default.
+   */
+  const createTestObjective = (overrides: Partial<Objective> = {}): Objective => {
+    const objective: Objective = {
+      id: 'test-objective-1',
+      title: 'Test Objective',
+      description: 'A test objective',
+      groundStation: 'gs-1',
+      conditions: [
+        {
+          type: 'mission-brief-opened',
+          description: 'Open mission brief',
+          mustMaintain: false,
+        },
+      ],
+      ...overrides,
+    };
+
+    return { ...objective, conditions: objective.conditions.map((c) => ({ requiresChange: false, ...c })) };
+  };
 
   describe('Singleton Pattern', () => {
     it('should create singleton instance with initialize()', () => {
@@ -506,6 +516,19 @@ describe('ObjectivesManager', () => {
       manager.applyTimeSkip(45_000);
 
       expect(failedCallback).toHaveBeenCalledWith(expect.objectContaining({ objectiveId: 'timed-obj', reason: 'timeout' }));
+    });
+
+    it('should not charge an objective skip against the scenario limit', () => {
+      const objectives = [createTestObjective({ id: 'wait-obj' })];
+      const expiredCallback = vi.fn();
+      eventBus.on(Events.SCENARIO_TIME_EXPIRED, expiredCallback);
+
+      const manager = ObjectivesManager.initialize(objectives, 300);
+
+      manager.applyTimeSkip(40 * 60_000, 'wait-obj');
+
+      expect(manager.getScenarioTimeRemaining()).toBe(300);
+      expect(expiredCallback).not.toHaveBeenCalled();
     });
 
     it('should ignore non-positive deltas', () => {
@@ -1821,6 +1844,8 @@ describe('ObjectivesManager', () => {
               type: 'ground-station-selected',
               description: 'Track losses',
               mustMaintain: true,
+              // A timed hold: since B8 an untimed mustMaintain completes on its first true frame
+              maintainDuration: 10,
               params: { groundStationId: 'gs-1' },
             },
           ],
@@ -2342,6 +2367,30 @@ describe('ObjectivesManager', () => {
       ObjectivesManager.initialize(objectives);
       eventBus.emit(Events.UPDATE, 16);
 
+      expect(completedCallback).toHaveBeenCalled();
+    });
+
+    it('antenna-beacon-locked with noradId needs that satellite as the target', () => {
+      mockAntennaState.isBeaconLocked = true;
+      (mockAntennaState as { targetSatelliteId?: number }).targetSatelliteId = 61525;
+
+      const objectives = [
+        createTestObjective({
+          id: 'beacon-lock-target-obj',
+          conditions: [{ type: 'antenna-beacon-locked', description: 'AURORA-7 beacon', params: { noradId: 28899 }, mustMaintain: false }],
+        }),
+      ];
+
+      const completedCallback = vi.fn();
+      eventBus.on(Events.OBJECTIVE_COMPLETED, completedCallback);
+
+      ObjectivesManager.initialize(objectives);
+      eventBus.emit(Events.UPDATE, 16);
+      // Locked, but on the previous satellite's beacon
+      expect(completedCallback).not.toHaveBeenCalled();
+
+      (mockAntennaState as { targetSatelliteId?: number }).targetSatelliteId = 28899;
+      eventBus.emit(Events.UPDATE, 16);
       expect(completedCallback).toHaveBeenCalled();
     });
 
@@ -3333,7 +3382,7 @@ describe('ObjectivesManager', () => {
 
   describe('Spectrum Analyzer Conditions', () => {
     it('should evaluate signal-detected condition', () => {
-      mockInputSignals = [{ signalId: 'test-signal', power: -40 }];
+      mockInputSignals = [{ signalId: 'test-signal', power: -40, frequency: 70e6, bandwidth: 1e6 }];
 
       const objectives = [
         createTestObjective({
@@ -3352,7 +3401,7 @@ describe('ObjectivesManager', () => {
     });
 
     it('should evaluate signal-detected with specific signalId', () => {
-      mockInputSignals = [{ signalId: 'target-signal', power: -40 }];
+      mockInputSignals = [{ signalId: 'target-signal', power: -40, frequency: 70e6, bandwidth: 1e6 }];
 
       const objectives = [
         createTestObjective({
@@ -3378,7 +3427,7 @@ describe('ObjectivesManager', () => {
     });
 
     it('should evaluate signal-detected with minPower', () => {
-      mockInputSignals = [{ signalId: 'target-signal', power: -40 }];
+      mockInputSignals = [{ signalId: 'target-signal', power: -40, frequency: 70e6, bandwidth: 1e6 }];
 
       const objectives = [
         createTestObjective({
@@ -3403,8 +3452,64 @@ describe('ObjectivesManager', () => {
       expect(completedCallback).toHaveBeenCalled();
     });
 
+    it('does not count a signal outside the analyzer window (Phase 27 B2)', () => {
+      // Analyzer at 70 MHz / 40 MHz span shows 50-90 MHz; a 1 MHz carrier at 120 MHz is off-screen
+      mockInputSignals = [{ signalId: 'beacon', power: -40, frequency: 120e6, bandwidth: 1e6 }];
+      const objectives = [
+        createTestObjective({
+          id: 'signal-obj',
+          conditions: [{ type: 'signal-detected', description: 'Beacon on screen', mustMaintain: false, params: { signalId: 'beacon' } }],
+        }),
+      ];
+      const completedCallback = vi.fn();
+      eventBus.on(Events.OBJECTIVE_COMPLETED, completedCallback);
+
+      ObjectivesManager.initialize(objectives);
+      eventBus.emit(Events.UPDATE, 16);
+      expect(completedCallback).not.toHaveBeenCalled();
+
+      // Retune the analyzer onto it
+      mockSpectrumAnalyzerState.centerFrequency = 118e6;
+      eventBus.emit(Events.UPDATE, 16);
+      expect(completedCallback).toHaveBeenCalled();
+    });
+
+    it('counts a wide carrier that only partly overlaps the window', () => {
+      mockSpectrumAnalyzerState.centerFrequency = 70e6;
+      mockSpectrumAnalyzerState.span = 2e3;
+      mockInputSignals = [{ signalId: 'carrier', power: -40, frequency: 75e6, bandwidth: 36e6 }];
+      const objectives = [
+        createTestObjective({
+          id: 'signal-obj',
+          conditions: [{ type: 'signal-detected', description: 'Carrier', mustMaintain: false, params: { signalId: 'carrier' } }],
+        }),
+      ];
+      const completedCallback = vi.fn();
+      eventBus.on(Events.OBJECTIVE_COMPLETED, completedCallback);
+
+      ObjectivesManager.initialize(objectives);
+      eventBus.emit(Events.UPDATE, 16);
+      expect(completedCallback).toHaveBeenCalled();
+    });
+
+    it('counts an off-screen signal with anyTuning', () => {
+      mockInputSignals = [{ signalId: 'beacon', power: -40, frequency: 120e6, bandwidth: 1e6 }];
+      const objectives = [
+        createTestObjective({
+          id: 'signal-obj',
+          conditions: [{ type: 'signal-detected', description: 'Beacon anywhere', mustMaintain: false, params: { signalId: 'beacon', anyTuning: true } }],
+        }),
+      ];
+      const completedCallback = vi.fn();
+      eventBus.on(Events.OBJECTIVE_COMPLETED, completedCallback);
+
+      ObjectivesManager.initialize(objectives);
+      eventBus.emit(Events.UPDATE, 16);
+      expect(completedCallback).toHaveBeenCalled();
+    });
+
     it('should evaluate signal-level-correct condition', () => {
-      mockInputSignals = [{ signalId: 'target-signal', power: -40 }];
+      mockInputSignals = [{ signalId: 'target-signal', power: -40, frequency: 70e6, bandwidth: 1e6 }];
 
       const objectives = [
         createTestObjective({
@@ -3607,7 +3712,7 @@ describe('ObjectivesManager', () => {
     });
 
     it('should evaluate speca-noise-floor-visible condition', () => {
-      mockInputSignals = [{ signalId: 'weak-signal', power: -70 }];
+      mockInputSignals = [{ signalId: 'weak-signal', power: -70, frequency: 70e6, bandwidth: 1e6 }];
 
       const objectives = [
         createTestObjective({

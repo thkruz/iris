@@ -264,7 +264,7 @@
           "kind": "leo",
           "pass": {
             "aosS": 712.73,
-            "losS": 1156.17,
+            "losS": 1155.7,
             "maxEl": 34.1
           },
           "atPeak": {
@@ -282,7 +282,7 @@
               "bandwidthMHz": 0,
               "modulation": "CW",
               "fec": "null",
-              "samples": 444,
+              "samples": 443,
               "peakCnDb": 27.12,
               "medianCnDb": 22.52,
               "peakEsN0Db": 27.91,
@@ -299,7 +299,7 @@
               "bandwidthMHz": 36,
               "modulation": "QPSK",
               "fec": "3/4",
-              "samples": 444,
+              "samples": 443,
               "peakCnDb": 12.84,
               "medianCnDb": 8.23,
               "peakEsN0Db": 13.62,

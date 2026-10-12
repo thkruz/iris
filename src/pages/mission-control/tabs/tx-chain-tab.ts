@@ -449,6 +449,7 @@ export class TxChainTab extends BaseElement {
                         <div class="form-check form-switch mb-1">
                           <input id="tx-transmit-switch" type="checkbox" class="form-check-input" role="switch" />
                           <label for="tx-transmit-switch" class="form-check-label small">Transmit</label>
+                          <span id="tx-boot-status" class="small fw-bold font-monospace text-warning ms-1 d-none"></span>
                         </div>
                         <div class="form-check form-switch mb-1">
                           <input id="tx-loopback-switch" type="checkbox" class="form-check-input" role="switch" />

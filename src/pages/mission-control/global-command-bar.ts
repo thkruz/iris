@@ -62,6 +62,12 @@ export class GlobalCommandBar {
   private readonly isTimeSkipEnabled_ = GlobalCommandBar.readTimeSkipEnabled_();
 
   /**
+   * Whether any objective declares a timeSkip (Phase 27 Q4): the "Skip N min"
+   * control renders hidden and shows while that objective's wait is on offer.
+   */
+  private readonly isObjectiveSkipEnabled_ = GlobalCommandBar.readObjectiveSkipEnabled_();
+
+  /**
    * Sandboxes carry no authored mission, so their equipment is the operator's
    * to choose: the loadout control renders only there (see LoadoutModal).
    * Declared before html_ for the same reason isTimeSkipEnabled_ is.
@@ -98,6 +104,7 @@ export class GlobalCommandBar {
     this.chromeVariant_ === 'tactical' || this.chromeVariant_ === 'astro' ? { objective: 'TASK', scenario: 'MSN' } : { objective: 'OBJECTIVE', scenario: 'MISSION' };
 
   private timeSkipBtn_: HTMLButtonElement | null = null;
+  private objectiveSkipBtn_: HTMLButtonElement | null = null;
   private timeSkipOverlay_: TimeSkipOverlay | null = null;
   private skipTarget_: SkipTarget | null = null;
   private lastSkipTargetComputeMs_ = 0;
@@ -164,6 +171,16 @@ export class GlobalCommandBar {
     }
   }
 
+  /** Whether any objective of the scenario offers a timeSkip. */
+  private static readObjectiveSkipEnabled_(): boolean {
+    try {
+      return (ScenarioManager.getInstance().data?.objectives ?? []).some((objective) => objective.timeSkip !== undefined);
+    } catch {
+      // ScenarioManager not initialized (menus, sandbox boot) - no scenario, no skip.
+      return false;
+    }
+  }
+
   /** Whether the scenario opted into the skip control. */
   private static readTimeSkipEnabled_(): boolean {
     try {
@@ -192,6 +209,16 @@ export class GlobalCommandBar {
           <button id="time-skip-control" class="time-skip-btn" type="button" disabled>
             <i class="fa-solid fa-forward"></i>
             <span id="time-skip-control-label">Skip</span>
+          </button>
+        `
+            : ''
+        }
+        ${
+          this.isObjectiveSkipEnabled_
+            ? html`
+          <button id="objective-skip-control" class="time-skip-btn" type="button" style="display: none;">
+            <i class="fa-solid fa-forward"></i>
+            <span id="objective-skip-control-label">Skip</span>
           </button>
         `
             : ''
@@ -272,15 +299,46 @@ export class GlobalCommandBar {
    * scenario declared settings.timeSkip.
    */
   private initTimeSkip_(parentDom: HTMLElement | null): void {
-    if (!this.isTimeSkipEnabled_) {
+    if (!this.isTimeSkipEnabled_ && !this.isObjectiveSkipEnabled_) {
       return;
     }
 
     this.timeSkipBtn_ = parentDom?.querySelector<HTMLButtonElement>('#time-skip-control') ?? null;
     this.timeSkipBtn_?.addEventListener('click', () => this.handleTimeSkipClick_());
+    this.objectiveSkipBtn_ = parentDom?.querySelector<HTMLButtonElement>('#objective-skip-control') ?? null;
+    this.objectiveSkipBtn_?.addEventListener('click', () => {
+      TimeSkipController.getInstance().startObjectiveSkip();
+      this.refreshObjectiveSkipControl_();
+    });
     this.timeSkipOverlay_ = new TimeSkipOverlay();
     EventBus.getInstance().on(Events.TIME_SKIP_ENDED, this.boundOnTimeSkipEnded_);
     this.refreshTimeSkipControl_(true);
+    this.refreshObjectiveSkipControl_();
+  }
+
+  /**
+   * Show the "Skip N min" control while an objective wait is on offer
+   * (Phase 27 Q4), disabled with the reason when it cannot run right now.
+   */
+  private refreshObjectiveSkipControl_(): void {
+    if (!this.objectiveSkipBtn_) {
+      return;
+    }
+
+    const controller = TimeSkipController.getInstance();
+    const offer = controller.findObjectiveSkip();
+    this.objectiveSkipBtn_.style.display = offer && !controller.isSkipping ? '' : 'none';
+    if (!offer) {
+      return;
+    }
+
+    const blockedReason = controller.getObjectiveSkipBlockedReason(offer.objectiveId);
+    this.objectiveSkipBtn_.disabled = blockedReason !== null;
+    this.objectiveSkipBtn_.title = blockedReason ?? `Skip the ${offer.label} (${offer.minutes} min of scenario time)`;
+    const labelEl = this.objectiveSkipBtn_.querySelector('#objective-skip-control-label');
+    if (labelEl) {
+      labelEl.textContent = `Skip ${offer.minutes} min`;
+    }
   }
 
   private handleTimeSkipClick_(): void {
@@ -387,8 +445,17 @@ export class GlobalCommandBar {
       case 'astro':
         return '---- --- --:--:--';
       default:
-        return '-- --- ---- --:--:--';
+        return '--- -- --- ---- --:--:--';
     }
+  }
+
+  /**
+   * `WED` - day of the week on the scenario clock (UTC, like the rest of the
+   * clock). Briefs open with "Wednesday, 1430"; without the weekday the HUD
+   * could not confirm it (nats-r2-s05-F3, s19-F7).
+   */
+  private static weekday_(timestampMs: number): string {
+    return ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date(timestampMs).getUTCDay()] ?? '---';
   }
 
   /**
@@ -411,7 +478,7 @@ export class GlobalCommandBar {
         this.clockEl_.textContent = formatAstroClock(data.timestampMs);
         break;
       default:
-        this.clockEl_.textContent = data.timeFormatted;
+        this.clockEl_.textContent = Number.isFinite(data.timestampMs) ? `${GlobalCommandBar.weekday_(data.timestampMs)} ${data.timeFormatted}` : data.timeFormatted;
     }
   }
 
@@ -588,6 +655,8 @@ export class GlobalCommandBar {
    * Update the timer displays based on ObjectivesManager state
    */
   private updateTimerDisplays_(): void {
+    this.refreshObjectiveSkipControl_();
+
     let objectivesManager: ObjectivesManager | null = null;
     try {
       objectivesManager = ObjectivesManager.getInstance();
@@ -634,10 +703,11 @@ export class GlobalCommandBar {
           }
         }
       } else {
-        // No time limit - show unlimited indicator
+        // No time limit: a blank clock face, with the reason on hover
         if (valueEl) {
-          valueEl.textContent = '∞';
+          valueEl.textContent = '--:--';
         }
+        this.scenarioTimerEl_.title = 'No time limit';
         this.scenarioTimerEl_.classList.remove('timer-warning', 'timer-urgent', 'timer-failed');
         this.scenarioTimerEl_.classList.add('timer-unlimited');
       }
@@ -649,6 +719,7 @@ export class GlobalCommandBar {
       let failedObjective: { title: string } | null = null;
       let passedObjective: { title: string } | null = null;
       let overtimeObjective: { title: string } | null = null;
+      let heldObjective: { title: string } | null = null;
       if (objectivesManager) {
         // Check for quiz passed state first
         if (objectivesManager.isQuizPassed()) {
@@ -671,6 +742,12 @@ export class GlobalCommandBar {
               break; // Show failed state
             }
             if (state.isTimerRunning && !state.isCompleted && !state.isFailed && state.timeRemainingSeconds !== undefined) {
+              // Q1: the timed work is done (only questions remain), so the
+              // clock is stopped; do not show a frozen countdown as if live
+              if (objectivesManager.isObjectiveCountdownHeld(state.objective.id)) {
+                heldObjective ??= { title: state.objective.title };
+                continue;
+              }
               activeObjectiveTimer = {
                 time: state.timeRemainingSeconds,
                 title: state.objective.title,
@@ -733,11 +810,11 @@ export class GlobalCommandBar {
         this.objectiveTimerEl_.classList.add('timer-urgent');
         this.objectiveTimerEl_.classList.remove('timer-warning', 'timer-unlimited', 'timer-failed', 'timer-passed');
       } else {
-        // No active timed objective - show unlimited indicator
+        // No active timed objective: a blank clock face, with the reason on hover
         if (valueEl) {
-          valueEl.textContent = '∞';
+          valueEl.textContent = '--:--';
         }
-        this.objectiveTimerEl_.title = 'No time limit';
+        this.objectiveTimerEl_.title = heldObjective ? `No time limit on the questions for ${heldObjective.title}` : 'No time limit';
         this.objectiveTimerEl_.classList.remove('timer-warning', 'timer-urgent', 'timer-failed', 'timer-passed');
         this.objectiveTimerEl_.classList.add('timer-unlimited');
       }

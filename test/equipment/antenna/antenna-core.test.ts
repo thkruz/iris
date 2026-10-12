@@ -1184,6 +1184,41 @@ describe('AntennaCore', () => {
       expect(antenna.getStepTrackController().isActive).toBe(false);
     });
 
+    it('re-arms from the program-track pointing on a new target (phase 27, r2-s06-F2)', () => {
+      antenna.startStepTrack();
+      antenna.state.stepTrackAzOffset = 0.2 as Degrees;
+      antenna.state.stepTrackElOffset = -0.1 as Degrees;
+      antenna.getStepTrackController().stop();
+
+      antenna.handleTargetSatelliteChange(99999);
+
+      expect(antenna.getStepTrackController().isActive).toBe(true);
+      expect(antenna.state.stepTrackAzOffset).toBe(0);
+      expect(antenna.state.stepTrackElOffset).toBe(0);
+      expect(antenna.state.isAutoTrackEnabled).toBe(true);
+    });
+
+    it('leaves step-track off on a target change when it was not armed', () => {
+      antenna.handleTargetSatelliteChange(99999);
+      expect(antenna.getStepTrackController().isActive).toBe(false);
+    });
+
+    it('re-arms on Move to Target', () => {
+      antenna.state.targetSatelliteId = 99999;
+      antenna.startStepTrack();
+      antenna.getStepTrackController().stop();
+      antenna.moveToTargetSatellite();
+      expect(antenna.getStepTrackController().isActive).toBe(true);
+    });
+
+    it('stops on power-off', () => {
+      antenna.startStepTrack();
+      antenna.handlePowerToggle(false);
+      expect(antenna.getStepTrackController().isActive).toBe(false);
+      expect(antenna.state.isStepTrackEnabled).toBe(false);
+      expect(antenna.state.isAutoTrackEnabled).toBe(false);
+    });
+
     it('should apply staged beacon settings', () => {
       antenna.state.stagedBeaconFrequencyHz = 4000000000;
       antenna.state.stagedBeaconSearchBwHz = 1000000;

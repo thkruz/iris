@@ -21,14 +21,79 @@ import './mission-overview-tab.css';
 export class MissionOverviewTab extends BaseElement {
   private readonly groundStations_: GroundStation[];
   private readonly satellites_: Satellite[];
+  /** Station whose view of each satellite the cards show (the last one selected; the first by default) */
+  private viewStationId_: string | null = null;
+  private lastLookSyncMs_ = 0;
+  private static readonly LOOK_SYNC_INTERVAL_MS = 1000;
+  private readonly boundUpdate_: () => void;
+  private readonly boundAssetSelected_: (asset: { type: 'ground-station' | 'satellite'; id: string }) => void;
 
   constructor(containerId: string) {
     super();
     this.groundStations_ = SimulationManager.getInstance().groundStations;
     this.satellites_ = SimulationManager.getInstance().satellites;
+    this.viewStationId_ = this.groundStations_[0]?.state.id ?? null;
     this.init_(containerId, 'replace');
     this.dom_ = qs('.mission-overview-tab');
     this.addEventListenersLate_();
+
+    // Look angles move (an inclined GEO's figure-8, a LEO pass): refresh them
+    // live from the station's own view (phase 27, s06-F5 / r2-s18-F1)
+    this.boundUpdate_ = this.throttledLookSync_.bind(this);
+    this.boundAssetSelected_ = this.onAssetSelected_.bind(this);
+    EventBus.getInstance().on(Events.UPDATE, this.boundUpdate_);
+    EventBus.getInstance().on(Events.ASSET_SELECTED, this.boundAssetSelected_);
+    this.syncLookAngles_();
+  }
+
+  private onAssetSelected_(asset: { type: 'ground-station' | 'satellite'; id: string }): void {
+    if (asset.type === 'ground-station' && this.groundStations_.some((gs) => gs.state.id === asset.id)) {
+      this.viewStationId_ = asset.id;
+      this.syncLookAngles_();
+    }
+  }
+
+  private throttledLookSync_(): void {
+    const now = Date.now();
+    if (now - this.lastLookSyncMs_ < MissionOverviewTab.LOOK_SYNC_INTERVAL_MS) {
+      return;
+    }
+    this.lastLookSyncMs_ = now;
+    this.syncLookAngles_();
+  }
+
+  /**
+   * Az/El of a satellite as the viewing station's antenna sees it. Before the
+   * station's equipment exists, the satellite's own reference angles.
+   */
+  lookAnglesOf(sat: Satellite): { az: number; el: number; stationId: string | null } {
+    const gs = this.groundStations_.find((g) => g.state.id === this.viewStationId_);
+    const antenna = gs?.antennas[0];
+    if (antenna) {
+      const view = antenna.viewOf(sat);
+      return { az: (((view.az as number) % 360) + 360) % 360, el: view.el as number, stationId: gs.state.id };
+    }
+
+    return { az: sat.az as number, el: sat.el as number, stationId: null };
+  }
+
+  private syncLookAngles_(): void {
+    if (!this.dom_) {
+      return;
+    }
+    for (const sat of this.satellites_) {
+      const card = this.dom_.querySelector(`[data-asset-id="sat-${sat.noradId}"]`);
+      if (!card) {
+        continue;
+      }
+      const look = this.lookAnglesOf(sat);
+      const azEl = card.querySelector('.sat-look-az');
+      const elEl = card.querySelector('.sat-look-el');
+      const fromEl = card.querySelector('.sat-look-from');
+      if (azEl) azEl.textContent = `${look.az.toFixed(1)}\u00B0`;
+      if (elEl) elEl.textContent = `${look.el.toFixed(1)}\u00B0`;
+      if (fromEl) fromEl.textContent = look.stationId ? `Look angles from ${look.stationId}` : 'Reference look angles';
+    }
   }
 
   protected get html_(): string {
@@ -110,12 +175,12 @@ export class MissionOverviewTab extends BaseElement {
                 <span class="count-label">RF-FE</span>
               </div>
               <div class="equipment-count">
-                <span class="count-value">${gs.transmitters.length}</span>
-                <span class="count-label">TX</span>
+                <span class="count-value">${gs.transmitters.reduce((n, tx) => n + tx.state.modems.length, 0)}</span>
+                <span class="count-label">TX MODEMS</span>
               </div>
               <div class="equipment-count">
-                <span class="count-value">${gs.receivers.length}</span>
-                <span class="count-label">RX</span>
+                <span class="count-value">${gs.receivers.reduce((n, rx) => n + rx.state.modems.length, 0)}</span>
+                <span class="count-label">RX MODEMS</span>
               </div>
             </div>
           </div>
@@ -151,14 +216,17 @@ export class MissionOverviewTab extends BaseElement {
               <div class="col-6">
                 <div class="d-flex justify-content-between align-items-center">
                   <span class="text-muted small">Azimuth:</span>
-                  <span class="fw-bold font-monospace small">${sat.az.toFixed(1)}&deg;</span>
+                  <span class="fw-bold font-monospace small sat-look-az">${sat.az.toFixed(1)}&deg;</span>
                 </div>
               </div>
               <div class="col-6">
                 <div class="d-flex justify-content-between align-items-center">
                   <span class="text-muted small">Elevation:</span>
-                  <span class="fw-bold font-monospace small">${sat.el.toFixed(1)}&deg;</span>
+                  <span class="fw-bold font-monospace small sat-look-el">${sat.el.toFixed(1)}&deg;</span>
                 </div>
+              </div>
+              <div class="col-12">
+                <span class="text-muted small sat-look-from">Reference look angles</span>
               </div>
             </div>
             <hr class="my-2" />
@@ -206,6 +274,8 @@ export class MissionOverviewTab extends BaseElement {
   }
 
   public dispose(): void {
+    EventBus.getInstance().off(Events.UPDATE, this.boundUpdate_);
+    EventBus.getInstance().off(Events.ASSET_SELECTED, this.boundAssetSelected_);
     this.dom_?.remove();
   }
 }

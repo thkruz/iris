@@ -286,6 +286,19 @@ describe('QuizModal', () => {
       expect(penaltyEl?.style.display).toBe('none');
     });
 
+    it('clears the previous quiz penalty notice and feedback, not just hides them (nats-r2-s01-F2)', () => {
+      const penaltyEl = mockElements.get('quiz-penalty-notice')!;
+      const feedbackEl = mockElements.get('quiz-feedback')!;
+      penaltyEl.innerHTML = '-10 points';
+      feedbackEl.innerHTML = 'Not quite. Try again.';
+      (modal as any).currentQuiz_ = createMockQuizData();
+
+      (modal as any).renderQuiz_();
+
+      expect(penaltyEl.innerHTML).toBe('');
+      expect(feedbackEl.innerHTML).toBe('');
+    });
+
     it('should render single option quiz without letter labels', () => {
       const quizData = createMockQuizData({
         options: ['Acknowledge'],

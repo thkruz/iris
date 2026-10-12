@@ -457,6 +457,29 @@ describe('WeatherManager', () => {
       expect(mockAntennas[0].updateIceAccumulation).not.toHaveBeenCalled();
     });
 
+    it('keeps building ice with the heater ON when the storm outpaces it (phase 27 Q5, heaterMeltDbPerMin)', () => {
+      mockScenarioSettings.weatherEvents = [
+        { id: 'event-1', groundStationId: 'gs-1', type: 'snow', severity: 'severe', startTime: 0, duration: 3600, linkMarginDegradation: 8, heaterMeltDbPerMin: 0.5 },
+      ];
+      mockAntennas = [createMockAntenna('antenna-1', true, 0.8)];
+      mockGroundStations.push({ state: { id: 'gs-1' }, antennas: mockAntennas });
+
+      WeatherManager.getInstance();
+      for (let s = 1; s <= 600; s++) {
+        setScenarioElapsed(s * 1000);
+        updateHandler(1000);
+      }
+
+      // dI/dt = (max - I) / tau - melt settles at E = max - melt x tau = 10 - (0.5/60) x 720 = 4 dB
+      const config = WeatherManager.SEVERITY_CONFIG['severe'];
+      const equilibrium = config.maxDegradation_dB - (0.5 / 60) * config.timeConstant_s;
+      const expected = equilibrium - (equilibrium - 0.8) * Math.exp(-600 / config.timeConstant_s);
+      expect(equilibrium).toBeCloseTo(4, 6);
+      expect(mockAntennas[0].state.iceAccumulation_dB).toBeCloseTo(expected, 2);
+      expect(mockAntennas[0].state.iceAccumulation_dB).toBeGreaterThan(0.8);
+      expect(mockAntennas[0].state.iceAccumulation_dB).toBeLessThan(equilibrium);
+    });
+
     it('should NOT accumulate ice for non-ice-producing weather types', () => {
       vi.useFakeTimers();
       const startTime = Date.now();

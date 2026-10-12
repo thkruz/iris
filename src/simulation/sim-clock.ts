@@ -45,11 +45,14 @@ let runSteps_ = 0;
 let scenarioSteps_ = 0;
 /** Scenario time not made of steps: skips and checkpoint restores, ms */
 let scenarioOffsetMs_ = 0;
+/** Run time not made of steps: objective waits fast-forwarded with advanceRun(), ms */
+let runOffsetMs_ = 0;
 let skippedMs_ = 0;
 let accumulatorMs_ = 0;
 
 /** ms for a whole number of steps; exact for every whole second */
 const stepsToMs = (steps: number): number => (steps * 1000) / STEPS_PER_SECOND;
+const currentRunMs_ = (): number => stepsToMs(runSteps_) + runOffsetMs_;
 let speed_: SimSpeed = 1;
 const pauseReasons_ = new Set<PauseReason>();
 
@@ -68,7 +71,7 @@ function fireDueTimers_(): void {
     let dueId = 0;
     let due: SimTimer | null = null;
     for (const [id, timer] of timers_) {
-      if (timer.dueRunMs <= stepsToMs(runSteps_) + 1e-6 && (!due || timer.dueRunMs < due.dueRunMs)) {
+      if (timer.dueRunMs <= currentRunMs_() + 1e-6 && (!due || timer.dueRunMs < due.dueRunMs)) {
         dueId = id;
         due = timer;
       }
@@ -93,6 +96,7 @@ export const SimClock = {
     runSteps_ = 0;
     scenarioSteps_ = 0;
     scenarioOffsetMs_ = 0;
+    runOffsetMs_ = 0;
     skippedMs_ = 0;
     accumulatorMs_ = 0;
     speed_ = 1;
@@ -180,6 +184,35 @@ export const SimClock = {
     skippedMs_ += deltaMs;
   },
 
+  /**
+   * Move run time forward by `deltaMs` without stepping (Phase 27 Q4: an
+   * objective wait the operator skips - the crew window, the rain cell - is
+   * time the equipment really sat through). Sim timers due inside the
+   * interval fire in order, each seeing run time at its own due moment, so
+   * lock delays, warm-ups and stabilisation finish as they would have.
+   * Per-step integrators (AGC, smoothing) are not replayed; they settle on the
+   * next steps. Scenario time is moved separately with skip().
+   */
+  advanceRun(deltaMs: number): void {
+    if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
+      return;
+    }
+
+    const targetMs = currentRunMs_() + deltaMs;
+    for (;;) {
+      let nextDueMs = Number.POSITIVE_INFINITY;
+      for (const timer of timers_.values()) {
+        nextDueMs = Math.min(nextDueMs, timer.dueRunMs);
+      }
+      if (nextDueMs > targetMs) {
+        break;
+      }
+      runOffsetMs_ = Math.max(runOffsetMs_, nextDueMs - stepsToMs(runSteps_));
+      fireDueTimers_();
+    }
+    runOffsetMs_ = targetMs - stepsToMs(runSteps_);
+  },
+
   /** Set scenario time directly (checkpoint restore). */
   setScenarioNowMs(nowMs: number): void {
     scenarioOffsetMs_ = nowMs - epochMs_ - stepsToMs(scenarioSteps_);
@@ -213,7 +246,7 @@ export const SimClock = {
 
   /** Run time since the scenario started, ms. What equipment dynamics read. */
   runMs(): number {
-    return stepsToMs(runSteps_);
+    return currentRunMs_();
   },
 
   /** Steps run since reset. Use for anything counted per step. */

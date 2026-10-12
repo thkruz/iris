@@ -194,15 +194,20 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
       return alarms;
     }
 
+    // Stowed or slewing to a new position: carriers sliding through the beam
+    // are expected, so the gain-limit alarms are inhibited (phase 27, r2-s03-F2:
+    // the stow after the S3 handover flashed "max gain - weak signal")
+    const isRepositioning = this.rfFrontEnd_?.antenna?.isRepositioning ?? false;
+
     // Nothing to level but noise: the empty-sky (pre-AOS) indication
     if (this.isNoiseOnly_) {
       alarms.push('AGC on noise only - no carrier in passband');
-    } else if (this.state.currentGain >= this.state.maxGain - 0.5) {
+    } else if (!isRepositioning && this.state.currentGain >= this.state.maxGain - 0.5) {
       // Warn when at gain limits
       alarms.push(`AGC at max gain (${this.state.currentGain.toFixed(1)} dB) - weak signal`);
     }
 
-    if (this.state.currentGain <= this.state.minGain + 0.5) {
+    if (!isRepositioning && this.state.currentGain <= this.state.minGain + 0.5) {
       alarms.push(`AGC at min gain (${this.state.currentGain.toFixed(1)} dB) - possible interference`);
     }
 

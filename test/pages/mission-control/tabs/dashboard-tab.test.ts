@@ -238,6 +238,14 @@ describe('DashboardTab', () => {
       expect(txEl?.textContent).toBe('1');
     });
 
+    it('Equipment Summary counts installed modems, the same scope as Quick Stats (phase 27, r2-s09-F1)', () => {
+      expect(document.querySelector('#tx-count')?.textContent).toBe('2');
+      expect(document.querySelector('#rx-count')?.textContent).toBe('2');
+      const labels = [...document.querySelectorAll('.equipment-item-label')].map((el) => el.textContent);
+      expect(labels).toContain('TX Modems');
+      expect(labels).toContain('RX Modems');
+    });
+
     it('labels Quick Stats as powered modems, which is what it counts (s01-F19)', () => {
       const labels = [...document.querySelectorAll('.quick-stat-label')].map((el) => el.textContent);
       expect(labels).toContain('RX Modems On');

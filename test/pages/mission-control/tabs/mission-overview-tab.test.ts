@@ -16,10 +16,10 @@ vi.mock('../../../../src/simulation/simulation-manager', () => ({
             location: { latitude: 38.897, longitude: -77.037, elevation: 100 },
             isOperational: true,
           },
-          antennas: [{}],
+          antennas: [{ viewOf: (sat: { az: number; el: number }) => ({ az: sat.az + 2, el: sat.el - 1 }) }],
           rfFrontEnds: [{}],
-          transmitters: [{}],
-          receivers: [{}],
+          transmitters: [{ state: { modems: [{}, {}, {}, {}] } }],
+          receivers: [{ state: { modems: [{}, {}, {}, {}] } }],
         },
         {
           state: {
@@ -31,7 +31,7 @@ vi.mock('../../../../src/simulation/simulation-manager', () => ({
           antennas: [{}],
           rfFrontEnds: [{}],
           transmitters: [],
-          receivers: [{}],
+          receivers: [{ state: { modems: [{}, {}, {}, {}] } }],
         },
       ],
       satellites: [
@@ -140,8 +140,27 @@ describe('MissionOverviewTab', () => {
       const html = document.body.innerHTML;
       expect(html).toContain('ANT');
       expect(html).toContain('RF-FE');
-      expect(html).toContain('TX');
-      expect(html).toContain('RX');
+      expect(html).toContain('TX MODEMS');
+      expect(html).toContain('RX MODEMS');
+      // Modems, not chassis (phase 27): one chassis of four reads 4
+      const first = document.querySelector('[data-asset-type="ground-station"]');
+      expect(first?.textContent).toMatch(/4\s*TX MODEMS/u);
+    });
+  });
+
+  describe('live look angles (phase 27, s06-F5)', () => {
+    it("shows each satellite at the viewing station's own az/el, labelled with the station", () => {
+      const card = document.querySelector('[data-asset-id="sat-12345"]');
+      expect(card?.querySelector('.sat-look-az')?.textContent).toBe('182.0°');
+      expect(card?.querySelector('.sat-look-el')?.textContent).toBe('44.0°');
+      expect(card?.querySelector('.sat-look-from')?.textContent).toBe('Look angles from GS-001');
+    });
+
+    it('subscribes to updates and unsubscribes on dispose', () => {
+      expect(mockEventBus.on).toHaveBeenCalledWith(Events.UPDATE, expect.any(Function));
+      tab.dispose();
+      expect(mockEventBus.off).toHaveBeenCalledWith(Events.UPDATE, expect.any(Function));
+      tab = new MissionOverviewTab('mission-overview-container');
     });
   });
 

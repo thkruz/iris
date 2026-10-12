@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { LNBModuleCore, LNBState } from '../../../../src/equipment/rf-front-end/lnb-module/lnb-module-core';
+import { LNBModuleCore, LNBState, LOOPBACK_COUPLING_DB } from '../../../../src/equipment/rf-front-end/lnb-module/lnb-module-core';
 import { RFFrontEndCore } from '../../../../src/equipment/rf-front-end/rf-front-end-core';
 import { createRFFrontEnd } from '../../../../src/equipment/rf-front-end/rf-front-end-factory';
 import { EventBus } from '../../../../src/events/event-bus';
@@ -341,6 +341,30 @@ describe('LNBModuleCore', () => {
     });
   });
 
+  describe('power-on gain (phase 27 Q6)', () => {
+    it('powers up at powerOnGain after a power cycle', () => {
+      lnbModule.state.powerOnGain = 65 as dB;
+      lnbModule.handleGainChange(60);
+      lnbModule.handlePowerToggle(false);
+      expect(lnbModule.state.gain).toBe(60);
+      lnbModule.handlePowerToggle(true);
+      expect(lnbModule.state.gain).toBe(65);
+    });
+
+    it('keeps the set gain when already powered or when no powerOnGain is set', () => {
+      lnbModule.state.powerOnGain = 65 as dB;
+      lnbModule.state.isPowered = true;
+      lnbModule.handleGainChange(60);
+      lnbModule.handlePowerToggle(true);
+      expect(lnbModule.state.gain).toBe(60);
+
+      lnbModule.state.powerOnGain = undefined;
+      lnbModule.handlePowerToggle(false);
+      lnbModule.handlePowerToggle(true);
+      expect(lnbModule.state.gain).toBe(60);
+    });
+  });
+
   describe('handleGainChange', () => {
     it('should update gain', () => {
       lnbModule.handleGainChange(55);
@@ -454,6 +478,51 @@ describe('LNBModuleCore', () => {
       const signals = lnbModule.rxSignalsIn;
 
       expect(Array.isArray(signals)).toBe(true);
+    });
+  });
+
+  describe('test-loop coupler and input compression (phase 27, r2-s07-F1)', () => {
+    const loopCarrier = (bucOutDbm: number): RfSignal =>
+      ({
+        signalId: 'loop',
+        frequency: 5943e6 as RfFrequency,
+        power: bucOutDbm as dBm,
+        bandwidth: 36e6 as Hertz,
+        polarization: 'H',
+        origin: SignalOrigin.BUC,
+        gainInPath: 0 as dBi,
+      }) as unknown as RfSignal;
+
+    const driveLoop = (bucOutDbm: number) => {
+      rfFrontEnd.bucModule.state.isLoopback = true;
+      vi.spyOn(rfFrontEnd.bucModule, 'outputSignals', 'get').mockReturnValue([loopCarrier(bucOutDbm)]);
+      lnbModule.state.isPowered = true;
+      lnbModule.state.gain = 60 as dB;
+      lnbModule.state.loFrequency = 7000 as MHz;
+      lnbModule.update();
+    };
+
+    it('the loop reaches the LNB through the coupler, not at the full BUC output', () => {
+      driveLoop(13);
+      const loop = lnbModule.rxSignalsIn.find((s) => s.signalId === 'loop');
+      expect(loop?.power).toBeCloseTo(13 - LOOPBACK_COUPLING_DB, 6);
+    });
+
+    it('backed-off drive (modem -7 dBm, BUC 20 dB) stays linear; the station standard 23 dB compresses and alarms', () => {
+      driveLoop(13);
+      expect(lnbModule.compressionDb).toBeLessThan(0.3);
+      expect(lnbModule.getAlarms().some((a) => a.includes('overload'))).toBe(false);
+
+      driveLoop(16);
+      expect(lnbModule.compressionDb).toBeGreaterThan(0.5);
+      expect(lnbModule.getAlarms().some((a) => a.includes('overload'))).toBe(true);
+    });
+
+    it('a satellite downlink alone is far from compression', () => {
+      lnbModule.state.isPowered = true;
+      lnbModule.state.gain = 65 as dB;
+      lnbModule.update();
+      expect(lnbModule.compressionDb).toBe(0);
     });
   });
 });

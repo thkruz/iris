@@ -8,7 +8,7 @@ import { SimClock } from '@app/simulation/sim-clock';
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
 import { dBi, dBm, Hertz, RfFrequency, RfSignal } from '@app/types';
 import { Degrees } from 'ootk';
-import { DEFAULT_TRANSPONDER_PHYSICS, operateTransponder, type TransponderOperatingPoint, type TransponderPhysics, uplinkNoiseDensityDbmHz } from './transponder-model';
+import { DEFAULT_TRANSPONDER_PHYSICS, operateTransponder, type TransponderOperatingPoint, type TransponderPhysics } from './transponder-model';
 
 /** Free-space path loss, dB (ITU-R P.525) */
 function freeSpaceLossDb(frequencyHz: number, distanceKm: number): number {
@@ -145,15 +145,6 @@ export interface SatelliteState {
    * Omitted: one az/el for every station (legacy).
    */
   lookAnglesFrom?: GeoSite;
-  /**
-   * Authored carriers that stand in for a ground station's own uplink
-   * (Phase 19.3): authored carrier signalId -> the ground carrier's signalId.
-   * While a station radiates that carrier into the transponder, the station's
-   * carrier is the real thing and the stand-in is not relayed (Campaign 1:
-   * each TDMA composite is the teleport carrier VT-01 or ME-02 uplinks; when
-   * neither radiates, the stand-in keeps the service on the air).
-   */
-  standIns?: Record<string, string>;
 }
 
 /** Offsets of a legacy GEO satellite's look angles and skew at one station, relative to its reference station */
@@ -216,8 +207,6 @@ export class Satellite {
   readonly lookAnglesFrom: GeoSite | null;
   /** Slot longitude (degrees east) derived from the authored azimuth at the reference station; null without one */
   readonly slotLongitudeDeg: number | null;
-  /** Authored carrier -> the ground carrier it stands in for */
-  private readonly standIns_: Record<string, string>;
   /** Each transponder's operating point from the last update */
   private readonly operatingPoints_ = new Map<string, TransponderOperatingPoint>();
   /** Per-station look-angle offsets, keyed by site */
@@ -264,7 +253,6 @@ export class Satellite {
     this.az = satelliteState.az;
     this.el = satelliteState.el;
     this.lookAnglesFrom = satelliteState.lookAnglesFrom ?? null;
-    this.standIns_ = satelliteState.standIns ?? {};
     const centerAz = satelliteState.geosyncConfig ? (satelliteState.geosyncConfig.minAz + satelliteState.geosyncConfig.maxAz) / 2 : satelliteState.az;
     this.slotLongitudeDeg = this.lookAnglesFrom ? geoLongitudeFromAzimuth(this.lookAnglesFrom, centerAz) : null;
     // Authored skew wins. Unauthored: the geometric skew at the reference
@@ -479,29 +467,19 @@ export class Satellite {
       list.push({ signal, isoPowerDbm });
       byTransponder.set(transponder, list);
     };
-    // One service, one carrier: two stations radiating the same carrier (a
-    // handover partner holding the traffic too) are not a collision; the
-    // stronger arrival is the carrier (DEV-XPDR-07)
-    const strongest = new Map<string, RfSignal>();
+    // Every arrival is its own carrier (phase 27, DEV-XPDR-07 closed): two
+    // stations radiating one carrier at once (a sloppy handover with both at
+    // full power) put two copies on one frequency, and each is the other's
+    // co-channel interference. A correct handover is break-before-make
+    // (TrafficControlManager.executeHandover), so the pair never overlaps.
+    // A repeated id gets a suffix so the receiver counts the copy as I.
+    const seen = new Map<string, number>();
     for (const signal of this.rxSignal) {
-      const prev = strongest.get(signal.signalId);
-      if (!prev || signal.power > prev.power) {
-        strongest.set(signal.signalId, signal);
-      }
-    }
-    const onAir = new Set<string>();
-    for (const signal of strongest.values()) {
-      accept(signal, signal.power);
-      const tp = this.findTransponderByUplinkFrequency(signal.frequency, signal.polarization);
-      if (tp && signal.power - (uplinkNoiseDensityDbmHz(tp.physics.gOverTDbK) + 10 * Math.log10(Math.max(1, signal.bandwidth as number))) >= Satellite.RELAY_FLOOR_CN_DB) {
-        onAir.add(signal.signalId);
-      }
+      const n = (seen.get(signal.signalId) ?? 0) + 1;
+      seen.set(signal.signalId, n);
+      accept(n === 1 ? signal : { ...signal, signalId: `${signal.signalId}#${n}` }, signal.power);
     }
     for (const signal of this.externalSignal) {
-      const standsInFor = this.standIns_[signal.signalId];
-      if (standsInFor && onAir.has(standsInFor)) {
-        continue;
-      }
       accept(signal, (signal.power as number) - freeSpaceLossDb(signal.frequency as number, externalRangeKm));
     }
 

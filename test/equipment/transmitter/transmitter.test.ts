@@ -221,6 +221,23 @@ describe('Transmitter class', () => {
     });
   });
 
+  describe('intermittent fault alarm (phase 27, s08-F2)', () => {
+    it('alarms only while the modem is powered, and keeps the fault latched', () => {
+      transmitter = new Transmitter('test-root');
+      const modem = transmitter.state.modems[0];
+      modem.intermittentFault = true;
+      modem.isPowered = true;
+      expect(transmitter.getStatusAlarms().map((a) => a.message)).toContain('Modem 1 Intermittent Fault');
+
+      modem.isPowered = false;
+      expect(transmitter.getStatusAlarms().map((a) => a.message)).not.toContain('Modem 1 Intermittent Fault');
+      expect(modem.intermittentFault).toBe(true);
+
+      modem.isPowered = true;
+      expect(transmitter.getStatusAlarms().map((a) => a.message)).toContain('Modem 1 Intermittent Fault');
+    });
+  });
+
   describe('activeModem getter', () => {
     beforeEach(() => {
       transmitter = new Transmitter('test-root');
@@ -705,6 +722,123 @@ describe('Transmitter class', () => {
       expect(emitSpy).toHaveBeenCalledWith(Events.TX_CONFIG_CHANGED, expect.any(Object));
 
       emitSpy.mockRestore();
+    });
+
+    describe('boot lockout', () => {
+      beforeEach(() => {
+        transmitter.activeModem.isPowered = false;
+        transmitter.activeModem.isTransmitting = false;
+        transmitter.activeModem.isTransmittingSwitchUp = false;
+      });
+
+      it('reports isBooting from power-on until the boot completes', () => {
+        transmitter.handlePowerToggle(true);
+
+        expect(transmitter.activeModem.isBooting).toBe(true);
+        expect(transmitter.isModemBooting()).toBe(true);
+
+        advanceSimTime(Transmitter.BOOT_TIME_MS + 100);
+
+        expect(transmitter.activeModem.isBooting).toBe(false);
+        expect(transmitter.activeModem.isPowered).toBe(true);
+        expect(transmitter.isModemBooting()).toBe(false);
+      });
+
+      it('emits TX_CONFIG_CHANGED at boot start so the UI shows BOOTING at once', () => {
+        const emitSpy = vi.spyOn(transmitter, 'emit');
+
+        transmitter.handlePowerToggle(true);
+
+        expect(emitSpy).toHaveBeenCalledWith(Events.TX_CONFIG_CHANGED, expect.objectContaining({ config: expect.objectContaining({ isBooting: true }) }));
+
+        emitSpy.mockRestore();
+      });
+
+      it('refuses to key the carrier while booting and keeps the switch off', () => {
+        transmitter.handlePowerToggle(true);
+
+        const accepted = transmitter.handleTransmitToggle(true);
+
+        expect(accepted).toBe(false);
+        expect(transmitter.activeModem.isTransmitting).toBe(false);
+        expect(transmitter.activeModem.isTransmittingSwitchUp).toBe(false);
+      });
+
+      it('does not queue a refused key-up: the carrier stays off after the boot', () => {
+        transmitter.handlePowerToggle(true);
+        transmitter.handleTransmitToggle(true);
+
+        advanceSimTime(Transmitter.BOOT_TIME_MS + 100);
+
+        expect(transmitter.activeModem.isPowered).toBe(true);
+        expect(transmitter.activeModem.isTransmitting).toBe(false);
+      });
+
+      it('keys the carrier once the boot has completed', () => {
+        transmitter.handlePowerToggle(true);
+        advanceSimTime(Transmitter.BOOT_TIME_MS + 100);
+
+        const accepted = transmitter.handleTransmitToggle(true);
+
+        expect(accepted).toBe(true);
+        expect(transmitter.activeModem.isTransmitting).toBe(true);
+        expect(transmitter.activeModem.isTransmittingSwitchUp).toBe(true);
+      });
+
+      it('snaps the legacy panel transmit switch back when a key-up is refused', () => {
+        transmitter.handlePowerToggle(true);
+        const syncSpy = vi.spyOn(transmitter.txToggleSwitch, 'sync');
+
+        transmitter.handleTransmitToggle(true);
+
+        expect(syncSpy).toHaveBeenCalledWith(false);
+
+        syncSpy.mockRestore();
+      });
+
+      it('cancels the boot when powered off mid-boot', () => {
+        transmitter.handlePowerToggle(true);
+        advanceSimTime(1000);
+        transmitter.handlePowerToggle(false);
+
+        expect(transmitter.activeModem.isBooting).toBe(false);
+
+        advanceSimTime(Transmitter.BOOT_TIME_MS + 100);
+
+        expect(transmitter.activeModem.isPowered).toBe(false);
+        expect(transmitter.activeModem.isBooting).toBe(false);
+      });
+
+      it('boots the modem that was powered even if another modem is selected mid-boot', () => {
+        transmitter.handlePowerToggle(true);
+        transmitter.setActiveModem(2);
+
+        advanceSimTime(Transmitter.BOOT_TIME_MS + 100);
+
+        const modem1 = transmitter.state.modems.find((m) => m.modem_number === 1)!;
+        expect(modem1.isPowered).toBe(true);
+        expect(modem1.isBooting).toBe(false);
+      });
+
+      it('ignores a second power-on while already booting (no boot restart)', () => {
+        transmitter.handlePowerToggle(true);
+        advanceSimTime(3000);
+        transmitter.handlePowerToggle(true);
+
+        advanceSimTime(1100);
+
+        expect(transmitter.activeModem.isPowered).toBe(true);
+        expect(transmitter.activeModem.isBooting).toBe(false);
+      });
+
+      it('drops the transmit switch on power-off so the next boot comes up unkeyed', () => {
+        transmitter.activeModem.isPowered = true;
+        transmitter.handleTransmitToggle(true);
+
+        transmitter.handlePowerToggle(false);
+
+        expect(transmitter.activeModem.isTransmittingSwitchUp).toBe(false);
+      });
     });
   });
 

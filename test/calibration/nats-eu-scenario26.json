@@ -27,10 +27,10 @@
           "pass": {
             "aosS": 32587.27,
             "losS": 33030.7,
-            "maxEl": 33.41
+            "maxEl": 33.4
           },
           "atPeak": {
-            "elevationDeg": 33.41,
+            "elevationDeg": 33.4,
             "frequencyMHz": 11711.27,
             "gainDbi": 51.1,
             "gOverTDbPerK": 29.55,

@@ -44,10 +44,10 @@
           "pass": {
             "aosS": 2593.36,
             "losS": 3018.05,
-            "maxEl": 25.19
+            "maxEl": 25.18
           },
           "atPeak": {
-            "elevationDeg": 25.19,
+            "elevationDeg": 25.18,
             "frequencyMHz": 11711.26,
             "gainDbi": 51.1,
             "gOverTDbPerK": 29.42,
@@ -103,7 +103,7 @@
           },
           "atPeak": {
             "elevationDeg": 27.87,
-            "frequencyMHz": 11703.27,
+            "frequencyMHz": 11703.26,
             "gainDbi": 51.1,
             "gOverTDbPerK": 29.46,
             "tsysK": 123.7
@@ -111,8 +111,8 @@
           "carriers": [
             {
               "signalId": "MERIDIAN-SAR-2-Beacon",
-              "rfMHz": 11703.27,
-              "ifMHz": 1396.73,
+              "rfMHz": 11703.26,
+              "ifMHz": 1396.74,
               "bandwidthMHz": 0,
               "modulation": "CW",
               "fec": "null",
@@ -128,8 +128,8 @@
             },
             {
               "signalId": "MERIDIAN-SAR-2-VIDEO",
-              "rfMHz": 11730.27,
-              "ifMHz": 1369.73,
+              "rfMHz": 11730.26,
+              "ifMHz": 1369.74,
               "bandwidthMHz": 36,
               "modulation": "QPSK",
               "fec": "3/4",

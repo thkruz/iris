@@ -266,14 +266,22 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
     }
 
     const extRefPresent = this.isExtRefPresent();
+    // Pulling in to the reference (2-5 s after power-on or a reference
+    // restore) is a normal transient: one info line, not a lock, frequency
+    // error and phase-noise alarm for a few seconds each (phase 27, r2-s02-F4)
+    const isAcquiring = this.isAcquiringReference;
+
+    if (isAcquiring) {
+      alarms.push('BUC acquiring 10 MHz reference');
+    }
 
     // Lock alarm
-    if (!this.state.isExtRefLocked && extRefPresent) {
+    if (!this.state.isExtRefLocked && extRefPresent && !isAcquiring) {
       alarms.push('BUC not locked to reference');
     }
 
     // Frequency error alarm (when unlocked)
-    if (!this.state.isExtRefLocked && Math.abs(this.state.frequencyError) > 50000) {
+    if (!this.state.isExtRefLocked && !isAcquiring && Math.abs(this.state.frequencyError) > 50000) {
       alarms.push(`BUC frequency error: ${(this.state.frequencyError / 1000).toFixed(1)} kHz`);
     }
 
@@ -298,7 +306,7 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
     }
 
     // Phase noise degradation (when unlocked)
-    if (this.state.phaseNoise > -85 && !this.state.isExtRefLocked) {
+    if (this.state.phaseNoise > -85 && !this.state.isExtRefLocked && !isAcquiring) {
       alarms.push('BUC phase noise degraded (unlocked)');
     }
 
@@ -366,10 +374,11 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
 
   /**
    * Get the active LO injection mode based on which sideband is in-band
-   * @returns 'low' for USB (LO+IF in band), 'high' for LSB (LO-IF in band), 'none' if neither
+   * @returns 'low' for USB (LO+IF in band), 'high' for LSB (LO-IF in band), 'none' if neither, 'no-input' without IF drive
    */
-  getActiveInjectionMode(): 'low' | 'high' | 'none' {
-    if (this.inputSignals.length === 0) return 'none';
+  getActiveInjectionMode(): 'low' | 'high' | 'none' | 'no-input' {
+    // No modem driving the IF: there is no sideband to judge (phase 27, r2-s11-F1)
+    if (this.inputSignals.length === 0) return 'no-input';
 
     const ifFreq = this.inputSignals[0].frequency;
     const loHz = this.state.loFrequency * 1e6;
@@ -446,7 +455,8 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
       // In real system, lock acquisition takes 2-5 seconds
       // Simulate lock acquisition if not already locked
       if (!this.state.isExtRefLocked) {
-        this.simulateLockAcquisition();
+        // One timer per acquisition; it locks only if the reference is still there
+        this.simulateLockAcquisition(2000, 5000, undefined, () => this.state.isPowered && this.isExtRefPresent());
       }
     } else {
       this.state.isExtRefLocked = false;

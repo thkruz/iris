@@ -317,6 +317,24 @@ describe('AGCModuleCore', () => {
       expect(alarms[0]).toContain('weak signal');
     });
 
+    it('inhibits the gain-limit alarms while the antenna is stowed or slewing to a new position (phase 27, r2-s03-F2)', () => {
+      agcModule.state.isBypassed = false;
+      agcModule.state.maxGain = 30 as dB;
+      agcModule.state.currentGain = 29.8 as dB;
+      const antenna = { isRepositioning: true };
+      rfFrontEnd.antenna = antenna as never;
+      expect(agcModule.getAlarms().some((a) => a.includes('max gain'))).toBe(false);
+
+      agcModule.state.minGain = -30 as dB;
+      agcModule.state.currentGain = -29.8 as dB;
+      expect(agcModule.getAlarms().some((a) => a.includes('min gain'))).toBe(false);
+
+      // On station again: the limits alarm
+      antenna.isRepositioning = false;
+      expect(agcModule.getAlarms().some((a) => a.includes('min gain'))).toBe(true);
+      rfFrontEnd.antenna = null;
+    });
+
     it('should alarm when at min gain', () => {
       agcModule.state.isBypassed = false;
       agcModule.state.currentGain = -29.8 as dB;

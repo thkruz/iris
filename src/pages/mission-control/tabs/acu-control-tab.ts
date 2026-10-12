@@ -206,6 +206,7 @@ export class ACUControlTab extends BaseElement {
                                value="3948" step="0.1" min="1000" max="50000">
                         <span class="input-group-text">MHz</span>
                       </div>
+                      <div class="form-text small font-monospace" id="${p}beacon-if" title="Where the beacon lands at the LNB output: |LNB LO - RF| (what the spectrum analyzer tunes to)">IF: -- MHz</div>
                     </div>
                     <div class="mb-2">
                       <label class="form-label small mb-1">Search Bandwidth</label>
@@ -253,7 +254,7 @@ export class ACUControlTab extends BaseElement {
               <!-- Beacon C/N Display - visible in manual and program-track modes -->
               <div id="${p}beacon-display-section" class="mt-3" style="display: none;">
                 <div class="beacon-strength-container">
-                  <label class="form-label" title="Beacon C/N in the beacon receiver's narrow tracking bandwidth: higher than the carrier C/N on the RX modem, which is measured in the carrier's full bandwidth">Beacon C/N (1 kHz)</label>
+                  <label class="form-label" id="${p}beacon-cn-label" title="Beacon C/N in the beacon receiver's narrow tracking bandwidth: higher than the carrier C/N on the RX modem, which is measured in the carrier's full bandwidth">Beacon C/N (1 kHz)</label>
                   <div class="beacon-strength-bar">
                     <div class="beacon-strength-fill" id="${p}beacon-strength-fill"></div>
                     <span class="beacon-strength-value" id="${p}beacon-cn-value">-- dB</span>
@@ -362,7 +363,7 @@ export class ACUControlTab extends BaseElement {
               <div class="row g-2">
                 <div class="col-4">
                   <div class="rf-metric-box">
-                    <div class="rf-metric-label">Frequency</div>
+                    <div class="rf-metric-label" title="The tracked beacon frequency (RF) the metrics are quoted at">Beacon Freq (RF)</div>
                     <div id="${p}rf-metric-freq" class="rf-metric-value">-- GHz</div>
                   </div>
                 </div>
@@ -408,6 +409,18 @@ export class ACUControlTab extends BaseElement {
   /**
    * Helper to query elements with the unique prefix
    */
+  /** A beacon's IF at the LNB output, MHz: |LO - RF| (C-band LNBs run the LO above or below the band) */
+  static beaconIfMHz(rfMHz: number, loMHz: number): number {
+    return Math.abs(loMHz - rfMHz);
+  }
+
+  /** A measurement bandwidth as an operator reads it: 1 kHz, 300 Hz, 2.5 MHz */
+  static formatBandwidth(hz: number): string {
+    if (hz >= 1e6) return `${Number((hz / 1e6).toFixed(2))} MHz`;
+    if (hz >= 1e3) return `${Number((hz / 1e3).toFixed(2))} kHz`;
+    return `${Math.round(hz)} Hz`;
+  }
+
   private qs_<T extends HTMLElement>(id: string): T | null {
     return this.dom_?.querySelector(`#${this.uniquePrefix_}${id}`) as T | null;
   }
@@ -892,6 +905,21 @@ export class ACUControlTab extends BaseElement {
     if (beaconFreqInput && document.activeElement !== beaconFreqInput) {
       const freqMHz = (state.stagedBeaconFrequencyHz ?? state.beaconFrequencyHz) / 1e6;
       beaconFreqInput.value = freqMHz.toString();
+    }
+
+    // Its IF equivalent through this station's LNB (phase 27): the number the
+    // analyzer is tuned to, so the operator does not have to work it out
+    const beaconIfEl = this.qs_('beacon-if');
+    if (beaconIfEl) {
+      const rfMHz = (state.stagedBeaconFrequencyHz ?? state.beaconFrequencyHz) / 1e6;
+      const loMHz = this.groundStation.rfFrontEnds[this.antennaIndex_]?.lnbModule?.state.loFrequency as number | undefined;
+      beaconIfEl.textContent = loMHz && rfMHz > 0 ? `IF: ${ACUControlTab.beaconIfMHz(rfMHz, loMHz).toFixed(1)} MHz (LNB LO ${loMHz} MHz)` : 'IF: -- MHz';
+    }
+
+    // The beacon receiver's measurement bandwidth, from the antenna (phase 27)
+    const beaconCnLabel = this.qs_('beacon-cn-label');
+    if (beaconCnLabel) {
+      beaconCnLabel.textContent = `Beacon C/N (${ACUControlTab.formatBandwidth(state.beaconTrackingBwHz)})`;
     }
 
     // Sync beacon search bandwidth input (skip if user is typing)

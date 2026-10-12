@@ -115,6 +115,7 @@ export class TransmitterAdapter {
 
     // Switches
     this.cacheElement_('tx-transmit-switch', 'tx-switch');
+    this.cacheElement_('tx-boot-status', 'boot-status');
     this.cacheElement_('tx-fault-reset-btn', 'fault-reset-btn');
     this.cacheElement_('tx-loopback-switch', 'loopback-switch');
     this.cacheElement_('tx-power-switch', 'power-switch');
@@ -339,6 +340,10 @@ export class TransmitterAdapter {
     const isEnabled = (e.target as HTMLInputElement).checked;
     this.transmitter.handleTransmitToggle(isEnabled);
     this.syncDomWithState_(this.transmitter.state);
+    // A refused request (modem off or booting) leaves the core state unchanged,
+    // so the diffed sync above skips; snap the switch back to the core state
+    this.updateSwitchesAndLeds_();
+    this.updateStatusBar_();
   }
 
   private faultResetHandler_(): void {
@@ -589,10 +594,19 @@ export class TransmitterAdapter {
     const activeModem = this.getActiveModem_();
     if (!activeModem) return;
 
-    // TX Switch
+    const isBooting = activeModem.isBooting === true;
+
+    // TX Switch: locked out while the modem firmware boots
     const txSwitch = this.domCache_.get('tx-switch') as HTMLInputElement;
     if (txSwitch) {
       txSwitch.checked = activeModem.isTransmitting;
+      txSwitch.disabled = isBooting;
+    }
+
+    const bootStatus = this.domCache_.get('boot-status');
+    if (bootStatus) {
+      bootStatus.textContent = isBooting ? 'BOOTING' : '';
+      bootStatus.classList.toggle('d-none', !isBooting);
     }
 
     // Loopback Switch
@@ -604,7 +618,8 @@ export class TransmitterAdapter {
     // Power Switch
     const powerSwitch = this.domCache_.get('power-switch') as HTMLInputElement;
     if (powerSwitch) {
-      powerSwitch.checked = activeModem.isPowered;
+      // The operator switched power on; it stays on while the modem boots
+      powerSwitch.checked = activeModem.isPowered || isBooting;
     }
 
     // LEDs (using card-alarm-led flat style)
@@ -629,7 +644,13 @@ export class TransmitterAdapter {
     const onlineLed = this.domCache_.get('online-led');
     if (onlineLed) {
       onlineLed.classList.remove('off', 'success', 'error', 'warning');
-      onlineLed.classList.add(activeModem.isPowered ? 'success' : 'off');
+      let onlineClass = 'off';
+      if (activeModem.isPowered) {
+        onlineClass = 'success';
+      } else if (isBooting) {
+        onlineClass = 'warning';
+      }
+      onlineLed.classList.add(onlineClass);
     }
   }
 
@@ -647,7 +668,11 @@ export class TransmitterAdapter {
       return;
     }
 
-    if (alarms.length === 0) {
+    const activeModem = this.getActiveModem_();
+    if (activeModem?.isBooting) {
+      statusBar.className = 'alert alert-warning mt-3';
+      statusBar.textContent = `Modem ${activeModem.modem_number} BOOTING - TX modem still initializing`;
+    } else if (alarms.length === 0) {
       if (this.transmitter.state.modems[this.transmitter.state.activeModem - 1]?.isTransmitting) {
         statusBar.className = 'alert alert-success mt-3';
         statusBar.textContent = 'Transmitting';

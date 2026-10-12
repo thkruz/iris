@@ -180,21 +180,40 @@ describe('StepTrackController (phase 19.4 hill-climb)', () => {
       expect(controller.isActive).toBe(true);
     });
 
-    it('gives up when the beacon is not trackable (< 3 dB)', () => {
+    it('keeps SEARCHING when the beacon is not trackable (< 3 dB), holding its pointing (phase 27, r2-s06-F2)', () => {
       antenna.peak.cn = 2;
       antenna.state.isAutoTrackEnabled = true;
       controller.start();
       run(3_000);
-      expect(controller.isActive).toBe(false);
+      expect(controller.isActive).toBe(true);
+      expect(controller.isSearching).toBe(true);
       expect(antenna.state.isBeaconLocked).toBe(false);
-      expect(antenna.state.isAutoTrackEnabled).toBe(false);
+      // Still armed: the ACU reads SEARCHING, not IDLE
+      expect(antenna.state.isAutoTrackEnabled).toBe(true);
+      expect(antenna.state.stepTrackAzOffset).toBe(0);
+      expect(antenna.state.stepTrackElOffset).toBe(0);
     });
 
-    it('gives up when there is no beacon in the search window', () => {
+    it('keeps SEARCHING with no beacon in the search window, then climbs once it appears', () => {
       antenna.noBeacon = true;
       controller.start();
       run(3_000);
+      expect(controller.isActive).toBe(true);
+      expect(controller.isSearching).toBe(true);
+
+      antenna.noBeacon = false;
+      run(4_000);
+      expect(controller.isSearching).toBe(false);
+      expect(controller.getState().lastMeasuredCn).not.toBeNull();
+    });
+
+    it('stops when told to', () => {
+      antenna.noBeacon = true;
+      controller.start();
+      run(2_000);
+      controller.stop();
       expect(controller.isActive).toBe(false);
+      expect(controller.isSearching).toBe(false);
     });
   });
 

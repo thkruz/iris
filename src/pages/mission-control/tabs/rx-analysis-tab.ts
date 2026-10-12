@@ -64,6 +64,197 @@ export class RxAnalysisTab extends BaseElement {
     return html`
     <div class="rx-analysis-tab">
       <div class="row g-2 pb-6">
+        <!-- Spectrum Analyzer Canvas Card (top: the plot fits above the fold at 1080p) -->
+        <div class="col-8 d-flex">
+          <div class="card flex-fill">
+            <div class="card-header">
+              <h3 class="card-title">Spectrum Analyzer</h3>
+            </div>
+            <div class="card-body">
+              <div id="spec-analyzer-canvas-container" class="spec-analyzer-canvas row g-2">
+                <!-- Canvas will be moved here by adapter -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Spectrum Analyzer Controls Card -->
+        <div class="col-4 d-flex">
+          <div class="card flex-fill">
+            <div class="card-header">
+              <h3 class="card-title">Spectrum Analyzer Controls</h3>
+            </div>
+            <div class="card-body d-flex flex-column" id="spec-analyzer-controls">
+              <!-- Primary Action: Auto-Tune -->
+              <div class="sa-primary-actions mb-3">
+                <button id="sa-auto-tune" class="btn btn-lg btn-primary w-100">
+                  <strong>AUTO-TUNE</strong>
+                </button>
+              </div>
+
+              <!-- Peak Search: marker to the highest point of the trace (always visible) -->
+              <div class="sa-peak-row d-flex align-items-center gap-2 mb-2">
+                <button id="sa-peak-search" class="btn btn-sm btn-outline-primary" title="Put the marker on the highest point of the trace">Peak Search</button>
+                <div id="sa-peak-readout" class="sa-peak-readout font-monospace small flex-fill text-end">Peak: --- MHz @ --- dBm</div>
+              </div>
+
+              <!-- Frequency Row -->
+              <div class="row g-2 mb-2">
+                <div class="col-6">
+                  <label class="form-label text-muted small text-uppercase">Center Frequency</label>
+                  <div class="input-group input-group-sm">
+                    <input type="number" id="sa-center-freq" class="form-control" step="0.001">
+                    <span class="input-group-text">MHz</span>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <label class="form-label text-muted small text-uppercase">Span</label>
+                  <div class="input-group input-group-sm">
+                    <input type="number" id="sa-span" class="form-control" step="0.001">
+                    <span class="input-group-text">MHz</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Amplitude Row (always visible) -->
+              <div class="row g-2 mb-2">
+                <div class="col-6">
+                  <label class="form-label text-muted small text-uppercase">Min Amp</label>
+                  <div class="input-group input-group-sm">
+                    <input type="number" id="sa-min-amp" class="form-control" step="1">
+                    <span class="input-group-text">dBm</span>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <label class="form-label text-muted small text-uppercase">Max Amp</label>
+                  <div class="input-group input-group-sm">
+                    <input type="number" id="sa-max-amp" class="form-control" step="1">
+                    <span class="input-group-text">dBm</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RBW Row (always visible) -->
+              <div class="row g-2 mb-2">
+                <div class="col-6">
+                  <label class="form-label text-muted small text-uppercase">RBW</label>
+                  <select id="sa-rbw" class="form-select form-select-sm">
+                    <option value="auto">Auto</option>
+                    <option value="0.00001">10 Hz</option>
+                    <option value="0.00003">30 Hz</option>
+                    <option value="0.0001">100 Hz</option>
+                    <option value="0.0003">300 Hz</option>
+                    <option value="0.001">1 kHz</option>
+                    <option value="0.003">3 kHz</option>
+                    <option value="0.01">10 kHz</option>
+                    <option value="0.03">30 kHz</option>
+                    <option value="0.1">100 kHz</option>
+                    <option value="0.3">300 kHz</option>
+                    <option value="1">1 MHz</option>
+                    <option value="3">3 MHz</option>
+                  </select>
+                </div>
+                <div class="col-6 d-flex align-items-end">
+                  <div id="sa-rbw-status" class="small text-muted font-monospace pb-1">RBW --</div>
+                </div>
+              </div>
+
+              <!-- Engineering Controls (hidden by default, shown with ENGINEERING_MODE) -->
+              <div id="sa-engineering-controls" class="sa-engineering-controls mb-2" style="display: none;">
+                <div class="row g-2">
+                  <div class="col-4">
+                    <label class="form-label text-muted small text-uppercase">Ref Level</label>
+                    <div class="input-group input-group-sm">
+                      <input type="number" id="sa-ref-level" class="form-control" step="1">
+                      <span class="input-group-text">dBm</span>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <label class="form-label text-muted small text-uppercase">Scale</label>
+                    <select id="sa-scale" class="form-select form-select-sm">
+                      <option value="1">1 dB/div</option>
+                      <option value="2">2 dB/div</option>
+                      <option value="5">5 dB/div</option>
+                      <option value="6" selected>6 dB/div</option>
+                      <option value="10">10 dB/div</option>
+                    </select>
+                  </div>
+                  <div class="col-4">
+                    <label class="form-label text-muted small text-uppercase">Refresh</label>
+                    <select id="sa-refresh" class="form-select form-select-sm">
+                      <option value="1">1 Hz</option>
+                      <option value="5">5 Hz</option>
+                      <option value="10" selected>10 Hz</option>
+                      <option value="15">15 Hz</option>
+                      <option value="20">20 Hz</option>
+                      <option value="30">30 Hz</option>
+                    </select>
+                  </div>
+                  <div class="col-4">
+                    <label class="form-label text-muted small text-uppercase">Markers</label>
+                    <div class="form-check form-switch mb-0">
+                      <input type="checkbox" id="sa-marker-enabled" class="form-check-input" role="switch">
+                      <label for="sa-marker-enabled" class="form-check-label">Enable</label>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <label class="form-label text-muted small text-uppercase">Index</label>
+                    <input type="number" id="sa-marker-index" class="form-control form-control-sm" min="0">
+                  </div>
+                  <div class="col-4">
+                    <label class="form-label text-muted small text-uppercase">Peak</label>
+                    <div id="sa-marker-info" class="form-control-plaintext font-monospace small">--- MHz @ --- dBm</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Display Mode & Actions -->
+              <div class="sa-display-mode-actions">
+                <div class="row g-2">
+                  <div class="col-6 d-flex justify-content-center align-items-center">
+                    <div class="btn-group btn-group-sm">
+                      <button id="sa-mode-spectral" class="btn btn-outline-primary active">Spectral</button>
+                      <button id="sa-mode-waterfall" class="btn btn-outline-primary">Waterfall</button>
+                      <button id="sa-mode-both" class="btn btn-outline-primary">Both</button>
+                    </div>
+                  </div>
+                  <div class="col-6 d-flex justify-content-center align-items-center">
+                    <button id="sa-pause" class="btn btn-warning btn-sm">Pause</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Trace Controls -->
+              <div class="row g-2 mb-2 sa-trace-controls">
+                <div class="col-12">
+                  <label class="form-label text-muted small text-uppercase">Traces</label>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div class="btn-group btn-group-sm">
+                      <button id="sa-trace-1" class="btn btn-outline-primary active" data-trace="1">T1</button>
+                      <button id="sa-trace-2" class="btn btn-outline-primary" data-trace="2">T2</button>
+                      <button id="sa-trace-3" class="btn btn-outline-primary" data-trace="3">T3</button>
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                      <input type="checkbox" id="sa-trace-visible" class="form-check-input" role="switch" checked>
+                      <label for="sa-trace-visible" class="form-check-label">Visible</label>
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                      <input type="checkbox" id="sa-trace-updating" class="form-check-input" role="switch" checked>
+                      <label for="sa-trace-updating" class="form-check-label">Updating</label>
+                    </div>
+                    <select id="sa-trace-mode" class="form-select form-select-sm" style="width: auto;">
+                      <option value="clearwrite">Clear Write</option>
+                      <option value="maxhold">Max Hold</option>
+                      <option value="minhold">Min Hold</option>
+                      <option value="average">Average</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- LNB Control Card -->
         <div class="col-lg-6">
           <div class="card h-100">
@@ -346,181 +537,6 @@ export class RxAnalysisTab extends BaseElement {
                       <span class="metric-label">Coupling:</span>
                       <span id="tap-b-coupling" class="metric-value font-monospace">-20 dB</span>
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Spectrum Analyzer Canvas Card -->
-        <div class="col-8 d-flex">
-          <div class="card flex-fill">
-            <div class="card-header">
-              <h3 class="card-title">Spectrum Analyzer</h3>
-            </div>
-            <div class="card-body">
-              <div id="spec-analyzer-canvas-container" class="spec-analyzer-canvas row g-2">
-                <!-- Canvas will be moved here by adapter -->
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Spectrum Analyzer Controls Card -->
-        <div class="col-4 d-flex">
-          <div class="card flex-fill">
-            <div class="card-header">
-              <h3 class="card-title">Spectrum Analyzer Controls</h3>
-            </div>
-            <div class="card-body d-flex flex-column" id="spec-analyzer-controls">
-              <!-- Primary Action: Auto-Tune -->
-              <div class="sa-primary-actions mb-3">
-                <button id="sa-auto-tune" class="btn btn-lg btn-primary w-100">
-                  <strong>AUTO-TUNE</strong>
-                </button>
-              </div>
-
-              <!-- Frequency Row -->
-              <div class="row g-2 mb-2">
-                <div class="col-6">
-                  <label class="form-label text-muted small text-uppercase">Center Frequency</label>
-                  <div class="input-group input-group-sm">
-                    <input type="number" id="sa-center-freq" class="form-control" step="0.001">
-                    <span class="input-group-text">MHz</span>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <label class="form-label text-muted small text-uppercase">Span</label>
-                  <div class="input-group input-group-sm">
-                    <input type="number" id="sa-span" class="form-control" step="0.001">
-                    <span class="input-group-text">MHz</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Amplitude Row (always visible) -->
-              <div class="row g-2 mb-2">
-                <div class="col-6">
-                  <label class="form-label text-muted small text-uppercase">Min Amp</label>
-                  <div class="input-group input-group-sm">
-                    <input type="number" id="sa-min-amp" class="form-control" step="1">
-                    <span class="input-group-text">dBm</span>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <label class="form-label text-muted small text-uppercase">Max Amp</label>
-                  <div class="input-group input-group-sm">
-                    <input type="number" id="sa-max-amp" class="form-control" step="1">
-                    <span class="input-group-text">dBm</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- RBW Row (always visible) -->
-              <div class="row g-2 mb-2">
-                <div class="col-6">
-                  <label class="form-label text-muted small text-uppercase">RBW</label>
-                  <select id="sa-rbw" class="form-select form-select-sm">
-                    <option value="auto">Auto</option>
-                    <option value="0.0001">100 Hz</option>
-                    <option value="0.001">1 kHz</option>
-                    <option value="0.01">10 kHz</option>
-                    <option value="0.1">100 kHz</option>
-                    <option value="1">1 MHz</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Engineering Controls (hidden by default, shown with ENGINEERING_MODE) -->
-              <div id="sa-engineering-controls" class="sa-engineering-controls mb-2" style="display: none;">
-                <div class="row g-2">
-                  <div class="col-4">
-                    <label class="form-label text-muted small text-uppercase">Ref Level</label>
-                    <div class="input-group input-group-sm">
-                      <input type="number" id="sa-ref-level" class="form-control" step="1">
-                      <span class="input-group-text">dBm</span>
-                    </div>
-                  </div>
-                  <div class="col-4">
-                    <label class="form-label text-muted small text-uppercase">Scale</label>
-                    <select id="sa-scale" class="form-select form-select-sm">
-                      <option value="1">1 dB/div</option>
-                      <option value="2">2 dB/div</option>
-                      <option value="5">5 dB/div</option>
-                      <option value="6" selected>6 dB/div</option>
-                      <option value="10">10 dB/div</option>
-                    </select>
-                  </div>
-                  <div class="col-4">
-                    <label class="form-label text-muted small text-uppercase">Refresh</label>
-                    <select id="sa-refresh" class="form-select form-select-sm">
-                      <option value="1">1 Hz</option>
-                      <option value="5">5 Hz</option>
-                      <option value="10" selected>10 Hz</option>
-                      <option value="15">15 Hz</option>
-                      <option value="20">20 Hz</option>
-                      <option value="30">30 Hz</option>
-                    </select>
-                  </div>
-                  <div class="col-4">
-                    <label class="form-label text-muted small text-uppercase">Markers</label>
-                    <div class="form-check form-switch mb-0">
-                      <input type="checkbox" id="sa-marker-enabled" class="form-check-input" role="switch">
-                      <label for="sa-marker-enabled" class="form-check-label">Enable</label>
-                    </div>
-                  </div>
-                  <div class="col-4">
-                    <label class="form-label text-muted small text-uppercase">Index</label>
-                    <input type="number" id="sa-marker-index" class="form-control form-control-sm" min="0">
-                  </div>
-                  <div class="col-4">
-                    <label class="form-label text-muted small text-uppercase">Peak</label>
-                    <div id="sa-marker-info" class="form-control-plaintext font-monospace small">--- MHz @ --- dBm</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Display Mode & Actions -->
-              <div class="sa-display-mode-actions">
-                <div class="row g-2">
-                  <div class="col-6 d-flex justify-content-center align-items-center">
-                    <div class="btn-group btn-group-sm">
-                      <button id="sa-mode-spectral" class="btn btn-outline-primary active">Spectral</button>
-                      <button id="sa-mode-waterfall" class="btn btn-outline-primary">Waterfall</button>
-                      <button id="sa-mode-both" class="btn btn-outline-primary">Both</button>
-                    </div>
-                  </div>
-                  <div class="col-6 d-flex justify-content-center align-items-center">
-                    <button id="sa-pause" class="btn btn-warning btn-sm">Pause</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Trace Controls -->
-              <div class="row g-2 mb-2 sa-trace-controls">
-                <div class="col-12">
-                  <label class="form-label text-muted small text-uppercase">Traces</label>
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div class="btn-group btn-group-sm">
-                      <button id="sa-trace-1" class="btn btn-outline-primary active" data-trace="1">T1</button>
-                      <button id="sa-trace-2" class="btn btn-outline-primary" data-trace="2">T2</button>
-                      <button id="sa-trace-3" class="btn btn-outline-primary" data-trace="3">T3</button>
-                    </div>
-                    <div class="form-check form-switch mb-0">
-                      <input type="checkbox" id="sa-trace-visible" class="form-check-input" role="switch" checked>
-                      <label for="sa-trace-visible" class="form-check-label">Visible</label>
-                    </div>
-                    <div class="form-check form-switch mb-0">
-                      <input type="checkbox" id="sa-trace-updating" class="form-check-input" role="switch" checked>
-                      <label for="sa-trace-updating" class="form-check-label">Updating</label>
-                    </div>
-                    <select id="sa-trace-mode" class="form-select form-select-sm" style="width: auto;">
-                      <option value="clearwrite">Clear Write</option>
-                      <option value="maxhold">Max Hold</option>
-                      <option value="minhold">Min Hold</option>
-                      <option value="average">Average</option>
-                    </select>
                   </div>
                 </div>
               </div>

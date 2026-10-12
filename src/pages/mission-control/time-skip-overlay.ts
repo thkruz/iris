@@ -23,6 +23,7 @@ export class TimeSkipOverlay {
   private el_: HTMLElement | null = null;
   private targetMs_ = 0;
   private satelliteName_ = '';
+  private label_: string | null = null;
 
   private readonly boundStartedHandler_: (data: TimeSkipStartedData) => void;
   private readonly boundProgressHandler_: (data: TimeSkipProgressData) => void;
@@ -43,6 +44,7 @@ export class TimeSkipOverlay {
   private handleStarted_(data: TimeSkipStartedData): void {
     this.targetMs_ = data.targetMs;
     this.satelliteName_ = data.satelliteName;
+    this.label_ = data.label ?? null;
 
     document.body.insertAdjacentHTML(
       'beforeend',
@@ -91,7 +93,7 @@ export class TimeSkipOverlay {
       targetEl.innerHTML = html`
         Holding at <strong>${formatUtcClock(this.targetMs_)}</strong>
         &middot; ${formatDuration(remainingMs)} of scenario time to go
-        &middot; then ${this.satelliteName_} AOS
+        &middot; ${this.label_ ? `waiting out the ${this.label_}` : `then ${this.satelliteName_} AOS`}
       `;
     }
   }

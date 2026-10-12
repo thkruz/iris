@@ -67,4 +67,10 @@ export interface GroundStationConfig {
    * professional site exactly as before.
    */
   stationClass?: 'professional' | 'backyard';
+  /**
+   * The station's ACU tag (phase 27, r2-s11-F2). Omitted: derived from the
+   * station number in `id` ('ME-02' -> 'ACU-02'), so two sites never both
+   * read ACU-01. An antenna state's own `acuSerialNumber` wins.
+   */
+  acuSerialNumber?: string;
 }

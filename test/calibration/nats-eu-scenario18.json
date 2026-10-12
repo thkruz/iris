@@ -83,7 +83,7 @@
             "frequencyMHz": 11711.26,
             "gainDbi": 51.1,
             "gOverTDbPerK": 29.39,
-            "tsysK": 125.86
+            "tsysK": 125.87
           },
           "carriers": [
             {
@@ -105,8 +105,8 @@
             },
             {
               "signalId": "MERIDIAN-SAR-1-VIDEO",
-              "rfMHz": 11686.26,
-              "ifMHz": 1413.74,
+              "rfMHz": 11686.25,
+              "ifMHz": 1413.75,
               "bandwidthMHz": 36,
               "modulation": "QPSK",
               "fec": "3/4",
@@ -131,10 +131,10 @@
           "pass": {
             "aosS": 1151.02,
             "losS": 1584.14,
-            "maxEl": 31.76
+            "maxEl": 31.75
           },
           "atPeak": {
-            "elevationDeg": 31.76,
+            "elevationDeg": 31.75,
             "frequencyMHz": 11703.27,
             "gainDbi": 51.1,
             "gOverTDbPerK": 29.52,
@@ -281,10 +281,10 @@
           "pass": {
             "aosS": 1023.98,
             "losS": 1477.27,
-            "maxEl": 56.52
+            "maxEl": 56.51
           },
           "atPeak": {
-            "elevationDeg": 56.52,
+            "elevationDeg": 56.51,
             "frequencyMHz": 11703.28,
             "gainDbi": 51.1,
             "gOverTDbPerK": 29.69,

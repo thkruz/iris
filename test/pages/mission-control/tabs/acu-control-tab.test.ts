@@ -79,6 +79,7 @@ describe('ACUControlTab', () => {
     stagedTargetElevation: 45,
     stagedTargetPolarization: 0,
     beaconFrequencyHz: 3948e6,
+    beaconTrackingBwHz: 1_000,
     beaconSearchBwHz: 500e3,
     beaconCN: null,
     rxSignalsIn: [],
@@ -138,6 +139,7 @@ describe('ACUControlTab', () => {
       rfFrontEnds: [
         {
           omtModule: { state: {} },
+          lnbModule: { state: { loFrequency: 5150 } },
         },
       ],
       initializeEquipment: vi.fn(),
@@ -866,6 +868,20 @@ describe('ACUControlTab', () => {
       for (const id of ['step-track-toggle', 'heater-switch', 'blower-switch']) {
         expect(document.querySelector(`label[for="${PREFIX}${id}"]`)).not.toBeNull();
       }
+    });
+  });
+  describe('beacon readouts (phase 27)', () => {
+    it("shows the beacon's IF through the station LNB and labels C/N with its measurement bandwidth", () => {
+      const ifText = document.querySelector('[id$="beacon-if"]')?.textContent ?? '';
+      expect(ifText).toContain('1202.0 MHz');
+      expect(ifText).toContain('LNB LO 5150');
+      expect(document.querySelector('[id$="beacon-cn-label"]')?.textContent).toBe('Beacon C/N (1 kHz)');
+    });
+
+    it('formats bandwidths and IFs', () => {
+      expect(ACUControlTab.formatBandwidth(1_000)).toBe('1 kHz');
+      expect(ACUControlTab.formatBandwidth(300)).toBe('300 Hz');
+      expect(ACUControlTab.beaconIfMHz(4175.5, 5250)).toBeCloseTo(1074.5, 6);
     });
   });
 });

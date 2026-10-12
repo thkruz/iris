@@ -1,3 +1,4 @@
+import { amplifierFromDatasheet, compressionDb } from '@app/equipment/rf-front-end/amplifier-models';
 import { carrierTransmission, transmissionLossDb } from '@app/equipment/rf-front-end/filter-response';
 import { combinePhaseNoiseDbcHz, FreeRunDrift, LO_PHASE_NOISE_DBC_HZ } from '@app/equipment/rf-front-end/lo-reference';
 import { RFFrontEndCore } from '@app/equipment/rf-front-end/rf-front-end-core';
@@ -15,6 +16,26 @@ const PASSBAND_SKIRT_HZ = 25e6;
 const PASSBAND_SKIRT_ORDER = 3;
 /** A carrier the passband takes more than this off does not reach the IF at all, dB */
 const PASSBAND_DROP_DB = 60;
+
+/**
+ * BUC loopback test loop (phase 27, r2-s07-F1). A real loop is a directional
+ * coupler on the BUC output into a fixed pad feeding the LNB input; it never
+ * puts the BUC's full output into an LNA built for -90 dBm downlinks. 66 dB
+ * puts the station's standard drive (modem -7 dBm, BUC 23 dB: +16 dBm) at the
+ * LNB's input P1dB at the 60 dB gain S7 runs (-50 dBm), so the procedure's
+ * backed-off 20 dB drive sits 3 dB under it (~0.2 dB of compression) and the
+ * AGC levels it mid-range.
+ */
+export const LOOPBACK_COUPLING_DB = 66;
+
+/**
+ * Output P1dB of a C-band PLL LNB, dBm: +10 dBm is the typical datasheet
+ * figure (e.g. Norsat 3000-series, NJR2836). Input P1dB = this - gain, so
+ * -50 dBm at 60 dB gain. Rapp (s = 2) AM/AM on the LNB's total input.
+ */
+export const LNB_OUTPUT_P1DB_DBM = 10;
+/** Compression the LNB alarms on, dB */
+const LNB_COMPRESSION_ALARM_DB = 0.5;
 
 /**
  * Low Noise Block converter module state
@@ -50,6 +71,13 @@ export interface LNBState extends RFFrontEndModuleState {
    * inverted; the default, every shipped station), 'low' = IF = RF − LO.
    */
   loInjection?: 'high' | 'low';
+  /**
+   * Gain the LNB comes back at after a power cycle, dB (Phase 27 Q6). An LNB
+   * whose gain trim is not held in non-volatile memory powers up at its
+   * factory default, so an operator who runs it lower has to set it again.
+   * Undefined: the set gain survives a power cycle.
+   */
+  powerOnGain?: dB;
 }
 
 /** Direct-sampling (SDR) passband limits, modeled on common RTL-SDR tuners */
@@ -68,6 +96,8 @@ export abstract class LNBModuleCore extends RFFrontEndModule<LNBState> {
 
   // Thermal stabilization tracking
   private powerOnTimestamp_: number | null = null;
+  /** Gain compression at the last update, dB */
+  private compressionDb_ = 0;
   private lastRunMs_: number | null = null;
   /**
    * The LO's own oscillator when it is not locked to the station reference:
@@ -134,12 +164,15 @@ export abstract class LNBModuleCore extends RFFrontEndModule<LNBState> {
       return;
     }
 
-    // Calculate post-LNA signals (apply LNA gain)
-    this.postLNASignals = this.rxSignalsIn.map(
+    // Calculate post-LNA signals (apply LNA gain, less the compression the
+    // total input drives the LNB into; phase 27)
+    const inputs = this.rxSignalsIn;
+    this.compressionDb_ = this.compressionFor_(inputs);
+    this.postLNASignals = inputs.map(
       (sig) =>
         ({
           ...sig,
-          power: sig.power + this.state.gain,
+          power: sig.power + this.state.gain - this.compressionDb_,
           origin: SignalOrigin.LOW_NOISE_AMPLIFIER,
         }) as RfSignal
     );
@@ -223,9 +256,40 @@ export abstract class LNBModuleCore extends RFFrontEndModule<LNBState> {
 
   get rxSignalsIn(): RfSignal[] {
     const omtSignals = this.rfFrontEnd_.omtModule.rxSignalsOut;
-    const bucLoopback = this.rfFrontEnd_.bucModule.state.isLoopback ? this.rfFrontEnd_.bucModule.outputSignals : [];
+    // Loopback reaches the LNB through the test-loop coupler, not at full BUC output
+    const bucLoopback = this.rfFrontEnd_.bucModule.state.isLoopback
+      ? this.rfFrontEnd_.bucModule.outputSignals.map((sig) => ({ ...sig, power: (sig.power - LOOPBACK_COUPLING_DB) as dBm }))
+      : [];
 
     return [...omtSignals, ...bucLoopback];
+  }
+
+  /** Gain compression from the last update, dB (0 when linear) */
+  get compressionDb(): number {
+    return this.compressionDb_;
+  }
+
+  /**
+   * Gain compression the total input drives the LNB into, dB (Rapp, output
+   * P1dB LNB_OUTPUT_P1DB_DBM). Every carrier pays it: a compressed LNB turns
+   * down the whole band, the downlink with the loop carrier. Direct sampling
+   * (an SDR front end) has no LNB amplifier to model.
+   */
+  private compressionFor_(inputs: RfSignal[]): number {
+    if (this.state.isDirectSampling || inputs.length === 0) {
+      return 0;
+    }
+    const totalMw = inputs.reduce((sum, sig) => sum + 10 ** ((sig.power as number) / 10), 0);
+    if (!(totalMw > 0)) {
+      return 0;
+    }
+    const totalDbm = 10 * Math.log10(totalMw);
+    // Far under P1dB: linear (skip the model on every normal frame)
+    if (totalDbm + this.state.gain < LNB_OUTPUT_P1DB_DBM - 20) {
+      return 0;
+    }
+
+    return Math.max(0, compressionDb(amplifierFromDatasheet('rapp', this.state.gain, LNB_OUTPUT_P1DB_DBM), totalDbm));
   }
 
   /**
@@ -417,6 +481,11 @@ export abstract class LNBModuleCore extends RFFrontEndModule<LNBState> {
       alarms.push(`LNB noise figure degraded (${this.state.lnaNoiseFigure.toFixed(2)} dB)`);
     }
 
+    // Input overload: the LNB is past linear (a loop driven too hard, a strong interferer)
+    if (this.compressionDb_ >= LNB_COMPRESSION_ALARM_DB) {
+      alarms.push(`LNB input overload - ${this.compressionDb_.toFixed(1)} dB gain compression`);
+    }
+
     return alarms;
   }
 
@@ -478,6 +547,11 @@ export abstract class LNBModuleCore extends RFFrontEndModule<LNBState> {
       // Clear sticky fault on power-on (simulates power cycle clearing transient faults)
       if (!wasPowered && this.state.hasRefLockFault) {
         this.state.hasRefLockFault = false;
+      }
+
+      // A gain trim without non-volatile memory powers up at factory default
+      if (!wasPowered && this.state.powerOnGain !== undefined) {
+        this.state.gain = this.state.powerOnGain;
       }
     } else {
       this.powerOnTimestamp_ = null;

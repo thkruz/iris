@@ -82,7 +82,7 @@
           "pass": {
             "aosS": 2816.02,
             "losS": 3269.77,
-            "maxEl": 14.68
+            "maxEl": 14.67
           },
           "atPeak": null,
           "carriers": [],
@@ -150,10 +150,10 @@
           "pass": {
             "aosS": 2816.02,
             "losS": 3269.77,
-            "maxEl": 14.68
+            "maxEl": 14.67
           },
           "atPeak": {
-            "elevationDeg": 14.68,
+            "elevationDeg": 14.67,
             "frequencyMHz": 435.26,
             "gainDbi": 12,
             "gOverTDbPerK": -12.02,

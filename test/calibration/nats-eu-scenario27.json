@@ -25,7 +25,7 @@
           "noradId": 61701,
           "kind": "leo",
           "pass": {
-            "aosS": 20338.83,
+            "aosS": 20339.3,
             "losS": 20580.23,
             "maxEl": 8.03
           },
@@ -44,7 +44,7 @@
               "bandwidthMHz": 0,
               "modulation": "CW",
               "fec": "null",
-              "samples": 242,
+              "samples": 241,
               "peakCnDb": 19.15,
               "medianCnDb": 18.81,
               "peakEsN0Db": 19.94,
@@ -61,15 +61,15 @@
               "bandwidthMHz": 36,
               "modulation": "QPSK",
               "fec": "3/4",
-              "samples": 242,
+              "samples": 241,
               "peakCnDb": 4.88,
               "medianCnDb": 4.54,
               "peakEsN0Db": 5.67,
               "requiredEsN0Db": 5.03,
               "peakLockMarginDb": 0.64,
-              "peakRxIfDbm": -30.77,
-              "noiseIfDbm": -34.42,
-              "lockedSamples": 168
+              "peakRxIfDbm": -30.76,
+              "noiseIfDbm": -34.43,
+              "lockedSamples": 169
             }
           ],
           "adjacentCarriers": 0,
@@ -106,7 +106,7 @@
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
               "peakRxIfDbm": -61.59,
-              "noiseIfDbm": -80.97,
+              "noiseIfDbm": -80.98,
               "lockedSamples": 0
             },
             {

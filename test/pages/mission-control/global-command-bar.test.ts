@@ -91,7 +91,7 @@ describe('GlobalCommandBar', () => {
     it('should render UTC clock element', () => {
       const clock = document.querySelector('#utc-clock');
       expect(clock).not.toBeNull();
-      expect(clock?.textContent).toBe('-- --- ---- --:--:--');
+      expect(clock?.textContent).toBe('--- -- --- ---- --:--:--');
     });
 
     it('should render AOS countdown section', () => {
@@ -411,12 +411,14 @@ describe('GlobalCommandBar', () => {
         hasScenarioTimer: vi.fn(() => false),
         getObjectiveStates: vi.fn(() => []),
         isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => false),
       });
 
       vi.advanceTimersByTime(1000);
 
       const scenarioValue = document.querySelector('#scenario-timer-value');
-      expect(scenarioValue?.textContent).toBe('∞');
+      expect(scenarioValue?.textContent).toBe('--:--');
+      expect(document.querySelector<HTMLElement>('#scenario-timer-display')?.title).toBe('No time limit');
     });
 
     it('should show scenario time remaining when timer is active', () => {
@@ -426,6 +428,7 @@ describe('GlobalCommandBar', () => {
         formatTimeRemaining: vi.fn(() => '02:00'),
         getObjectiveStates: vi.fn(() => []),
         isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => false),
       });
 
       vi.advanceTimersByTime(1000);
@@ -440,6 +443,7 @@ describe('GlobalCommandBar', () => {
         getScenarioTimeRemaining: vi.fn(() => 0),
         getObjectiveStates: vi.fn(() => []),
         isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => false),
       });
 
       vi.advanceTimersByTime(1000);
@@ -457,6 +461,7 @@ describe('GlobalCommandBar', () => {
         formatTimeRemaining: vi.fn(() => '00:30'),
         getObjectiveStates: vi.fn(() => []),
         isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => false),
       });
 
       vi.advanceTimersByTime(1000);
@@ -472,6 +477,7 @@ describe('GlobalCommandBar', () => {
         formatTimeRemaining: vi.fn(() => '03:00'),
         getObjectiveStates: vi.fn(() => []),
         isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => false),
       });
 
       vi.advanceTimersByTime(1000);
@@ -484,6 +490,7 @@ describe('GlobalCommandBar', () => {
       ObjectivesManager.getInstance.mockReturnValue({
         hasScenarioTimer: vi.fn(() => false),
         isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => false),
         formatTimeRemaining: vi.fn(() => '01:30'),
         getObjectiveStates: vi.fn(() => [
           {
@@ -506,6 +513,7 @@ describe('GlobalCommandBar', () => {
       ObjectivesManager.getInstance.mockReturnValue({
         hasScenarioTimer: vi.fn(() => false),
         isQuizPassed: vi.fn(() => true),
+        isObjectiveCountdownHeld: vi.fn(() => false),
         getPassedObjectiveId: vi.fn(() => 'obj1'),
         getObjectiveStates: vi.fn(() => [
           {
@@ -527,6 +535,7 @@ describe('GlobalCommandBar', () => {
       ObjectivesManager.getInstance.mockReturnValue({
         hasScenarioTimer: vi.fn(() => false),
         isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => false),
         getObjectiveStates: vi.fn(() => [
           {
             objective: { id: 'obj1', title: 'Failed Objective', timeLimitSeconds: 60 },
@@ -547,6 +556,7 @@ describe('GlobalCommandBar', () => {
       ObjectivesManager.getInstance.mockReturnValue({
         hasScenarioTimer: vi.fn(() => false),
         isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => false),
         formatTimeRemaining: vi.fn(() => '00:20'),
         getObjectiveStates: vi.fn(() => [
           {
@@ -569,6 +579,7 @@ describe('GlobalCommandBar', () => {
       ObjectivesManager.getInstance.mockReturnValue({
         hasScenarioTimer: vi.fn(() => false),
         isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => false),
         formatTimeRemaining: vi.fn(() => '00:45'),
         getObjectiveStates: vi.fn(() => [
           {
@@ -591,6 +602,7 @@ describe('GlobalCommandBar', () => {
       ObjectivesManager.getInstance.mockReturnValue({
         hasScenarioTimer: vi.fn(() => false),
         isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => false),
         getObjectiveStates: vi.fn(() => []),
       });
 
@@ -598,8 +610,33 @@ describe('GlobalCommandBar', () => {
 
       const objectiveValue = document.querySelector('#objective-timer-value');
       const objectiveTimer = document.querySelector('#objective-timer-display');
-      expect(objectiveValue?.textContent).toBe('∞');
+      expect(objectiveValue?.textContent).toBe('--:--');
+      expect((objectiveTimer as HTMLElement | null)?.title).toBe('No time limit');
       expect(objectiveTimer?.classList.contains('timer-unlimited')).toBe(true);
+    });
+
+    it('shows no countdown for an objective whose timed work is done (Phase 27 Q1)', () => {
+      ObjectivesManager.getInstance.mockReturnValue({
+        hasScenarioTimer: vi.fn(() => false),
+        isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => true),
+        getObjectiveStates: vi.fn(() => [
+          {
+            objective: { id: 'obj1', title: 'Read the C/N', timeLimitSeconds: 120 },
+            isActive: true,
+            isTimerRunning: true,
+            isCompleted: false,
+            isFailed: false,
+            timeRemainingSeconds: 90,
+          },
+        ]),
+      });
+
+      vi.advanceTimersByTime(1000);
+
+      const objectiveTimer = document.querySelector<HTMLElement>('#objective-timer-display');
+      expect(document.querySelector('#objective-timer-value')?.textContent).toBe('--:--');
+      expect(objectiveTimer?.title).toContain('No time limit on the questions');
     });
   });
 
@@ -615,6 +652,14 @@ describe('GlobalCommandBar', () => {
 
       const clock = document.querySelector('#utc-clock');
       expect(clock?.textContent).toBe('01 Jan 2024 12:34:56');
+    });
+
+    it('prefixes the weekday of the scenario clock (briefs open with "Wednesday, 1430")', () => {
+      const timeTickHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.SIMULATED_TIME_TICK)?.[1];
+
+      timeTickHandler?.({ timeFormatted: '04 FEB 2026 14:30:00', timestampMs: Date.UTC(2026, 1, 4, 14, 30, 0) });
+
+      expect(document.querySelector('#utc-clock')?.textContent).toBe('WED 04 FEB 2026 14:30:00');
     });
 
     it('should unsubscribe from SIMULATED_TIME_TICK on dispose', () => {

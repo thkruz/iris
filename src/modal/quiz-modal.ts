@@ -177,9 +177,13 @@ export class QuizModal extends DraggableBox {
     // Set question text
     questionEl.textContent = this.currentQuiz_.question;
 
-    // Hide feedback and penalty notices
+    // Hide and clear feedback and penalty notices: a hidden notice left over
+    // from the previous quiz still reads through innerText/textContent
+    // (nats-r2-s01-F2)
     feedbackEl.style.display = 'none';
+    feedbackEl.innerHTML = '';
     penaltyEl.style.display = 'none';
+    penaltyEl.innerHTML = '';
 
     // Create option buttons with randomized order
     const optionLabels = ['A', 'B', 'C', 'D'];

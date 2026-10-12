@@ -125,13 +125,13 @@ export class DashboardTab extends BaseElement {
                   </div>
                   <div class="equipment-item">
                     <img src="${transmitterPng}" alt="Transmitters" class="equipment-item-icon" />
-                    <span id="tx-count" class="equipment-item-count">${gs.transmitters.length}</span>
-                    <span class="equipment-item-label">Transmitters</span>
+                    <span id="tx-count" class="equipment-item-count">${this.txModems_().length}</span>
+                    <span class="equipment-item-label">TX Modems</span>
                   </div>
                   <div class="equipment-item">
                     <img src="${receiverPng}" alt="Receivers" class="equipment-item-icon" />
-                    <span id="rx-count" class="equipment-item-count">${gs.receivers.length}</span>
-                    <span class="equipment-item-label">Receivers</span>
+                    <span id="rx-count" class="equipment-item-count">${this.rxModems_().length}</span>
+                    <span class="equipment-item-label">RX Modems</span>
                   </div>
                 </div>
               </div>
@@ -382,17 +382,26 @@ export class DashboardTab extends BaseElement {
     `;
   }
 
-  // Quick Stats counts powered modems (each receiver/transmitter chassis has
-  // four), so the labels say "Modems On". Mission Overview counts chassis;
-  // "Active RX 4" beside an Overview "1 RX" read as a contradiction (s01-F19).
+  // One counting scope everywhere (phase 27, r2-s09-F1 / s01-F19): modems,
+  // across every chassis. A modem is what an operator assigns a carrier to;
+  // a chassis holds four. Equipment Summary and Mission Overview count the
+  // modems installed, Quick Stats the modems powered, and the TX/RX cards
+  // show powered/installed - so 4 installed and 1 on never reads "16" or
+  // contradicts a chassis count.
+  private txModems_() {
+    return this.groundStation.transmitters.flatMap((tx) => tx.state.modems);
+  }
+
+  private rxModems_() {
+    return this.groundStation.receivers.flatMap((rx) => rx.state.modems);
+  }
+
   private getActiveReceivers_(): number {
-    // Count powered modems across all receivers
-    return this.groundStation.receivers.reduce((count, rx) => count + rx.state.modems.filter((m) => m.isPowered).length, 0);
+    return this.rxModems_().filter((m) => m.isPowered).length;
   }
 
   private getActiveTransmitters_(): number {
-    // Count powered modems across all transmitters
-    return this.groundStation.transmitters.reduce((count, tx) => count + tx.state.modems.filter((m) => m.isPowered).length, 0);
+    return this.txModems_().filter((m) => m.isPowered).length;
   }
 
   private getSignalCount_(): number {
@@ -742,10 +751,12 @@ export class DashboardTab extends BaseElement {
   }
 
   private syncReceiversSummary_(): void {
-    const receiver = this.groundStation.receivers[0];
-    if (!receiver) return;
+    const receivers = this.groundStation.receivers;
+    if (receivers.length === 0) return;
 
-    const modems = receiver.state.modems;
+    // Every chassis's modems, each read through its own receiver
+    const owned = receivers.flatMap((rx) => rx.state.modems.map((modem) => ({ rx, modem })));
+    const modems = owned.map((o) => o.modem);
     const totalModems = modems.length;
     const activeModems = modems.filter((m) => m.isPowered).length;
 
@@ -759,8 +770,8 @@ export class DashboardTab extends BaseElement {
     const snrEl = this.domCache_.get('rx-snr');
     if (snrEl) {
       let bestSnr: number | null = null;
-      modems.forEach((modem) => {
-        const snr = receiver.getSnrForModem(modem);
+      owned.forEach(({ rx, modem }) => {
+        const snr = rx.getSnrForModem(modem);
         if (snr !== null && (bestSnr === null || snr > bestSnr)) {
           bestSnr = snr;
         }
@@ -771,14 +782,14 @@ export class DashboardTab extends BaseElement {
     // Modems in demodulator lock (the receiver's lock tracker, phase 19.5)
     const signalsEl = this.domCache_.get('rx-signals');
     if (signalsEl) {
-      const lockedCount = modems.filter((m) => m.isPowered && receiver.getSignalsInBandwidth(m).hasLock).length;
+      const lockedCount = owned.filter(({ rx, modem }) => modem.isPowered && rx.getSignalsInBandwidth(modem).hasLock).length;
       signalsEl.textContent = `${lockedCount} locked`;
     }
 
     // Quality LED (green if any signal, amber if degraded, red if none)
     const qualityEl = this.domCache_.get('rx-quality');
     if (qualityEl) {
-      const signals = receiver.state.availableSignals ?? [];
+      const signals = receivers.flatMap((rx) => rx.state.availableSignals ?? []);
       const hasDegraded = signals.some((s) => s.isDegraded);
       if (signals.length === 0) {
         qualityEl.className = 'card-alarm-led off';
@@ -794,7 +805,8 @@ export class DashboardTab extends BaseElement {
     const transmitter = this.groundStation.transmitters[0];
     if (!transmitter) return;
 
-    const modems = transmitter.state.modems;
+    // Modems across every chassis (the Quick Stats / Summary scope)
+    const modems = this.txModems_();
     const totalModems = modems.length;
     const activeModems = modems.filter((m) => m.isPowered).length;
     const transmittingModems = modems.filter((m) => m.isTransmitting).length;

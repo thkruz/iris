@@ -29,12 +29,17 @@ export class SpectrumAnalyzerAdvancedAdapter {
   private readonly boundHandlers: Map<string, EventListener> = new Map();
   private lastStateString: string = '';
   private readonly stateChangeHandler_: (state: Partial<RealTimeSpectrumAnalyzerState>) => void;
+  private readonly updateHandler_: () => void;
+  private lastLiveSyncMs_: number = 0;
+  /** Live readouts (peak, RBW in use) refresh at most this often, ms */
+  private static readonly LIVE_READOUT_INTERVAL_MS = 500;
 
   constructor(spectrumAnalyzer: RealTimeSpectrumAnalyzer, containerEl: HTMLElement) {
     this.spectrumAnalyzer = spectrumAnalyzer;
     this.containerEl = containerEl;
 
     this.stateChangeHandler_ = this.handleStateChange_.bind(this);
+    this.updateHandler_ = this.throttledLiveSync_.bind(this);
 
     this.setupDomCache_();
     this.setupEventListeners_();
@@ -56,6 +61,26 @@ export class SpectrumAnalyzerAdvancedAdapter {
   /** Convert Hz to MHz */
   private toMHz_(hz: number): number {
     return hz / 1e6;
+  }
+
+  /**
+   * A frequency in MHz with the precision it needs (to 1 Hz), trailing zeros
+   * dropped: a 2 kHz span reads 0.002, a 1.1 kHz one 0.0011, not 0.001
+   */
+  static formatMHz(hz: number): string {
+    return Number.parseFloat((hz / 1e6).toFixed(6)).toString();
+  }
+
+  /** Hz as the analyzer annotates RBW: 3 Hz, 30 kHz, 1 MHz */
+  static formatHz(hz: number): string {
+    if (hz >= 1e6) {
+      return `${Number.parseFloat((hz / 1e6).toFixed(3))} MHz`;
+    }
+    if (hz >= 1e3) {
+      return `${Number.parseFloat((hz / 1e3).toFixed(3))} kHz`;
+    }
+
+    return `${Number.parseFloat(hz.toFixed(1))} Hz`;
   }
 
   // ============ DOM Setup ============
@@ -99,6 +124,14 @@ export class SpectrumAnalyzerAdvancedAdapter {
         this.domCache_.set(id, el);
       }
     });
+
+    // Peak Search and live readouts (phase 27); optional so an older layout still binds
+    for (const id of ['sa-peak-search', 'sa-peak-readout', 'sa-rbw-status']) {
+      const el = this.containerEl.querySelector<HTMLElement>(`#${id}`);
+      if (el) {
+        this.domCache_.set(id, el);
+      }
+    }
   }
 
   private setupEventListeners_(): void {
@@ -128,6 +161,7 @@ export class SpectrumAnalyzerAdvancedAdapter {
       this.domCache_.get('sa-auto-tune')?.classList.add('d-none');
     }
     this.addClickHandler_('sa-pause', this.handlePauseToggle_.bind(this));
+    this.addClickHandler_('sa-peak-search', this.handlePeakSearch_.bind(this));
 
     // Trace controls
     this.addClickHandler_('sa-trace-1', () => this.handleTraceSelect_(1));
@@ -174,6 +208,38 @@ export class SpectrumAnalyzerAdvancedAdapter {
 
   private subscribeToStateChanges_(): void {
     EventBus.getInstance().on(Events.SPEC_A_CONFIG_CHANGED, this.stateChangeHandler_);
+    EventBus.getInstance().on(Events.UPDATE, this.updateHandler_);
+  }
+
+  /** Peak readout and RBW-in-use follow the live trace, throttled */
+  private throttledLiveSync_(): void {
+    const now = Date.now();
+    if (now - this.lastLiveSyncMs_ < SpectrumAnalyzerAdvancedAdapter.LIVE_READOUT_INTERVAL_MS) {
+      return;
+    }
+    this.lastLiveSyncMs_ = now;
+    this.syncLiveReadouts_();
+  }
+
+  private syncLiveReadouts_(): void {
+    const analyzer = this.spectrumAnalyzer;
+
+    const peakReadout = this.domCache_.get('sa-peak-readout');
+    if (peakReadout) {
+      const peak = analyzer.peakSearch?.();
+      peakReadout.textContent = peak ? `Peak: ${SpectrumAnalyzerAdvancedAdapter.formatMHz(peak.frequencyHz)} MHz @ ${peak.levelDbm.toFixed(1)} dBm` : 'Peak: --- MHz @ --- dBm';
+    }
+
+    const rbwStatus = this.domCache_.get('sa-rbw-status');
+    if (rbwStatus && typeof analyzer.effectiveRbwHz === 'number') {
+      const inUse = SpectrumAnalyzerAdvancedAdapter.formatHz(analyzer.effectiveRbwHz);
+      // A manual RBW too narrow for the span is coupled up, and says so
+      rbwStatus.textContent = analyzer.isRbwLimited ? `RBW ${inUse} (span limit)` : `RBW ${inUse}`;
+      rbwStatus.classList.toggle('text-warning', Boolean(analyzer.isRbwLimited));
+      rbwStatus.classList.toggle('text-muted', !analyzer.isRbwLimited);
+    }
+
+    this.updateMarkerInfo_();
   }
 
   private handleStateChange_(state: Partial<RealTimeSpectrumAnalyzerState>): void {
@@ -280,6 +346,16 @@ export class SpectrumAnalyzerAdvancedAdapter {
   private handleAutoTune_(): void {
     this.spectrumAnalyzer.freqAutoTune();
     this.syncDomWithState_();
+    this.syncLiveReadouts_();
+  }
+
+  /** Peak Search: marker on, placed on the highest point of the trace */
+  private handlePeakSearch_(): void {
+    const state = this.spectrumAnalyzer.state;
+    state.isMarkerOn = true;
+    state.isUpdateMarkers = true;
+    this.syncLiveReadouts_();
+    this.emitStateChange_();
   }
 
   private handlePauseToggle_(): void {
@@ -374,8 +450,8 @@ export class SpectrumAnalyzerAdvancedAdapter {
     this.lastStateString = stateString;
 
     // Frequency controls
-    this.setInputValue_('sa-center-freq', this.toMHz_(state.centerFrequency).toFixed(3));
-    this.setInputValue_('sa-span', this.toMHz_(state.span).toFixed(3));
+    this.setInputValue_('sa-center-freq', SpectrumAnalyzerAdvancedAdapter.formatMHz(state.centerFrequency));
+    this.setInputValue_('sa-span', SpectrumAnalyzerAdvancedAdapter.formatMHz(state.span));
 
     // RBW select
     const rbwSelect = this.domCache_.get('sa-rbw') as HTMLSelectElement;
@@ -415,7 +491,7 @@ export class SpectrumAnalyzerAdvancedAdapter {
     // Marker controls
     this.setCheckboxValue_('sa-marker-enabled', state.isMarkerOn);
     this.setInputValue_('sa-marker-index', state.markerIndex.toString());
-    this.updateMarkerInfo_();
+    this.syncLiveReadouts_();
   }
 
   private setInputValue_(id: string, value: string): void {
@@ -519,16 +595,18 @@ export class SpectrumAnalyzerAdvancedAdapter {
   private updateMarkerInfo_(): void {
     const state = this.spectrumAnalyzer.state;
     const markerInfo = this.domCache_.get('sa-marker-info');
+    if (!markerInfo) {
+      return;
+    }
 
-    if (markerInfo && state.isMarkerOn && state.topMarkers && state.topMarkers.length > 0) {
-      const marker = state.topMarkers[state.markerIndex] || state.topMarkers[0];
-      if (marker) {
-        const freqMHz = this.toMHz_(marker.x).toFixed(3);
-        const power = marker.signal.toFixed(1);
-        markerInfo.textContent = `Peak: ${freqMHz} MHz @ ${power} dBm`;
-      }
-    } else if (markerInfo) {
-      markerInfo.textContent = 'Peak: --- MHz @ --- dBm';
+    const marker = state.isMarkerOn && state.topMarkers?.length > 0 ? (state.topMarkers[state.markerIndex] ?? state.topMarkers[0]) : null;
+    const points = this.spectrumAnalyzer.spectrumDataProcessor?.combinedData?.length ?? 0;
+    if (marker && points > 0) {
+      // A marker's x is its trace point: back to frequency across the span
+      const freqHz = state.centerFrequency - state.span / 2 + ((marker.x + 0.5) / points) * state.span;
+      markerInfo.textContent = `Mkr: ${SpectrumAnalyzerAdvancedAdapter.formatMHz(freqHz)} MHz @ ${marker.signal.toFixed(1)} dBm`;
+    } else {
+      markerInfo.textContent = 'Mkr: --- MHz @ --- dBm';
     }
   }
 
@@ -537,6 +615,7 @@ export class SpectrumAnalyzerAdvancedAdapter {
   dispose(): void {
     // Unsubscribe from EventBus
     EventBus.getInstance().off(Events.SPEC_A_CONFIG_CHANGED, this.stateChangeHandler_);
+    EventBus.getInstance().off(Events.UPDATE, this.updateHandler_);
 
     // Remove all event listeners
     this.boundHandlers.forEach((handler, key) => {

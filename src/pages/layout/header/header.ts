@@ -26,6 +26,8 @@ export class Header extends BaseElement {
   private profileBtn: HTMLElement | null = null;
   private devMenuBtn: HTMLElement | null = null;
   private engModeBtn: HTMLElement | null = null;
+  private readonly boundScenarioChanged_ = (): void => this.updateEngModeButtonVisibility_();
+  private scenarioBus_: EventBus | null = null;
 
   private constructor(rootElementId?: string) {
     super();
@@ -178,15 +180,31 @@ export class Header extends BaseElement {
         this.updateEngModeActiveState_(enabled);
       });
 
-      // Listen for scenario changes to update button visibility
-      EventBus.getInstance().on(Events.SCENARIO_CHANGED, () => {
-        this.updateEngModeButtonVisibility_();
-      });
+      // Listen for scenario changes to update button visibility. Page teardown
+      // replaces the EventBus, so subscribe again on every new bus.
+      this.bindScenarioEvents();
+      EventBus.onRecreate(() => this.bindScenarioEvents());
 
       // Set initial state
       this.updateEngModeActiveState_(engService.isEnabled());
       this.updateEngModeButtonVisibility_();
     }
+  }
+
+  /**
+   * Subscribe to SCENARIO_CHANGED on the current EventBus. The header outlives
+   * pages and page teardown replaces the bus (EventBus.destroy), so this runs
+   * again for every new bus; a repeat call on the same bus is a no-op.
+   */
+  bindScenarioEvents(): void {
+    const bus = EventBus.getInstance();
+    if (this.scenarioBus_ === bus) {
+      return;
+    }
+    this.scenarioBus_?.off(Events.SCENARIO_CHANGED, this.boundScenarioChanged_);
+    bus.on(Events.SCENARIO_CHANGED, this.boundScenarioChanged_);
+    this.scenarioBus_ = bus;
+    this.updateEngModeButtonVisibility_();
   }
 
   private updateEngModeActiveState_(enabled: boolean): void {

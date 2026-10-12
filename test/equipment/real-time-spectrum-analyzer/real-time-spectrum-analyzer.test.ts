@@ -635,8 +635,25 @@ describe('RealTimeSpectrumAnalyzer', () => {
 
       specA.freqAutoTune();
 
-      // Span should be 10% wider than signal bandwidth
-      expect(specA.state.span).toBe(22e6); // 20e6 * 1.1
+      // 10% over the occupied bandwidth (22 MHz), up to the next 1-2-5 step
+      expect(specA.state.span).toBe(50e6);
+      expect(specA.state.rbw).toBeNull();
+    });
+
+    it('gives a CW beacon a 2 kHz span with RBW auto (never 1.1 kHz)', () => {
+      specA.inputSignals = [{ frequency: 1074.5e6, power: -57, bandwidth: 10, modulation: 'CW' } as any];
+      specA.state.centerFrequency = 1074.5e6 as Hertz;
+      specA.state.span = 100e3 as Hertz;
+      specA.state.rbw = 1e3 as Hertz;
+
+      specA.freqAutoTune();
+
+      expect(specA.state.span).toBe(2e3);
+      expect(specA.state.rbw).toBeNull();
+      expect(specA.state.centerFrequency).toBe(1074.5e6);
+      // The beacon sits inside the amplitude window with room above it
+      expect(specA.state.maxAmplitude).toBeGreaterThanOrEqual(-57 + 5);
+      expect(specA.state.minAmplitude).toBeLessThan(-57 - 10);
     });
 
     it('should adjust amplitude range based on signal power', () => {

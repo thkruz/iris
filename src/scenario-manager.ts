@@ -143,6 +143,8 @@ export interface SimulationSettings {
     linkMarginDegradation: number;
     /** rain/storm: peak rain rate in mm/h. Default by severity: minor 4, moderate 12, severe 30 (storm one step heavier) */
     rainRateMmPerHour?: number;
+    /** snow/ice/hail: what the feed heater melts against this storm, dB/min (default: it outmelts any buildup). See WeatherEventData */
+    heaterMeltDbPerMin?: number;
   }>;
   /** Scheduled, duty-cycled RF interference. Default path injects at a
    *  satellite's transponder (relayed to all stations - uplink interference);

@@ -50,6 +50,12 @@ export class SimulationManager {
 
     // Subscribe satellites to current EventBus (they may have been created before EventBus was ready)
     this.satellites.forEach((sat) => sat.subscribeToEventBus());
+    // Satellites are module singletons that outlive a scenario: uplinks the
+    // last run's antennas left on them would be relayed beside this run's own
+    // carriers as co-channel copies (phase 27: arrivals are no longer merged)
+    this.satellites.forEach((sat) => {
+      sat.rxSignal = [];
+    });
 
     this.satelliteSignals = this.satellites.flatMap((sat) => sat.txSignal);
 
