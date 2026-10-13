@@ -96,15 +96,15 @@ export const scenario21Data: ScenarioData = {
         antennasState: [
           {
             isPowered: true,
-            azimuth: 222.58 as Degrees, // Maine sees TM-2 here, not at Vermont's angles (phase 19.4)
-            elevation: 24.38 as Degrees,
-            polarization: -26.3 as Degrees,
+            azimuth: 146.96 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
+            elevation: 32.42 as Degrees,
+            polarization: -27.6 as Degrees,
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61526,
-            targetAzimuth: 222.58 as Degrees,
-            targetElevation: 24.38 as Degrees,
-            targetPolarization: -26.3 as Degrees,
+            targetAzimuth: 146.96 as Degrees,
+            targetElevation: 32.42 as Degrees,
+            targetPolarization: -27.6 as Degrees,
             slewing: false,
             beaconCN: 10.2 as dB,
             beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)
@@ -401,17 +401,20 @@ export const scenario21Data: ScenarioData = {
           description: 'Shape Read',
           params: {
             character: Character.SYSTEM,
-            question:
-              'The interferer is broadband-ish, sized close to our carrier, sitting inside our transponder near our allocation. How does that compare to benign explanations?',
+            // nats-r3-s21-F1: the analyzer shows a ~6 MHz noise shelf on the
+            // carrier's top edge (Peak ~1468.4-1469.1 MHz), not a carrier-
+            // sized jammer centered on it; the brief's signature list now
+            // names partial-band noise parked on a slice of our carrier
+            question: 'Compare the interferer you watched on the analyzer (bandwidth, shape, placement) with what the coordination database could explain. Which reading holds?',
             options: [
-              "It matches nothing in the database: cross-pol would mirror a neighbor's carrier, an errant uplink would sit at a known slot",
-              "It matches cross-pol leakage: a neighbor's carrier on the other polarization bleeds in, sized like ours because it is a peer",
-              'It matches a coordinated adjacent-satellite carrier: the database lists a peer at this slot, sized close to ours by design',
+              "It matches nothing benign: a featureless ~6 MHz noise band parked on our carrier's top edge is neither a neighbor's carrier nor a modulated uplink at a known slot",
+              "It matches cross-pol leakage: a neighbor's carrier on the other polarization bleeds in, and cross-pol always lands on the edge of the victim's carrier",
+              'It matches an aimed jammer by the book: centered on our carrier and sized to it, so the database comparison adds nothing to the case',
               'It matches nothing because shape means nothing: bandwidth and placement vary with the analyzer span, not with the source',
             ],
             correctIndex: 0,
             explanation:
-              'Accidents look like known things in the wrong place. Noise deliberately shaped and placed to deny a specific carrier looks like nothing the coordination database can account for - the absence of a benign match is itself evidence. Broadband noise shaped to our carrier inside our passband fits neither benign case.',
+              "Accidents look like known things in the wrong place: cross-pol mirrors a listed neighbor's carrier, an errant uplink is a modulated carrier at a coordinated slot. A featureless noise band about 6 MHz wide, parked on the top edge of our carrier at the same frequency every burst, is neither. It is not the full-carrier jammer either: it is partial-band noise, all of its power on one slice of our carrier, and that slice is enough to pull the modem to the edge of lock. The absence of a benign match is itself evidence.",
             pointPenalty: 5,
           },
           mustMaintain: false,

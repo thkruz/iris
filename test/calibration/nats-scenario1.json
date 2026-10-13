@@ -22,7 +22,7 @@
       "lnbLoMHz": 5250,
       "lnbNoiseTempK": 42.97,
       "agcOnNoiseAlone": {
-        "noiseInDbm": -40.27,
+        "noiseInDbm": -40.28,
         "filterMHz": 40,
         "settledGainDb": 10,
         "maxGainDb": 10,
@@ -35,11 +35,11 @@
           "kind": "fixed",
           "pass": null,
           "atPeak": {
-            "elevationDeg": 34.2,
+            "elevationDeg": 35.1,
             "frequencyMHz": 3718,
             "gainDbi": 49.7,
             "gOverTDbPerK": 30.19,
-            "tsysK": 80.92
+            "tsysK": 80.85
           },
           "carriers": [
             {
@@ -50,13 +50,13 @@
               "modulation": "QPSK",
               "fec": "3/4",
               "samples": 5,
-              "peakCnDb": 13.09,
-              "medianCnDb": 13.09,
-              "peakEsN0Db": 13.87,
+              "peakCnDb": 13.13,
+              "medianCnDb": 13.13,
+              "peakEsN0Db": 13.91,
               "requiredEsN0Db": 5.03,
-              "peakLockMarginDb": 8.84,
-              "peakRxIfDbm": -27.77,
-              "noiseIfDbm": -41.2,
+              "peakLockMarginDb": 8.88,
+              "peakRxIfDbm": -27.76,
+              "noiseIfDbm": -41.23,
               "lockedSamples": 5
             },
             {
@@ -67,13 +67,13 @@
               "modulation": "CW",
               "fec": "null",
               "samples": 5,
-              "peakCnDb": 52.53,
-              "medianCnDb": 52.53,
-              "peakEsN0Db": 43.06,
+              "peakCnDb": 52.56,
+              "medianCnDb": 52.56,
+              "peakEsN0Db": 43.07,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
               "peakRxIfDbm": -54.23,
-              "noiseIfDbm": -106.76,
+              "noiseIfDbm": -106.79,
               "lockedSamples": 0
             }
           ],
@@ -81,15 +81,15 @@
           "transponders": [
             {
               "id": "TP-1",
-              "iboDb": 3.04,
-              "oboDb": 0.52,
+              "iboDb": 3,
+              "oboDb": 0.51,
               "carrierToImDb": null,
               "carriers": [
                 {
                   "signalId": "TIDEMARK-1-Teleport",
-                  "eirpDbw": 26.46,
-                  "cnUpDbHz": 100.11,
-                  "upstreamCn0DbHz": 100.11
+                  "eirpDbw": 26.48,
+                  "cnUpDbHz": 100.15,
+                  "upstreamCn0DbHz": 100.15
                 }
               ]
             }

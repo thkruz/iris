@@ -695,11 +695,12 @@ export const scenario2Data: ScenarioData = {
       nice: ['K0645'],
       title: 'Hold for the Maintenance Window',
       description:
-        'The crew is on the feed for about 15 minutes. Keep the antenna parked at the maintenance position until Mike calls the work complete: wait it out, or use Skip 15 min in the command bar.',
+        'The crew is on the feed for about 15 minutes. Keep the antenna parked at the maintenance position until Mike calls the work complete: wait it out, or use the skip control in the command bar.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['verify-maintenance-position-quiz'],
       // No countdown: the wait is the crew's, not the operator's (Q4, r2-s02-F3)
-      timeSkip: { minutes: 15, label: 'crew maintenance window', availableAfterConditions: true },
+      // The skip lands at the end of the 15-minute maintainDuration (Phase 28 TimeSkipOffer)
+      timeSkip: { label: 'crew maintenance window', availableAfterConditions: true },
       conditions: [
         {
           type: 'antenna-position',
@@ -746,7 +747,7 @@ export const scenario2Data: ScenarioData = {
       // understanding program-track mode for GEO satellites
       nice: ['T1567', 'S0421', 'K1032'],
       title: 'Repoint Antenna at TIDEMARK-1',
-      description: 'Click PROGRAM, select TIDEMARK-1 as the target satellite and press Move to Target. The antenna settles near Az 161.9°, El 34.2°.',
+      description: 'Click PROGRAM, select TIDEMARK-1 as the target satellite and press Move to Target. The antenna settles near Az 153.2°, El 35.2°.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['maintenance-complete'],
       timeLimitSeconds: 2 * 60,
@@ -768,8 +769,8 @@ export const scenario2Data: ScenarioData = {
           type: 'antenna-position',
           description: 'Antenna Pointed at TIDEMARK-1',
           params: {
-            azimuth: 161.9 as Degrees,
-            elevation: 34.2 as Degrees,
+            azimuth: 153.2 as Degrees,
+            elevation: 35.2 as Degrees,
             tolerance: 0.1,
           },
           mustMaintain: true,
@@ -1409,10 +1410,10 @@ export const scenario2Data: ScenarioData = {
       'antenna-to-maintenance': {
         text: `
         <p>
-          Antenna's moving. Watch the position indicators. When it reaches 5 degrees elevation, we're good.
+          There - five degrees elevation, and it's holding. That's the maintenance position.
         </p>
         <p>
-          Quick question while we wait - why 5 degrees instead of parking it at zero?
+          Quick question before the crew climbs up - why 5 degrees instead of parking it at zero?
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -1445,7 +1446,7 @@ export const scenario2Data: ScenarioData = {
           Maintenance is complete. Crew's clear of the antenna. Time to bring the link back up.
         </p>
         <p>
-          We restore in reverse order: antenna first, then receive chain, then transmit chain. Set tracking mode back to PROGRAM, select TIDEMARK-1 as the target and press Move to Target. It'll settle near azimuth 161.9, elevation 34.2. That's where TIDEMARK-1 sits.
+          We restore in reverse order: antenna first, then receive chain, then transmit chain. Set tracking mode back to PROGRAM, select TIDEMARK-1 as the target and press Move to Target. It'll settle near azimuth 153.2, elevation 35.2. That's where TIDEMARK-1 sits.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -1486,10 +1487,10 @@ export const scenario2Data: ScenarioData = {
       'power-up-lnb': {
         text: `
         <p>
-          LNB's powering up. Watch the LOCK badge and the noise temperature - they need to settle before we can trust the readings.
+          LNB's back. The LOCK badge came up and the noise temperature settled - that's what we waited for before trusting the readings.
         </p>
         <p>
-          What should you be looking for to confirm it's ready?
+          So what told you it was ready?
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -1502,7 +1503,7 @@ export const scenario2Data: ScenarioData = {
           LNB's stable. Now verify we're actually seeing the satellite.
         </p>
         <p>
-          Check the spectrum analyzer. It's still parked on the carrier from before the work - retune it to the beacon: center 1,074.5 MHz, span 0.002 MHz. TIDEMARK-1's beacon should be visible at 1,074.5 MHz on the IF side. That's 4,175.5 MHz RF minus our 5,250 MHz LO. If you see a clean carrier there, we're pointed correctly.
+          Check the spectrum analyzer. It's still parked on the carrier from before the work - retune it to the beacon: center 1,074.5 MHz, span 0.002 MHz. TIDEMARK-1's beacon should be visible at 1,074.5 MHz on the IF side. That's our 5,250 MHz LO minus the 4,175.5 MHz RF. If you see a clean carrier there, we're pointed correctly.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,

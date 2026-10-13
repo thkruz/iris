@@ -46,10 +46,16 @@ export interface AntennaErrorData {
 }
 
 // TX Event specific interfaces
+/** What a TX_CONFIG_CHANGED event reports, for the Ops Log (absent: a state refresh) */
+export type TxModemAction = 'config' | 'transmit-on' | 'transmit-off' | 'power-on' | 'boot-complete' | 'power-off' | 'loopback-on' | 'loopback-off' | 'fault-reset';
+
 export interface TxConfigChangedData {
   uuid: string;
+  /** modem_number of the modem in `config` */
   modem: number;
   config: TransmitterModem;
+  /** The operator or automation action behind the change (Ops Log wording) */
+  action?: TxModemAction;
 }
 
 export interface TxActiveModemChangedData {

@@ -92,15 +92,15 @@ export const scenario14Data: ScenarioData = {
         antennasState: [
           {
             isPowered: true,
-            azimuth: 222.58 as Degrees, // Maine sees TM-2 here, not at Vermont's angles (phase 19.4)
-            elevation: 24.38 as Degrees,
-            polarization: -26.3 as Degrees,
+            azimuth: 146.96 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
+            elevation: 32.42 as Degrees,
+            polarization: -27.6 as Degrees,
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61526, // TIDEMARK-2
-            targetAzimuth: 222.58 as Degrees,
-            targetElevation: 24.38 as Degrees,
-            targetPolarization: -26.3 as Degrees,
+            targetAzimuth: 146.96 as Degrees,
+            targetElevation: 32.42 as Degrees,
+            targetPolarization: -27.6 as Degrees,
             slewing: false,
             beaconCN: 10.2 as dB,
             beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)
@@ -402,7 +402,8 @@ export const scenario14Data: ScenarioData = {
       id: 'baseline-beacon-and-lock',
       nice: ['T0153', 'K0773', 'K1032'],
       title: 'Baseline Beacon and Lock',
-      description: 'Confirm the TIDEMARK-1 beacon is healthy and the receiver is locked with margin before the rain hits.',
+      description:
+        'Confirm the TIDEMARK-1 beacon is healthy and RX modem 1 is locked with margin before the rain hits, and note its Raw C/N: the 7 dB action threshold is read on the same readout.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['open-rx-analysis-baseline'],
       timeLimitSeconds: 2 * 60,
@@ -427,8 +428,8 @@ export const scenario14Data: ScenarioData = {
         },
         {
           type: 'receiver-snr-threshold',
-          description: 'Baseline C/N ≥ 10 dB',
-          params: { minCNRatio: 10, requiresObservation: true, observationTab: 'rx-analysis' },
+          description: 'RX Modem 1 Raw C/N ≥ 10 dB',
+          params: { modemNumber: 1, minCNRatio: 10, requiresObservation: true, observationTab: 'rx-analysis' },
           mustMaintain: true,
         },
         {
@@ -436,13 +437,14 @@ export const scenario14Data: ScenarioData = {
           // raw C/N on VT-01's own TIDEMARK-1 carrier before the rain
           // (nats-scenario14.json), 8.9 dB over the QPSK 3/4 lock point
           type: 'status-check',
-          description: 'Baseline C/N Read',
+          description: 'Baseline Raw C/N Read',
           params: {
             character: Character.SYSTEM,
-            question: 'What C/N does RX modem 1 show on the TIDEMARK-1 carrier before the rain?',
+            question: 'What Raw C/N does RX modem 1 show on the TIDEMARK-1 carrier before the rain?',
             options: ['About 13 dB', 'About 7 dB', 'About 4 dB', 'About 25 dB'],
             correctIndex: 0,
-            explanation: 'About 13 dB, with the demodulator locking near 4 dB: roughly 9 dB of margin. That is the number to compare against when the cell is overhead.',
+            explanation:
+              'About 13 dB. That is the baseline the action rule in the brief hangs off: the threshold is RX modem 1 Raw C/N 7 dB, about 6 dB under it and still about 2 dB above where QPSK 3/4 locks (about 4.7 dB). Compare against it when the cell is overhead.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -475,7 +477,7 @@ export const scenario14Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'Margin = baseline C/N minus demod threshold. With about 9 dB of headroom (C/N near 13 dB against the 4.2 dB lock threshold) and under 1 dB of expected fade (a heavy cell at C-band costs about 0.7 dB of C/N, mostly sky-noise rise), we are comfortable. Without baseline data, every dip looks scary.',
+              'Margin = baseline C/N minus demod threshold. With about 8 dB of headroom (Raw C/N near 13 dB against the ~4.7 dB at which QPSK 3/4 locks), 6 dB of it above the 7 dB action threshold, and under 1 dB of expected fade (a heavy cell at C-band costs about 0.7 dB of C/N, mostly sky-noise rise), we are comfortable. Without baseline data, every dip looks scary.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -493,7 +495,7 @@ export const scenario14Data: ScenarioData = {
       nice: ['T0153', 'S0675'],
       title: 'Monitor Through the Fade',
       description:
-        "Stay on RX Analysis as the front arrives (within seconds of this step opening) and watch the C/N for 20 s. At C-band the dip is under a dB, about the size of the readout's normal wander; the ACU Environmental card shows Precipitation ACTIVE while the cell is overhead.",
+        "Stay on RX Analysis as the front arrives (within seconds of this step opening) and watch RX modem 1's Raw C/N for 20 s. At C-band the dip is under a dB, about the size of the readout's normal wander; the ACU Environmental card shows Precipitation ACTIVE while the cell is overhead.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['baseline-margin-quiz'],
       timeLimitSeconds: 6 * 60,
@@ -514,8 +516,8 @@ export const scenario14Data: ScenarioData = {
         },
         {
           type: 'receiver-snr-threshold',
-          description: 'C/N Above Storm Threshold (≥ 7 dB)',
-          params: { minCNRatio: 7, requiresObservation: true, observationTab: 'rx-analysis' },
+          description: 'RX Modem 1 Raw C/N ≥ 7 dB (Action Threshold)',
+          params: { modemNumber: 1, minCNRatio: 7, requiresObservation: true, observationTab: 'rx-analysis' },
           mustMaintain: true,
           maintainDuration: 20,
         },
@@ -731,14 +733,14 @@ export const scenario14Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'The customer prefers no handover, but the customer does not get the last word on RF reality. Which condition flips the call to "hand off now"?',
             options: [
-              'AGC at max with continued fade, or modem dropping lock',
-              'Any drop in C/N from baseline, or AGC leaving its floor',
-              'Rain reaching the dish, or the first dB of input fade',
-              'ME-02 reporting available, or Dana asking for a status',
+              'Raw C/N under the 7 dB action threshold and still falling, AGC at max with continued fade, or the modem dropping lock',
+              'Raw C/N a dB under the baseline, AGC gain leaving its floor, or Precipitation ACTIVE on the ACU card',
+              'Rain reaching the dish, the first dB of input fade, or the beacon C/N dipping on the ACU card',
+              'ME-02 reporting available, Dana asking for a status, or James calling back about the weather',
             ],
             correctIndex: 0,
             explanation:
-              'The customer can ask us to favor "hold." The customer cannot ask us to keep serving on a dead link. The trigger is operational, not contractual: AGC at max and still fading, or actual lock loss.',
+              'The customer can ask us to favor "hold." The customer cannot ask us to keep serving on a dead link. The trigger is operational, not contractual: RX modem 1 Raw C/N under 7 dB and not recovering, AGC at max and still fading, or actual lock loss.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -788,7 +790,7 @@ export const scenario14Data: ScenarioData = {
       nice: ['T0153', 'S0675'],
       title: 'Hold Through the Cell',
       description:
-        'Keep VT-01 on TIDEMARK-1 until the rain cell has passed (about 20 minutes from its arrival): lock held, C/N above 7 dB, antenna on TIDEMARK-1, heater on. Wait it out, or once the hold rows are green use Skip 20 min in the command bar.',
+        'Keep VT-01 on TIDEMARK-1 until the rain cell has passed (about 20 minutes from its arrival): lock held, RX modem 1 Raw C/N above the 7 dB action threshold, antenna on TIDEMARK-1, heater on. Wait it out, or once the hold rows are green use the skip control in the command bar: it jumps to the end of the cell, and the mission clock is held while you wait, so both score the same.',
       groundStation: 'VT-01',
       // A watch: every row but the weather is meant to stay as it is
       intent: 'confirm',
@@ -806,8 +808,8 @@ export const scenario14Data: ScenarioData = {
         },
         {
           type: 'receiver-snr-threshold',
-          description: 'C/N Holds ≥ 7 dB',
-          params: { minCNRatio: 7 },
+          description: 'RX Modem 1 Raw C/N Holds ≥ 7 dB',
+          params: { modemNumber: 1, minCNRatio: 7 },
           mustMaintain: true,
           maintainDuration: 30,
         },
@@ -873,7 +875,7 @@ export const scenario14Data: ScenarioData = {
       id: 'document-handover-avoided',
       nice: ['K0645', 'T0153', 'S0593'],
       title: 'Log the Hold',
-      description: 'Select the correct entry for the shift log.',
+      description: 'Select the shift log entry that records the hold, the trigger thresholds you watched, and the note to SeaLink that service held.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['post-storm-baseline-quiz'],
       timeLimitSeconds: 2 * 60,
@@ -886,13 +888,14 @@ export const scenario14Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Which entry correctly logs this event for the next shift?',
             options: [
-              'Heavy rain cell over VT-01, under 1 dB of C/N lost (mostly sky noise). Held TM-1 per customer SLA preference; AGC far from max, modem lock maintained, no handover.',
+              'Heavy rain cell over VT-01, under 1 dB of C/N lost (mostly sky noise). Held TM-1 per SeaLink SLA preference; watched Raw C/N 7 dB, AGC at max, modem unlock - none fired. SeaLink told service held.',
               'Heavy rain cell over VT-01, under 1 dB of C/N lost. Handed TM-1 to ME-02 at fade onset; AGC far from max, customer notified, service restored.',
               'Heavy rain cell over VT-01, under 1 dB of C/N lost. Lost lock on TM-1 near peak; AGC at max, modem re-locked after the cell cleared.',
               'Light rain over VT-01, no measurable fade. Held TM-1 as routine; AGC at floor, modem lock maintained, no customer contact.',
             ],
             correctIndex: 0,
-            explanation: 'Log what happened, what you chose, why, and the evidence the choice was correct. Next operator picks up with the trigger thresholds you were watching.',
+            explanation:
+              'Log what happened, what you chose and why, the trigger thresholds you watched (and that none fired), and that SeaLink heard it from us. The next operator picks up the same tripwires, and the account team can see the customer was told.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -946,7 +949,7 @@ export const scenario14Data: ScenarioData = {
       'document-handover-avoided': {
         text: `
         <p>
-          Clean ride through. Log it with the trigger thresholds you were watching - if it'd gone the other way, the next operator should know what we were looking at. Good shift.
+          Clean ride through. Drop James a line on the portal that we held, then log it with the trigger thresholds you were watching - if it'd gone the other way, the next operator should know what we were looking at. Good shift.
         </p>
         `,
         character: Character.DANA_TORRES,

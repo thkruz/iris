@@ -576,7 +576,7 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
     this.isLogBackfillDue_ = true;
   }
 
-  /** Case temperature trend over the last five minutes of the log, °C/min (null until it has three samples) */
+  /** Case temperature trend over the last minute of the log, °C/min (null until it has three samples) */
   temperatureTrendCPerMin(): number | null {
     return this.temperatureLog.trendCPerMin();
   }

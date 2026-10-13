@@ -281,15 +281,19 @@ export class NotchFilterAdapter {
       if (enabledSwitch) enabledSwitch.checked = notch.enabled;
 
       if (freqInput) {
-        if (canWrite(freqInput)) freqInput.value = isPowered ? notch.centerFrequency.toString() : '--';
+        // A number input cannot hold "--"; it is the placeholder (nats-r3-s02-F3)
+        if (canWrite(freqInput)) freqInput.value = isPowered ? notch.centerFrequency.toString() : '';
+        freqInput.placeholder = '--';
         freqInput.disabled = !isPowered;
       }
       if (bwInput) {
-        if (canWrite(bwInput)) bwInput.value = isPowered ? notch.bandwidth.toString() : '--';
+        if (canWrite(bwInput)) bwInput.value = isPowered ? notch.bandwidth.toString() : '';
+        bwInput.placeholder = '--';
         bwInput.disabled = !isPowered;
       }
       if (depthInput) {
-        if (canWrite(depthInput)) depthInput.value = isPowered ? notch.depth.toString() : '--';
+        if (canWrite(depthInput)) depthInput.value = isPowered ? notch.depth.toString() : '';
+        depthInput.placeholder = '--';
         depthInput.disabled = !isPowered;
       }
 

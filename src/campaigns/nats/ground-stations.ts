@@ -15,21 +15,21 @@ export const vermontGroundStation = {
   location: {
     latitude: 44.5588,
     longitude: -72.5778,
-    elevation: 2,
+    elevation: 210, // Lamoille valley floor, Morrisville area (was 2 m; nats-r3-s01-F2)
   },
   antennas: [ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK],
   antennasState: [
     {
       // Antenna already tracking TIDEMARK-1 in program-track mode
       isPowered: true,
-      azimuth: 161.8 as Degrees, // Locked on TIDEMARK-1
-      elevation: 34.2 as Degrees,
+      azimuth: 153.1 as Degrees, // Locked on TIDEMARK-1 (53 W, Phase 28 D4)
+      elevation: 35.1 as Degrees,
       polarization: 14 as Degrees,
       trackingMode: 'program-track',
       isBeaconLocked: true,
       targetSatelliteId: 61525,
-      targetAzimuth: 161.8 as Degrees,
-      targetElevation: 34.2 as Degrees,
+      targetAzimuth: 153.1 as Degrees,
+      targetElevation: 35.1 as Degrees,
       targetPolarization: 14 as Degrees,
       slewing: false,
       beaconCN: 10.5 as dB,
@@ -432,15 +432,15 @@ export const maineGroundStationOperational = {
 /** ME-02 tracking TIDEMARK-2 from Maine (phase 19.4 look angles; S9, S14, S16) */
 export const ME02_TM2_ANTENNA_STATE = {
   isPowered: true,
-  azimuth: 222.58 as Degrees, // Maine sees TM-2 here, not at Vermont's angles
-  elevation: 24.38 as Degrees,
-  polarization: -26.3 as Degrees,
+  azimuth: 148.13 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
+  elevation: 32.86 as Degrees,
+  polarization: -28.4 as Degrees,
   trackingMode: 'program-track',
   isBeaconLocked: true,
   targetSatelliteId: 61526, // TIDEMARK-2
-  targetAzimuth: 222.58 as Degrees,
-  targetElevation: 24.38 as Degrees,
-  targetPolarization: -26.3 as Degrees,
+  targetAzimuth: 148.13 as Degrees,
+  targetElevation: 32.86 as Degrees,
+  targetPolarization: -28.4 as Degrees,
   slewing: false,
   beaconCN: 10.2 as dB,
   beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)

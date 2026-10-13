@@ -4,6 +4,8 @@ import { AlarmStatus } from '@app/equipment/base-equipment';
 import { BUCModuleCore, BUCState } from '@app/equipment/rf-front-end/buc-module/buc-module-core';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
+import { EventAutoLogger } from '@app/ops-log/event-auto-logger';
+import { stationTagForRfModule } from '@app/ops-log/station-tag';
 import { parseLocalizedNumber } from '@app/utils/parse-number';
 
 /**
@@ -435,14 +437,18 @@ export class BUCAdapter {
 
     if (loFreqInput) {
       if (isUserEdit || document.activeElement !== loFreqInput) {
-        loFreqInput.value = isPowered ? this.stagedLoFrequency_.toString() : '--';
+        // A number input cannot hold "--" (console warning, blank box); show
+        // it as the placeholder instead (nats-r3-s02-F3)
+        loFreqInput.value = isPowered ? this.stagedLoFrequency_.toString() : '';
       }
+      loFreqInput.placeholder = '--';
       loFreqInput.disabled = !isPowered;
     }
     if (gainInput) {
       if (isUserEdit || document.activeElement !== gainInput) {
-        gainInput.value = isPowered ? this.stagedGain_.toString() : '--';
+        gainInput.value = isPowered ? this.stagedGain_.toString() : '';
       }
+      gainInput.placeholder = '--';
       gainInput.disabled = !isPowered;
     }
 
@@ -507,20 +513,31 @@ export class BUCAdapter {
 
   private powerHandler_(e: Event): void {
     const isChecked = (e.target as HTMLInputElement).checked;
+    const changed = this.bucModule.state.isPowered !== isChecked;
     this.bucModule.handlePowerToggle(isChecked);
+    if (changed) this.logAction_(isChecked ? 'BUC Power ON' : 'BUC Power OFF');
     this.syncDomWithState_(this.bucModule.state);
   }
 
   private muteHandler_(e: Event): void {
     const isChecked = (e.target as HTMLInputElement).checked;
+    const changed = this.bucModule.state.isMuted !== isChecked;
     this.bucModule.handleMuteToggle(isChecked);
+    if (changed) this.logAction_(isChecked ? 'BUC output MUTED' : 'BUC output UNMUTED');
     this.syncDomWithState_(this.bucModule.state);
   }
 
   private loopbackHandler_(e: Event): void {
     const isChecked = (e.target as HTMLInputElement).checked;
+    const changed = this.bucModule.state.isLoopback !== isChecked;
     this.bucModule.handleLoopbackToggle(isChecked);
+    if (changed) this.logAction_(isChecked ? 'BUC test loop ON' : 'BUC test loop OFF');
     this.syncDomWithState_(this.bucModule.state);
+  }
+
+  /** Ops Log line for a panel action, tagged with this BUC's station */
+  private logAction_(message: string): void {
+    EventAutoLogger.getInstance().logAction(message, 'RF FE', stationTagForRfModule(this.bucModule));
   }
 
   update(): void {

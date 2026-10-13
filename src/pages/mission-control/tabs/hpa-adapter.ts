@@ -4,6 +4,8 @@ import { AlarmStatus } from '@app/equipment/base-equipment';
 import { HPAModuleCore, HPAState } from '@app/equipment/rf-front-end/hpa-module/hpa-module-core';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
+import { EventAutoLogger } from '@app/ops-log/event-auto-logger';
+import { stationTagForRfModule } from '@app/ops-log/station-tag';
 import { parseLocalizedNumber } from '@app/utils/parse-number';
 
 /**
@@ -203,6 +205,8 @@ export class HPAAdapter {
     // Switches
     this.domCache_.set('powerSwitch', qs('#hpa-power', this.containerEl));
     this.domCache_.set('hpaEnableSwitch', qs('#hpa-enable', this.containerEl));
+    const enableStatus = this.containerEl.querySelector<HTMLElement>('#hpa-enable-status');
+    if (enableStatus) this.domCache_.set('hpaEnableStatus', enableStatus);
 
     // Power displays
     this.domCache_.set('inputPowerDisplay', qs('#hpa-input-power-display', this.containerEl));
@@ -260,8 +264,9 @@ export class HPAAdapter {
 
     // HPA Enable switch - immediate effect
     const hpaEnableSwitch = this.domCache_.get('hpaEnableSwitch') as HTMLInputElement;
-    hpaEnableSwitch?.addEventListener('change', this.hpaEnableHandler_.bind(this));
-    this.boundHandlers.set('hpaEnable', this.hpaEnableHandler_.bind(this));
+    const hpaEnableHandler = this.hpaEnableHandler_.bind(this);
+    hpaEnableSwitch?.addEventListener('change', hpaEnableHandler);
+    this.boundHandlers.set('hpaEnable', hpaEnableHandler);
 
     // ALC switch - immediate effect (the back-off control's meaning follows it)
     const alcSwitch = this.domCache_.get('alcSwitch') as HTMLInputElement | undefined;
@@ -373,6 +378,7 @@ export class HPAAdapter {
 
   private powerHandler_(e: Event) {
     const isChecked = (e.target as HTMLInputElement).checked;
+    if (isChecked) this.showEnableStatus_(null);
     this.hpaModule.handlePowerToggle(isChecked, (state: HPAState) => {
       this.syncDomWithState_(state);
     });
@@ -382,9 +388,30 @@ export class HPAAdapter {
     const isChecked = (e.target as HTMLInputElement).checked;
     // Only toggle if state doesn't match checkbox value
     if (this.hpaModule.state.isHpaEnabled !== isChecked) {
-      this.hpaModule.handleHpaToggle();
+      const station = stationTagForRfModule(this.hpaModule);
+      const reason = isChecked ? this.hpaModule.getEnableBlockReason() : null;
+      if (reason) {
+        // Refused: say why on the panel and in the log (nats-r3-s04-F2)
+        this.showEnableStatus_(`Enable refused: ${reason}`);
+        EventAutoLogger.getInstance().logAction(`HPA enable refused: ${reason}`, 'RF FE', station);
+      } else {
+        this.hpaModule.handleHpaToggle();
+        this.showEnableStatus_(null);
+        EventAutoLogger.getInstance().logAction(this.hpaModule.state.isHpaEnabled ? 'HPA enabled' : 'HPA disabled', 'RF FE', station);
+      }
     }
+    // A refused request leaves the state as it was; force the sync so the
+    // switch snaps back to it instead of showing a state the HPA is not in
+    this.lastStateString = '';
     this.syncDomWithState_(this.hpaModule.state);
+  }
+
+  /** Inline note under the HPA Enable switch; null hides it */
+  private showEnableStatus_(text: string | null): void {
+    const status = this.domCache_.get('hpaEnableStatus');
+    if (!status) return;
+    status.textContent = text ?? '';
+    status.classList.toggle('d-none', text === null);
   }
 
   private syncDomWithState_(state: Partial<HPAState>): void {

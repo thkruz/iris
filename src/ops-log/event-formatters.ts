@@ -38,7 +38,17 @@ export function formatAntennaEvent(data: Partial<AntennaState>): string | null {
   const parts: string[] = [];
 
   if (data.trackingMode !== undefined) {
-    parts.push(`Tracking mode: ${TRACKING_MODE_LABELS[data.trackingMode] ?? data.trackingMode.toUpperCase()}`);
+    const label = TRACKING_MODE_LABELS[data.trackingMode] ?? data.trackingMode.toUpperCase();
+    // STOW/MAINT only stage the park elevation; the dish moves on APPLY. Log
+    // the staged mode as staged, without the lock flags the mode switch
+    // momentarily cleared: the dish is still where it was (nats-r3-s11-F2).
+    // The APPLY logs the mode again with the state at that moment.
+    const pendingEl = data.stagedTargetElevation;
+    const isParkMode = data.trackingMode === 'stow' || data.trackingMode === 'maintenance';
+    if (isParkMode && data.hasStagedChanges && pendingEl !== undefined && pendingEl !== null) {
+      return `Tracking mode: ${label} staged (El ${pendingEl.toFixed(1)} pending APPLY)`;
+    }
+    parts.push(`Tracking mode: ${label}`);
   }
 
   if (data.isPowered !== undefined) {
@@ -85,14 +95,40 @@ export function formatTxConfigEvent(data: TxConfigChangedData): string | null {
   const fec = config.ifSignal.fec !== 'null' ? config.ifSignal.fec : '';
 
   const modFec = [mod, fec].filter(Boolean).join(' ');
-  return `M${modemNum}: Config ${freqMHz} MHz${modFec ? `, ${modFec}` : ''}`;
+  const carrier = `${freqMHz} MHz${modFec ? `, ${modFec}` : ''}`;
+
+  // The event names the modem that changed and what changed (nats-r3-s11-F1);
+  // an event with no action is a state refresh and logs nothing
+  switch (data.action) {
+    case 'config':
+      return `M${modemNum}: Config ${carrier}`;
+    case 'transmit-on':
+      return `M${modemNum}: Transmission STARTED, ${carrier}`;
+    case 'transmit-off':
+      return `M${modemNum}: Transmission STOPPED`;
+    case 'power-on':
+      return `M${modemNum}: Power ON, booting`;
+    case 'boot-complete':
+      return `M${modemNum}: Boot complete`;
+    case 'power-off':
+      return `M${modemNum}: Power OFF`;
+    case 'loopback-on':
+      return `M${modemNum}: Loopback ON`;
+    case 'loopback-off':
+      return `M${modemNum}: Loopback OFF`;
+    case 'fault-reset':
+      return `M${modemNum}: Fault reset`;
+    default:
+      return null;
+  }
 }
 
 /**
  * Format transmitter modem selection change
  */
 export function formatTxActiveModemEvent(data: TxActiveModemChangedData): string | null {
-  return `Switched to Modem ${data.activeModem + 1}`;
+  // activeModem is the modem number (1-4), not an index
+  return `Switched to Modem ${data.activeModem}`;
 }
 
 /**
@@ -123,7 +159,8 @@ export function formatRxConfigEvent(data: RxConfigChangedData): string | null {
  * Format receiver modem selection change
  */
 export function formatRxActiveModemEvent(data: RxActiveModemChangedData): string | null {
-  return `Switched to Modem ${data.activeModem + 1}`;
+  // activeModem is the modem number (1-4), not an index
+  return `Switched to Modem ${data.activeModem}`;
 }
 
 // ════════════════════════════════════════════════════════════════════════════

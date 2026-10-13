@@ -124,15 +124,15 @@ export const scenario20Data: ScenarioData = {
         antennasState: [
           {
             isPowered: true,
-            azimuth: 222.58 as Degrees, // Maine sees TM-2 here, not at Vermont's angles (phase 19.4)
-            elevation: 24.38 as Degrees,
-            polarization: -26.3 as Degrees,
+            azimuth: 146.96 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
+            elevation: 32.42 as Degrees,
+            polarization: -27.6 as Degrees,
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61526,
-            targetAzimuth: 222.58 as Degrees,
-            targetElevation: 24.38 as Degrees,
-            targetPolarization: -26.3 as Degrees,
+            targetAzimuth: 146.96 as Degrees,
+            targetElevation: 32.42 as Degrees,
+            targetPolarization: -27.6 as Degrees,
             slewing: false,
             beaconCN: 10.2 as dB,
             beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)

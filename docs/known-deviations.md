@@ -153,7 +153,7 @@ These are rules authors and specs follow today. Each is re-decided, not silently
 its deviation closes:
 
 - "The board is never clean" before AOS: since 19.2 the AGC measures noise, so a pre-AOS LEO
-  station no longer rails at max gain; it raises "AGC on noise only - no carrier in passband"
+  station no longer rails at max gain; it raises "AGC on noise only - passband power is noise, no traffic carrier"
   instead (decision recorded in the phase 19 plan, 19.2 status entry).
 - `cnHoldSeconds` and "commit the displayed C/N" in the link-budget tab: workarounds for the old
   1 Hz position step. The hysteresis stays for grading; the comments are stale.

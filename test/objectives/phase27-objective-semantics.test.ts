@@ -13,6 +13,7 @@ import { TAB_HINT_DELAY_SECONDS } from '../../src/objectives/objective-types';
 import { ObjectivesManager } from '../../src/objectives/objectives-manager';
 import { TabbedCanvas } from '../../src/pages/mission-control/tabbed-canvas';
 import { resetMissionClock } from '../../src/simulation/mission-clock';
+import { SimClock } from '../../src/simulation/sim-clock';
 import { advanceSimTime } from '../helpers/sim-time';
 
 const station = vi.hoisted(() => ({
@@ -27,7 +28,7 @@ const quizzes = vi.hoisted(() => ({
   complete: new Set<string>(),
 }));
 
-const weather = vi.hoisted(() => ({ ended: new Set<string>() }));
+const weather = vi.hoisted(() => ({ ended: new Set<string>(), untilEndS: new Map<string, number>() }));
 
 vi.mock('../../src/simulation/simulation-manager', () => ({
   SimulationManager: {
@@ -92,7 +93,10 @@ vi.mock('../../src/modal/quiz-manager', () => ({
 vi.mock('../../src/weather/weather-manager', () => ({
   WeatherManager: {
     hasInstance: () => true,
-    getInstance: () => ({ hasEventEnded: (id: string) => weather.ended.has(id) }),
+    getInstance: () => ({
+      hasEventEnded: (id: string) => weather.ended.has(id),
+      getSecondsUntilEventEnds: (id: string) => weather.untilEndS.get(id) ?? null,
+    }),
   },
 }));
 
@@ -133,6 +137,7 @@ describe('Phase 27 objective semantics', () => {
     quizzes.registered.clear();
     quizzes.complete.clear();
     weather.ended.clear();
+    weather.untilEndS.clear();
     activeTab = null;
     vi.spyOn(TabbedCanvas, 'getActiveTab').mockImplementation(() => activeTab);
   });
@@ -380,8 +385,11 @@ describe('Phase 27 objective semantics', () => {
       expect(manager.getAvailableTimeSkip()).toBeNull();
 
       station.heaterEnabled = true;
+      weather.untilEndS.set('cell', 1200);
       tick();
-      expect(manager.getAvailableTimeSkip()).toEqual({ objectiveId: 'ride-out-rain', minutes: 20, label: 'rain cell' });
+      // Phase 28 D1: the offer runs to the end of the cell, on the station clock
+      expect(manager.getAvailableTimeSkip()).toMatchObject({ objectiveId: 'ride-out-rain', deltaMs: 1_200_000, label: 'rain cell' });
+      expect(manager.getAvailableTimeSkip()?.landsAtMs).toBeCloseTo(SimClock.nowMs() + 1_200_000, 0);
 
       manager.markTimeSkipUsed('ride-out-rain');
       expect(manager.getAvailableTimeSkip()).toBeNull();
@@ -405,6 +413,131 @@ describe('Phase 27 objective semantics', () => {
       expect(stateOf('hold').timeRemainingSeconds).toBe(120);
       tick();
       expect(stateOf('hold').isCompleted).toBe(true);
+    });
+  });
+
+  describe('Phase 28 D1 hold-step skips', () => {
+    /** 2026-02-17 09:48:08 UTC, the S10 standby moment from nats-r3-s10-F2 */
+    const STANDBY_MS = Date.UTC(2026, 1, 17, 9, 48, 8);
+    const secondsOfUpdates = (seconds: number): void => {
+      for (let i = 0; i < seconds * 60; i++) {
+        tick();
+      }
+    };
+    const standBy = (extra: Partial<Objective> = {}): Objective =>
+      objective(
+        'stand-by',
+        [
+          { type: 'feed-heater-enabled', description: 'Heater', mustMaintain: false, requiresChange: false },
+          { type: 'scenario-time-reached', description: 'Window open (10:00)', mustMaintain: false, params: { scenarioTime: '10:00' } },
+        ],
+        { timeSkip: { minutes: 10, label: 'standby until the 10:00 window', availableAfterConditions: true }, ...extra }
+      );
+
+    beforeEach(() => {
+      SimClock.reset(STANDBY_MS);
+    });
+
+    it('scenario-time-reached reads the station clock, first occurrence after scenario start', () => {
+      expect(ObjectivesManager.scenarioTimeTargetMs('10:00')).toBe(Date.UTC(2026, 1, 17, 10, 0, 0));
+      expect(ObjectivesManager.scenarioTimeTargetMs('10:30:15')).toBe(Date.UTC(2026, 1, 17, 10, 30, 15));
+      // Before the start: the next day
+      expect(ObjectivesManager.scenarioTimeTargetMs('06:00')).toBe(Date.UTC(2026, 1, 18, 6, 0, 0));
+      expect(ObjectivesManager.scenarioTimeTargetMs('25:00')).toBeNull();
+      expect(ObjectivesManager.scenarioTimeTargetMs(undefined)).toBeNull();
+    });
+
+    it('offers a skip that lands exactly on the clock time the hold waits for (s10-F2)', () => {
+      station.heaterEnabled = true;
+      ObjectivesManager.initialize([standBy()]);
+      const manager = ObjectivesManager.getInstance();
+      tick();
+
+      const offer = manager.getAvailableTimeSkip();
+      expect(offer?.landsAtMs).toBe(Date.UTC(2026, 1, 17, 10, 0, 0));
+      expect(offer?.deltaMs).toBe(Date.UTC(2026, 1, 17, 10, 0, 0) - STANDBY_MS);
+      expect(stateOf('stand-by').isCompleted).toBe(false);
+
+      SimClock.skip(offer?.deltaMs ?? 0);
+      manager.applyTimeSkip(offer?.deltaMs ?? 0, 'stand-by');
+      tick();
+      expect(stateOf('stand-by').isCompleted).toBe(true);
+    });
+
+    it('runs a timed hold to its end, not a fixed N minutes (s10-F1)', () => {
+      ObjectivesManager.initialize([
+        objective('hold', [{ type: 'receiver-snr-threshold', description: 'C/N held', mustMaintain: true, maintainDuration: 29 * 60, params: { minCNRatio: 7 } }], {
+          timeSkip: { minutes: 30, label: 'pass window' },
+        }),
+      ]);
+      const manager = ObjectivesManager.getInstance();
+      tick();
+      secondsOfUpdates(60);
+
+      const offer = manager.getAvailableTimeSkip();
+      expect(offer?.landsAtMs).toBeNull();
+      // 29 min hold, about a minute already held: about 28 min left, not 30
+      expect(offer?.deltaMs).toBeGreaterThan(27.9 * 60_000);
+      expect(offer?.deltaMs).toBeLessThan(28.1 * 60_000);
+    });
+
+    it('holds the mission countdown and the objective countdown through the wait, not through setup (s14-F1)', () => {
+      ObjectivesManager.initialize([standBy({ timeLimitSeconds: 120 })], 30 * 60);
+      const manager = ObjectivesManager.getInstance();
+      tick();
+
+      // Setup (heater off): the operator is working, both clocks run
+      secondsOfUpdates(5);
+      expect(manager.getScenarioTimeRemaining()).toBe(30 * 60 - 5);
+      expect(stateOf('stand-by').timeRemainingSeconds).toBe(115);
+      expect(manager.getMissionClockHold()).toBeNull();
+
+      // Setup done, waiting for 10:00: both clocks hold
+      station.heaterEnabled = true;
+      tick();
+      expect(manager.getMissionClockHold()).toMatchObject({ objectiveId: 'stand-by', label: 'standby until the 10:00 window' });
+      expect(manager.isObjectiveCountdownHeld('stand-by')).toBe(true);
+      secondsOfUpdates(30);
+      expect(manager.getScenarioTimeRemaining()).toBe(30 * 60 - 5);
+      expect(stateOf('stand-by').timeRemainingSeconds).toBe(115);
+
+      // A dev/e2e clock jump through the wait does not charge the mission either
+      manager.applyTimeSkip(60_000);
+      expect(manager.getScenarioTimeRemaining()).toBe(30 * 60 - 5);
+    });
+
+    it('an objective skip burns no countdown of a step it opened (s10-F1)', () => {
+      ObjectivesManager.initialize([
+        standBy(),
+        objective('next', [{ type: 'hpa-enabled', description: 'HPA on', mustMaintain: false }], { prerequisiteObjectiveIds: ['stand-by'], timeLimitSeconds: 120 }),
+      ]);
+      station.heaterEnabled = true;
+      const manager = ObjectivesManager.getInstance();
+      tick();
+      const offer = manager.getAvailableTimeSkip();
+      SimClock.skip(offer?.deltaMs ?? 0);
+      tick();
+      expect(stateOf('next').isActive).toBe(true);
+
+      // The animation's remaining chunks land after the wait ended
+      manager.applyTimeSkip(73_000, 'stand-by');
+      expect(stateOf('next').timeRemainingSeconds).toBe(120);
+    });
+
+    it('freezes the mission timer at Mission Complete, even if something restarts it (s19-F2)', () => {
+      ObjectivesManager.initialize([objective('only', [{ type: 'hpa-enabled', description: 'HPA on', mustMaintain: false }])], 30 * 60);
+      const manager = ObjectivesManager.getInstance();
+      secondsOfUpdates(6);
+      station.hpaEnabled = true;
+      tick();
+      expect(manager.areAllObjectivesCompleted()).toBe(true);
+      const atCompletion = manager.getScenarioTimeRemaining();
+
+      // A sync/checkpoint restore sets the running flag from the saved time
+      manager.restoreState([], atCompletion);
+      secondsOfUpdates(30);
+      manager.applyTimeSkip(60_000);
+      expect(manager.getScenarioTimeRemaining()).toBe(atCompletion);
     });
   });
 });

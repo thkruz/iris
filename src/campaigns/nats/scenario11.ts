@@ -92,15 +92,15 @@ export const scenario11Data: ScenarioData = {
         antennasState: [
           {
             isPowered: true,
-            azimuth: 165.94 as Degrees, // Maine sees TM-1 here, not at Vermont's angles (phase 19.4)
-            elevation: 34.16 as Degrees,
-            polarization: 11.1 as Degrees,
+            azimuth: 157.0 as Degrees, // Maine sees TM-1 (53 W) here, not at Vermont's 153.1 / 35.1 (Phase 28 D4)
+            elevation: 35.33 as Degrees,
+            polarization: 11.2 as Degrees,
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61525, // TIDEMARK-1
-            targetAzimuth: 165.94 as Degrees,
-            targetElevation: 34.16 as Degrees,
-            targetPolarization: 11.1 as Degrees,
+            targetAzimuth: 157.0 as Degrees,
+            targetElevation: 35.33 as Degrees,
+            targetPolarization: 11.2 as Degrees,
             slewing: false,
             beaconCN: 10.4 as dB,
             beaconFrequencyHz: 4175.5e6 as Hertz, // TIDEMARK-1 beacon (RF)
@@ -149,7 +149,7 @@ export const scenario11Data: ScenarioData = {
                 isTransmitting: false,
                 isTransmittingSwitchUp: false,
                 isFaultSwitchUp: false,
-                id: 1,
+                id: 0, // Modem 1 is index 0, as the station default builds it (Phase 28)
                 isLoopback: false,
                 ifSignal: {
                   signalId: 'TIDEMARK-1-Teleport',
@@ -604,13 +604,18 @@ export const scenario11Data: ScenarioData = {
       points: 15,
     },
     {
+      // nats-r2-s03-F3 (S11): this used to tick on the Execute click itself.
+      // Continuity is judged after the handover, on ME-02's own receiver: it
+      // now hears ME-02's carrier relayed by TIDEMARK-1, and the player has
+      // to go and look at it
       id: 'verify-me-traffic-owner',
       nice: ['T0129', 'K0741'],
-      title: 'Verify ME-02 Owns Traffic',
-      description: 'Confirm ME-02 is now the traffic owner for TIDEMARK-1.',
+      title: 'Verify Service Continuity on ME-02',
+      description:
+        "Confirm the transfer held the link: on ME-02's RX Analysis the receiver is locked on TIDEMARK-1's TP-1 carrier, now ME-02's own carrier relayed back down by the bird, and ME-02 owns the TIDEMARK-1 traffic.",
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['execute-handover'],
-      timeLimitSeconds: 1 * 60,
+      timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
         {
@@ -619,6 +624,19 @@ export const scenario11Data: ScenarioData = {
           // Evaluator compares the objective's groundStation against the
           // current owner of params.satelliteId.
           params: { satelliteId: 61525 },
+          mustMaintain: true,
+        },
+        {
+          type: 'tab-active',
+          hidden: true,
+          description: 'RX Analysis Open',
+          params: { tab: 'rx-analysis' },
+          mustMaintain: true,
+        },
+        {
+          type: 'receiver-signal-locked',
+          description: 'ME-02 Receiver Locked After the Transfer',
+          params: { modemNumber: 1, requiresObservation: true, observationTab: 'rx-analysis' },
           mustMaintain: true,
         },
       ],
@@ -719,7 +737,7 @@ export const scenario11Data: ScenarioData = {
       id: 'vt-antenna-maintenance-position',
       nice: ['S0421', 'K0770'],
       title: 'Park VT-01 Antenna at Maintenance Position',
-      description: 'Set the antenna tracking mode to MAINTENANCE so the dish parks at 5° elevation for the crew.',
+      description: 'On ACU Control press MAINT, then APPLY: MAINT stages the 5° maintenance elevation and the dish only moves on APPLY. Wait for it to park at 5° for the crew.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['vt-safe-tx-chain'],
       timeLimitSeconds: 3 * 60,
@@ -821,15 +839,18 @@ export const scenario11Data: ScenarioData = {
           description: 'Handover Log Entry',
           params: {
             character: Character.SYSTEM,
+            // nats-r3-s09-F1 (S11): no clock stamp in the options; the Ops
+            // Log stamps the station clock on the entry itself
             question: 'Which line correctly records this handover in the operations log?',
             options: [
-              '1000 - Planned TM-1 handover to ME-02 complete. VT-01 safed, antenna at maintenance position, crew on-site. Return to service after crew sign-off.',
-              '1000 - Emergency TM-1 handover to ME-02 complete. VT-01 fault cause unknown, antenna still on TM-1, crew on-site. Investigation pending.',
-              '1000 - Crew on-site for VT-01 HPA waveguide gasket. TM-1 handover to ME-02 deferred, VT-01 still carrying traffic. Return to service after crew sign-off.',
-              '1000 - Planned TM-1 handover to ME-02 complete. VT-01 maintenance finished, antenna back on TM-1, crew released. Traffic resumed on VT-01.',
+              'Planned TM-1 handover to ME-02 complete. VT-01 safed, antenna at maintenance position, crew on-site. Return to service after crew sign-off.',
+              'Emergency TM-1 handover to ME-02 complete. VT-01 fault cause unknown, antenna still on TM-1, crew on-site. Investigation pending.',
+              'Crew on-site for VT-01 HPA waveguide gasket. TM-1 handover to ME-02 deferred, VT-01 still carrying traffic. Return to service after crew sign-off.',
+              'Planned TM-1 handover to ME-02 complete. VT-01 maintenance finished, antenna back on TM-1, crew released. Traffic resumed on VT-01.',
             ],
             correctIndex: 0,
-            explanation: 'Who, what, why, where it stands, who has the link. The next operator should be able to pick up the shift without asking a question.',
+            explanation:
+              'Who, what, why, where it stands, who has the link. The Operations Log stamps the station clock on the entry for you. The next operator should be able to pick up the shift without asking a question.',
             pointPenalty: 5,
           },
           mustMaintain: false,

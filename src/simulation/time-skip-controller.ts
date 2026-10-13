@@ -30,12 +30,19 @@
  * stabilisation) fire, weather ice integrates over it, and the objective's
  * own timed holds earn the skipped seconds. It does not burn the anchoring
  * objective's countdown, and it is logged in the Ops Log.
+ *
+ * Phase 28 D1: the objective skip runs to the end of the hold (the clock time,
+ * weather end or timed hold the objective waits for) and stops as soon as the
+ * objective completes, so it never spends a later step's time. It charges no
+ * countdown at all: the mission countdown is held through the wait whether
+ * the operator waits or skips.
  */
 
 import { CryptoModule } from '@app/equipment/crypto';
 import { type OrbitalObserver, OrbitalSatellite, observerFromLocation } from '@app/equipment/satellite/orbital-satellite';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
+import type { TimeSkipOffer } from '@app/objectives/objective-types';
 import { ObjectivesManager } from '@app/objectives/objectives-manager';
 import { OpsLogManager } from '@app/ops-log/ops-log-manager';
 import { ScenarioManager } from '@app/scenario-manager';
@@ -82,13 +89,6 @@ export interface SkipTarget {
   willExpireCryptoKey: boolean;
 }
 
-/** An objective-anchored skip in progress (Phase 27 Q4) */
-interface ObjectiveSkip {
-  objectiveId: string;
-  minutes: number;
-  label: string;
-}
-
 const DEFAULT_LEAD_TIME_S = 120;
 const DEFAULT_ANIMATION_MS = 2500;
 const DEFAULT_MIN_SKIP_S = 300;
@@ -105,7 +105,7 @@ export class TimeSkipController {
   private skippedMs_ = 0;
   private startedAtRealMs_ = 0;
   private animationFrameId_: number | null = null;
-  private objectiveSkip_: ObjectiveSkip | null = null;
+  private objectiveSkip_: TimeSkipOffer | null = null;
 
   private constructor() {
     this.config_ = (ScenarioManager.getInstance().settings.timeSkip as TimeSkipConfig | undefined) ?? {};
@@ -179,9 +179,10 @@ export class TimeSkipController {
 
   /**
    * The objective wait on offer right now (Phase 27 Q4), or null. Read by the
-   * command bar each second to show or hide its "Skip N min" control.
+   * command bar each second to show or hide its skip control. Since Phase 28
+   * D1 the offer covers exactly the rest of the hold.
    */
-  findObjectiveSkip(): { objectiveId: string; minutes: number; label: string } | null {
+  findObjectiveSkip(): TimeSkipOffer | null {
     if (!ObjectivesManager.hasInstance()) {
       return null;
     }
@@ -213,8 +214,9 @@ export class TimeSkipController {
   }
 
   /**
-   * Fast-forward the active objective's wait. One shot per objective. Returns
-   * false when nothing is on offer or the skip is blocked.
+   * Fast-forward the active objective's wait to its end (Phase 28 D1). One
+   * shot per objective. Returns false when nothing is on offer or the skip is
+   * blocked.
    */
   startObjectiveSkip(): boolean {
     const offer = this.findObjectiveSkip();
@@ -222,7 +224,7 @@ export class TimeSkipController {
       return false;
     }
 
-    const totalMs = offer.minutes * 60_000;
+    const totalMs = offer.deltaMs;
     ObjectivesManager.getInstance().markTimeSkipUsed(offer.objectiveId);
     this.objectiveSkip_ = offer;
     this.isSkipping_ = true;
@@ -347,6 +349,16 @@ export class TimeSkipController {
       return false;
     }
 
+    // The wait is over: the objective completed (its holds also earn the
+    // frames that run during the animation, so it can finish a moment
+    // early). Stop here; running on would spend the next step's time
+    // (nats-r3-s10-F1).
+    if (this.objectiveSkip_ && !this.isObjectiveStillWaiting_(this.objectiveSkip_.objectiveId)) {
+      this.finish_(true);
+
+      return false;
+    }
+
     const progress = Math.min(1, elapsedRealMs / this.animationMs);
     const chunkMs = TimeSkipController.ease_(progress) * this.totalMs_ - this.skippedMs_;
 
@@ -428,6 +440,16 @@ export class TimeSkipController {
       isCompleted,
       skippedMs: this.skippedMs_,
     });
+  }
+
+  /** Whether the objective an objective skip covers is still open */
+  private isObjectiveStillWaiting_(objectiveId: string): boolean {
+    if (!ObjectivesManager.hasInstance()) {
+      return false;
+    }
+    const state = ObjectivesManager.getInstance().getObjectiveState(objectiveId);
+
+    return state !== undefined && state.isActive && !state.isCompleted && !state.isFailed;
   }
 
   private orbitalSatellites_(): OrbitalSatellite[] {

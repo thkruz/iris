@@ -83,6 +83,7 @@ export const QUIZ_CONDITION_TYPES: ReadonlySet<ConditionType> = new Set<Conditio
  */
 export const TIME_GATED_CONDITION_TYPES: ReadonlySet<ConditionType> = new Set<ConditionType>([
   'weather-event-ended',
+  'scenario-time-reached',
   'interference-event-ended',
   'hardware-fault-tripped',
   'gpsdo-time-offset-stable',

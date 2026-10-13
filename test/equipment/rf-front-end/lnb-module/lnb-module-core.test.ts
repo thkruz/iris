@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { LNBModuleCore, LNBState, LOOPBACK_COUPLING_DB } from '../../../../src/equipment/rf-front-end/lnb-module/lnb-module-core';
+import { LNBModuleCore, LNBState, LOOP_TRANSLATION_HZ, LOOPBACK_COUPLING_DB } from '../../../../src/equipment/rf-front-end/lnb-module/lnb-module-core';
 import { RFFrontEndCore } from '../../../../src/equipment/rf-front-end/rf-front-end-core';
 import { createRFFrontEnd } from '../../../../src/equipment/rf-front-end/rf-front-end-factory';
 import { EventBus } from '../../../../src/events/event-bus';
@@ -482,10 +482,10 @@ describe('LNBModuleCore', () => {
   });
 
   describe('test-loop coupler and input compression (phase 27, r2-s07-F1)', () => {
-    const loopCarrier = (bucOutDbm: number): RfSignal =>
+    const loopCarrier = (bucOutDbm: number, rfHz = 5943e6): RfSignal =>
       ({
         signalId: 'loop',
-        frequency: 5943e6 as RfFrequency,
+        frequency: rfHz as RfFrequency,
         power: bucOutDbm as dBm,
         bandwidth: 36e6 as Hertz,
         polarization: 'H',
@@ -493,12 +493,15 @@ describe('LNBModuleCore', () => {
         gainInPath: 0 as dBi,
       }) as unknown as RfSignal;
 
-    const driveLoop = (bucOutDbm: number) => {
+    const driveLoop = (bucOutDbm: number, rfHz = 5943e6) => {
       rfFrontEnd.bucModule.state.isLoopback = true;
-      vi.spyOn(rfFrontEnd.bucModule, 'outputSignals', 'get').mockReturnValue([loopCarrier(bucOutDbm)]);
+      vi.spyOn(rfFrontEnd.bucModule, 'outputSignals', 'get').mockReturnValue([loopCarrier(bucOutDbm, rfHz)]);
       lnbModule.state.isPowered = true;
       lnbModule.state.gain = 60 as dB;
-      lnbModule.state.loFrequency = 7000 as MHz;
+      // The normal receive LO: the loop translator, not an LO retune, brings the loop in (Phase 28 D3)
+      lnbModule.state.loFrequency = 5250 as MHz;
+      lnbModule.state.loInjection = 'high';
+      lnbModule.state.frequencyError = 0;
       lnbModule.update();
     };
 
@@ -516,6 +519,41 @@ describe('LNBModuleCore', () => {
       driveLoop(16);
       expect(lnbModule.compressionDb).toBeGreaterThan(0.5);
       expect(lnbModule.getAlarms().some((a) => a.includes('overload'))).toBe(true);
+    });
+
+    it('the loop translator puts the 6053 MHz uplink at 3828 MHz RF, 1422 MHz IF with LO 5250 (nats-r3-s08-F1)', () => {
+      // S8: modem 2 at 1047 MHz IF, BUC LO 7100 MHz: 6053 MHz uplink; -7 dBm
+      // drive at the 20 dB loop gain puts +13 dBm out of the BUC
+      driveLoop(13, 6053e6);
+
+      const atLnbInput = lnbModule.rxSignalsIn.find((s) => s.signalId === 'loop');
+      expect(LOOP_TRANSLATION_HZ).toBe(2225e6);
+      expect(atLnbInput?.frequency).toBe(3828e6);
+      expect(atLnbInput?.power).toBeCloseTo(13 - LOOPBACK_COUPLING_DB, 6);
+
+      const atIf = lnbModule.ifSignals.find((s) => s.signalId === 'loop');
+      expect(atIf).toBeDefined();
+      expect(atIf!.frequency).toBeCloseTo(1422e6, -3);
+      // Coupler loss, then LNB gain less its (small) compression and the IF cable
+      const expected = 13 - LOOPBACK_COUPLING_DB + 60 - lnbModule.compressionDb - rfFrontEnd.cableLossDb('rxIf');
+      expect(atIf!.power).toBeCloseTo(expected, 6);
+      expect(atIf!.power).toBeGreaterThan(6);
+      expect(atIf!.power).toBeLessThan(7.1);
+    });
+
+    it('S7: 5943 MHz uplink loops back at the TM-1 downlink-equivalent 3718 MHz, 1532 MHz IF', () => {
+      driveLoop(13, 5943e6);
+
+      const atIf = lnbModule.ifSignals.find((s) => s.signalId === 'loop');
+      expect(atIf?.frequency).toBeCloseTo(1532e6, -3);
+    });
+
+    it('a station loopTranslationMHz overrides the 2225 MHz default', () => {
+      lnbModule.state.loopTranslationMHz = 2300 as MHz;
+      driveLoop(13, 6053e6);
+
+      expect(lnbModule.rxSignalsIn.find((s) => s.signalId === 'loop')?.frequency).toBe(3753e6);
+      lnbModule.state.loopTranslationMHz = undefined;
     });
 
     it('a satellite downlink alone is far from compression', () => {

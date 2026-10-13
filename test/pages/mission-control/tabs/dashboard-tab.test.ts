@@ -2,7 +2,9 @@ import { Mock, Mocked, vi } from 'vitest';
 import { GroundStation } from '../../../../src/assets/ground-station/ground-station';
 import { EventBus } from '../../../../src/events/event-bus';
 import { Events } from '../../../../src/events/events';
+import { OpsLogManager } from '../../../../src/ops-log/ops-log-manager';
 import { DashboardTab } from '../../../../src/pages/mission-control/tabs/dashboard-tab';
+import { SimClock } from '../../../../src/simulation/sim-clock';
 
 // Mock dependencies
 vi.mock('../../../../src/events/event-bus');
@@ -270,6 +272,21 @@ describe('DashboardTab', () => {
       updateHandler();
       expect(document.querySelector('#antenna-mode')?.textContent).toBe('PROGRAM TRACK + STEP');
     });
+
+    it('turns the mode badge and the antenna LED red under an ACU automation fault (nats-r3-s23-F1)', () => {
+      const state = mockGroundStation.antennas[0].state as { trackingMode: string; isStepTrackEnabled: boolean; isAcuAutomationFaulted: boolean };
+      state.trackingMode = 'program-track';
+      state.isStepTrackEnabled = false;
+      state.isAcuAutomationFaulted = true;
+      vi.spyOn(Date, 'now').mockReturnValue(30_000_000);
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
+      updateHandler();
+      const mode = document.querySelector('#antenna-mode');
+      expect(mode?.textContent).toBe('PROGRAM TRACK (OFFLINE)');
+      expect(mode?.className).toContain('status-badge-red');
+      expect(mode?.className).not.toContain('status-badge-green');
+      expect(document.querySelector('#antenna-fault-led')?.className).toContain('error');
+    });
   });
 
   describe('alarms (same source as the ticker)', () => {
@@ -304,6 +321,31 @@ describe('DashboardTab', () => {
       expect(document.querySelector('#alarm-list .no-alarms')?.textContent).toContain('No active alarms');
       expect(document.querySelector('#alarm-list .alarm-message')?.textContent).toBe('LOOPBACK ENABLED');
       expect(document.querySelector('#alarm-count')?.textContent).toBe('0');
+    });
+
+    it('stamps each alarm on the station clock when first raised, not the wall clock (nats-r3-s08-F2)', () => {
+      OpsLogManager.initialize('02:15:00', '2026-02-14');
+      try {
+        (mockGroundStation.receivers[0].getStatusAlarms as Mock).mockReturnValue([{ severity: 'warning', message: 'RX lost lock' }]);
+        sync(50_000_000);
+        expect(document.querySelector('#alarm-list .alarm-time')?.textContent).toBe('02:15:00');
+
+        // A minute later the standing alarm keeps its raise time; a new one gets the new time
+        SimClock.skip(60_000);
+        (mockGroundStation.transmitters[0].getStatusAlarms as Mock).mockReturnValue([{ severity: 'error', message: 'Modem 1 Faulted' }]);
+        sync(60_000_000);
+        const times = [...document.querySelectorAll('#alarm-list .alarm-item')].map((el) => [
+          el.querySelector('.alarm-message')?.textContent,
+          el.querySelector('.alarm-time')?.textContent,
+        ]);
+        expect(times).toEqual([
+          ['Modem 1 Faulted', '02:16:00'],
+          ['RX lost lock', '02:15:00'],
+        ]);
+      } finally {
+        OpsLogManager.destroy();
+        SimClock.reset();
+      }
     });
   });
 });

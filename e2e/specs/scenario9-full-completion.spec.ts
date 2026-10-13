@@ -295,7 +295,7 @@ const SCENARIO_9_OBJECTIVES: Scenario9Objective[] = [
     id: 'log-shift-summary',
     title: 'Log Shift Summary',
     type: 'quiz',
-    correctAnswer: '0700 - Morning rounds complete. VT-01/TM-1, ME-02/TM-2, TM-3 beacon verified via VT-01 spot-check (TM-1 on the sister teleport meanwhile). No anomalies.',
+    correctAnswer: 'Morning rounds complete. VT-01/TM-1, ME-02/TM-2, TM-3 beacon verified via VT-01 spot-check (TM-1 on the sister teleport meanwhile). No anomalies.',
   },
 ];
 

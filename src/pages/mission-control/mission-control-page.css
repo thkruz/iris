@@ -296,3 +296,22 @@
   color: #22c55e;
   font-weight: 800;
 }
+/* Held state - an objective's wait holds the mission clock (Phase 28 D1) */
+.timer-display .timer-hold-tag {
+  margin-left: 0.35em;
+  padding: 0 0.3em;
+  border-radius: 2px;
+  background: rgba(59, 130, 246, 0.35);
+  color: #bfdbfe;
+  letter-spacing: 0.05em;
+}
+
+.timer-display.timer-held .timer-value {
+  color: #93c5fd;
+}
+
+/* The station clock never wraps: a wrapped clock spilled below the header
+   when anything else in the brand block took width (nats-r3-s10-F3) */
+.command-bar-left #utc-clock {
+  white-space: nowrap;
+}

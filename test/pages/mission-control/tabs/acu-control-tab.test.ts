@@ -392,7 +392,7 @@ describe('ACUControlTab', () => {
   });
 
   describe('satellite dropdown interactions', () => {
-    it('should call handleTargetSatelliteChange when satellite is selected', () => {
+    it('stages a satellite pick and commits it only on Move to Target (nats-r3-s12-F3)', () => {
       SimulationManager.getInstance.mockReturnValue({
         satellites: [
           { noradId: 12345, name: 'Test Satellite 1' },
@@ -410,10 +410,22 @@ describe('ACUControlTab', () => {
 
       const antenna = mockGroundStation.antennas[0];
       const select = document.querySelector(`#${PREFIX}satellite-select`) as HTMLSelectElement;
+      antenna.state.trackingMode = 'program-track';
       select.value = '12345';
       select.dispatchEvent(new Event('change'));
 
+      // The pick alone commands nothing
+      expect(antenna.handleTargetSatelliteChange).not.toHaveBeenCalled();
+      const moveBtn = document.querySelector(`#${PREFIX}move-to-target-btn`) as HTMLButtonElement;
+      expect(moveBtn.disabled).toBe(false);
+      const hint = document.querySelector(`#${PREFIX}target-staged-hint`) as HTMLElement;
+      expect(hint.textContent).toContain('Test Satellite 1 staged');
+
+      moveBtn.click();
+
       expect(antenna.handleTargetSatelliteChange).toHaveBeenCalledWith(12345);
+      expect(antenna.moveToTargetSatellite).toHaveBeenCalled();
+      antenna.state.trackingMode = 'manual';
       tab2.dispose();
     });
 

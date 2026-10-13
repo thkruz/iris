@@ -101,11 +101,11 @@
           "kind": "fixed",
           "pass": null,
           "atPeak": {
-            "elevationDeg": 34.2,
+            "elevationDeg": 35.1,
             "frequencyMHz": 4175.5,
             "gainDbi": 50.7,
             "gOverTDbPerK": 31.12,
-            "tsysK": 82.03
+            "tsysK": 81.95
           },
           "carriers": [
             {
@@ -116,12 +116,12 @@
               "modulation": "CW",
               "fec": "null",
               "samples": 5,
-              "peakCnDb": 52.53,
-              "medianCnDb": 52.53,
-              "peakEsN0Db": 43.06,
+              "peakCnDb": 52.56,
+              "medianCnDb": 52.56,
+              "peakEsN0Db": 43.07,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
-              "peakRxIfDbm": -47.21,
+              "peakRxIfDbm": -47.18,
               "noiseIfDbm": -103.08,
               "lockedSamples": 0
             }

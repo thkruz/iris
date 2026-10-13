@@ -458,13 +458,13 @@ export const scenario1Data: ScenarioData = {
             question: 'What does the receiver modem C/N indicate for a QPSK link?',
             options: [
               '≥ 8 dB - Strong link with good operating margin',
-              '5-7 dB - Warning; margin is thin',
-              '3-4 dB - Near lock threshold; errors likely',
-              '< 3 dB - Below demodulation threshold; no reliable lock',
+              '5-8 dB - Warning; locked, but the fade margin is thin',
+              '4-5 dB - At the lock threshold; errors likely',
+              '< 4 dB - Below demodulation threshold; no reliable lock',
             ],
             correctIndex: 0,
             explanation:
-              'C/N at or above 8 dB is a healthy QPSK 3/4 link with adequate margin for reliable data reception (Normal in the brief table; 5-7 dB is Warning). A healthy reading confirms the entire receive chain from antenna to modem is functioning properly.',
+              'C/N at or above 8 dB is a healthy QPSK 3/4 link with adequate margin for reliable data reception (Normal in the brief table; 5-8 dB is Warning, and lock needs about 4.2 dB). A healthy reading confirms the entire receive chain from antenna to modem is functioning properly.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -1000,22 +1000,6 @@ export const scenario1Data: ScenarioData = {
         emotion: Emotion.NEUTRAL,
         audioUrl: getAssetUrl('/assets/campaigns/nats/1/v2/obj-verify-tap-points.mp3'),
       },
-      'identify-beacon': {
-        text: `
-      <p>
-        You're looking for the beacon - TIDEMARK-1's CW carrier. It's already configured to show it. Should be a clean spike above the noise floor. If you don't see it, check the center frequency. Beacon IF is 1074.5 MHz after the LNB downconverts from RF.
-      </p>
-      <p>
-        There it is. Clean beacon. That carrier is your canary - if you can see it, the receive path is working. If it disappears or goes ragged, something changed. Could be weather, could be equipment, could be the satellite.
-      </p>
-      <p>
-        Now check the analyzer settings. Center frequency and span determine what you're actually looking at.
-      </p>
-      `,
-        character: Character.CHARLIE_BROOKS,
-        emotion: Emotion.HAPPY,
-        audioUrl: getAssetUrl('/assets/campaigns/nats/1/v2/obj-phase-6-spectrum.mp3'),
-      },
       'verify-speca-settings': {
         text: `
       <p>
@@ -1203,6 +1187,26 @@ export const scenario1Data: ScenarioData = {
         character: Character.CHARLIE_BROOKS,
         emotion: Emotion.HAPPY,
         audioUrl: getAssetUrl('/assets/campaigns/nats/1/v2/obj-phase-10-alarms.mp3'),
+      },
+    },
+    objectivesOnStart: {
+      // Phase 28 (nats-r3-s01-F1): the beacon guidance plays when the step
+      // opens, not after its quiz is answered
+      'identify-beacon': {
+        text: `
+      <p>
+        You're looking for the beacon - TIDEMARK-1's CW carrier. The analyzer is already configured to show it. Should be a clean spike above the noise floor. If you don't see it, check the center frequency. Beacon IF is 1074.5 MHz after the LNB downconverts from RF.
+      </p>
+      <p>
+        That carrier is your canary - if you can see it, the receive path is working. If it disappears or goes ragged, something changed. Could be weather, could be equipment, could be the satellite.
+      </p>
+      <p>
+        Once you've confirmed it, check the analyzer settings. Center frequency and span determine what you're actually looking at.
+      </p>
+      `,
+        character: Character.CHARLIE_BROOKS,
+        emotion: Emotion.NEUTRAL,
+        audioUrl: getAssetUrl('/assets/campaigns/nats/1/v2/obj-phase-6-spectrum.mp3'),
       },
     },
   },

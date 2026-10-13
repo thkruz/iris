@@ -165,9 +165,17 @@ const SCENARIO_11_OBJECTIVES: Scenario11Objective[] = [
     },
   },
   {
+    // nats-r2-s03-F3: continuity is read off ME-02's receiver after the transfer
+    id: 'verify-me-traffic-owner-station',
+    title: 'Back to ME-02 After the Transfer',
+    type: 'select-station',
+    stationId: 'ME-02',
+  },
+  {
     id: 'verify-me-traffic-owner',
-    title: 'Verify ME-02 Owns Traffic',
-    type: 'auto',
+    title: 'Verify Service Continuity on ME-02',
+    type: 'click-tab',
+    tabId: 'rx-analysis',
   },
   {
     id: 'catherine-confirm-hot',
@@ -238,7 +246,7 @@ const SCENARIO_11_OBJECTIVES: Scenario11Objective[] = [
     id: 'log-handover-quiz',
     title: 'Check the Log Line',
     type: 'quiz',
-    correctAnswer: '1000 - Planned TM-1 handover to ME-02 complete. VT-01 safed, antenna at maintenance position, crew on-site. Return to service after crew sign-off.',
+    correctAnswer: 'Planned TM-1 handover to ME-02 complete. VT-01 safed, antenna at maintenance position, crew on-site. Return to service after crew sign-off.',
   },
 ];
 

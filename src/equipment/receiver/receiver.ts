@@ -97,7 +97,7 @@ export interface IQSignalInfo {
   effectiveEsN0_dB?: number;
   /** Es/N0 lost to untracked LO phase noise, dB (Phase 19.6) */
   phaseNoisePenalty_dB?: number;
-  /** Carrier to thermal noise density, dB-Hz */
+  /** Carrier to noise-plus-interference density, C/(N0 + I0), dB-Hz: C/N + 10 log10(modem bandwidth) */
   cn0_dBHz?: number;
   /** The modem's MODCOD (its configured labels); null for labels no demodulator locks to */
   modcod?: Modcod | null;
@@ -713,7 +713,12 @@ export class Receiver extends BaseEquipment {
     const inCarrierInterference = this.calculateInterferencePower_(targetSignal, allSignals, targetSignal.bandwidth, targetSignal.frequency);
     const inCarrierInterferenceMw = inCarrierInterference > -Infinity ? 10 ** (inCarrierInterference / 10) : 0;
     const esN0 = signalLevel - 10 * Math.log10(10 ** (noiseInRsDbm / 10) + upstreamN0Mw * symbolRate + inCarrierInterferenceMw);
-    const cn0 = signalLevel - 10 * Math.log10(10 ** (n0DbmHz / 10) + upstreamN0Mw);
+    // C/N0 on the same footing as the C/N readout (nats-r3-s05-F3): thermal
+    // plus upstream noise density plus the interference in the modem
+    // bandwidth spread over it, C/(N0 + I0). So C/N0 - C/N = 10 log10(B_modem)
+    // always, and an interferer moves both readouts together.
+    const interferenceDensityMw = interferenceMw / modemBandwidthHz;
+    const cn0 = signalLevel - 10 * Math.log10(10 ** (n0DbmHz / 10) + upstreamN0Mw + interferenceDensityMw);
 
     // ADC: the demodulator's tuner filters the modem's channel out of the AGC
     // output and its IF AGC lifts it toward the target level (up to 30 dB of

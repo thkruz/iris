@@ -412,6 +412,7 @@ describe('GlobalCommandBar', () => {
         getObjectiveStates: vi.fn(() => []),
         isQuizPassed: vi.fn(() => false),
         isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => null),
       });
 
       vi.advanceTimersByTime(1000);
@@ -429,6 +430,7 @@ describe('GlobalCommandBar', () => {
         getObjectiveStates: vi.fn(() => []),
         isQuizPassed: vi.fn(() => false),
         isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => null),
       });
 
       vi.advanceTimersByTime(1000);
@@ -444,6 +446,7 @@ describe('GlobalCommandBar', () => {
         getObjectiveStates: vi.fn(() => []),
         isQuizPassed: vi.fn(() => false),
         isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => null),
       });
 
       vi.advanceTimersByTime(1000);
@@ -462,6 +465,7 @@ describe('GlobalCommandBar', () => {
         getObjectiveStates: vi.fn(() => []),
         isQuizPassed: vi.fn(() => false),
         isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => null),
       });
 
       vi.advanceTimersByTime(1000);
@@ -478,6 +482,7 @@ describe('GlobalCommandBar', () => {
         getObjectiveStates: vi.fn(() => []),
         isQuizPassed: vi.fn(() => false),
         isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => null),
       });
 
       vi.advanceTimersByTime(1000);
@@ -491,10 +496,12 @@ describe('GlobalCommandBar', () => {
         hasScenarioTimer: vi.fn(() => false),
         isQuizPassed: vi.fn(() => false),
         isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => null),
         formatTimeRemaining: vi.fn(() => '01:30'),
         getObjectiveStates: vi.fn(() => [
           {
             objective: { id: 'obj1', title: 'Test Objective', timeLimitSeconds: 120 },
+            isActive: true,
             isTimerRunning: true,
             isCompleted: false,
             isFailed: false,
@@ -514,6 +521,7 @@ describe('GlobalCommandBar', () => {
         hasScenarioTimer: vi.fn(() => false),
         isQuizPassed: vi.fn(() => true),
         isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => null),
         getPassedObjectiveId: vi.fn(() => 'obj1'),
         getObjectiveStates: vi.fn(() => [
           {
@@ -536,6 +544,7 @@ describe('GlobalCommandBar', () => {
         hasScenarioTimer: vi.fn(() => false),
         isQuizPassed: vi.fn(() => false),
         isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => null),
         getObjectiveStates: vi.fn(() => [
           {
             objective: { id: 'obj1', title: 'Failed Objective', timeLimitSeconds: 60 },
@@ -557,10 +566,12 @@ describe('GlobalCommandBar', () => {
         hasScenarioTimer: vi.fn(() => false),
         isQuizPassed: vi.fn(() => false),
         isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => null),
         formatTimeRemaining: vi.fn(() => '00:20'),
         getObjectiveStates: vi.fn(() => [
           {
             objective: { id: 'obj1', title: 'Test', timeLimitSeconds: 60 },
+            isActive: true,
             isTimerRunning: true,
             isCompleted: false,
             isFailed: false,
@@ -580,10 +591,12 @@ describe('GlobalCommandBar', () => {
         hasScenarioTimer: vi.fn(() => false),
         isQuizPassed: vi.fn(() => false),
         isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => null),
         formatTimeRemaining: vi.fn(() => '00:45'),
         getObjectiveStates: vi.fn(() => [
           {
             objective: { id: 'obj1', title: 'Test', timeLimitSeconds: 120 },
+            isActive: true,
             isTimerRunning: true,
             isCompleted: false,
             isFailed: false,
@@ -603,6 +616,7 @@ describe('GlobalCommandBar', () => {
         hasScenarioTimer: vi.fn(() => false),
         isQuizPassed: vi.fn(() => false),
         isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => null),
         getObjectiveStates: vi.fn(() => []),
       });
 
@@ -620,6 +634,7 @@ describe('GlobalCommandBar', () => {
         hasScenarioTimer: vi.fn(() => false),
         isQuizPassed: vi.fn(() => false),
         isObjectiveCountdownHeld: vi.fn(() => true),
+        getMissionClockHold: vi.fn(() => null),
         getObjectiveStates: vi.fn(() => [
           {
             objective: { id: 'obj1', title: 'Read the C/N', timeLimitSeconds: 120 },
@@ -743,6 +758,88 @@ describe('GlobalCommandBar', () => {
       // Timer should be cleared
       vi.advanceTimersByTime(2000);
       // No errors should occur from timer callback
+    });
+  });
+
+  describe('Phase 28 D1 / nats-r3 timers', () => {
+    it('shows HOLD beside the MISSION timer while an objective wait holds it', () => {
+      ObjectivesManager.getInstance.mockReturnValue({
+        hasScenarioTimer: vi.fn(() => true),
+        getScenarioTimeRemaining: vi.fn(() => 1800),
+        formatTimeRemaining: vi.fn(() => '30:00'),
+        getObjectiveStates: vi.fn(() => []),
+        isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => ({ objectiveId: 'sustained-monitor', title: 'Hold Through the Cell', label: 'rain cell' })),
+      });
+
+      vi.advanceTimersByTime(1000);
+
+      const tag = document.querySelector<HTMLElement>('#scenario-timer-hold');
+      expect(tag?.hidden).toBe(false);
+      expect(document.querySelector('#scenario-timer-display')?.classList.contains('timer-held')).toBe(true);
+      expect(document.querySelector<HTMLElement>('#scenario-timer-display')?.title).toContain('rain cell');
+    });
+
+    it('hides HOLD when nothing holds the mission clock', () => {
+      ObjectivesManager.getInstance.mockReturnValue({
+        hasScenarioTimer: vi.fn(() => true),
+        getScenarioTimeRemaining: vi.fn(() => 1800),
+        formatTimeRemaining: vi.fn(() => '30:00'),
+        getObjectiveStates: vi.fn(() => []),
+        isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => null),
+      });
+
+      vi.advanceTimersByTime(1000);
+
+      expect(document.querySelector<HTMLElement>('#scenario-timer-hold')?.hidden).toBe(true);
+    });
+
+    it('reads only active objectives, like the checklist row (nats-r3-s24-F2)', () => {
+      ObjectivesManager.getInstance.mockReturnValue({
+        hasScenarioTimer: vi.fn(() => false),
+        isQuizPassed: vi.fn(() => false),
+        isObjectiveCountdownHeld: vi.fn(() => false),
+        getMissionClockHold: vi.fn(() => null),
+        formatTimeRemaining: vi.fn((s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`),
+        getObjectiveStates: vi.fn(() => [
+          {
+            objective: { id: 'stale', title: 'Stale', timeLimitSeconds: 60 },
+            isActive: false,
+            isTimerRunning: true,
+            isCompleted: false,
+            isFailed: false,
+            timeRemainingSeconds: 58,
+          },
+          {
+            objective: { id: 'heater', title: 'Heater Before the Front', timeLimitSeconds: 180 },
+            isActive: true,
+            isTimerRunning: true,
+            isCompleted: false,
+            isFailed: false,
+            timeRemainingSeconds: 180,
+          },
+        ]),
+      });
+
+      vi.advanceTimersByTime(1000);
+
+      expect(document.querySelector('#objective-timer-value')?.textContent).toBe('3:00');
+    });
+
+    it('repaints the timers when an objective activates, not on the next tick', () => {
+      expect(mockEventBus.on).toHaveBeenCalledWith(Events.OBJECTIVE_ACTIVATED, expect.any(Function));
+      expect(mockEventBus.on).toHaveBeenCalledWith(Events.OBJECTIVES_ALL_COMPLETED, expect.any(Function));
+    });
+
+    it('labels an objective skip by where it lands', () => {
+      const landsAtMs = Date.UTC(2026, 1, 17, 10, 0, 0);
+      expect(GlobalCommandBar.objectiveSkipText({ objectiveId: 'a', deltaMs: 712_000, landsAtMs, label: 'standby' })).toBe('Skip to 10:00');
+      expect(GlobalCommandBar.objectiveSkipText({ objectiveId: 'a', deltaMs: 60_000, landsAtMs: landsAtMs + 17_000, label: 'cell' })).toBe('Skip to 10:00:17');
+      expect(GlobalCommandBar.objectiveSkipText({ objectiveId: 'a', deltaMs: 7.2 * 60_000, landsAtMs: null, label: 'hold' })).toBe('Skip 8 min');
+      expect(GlobalCommandBar.objectiveSkipText({ objectiveId: 'a', deltaMs: 40_000, landsAtMs: null, label: 'hold' })).toBe('Skip 40 s');
     });
   });
 });

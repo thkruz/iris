@@ -6,6 +6,7 @@ import { qs } from '@app/engine/utils/query-selector';
 import { EventBus } from '@app/events/event-bus';
 import { AggregatedAlarm, AlarmStateChangedData, Events, SimulatedTimeTickData, TimeSkipEndedData } from '@app/events/events';
 import { t7e } from '@app/locales/i18n';
+import type { TimeSkipOffer } from '@app/objectives/objective-types';
 import { ObjectivesManager } from '@app/objectives/objectives-manager';
 import { LoadoutModal } from '@app/sandbox/loadout-modal';
 import { SandboxLoadoutService } from '@app/sandbox/sandbox-loadout';
@@ -109,6 +110,7 @@ export class GlobalCommandBar {
   private skipTarget_: SkipTarget | null = null;
   private lastSkipTargetComputeMs_ = 0;
   private readonly boundOnTimeSkipEnded_: (data: TimeSkipEndedData) => void;
+  private readonly boundOnObjectiveChanged_ = (): void => this.onObjectiveChanged_();
 
   constructor(private readonly parentContainerId_: string) {
     this.boundOnAlarmStateChanged_ = this.onAlarmStateChanged_.bind(this);
@@ -203,36 +205,6 @@ export class GlobalCommandBar {
           <div class="font-bold tracking-wide text-white">${this.headerIdentity_.name}<span class="text-blue-500">${this.headerIdentity_.nameAccent}</span></div>
           <div class="text-[10px] text-slate-400 font-mono" id="utc-clock">${this.clockPlaceholder_()}</div>
         </div>
-        ${
-          this.isTimeSkipEnabled_
-            ? html`
-          <button id="time-skip-control" class="time-skip-btn" type="button" disabled>
-            <i class="fa-solid fa-forward"></i>
-            <span id="time-skip-control-label">Skip</span>
-          </button>
-        `
-            : ''
-        }
-        ${
-          this.isObjectiveSkipEnabled_
-            ? html`
-          <button id="objective-skip-control" class="time-skip-btn" type="button" style="display: none;">
-            <i class="fa-solid fa-forward"></i>
-            <span id="objective-skip-control-label">Skip</span>
-          </button>
-        `
-            : ''
-        }
-        ${
-          this.isSandbox_
-            ? html`
-          <button id="loadout-control" class="loadout-btn" type="button" title="${t7e('loadout.buttonTitle')}">
-            <i class="fa-solid fa-satellite-dish"></i>
-            <span>${t7e('loadout.button')}</span>
-          </button>
-        `
-            : ''
-        }
       </div>
 
       <div id="${this.id}" class="command-bar-center">
@@ -240,6 +212,42 @@ export class GlobalCommandBar {
         <div class="aos-countdown">
           <div id="scenario-info" class="absolute left-4 flex items-center gap-2 text-xs text-slate-500">
             <span class="px-1.5 py-0.5">SCENARIO --</span>
+          </div>
+          <!-- Skip and loadout controls live here, not beside the clock: a
+               "Skip to 10:00" label squeezed the date/time out of the 256 px
+               brand block (nats-r3-s10-F3), and with the clock on one line the
+               sandbox LOADOUT button overflowed under this bar -->
+          <div class="command-bar-skip-controls">
+            ${
+              this.isTimeSkipEnabled_
+                ? html`
+              <button id="time-skip-control" class="time-skip-btn" type="button" disabled>
+                <i class="fa-solid fa-forward"></i>
+                <span id="time-skip-control-label">Skip</span>
+              </button>
+            `
+                : ''
+            }
+            ${
+              this.isObjectiveSkipEnabled_
+                ? html`
+              <button id="objective-skip-control" class="time-skip-btn" type="button" style="display: none;">
+                <i class="fa-solid fa-forward"></i>
+                <span id="objective-skip-control-label">Skip</span>
+              </button>
+            `
+                : ''
+            }
+            ${
+              this.isSandbox_
+                ? html`
+              <button id="loadout-control" class="loadout-btn" type="button" title="${t7e('loadout.buttonTitle')}">
+                <i class="fa-solid fa-satellite-dish"></i>
+                <span>${t7e('loadout.button')}</span>
+              </button>
+            `
+                : ''
+            }
           </div>
         </div>
         <!-- Static Alarm Bar -->
@@ -260,7 +268,7 @@ export class GlobalCommandBar {
               <div class="timer-value" id="objective-timer-value">--:--</div>
           </div>
           <div id="scenario-timer-display" class="timer-display" style="display: none;">
-              <div class="timer-label">${this.timerLabels_.scenario}</div>
+              <div class="timer-label">${this.timerLabels_.scenario}<span id="scenario-timer-hold" class="timer-hold-tag" hidden>HOLD</span></div>
               <div class="timer-value" id="scenario-timer-value">--:--</div>
           </div>
       </div>
@@ -333,12 +341,32 @@ export class GlobalCommandBar {
     }
 
     const blockedReason = controller.getObjectiveSkipBlockedReason(offer.objectiveId);
+    const buttonText = GlobalCommandBar.objectiveSkipText(offer);
     this.objectiveSkipBtn_.disabled = blockedReason !== null;
-    this.objectiveSkipBtn_.title = blockedReason ?? `Skip the ${offer.label} (${offer.minutes} min of scenario time)`;
+    this.objectiveSkipBtn_.title =
+      blockedReason ?? `${buttonText}: the end of the ${offer.label}. The mission clock is held while you wait, so waiting and skipping score the same.`;
     const labelEl = this.objectiveSkipBtn_.querySelector('#objective-skip-control-label');
     if (labelEl) {
-      labelEl.textContent = `Skip ${offer.minutes} min`;
+      labelEl.textContent = buttonText;
     }
+  }
+
+  /**
+   * Button text for an objective skip (Phase 28 D1): where it lands on the
+   * station clock when the hold ends on the clock ("Skip to 10:00"), else how
+   * long it covers ("Skip 7 min", "Skip 40 s").
+   */
+  static objectiveSkipText(offer: TimeSkipOffer): string {
+    if (offer.landsAtMs !== null) {
+      const clock = new Date(Math.round(offer.landsAtMs / 1000) * 1000).toISOString().slice(11, 19);
+
+      return `Skip to ${clock.endsWith(':00') ? clock.slice(0, 5) : clock}`;
+    }
+    if (offer.deltaMs < 60_000) {
+      return `Skip ${Math.ceil(offer.deltaMs / 1000)} s`;
+    }
+
+    return `Skip ${Math.ceil(offer.deltaMs / 60_000)} min`;
   }
 
   private handleTimeSkipClick_(): void {
@@ -422,6 +450,9 @@ export class GlobalCommandBar {
   }
 
   private subscribeToAlarms_(): void {
+    EventBus.getInstance().on(Events.OBJECTIVE_ACTIVATED, this.boundOnObjectiveChanged_);
+    EventBus.getInstance().on(Events.OBJECTIVE_COMPLETED, this.boundOnObjectiveChanged_);
+    EventBus.getInstance().on(Events.OBJECTIVES_ALL_COMPLETED, this.boundOnObjectiveChanged_);
     EventBus.getInstance().on(Events.ALARM_STATE_CHANGED, this.boundOnAlarmStateChanged_);
     EventBus.getInstance().on(Events.ASSET_SELECTED, this.boundOnAssetSelected_);
   }
@@ -677,6 +708,7 @@ export class GlobalCommandBar {
         this.scenarioTimerEl_.classList.remove('timer-warning', 'timer-urgent', 'timer-unlimited', 'timer-failed');
       } else if (objectivesManager.hasScenarioTimer()) {
         const timeRemaining = objectivesManager.getScenarioTimeRemaining();
+        this.renderMissionClockHold_(objectivesManager);
 
         // Check if scenario timer has expired (time is 0 or less)
         if (timeRemaining <= 0) {
@@ -741,7 +773,9 @@ export class GlobalCommandBar {
               failedObjective = { title: state.objective.title };
               break; // Show failed state
             }
-            if (state.isTimerRunning && !state.isCompleted && !state.isFailed && state.timeRemainingSeconds !== undefined) {
+            // Active objectives only, the same rows the checklist shows a
+            // countdown on, so the HUD and the row never disagree (nats-r3-s24-F2)
+            if (state.isActive && state.isTimerRunning && !state.isCompleted && !state.isFailed && state.timeRemainingSeconds !== undefined) {
               // Q1: the timed work is done (only questions remain), so the
               // clock is stopped; do not show a frozen countdown as if live
               if (objectivesManager.isObjectiveCountdownHeld(state.objective.id)) {
@@ -814,14 +848,52 @@ export class GlobalCommandBar {
         if (valueEl) {
           valueEl.textContent = '--:--';
         }
-        this.objectiveTimerEl_.title = heldObjective ? `No time limit on the questions for ${heldObjective.title}` : 'No time limit';
+        this.objectiveTimerEl_.title = heldObjective ? this.heldObjectiveTitle_(objectivesManager, heldObjective) : 'No time limit';
         this.objectiveTimerEl_.classList.remove('timer-warning', 'timer-urgent', 'timer-failed', 'timer-passed');
         this.objectiveTimerEl_.classList.add('timer-unlimited');
       }
     }
   }
 
+  /**
+   * Phase 28 D1: show HOLD beside the MISSION timer while an objective's wait
+   * holds it, so a frozen countdown reads as intentional.
+   */
+  private renderMissionClockHold_(objectivesManager: ObjectivesManager): void {
+    const tagEl = this.scenarioTimerEl_?.querySelector<HTMLElement>('#scenario-timer-hold');
+    if (!tagEl || !this.scenarioTimerEl_) {
+      return;
+    }
+    const hold = objectivesManager.getMissionClockHold();
+    tagEl.hidden = hold === null;
+    this.scenarioTimerEl_.classList.toggle('timer-held', hold !== null);
+    this.scenarioTimerEl_.title = hold ? `Mission clock held for the ${hold.label} (${hold.title}): waiting costs no time bonus` : '';
+  }
+
+  /** Tooltip for an objective whose countdown is held (Q1 questions, or its D1 wait) */
+  private heldObjectiveTitle_(objectivesManager: ObjectivesManager, heldObjective: { title: string }): string {
+    const hold = objectivesManager.getMissionClockHold();
+    if (hold && hold.title === heldObjective.title) {
+      return `Waiting out the ${hold.label}: no time limit`;
+    }
+
+    return `No time limit on the questions for ${heldObjective.title}`;
+  }
+
+  /**
+   * Repaint the timers the moment an objective starts or ends, rather than on
+   * the next 1 s tick: the checklist re-renders on OBJECTIVE_ACTIVATED, and a
+   * HUD a second behind showed the previous step's countdown beside the new
+   * step's row (nats-r3-s24-F2).
+   */
+  private onObjectiveChanged_(): void {
+    this.updateTimerDisplays_();
+  }
+
   dispose(): void {
+    EventBus.getInstance().off(Events.OBJECTIVE_ACTIVATED, this.boundOnObjectiveChanged_);
+    EventBus.getInstance().off(Events.OBJECTIVE_COMPLETED, this.boundOnObjectiveChanged_);
+    EventBus.getInstance().off(Events.OBJECTIVES_ALL_COMPLETED, this.boundOnObjectiveChanged_);
     EventBus.getInstance().off(Events.ALARM_STATE_CHANGED, this.boundOnAlarmStateChanged_);
     EventBus.getInstance().off(Events.ASSET_SELECTED, this.boundOnAssetSelected_);
     EventBus.getInstance().off(Events.SIMULATED_TIME_TICK, this.boundOnSimulatedTimeTick_);

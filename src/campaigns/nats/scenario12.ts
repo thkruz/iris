@@ -51,7 +51,7 @@ import { ses10Satellite, tidemark1Satellite, tidemark2Satellite } from './satell
  *   - Catherine is a peer, not a supervisor. She talks like Catherine, not Dana.
  *
  * Technical Reference (TIDEMARK-1 from VT-01):
- *   - Az 161.8°, El 34.2°, Pol 14°
+ *   - Az 153.1°, El 35.1°, Pol 14°
  *   - LNB LO: 5250 MHz; Beacon RF: 4175.5 MHz; Beacon IF: 1074.5 MHz
  *   - BUC LO: 7000 MHz (LSB); Teleport carrier RF: 5943 MHz (TP-1); TX IF: 1057 MHz
  *   - Operating BUC gain: 23 dB (post-maintenance leftover: 50 dB - same as S7 testing value)
@@ -86,7 +86,7 @@ export const scenario12Data: ScenarioData = {
             isPowered: true,
             // Stowed at zenith on TIDEMARK-1's azimuth: stow parks the
             // elevation and leaves the azimuth (phase 19.4)
-            azimuth: 161.8 as Degrees,
+            azimuth: 153.1 as Degrees,
             elevation: 90 as Degrees,
             polarization: 0 as Degrees,
             trackingMode: 'stow',
@@ -168,15 +168,15 @@ export const scenario12Data: ScenarioData = {
         antennasState: [
           {
             isPowered: true,
-            azimuth: 165.94 as Degrees, // Maine sees TM-1 here, not at Vermont's angles (phase 19.4)
-            elevation: 34.16 as Degrees,
-            polarization: 11.1 as Degrees,
+            azimuth: 157.0 as Degrees, // Maine sees TM-1 (53 W) here, not at Vermont's 153.1 / 35.1 (Phase 28 D4)
+            elevation: 35.33 as Degrees,
+            polarization: 11.2 as Degrees,
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61525, // TIDEMARK-1
-            targetAzimuth: 165.94 as Degrees,
-            targetElevation: 34.16 as Degrees,
-            targetPolarization: 11.1 as Degrees,
+            targetAzimuth: 157.0 as Degrees,
+            targetElevation: 35.33 as Degrees,
+            targetPolarization: 11.2 as Degrees,
             slewing: false,
             beaconCN: 10.4 as dB,
             beaconFrequencyHz: 4175.5e6 as Hertz, // TIDEMARK-1 beacon (RF)
@@ -352,7 +352,8 @@ export const scenario12Data: ScenarioData = {
       id: 'repoint-antenna-tm1',
       nice: ['T1567', 'S0421', 'K1032'],
       title: 'Repoint VT-01 to TIDEMARK-1',
-      description: 'Set tracking mode to program-track and acquire TIDEMARK-1.',
+      // nats-r3-s12-F3: a Target Satellite pick only stages; Move to Target commits the slew
+      description: 'On ACU Control select PROGRAM, pick TIDEMARK-1 in Target Satellite (the pick only stages it), then press Move to Target to slew off stow and lock on.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['pre-restoration-dashboard'],
       timeLimitSeconds: 3 * 60,
@@ -587,7 +588,9 @@ export const scenario12Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'The bench-test gain (50 dB) was never dialed back to 23 dB. With the BUC muted and the HPA off this is harmless, but the moment the modem keyed, its -7 dBm plus 50 dB would drive the BUC about 10 dB into compression (near 30 dBm against a 28 dBm P1dB, about 5 A and a high-current alarm) and hand the HPA a distorted carrier. Catch it before you energize the HPA.',
+              // nats-r3-s12-F1: BUC model (Rapp s = 2, P1dB 28 dBm, Psat ~30.2 dBm):
+              // -7 + 50 = 43 dBm small-signal -> ~30.2 dBm out, ~12.8 dB compressed
+              'The bench-test gain (50 dB) was never dialed back to 23 dB. With the BUC muted and the HPA off this is harmless, but the moment the modem keyed, its -7 dBm plus 50 dB would ask for 43 dBm, 15 dB past the 28 dBm P1dB: the output would pin at saturation near 30 dBm, almost 13 dB of gain compression, draw about 5 A with a high-current alarm and hand the HPA a distorted carrier. At 23 dB the same drive gives 16 dBm, 12 dB under P1dB. Catch it before you energize the HPA.',
             pointPenalty: 10,
           },
           mustMaintain: false,

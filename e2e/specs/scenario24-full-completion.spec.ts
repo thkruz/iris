@@ -39,6 +39,8 @@ interface Scenario24Objective {
   logText?: string;
   /** For quiz: how long to wait for it (rows listed before it must hold first) */
   quizWaitMs?: number;
+  /** For quiz: read the BUC panel (current down, Trend negative) before answering */
+  assertBucTrendTurned?: boolean;
 }
 
 const SCENARIO_24_OBJECTIVES: Scenario24Objective[] = [
@@ -104,10 +106,13 @@ const SCENARIO_24_OBJECTIVES: Scenario24Objective[] = [
   {
     id: 'verify-buc-trending-down',
     title: 'Confirm the Trend Bends',
-    // Phase 27 Q3: the current / linearity rows latch on TX Chain, then the panel read
+    // Phase 27 Q3: the current / linearity rows latch on TX Chain, then the panel read.
+    // nats-r3-s24-F1: the current row holds 45 s so the Trend (1 min) has turned
+    // when the quiz opens; the spec reads the panel before answering.
     type: 'quiz',
-    correctAnswer: 'Current about 3.1 A, temperature still in the low 60s but the Trend now negative, P1dB Margin about 12 dB - the curve has turned',
-    quizWaitMs: 60000,
+    correctAnswer: 'Current about 3.1 A, temperature still in the low 60s but the Trend (1 min) now negative, P1dB Margin about 12 dB - the curve has turned',
+    quizWaitMs: 90000,
+    assertBucTrendTurned: true,
   },
 
   // TRACK 3: AURORA-7 PASS
@@ -336,6 +341,25 @@ async function typeOpsLogEntry(page: import('@playwright/test').Page, text: stri
   await page.waitForTimeout(300);
 }
 
+/**
+ * The de-rate as the ME-02 BUC panel shows it when the quiz opens: current
+ * near 3.1 A, temperature still in the low 60s, Trend (1 min) below zero.
+ * Read off the DOM so the keyed answer is the screen, not the option text.
+ */
+async function assertBucTrendTurned(page: import('@playwright/test').Page): Promise<void> {
+  const readNumber = async (selector: string): Promise<number> => {
+    const text = (await page.locator(`${selector}:visible`).first().textContent()) ?? '';
+    const match = /[-+]?\d+(?:\.\d+)?/u.exec(text);
+    expect(match, `${selector} reads a number (got "${text}")`).not.toBeNull();
+    return Number.parseFloat(match![0]);
+  };
+  expect(await readNumber('#buc-current-display')).toBeLessThan(3.5);
+  const temperature = await readNumber('#buc-temperature-display');
+  expect(temperature).toBeGreaterThanOrEqual(60);
+  expect(temperature).toBeLessThan(65);
+  expect(await readNumber('#buc-temp-trend-display')).toBeLessThan(0);
+}
+
 /** Wait until the objective reports complete, via the debugObjective dev hook. */
 async function waitForObjectiveDone(page: import('@playwright/test').Page, objectiveId: string, timeout: number): Promise<void> {
   await page.waitForFunction(
@@ -352,6 +376,9 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page, objective.quizWaitMs);
+      if (objective.assertBucTrendTurned) {
+        await assertBucTrendTurned(page);
+      }
       await answerQuizByText(page, objective.correctAnswer!);
       break;
 

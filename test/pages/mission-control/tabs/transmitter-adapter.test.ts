@@ -76,6 +76,7 @@ describe('TransmitterAdapter', () => {
       handlePowerToggle: vi.fn(),
       getPowerPercentage: vi.fn().mockReturnValue(50),
       getStatusAlarms: vi.fn().mockReturnValue([]),
+      getBootRemainingMs: vi.fn().mockReturnValue(2600),
     } as unknown as Mocked<Transmitter>;
 
     // Setup container with required DOM elements
@@ -272,7 +273,7 @@ describe('TransmitterAdapter', () => {
 
       expect(txSwitch.disabled).toBe(true);
       expect(txSwitch.checked).toBe(false);
-      expect(bootStatus.textContent).toBe('BOOTING');
+      expect(bootStatus.textContent).toBe('BOOTING 3 s');
       expect(bootStatus.classList.contains('d-none')).toBe(false);
     });
 
@@ -282,6 +283,7 @@ describe('TransmitterAdapter', () => {
 
       expect(powerSwitch.checked).toBe(true);
       expect(statusBar.textContent).toContain('still initializing');
+      expect(statusBar.textContent).toContain('ready in 3 s');
     });
 
     it('re-enables the TX switch on the boot-complete state change, without waiting for a throttled sync', () => {

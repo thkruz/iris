@@ -287,14 +287,17 @@ export class LNBAdapter {
 
     if (loInput) {
       if (isUserEdit || document.activeElement !== loInput) {
-        loInput.value = isPowered ? this.stagedLoFrequency_.toString() : '--';
+        // A number input cannot hold "--"; it is the placeholder (nats-r3-s02-F3)
+        loInput.value = isPowered ? this.stagedLoFrequency_.toString() : '';
       }
+      loInput.placeholder = '--';
       loInput.disabled = !isPowered;
     }
     if (gainInput) {
       if (isUserEdit || document.activeElement !== gainInput) {
-        gainInput.value = isPowered ? this.stagedGain_.toFixed(1) : '--';
+        gainInput.value = isPowered ? this.stagedGain_.toFixed(1) : '';
       }
+      gainInput.placeholder = '--';
       gainInput.disabled = !isPowered;
     }
 

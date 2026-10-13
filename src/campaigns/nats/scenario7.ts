@@ -51,6 +51,7 @@ import { ses10Satellite, tidemark1Satellite } from './satellites';
  *   - Beacon RF: 4175.5 MHz
  *   - LNB LO: 5250 MHz
  *   - Beacon IF: 1074.5 MHz (5250 - 4175.5 = 1074.5)
+ *   - Loop IF: 1532 MHz (loop translator 5943 - 2225 = 3718 MHz RF; 5250 - 3718 = 1532)
  *
  * Character Notes:
  *   - Charlie Brooks: Off-site, brief intro call and final check-in only
@@ -341,15 +342,18 @@ export const scenario7Data: ScenarioData = {
           type: 'status-check',
           description: 'Confirm Alarm Cleared',
           params: {
-            question: 'What is the current BUC status on the Dashboard?',
+            // nats-r3-s07-F2: the AGC noise-only alarm stays listed (no traffic
+            // carrier in the receive passband until our own uplink is back)
+            question: 'With the BUC muted and out of loopback, what does the Dashboard alarm list show now?',
             options: [
-              'Normal - output within limits, no active alarms',
-              'Warning - output still near saturation, alarm latched',
-              'Fault - BUC offline, current draw at zero, alarm active',
-              'Unknown - BUC not reporting, no current or alarm data',
+              'The BUC loopback alarm has cleared; only the AGC noise-only alarm remains, because no traffic carrier is up yet',
+              'The BUC loopback alarm is still listed; it stays latched until the BUC is power-cycled',
+              'Every alarm has cleared; the board shows no active alarms',
+              'A BUC high-current alarm has replaced the loopback alarm',
             ],
             correctIndex: 0,
-            explanation: 'The BUC has been muted and loopback disabled. The loopback alarm has cleared. Always verify alarm resolution on the Dashboard before proceeding.',
+            explanation:
+              'Muting the BUC and taking it out of loopback cleared the loopback alarm. The AGC noise-only alarm stays until our own carrier is back on the air: the receive passband holds nothing but noise until then, which is expected right now. Always verify alarm resolution on the Dashboard before proceeding.',
             pointPenalty: 5,
             character: Character.DANA_TORRES,
           },
@@ -792,7 +796,7 @@ export const scenario7Data: ScenarioData = {
       nice: ['T1313'],
       title: 'Verify Loopback Signal',
       description:
-        'Configure the spectrum analyzer and LNB to view the loopback signal. Set the LNB LO to 7000 MHz to match the BUC LO for direct IF comparison, then tune to the TX IF frequency: Center 1057 MHz, Span 50 MHz, Min Amp -100 dBm, Max Amp -20 dBm, RBW Auto. The AGC levels the loop carrier like any other, so it reads around -55 dBm per RBW.',
+        "Find the loop carrier on the spectrum analyzer. The test loop translator shifts the 5943 MHz uplink down by the satellite's 2225 MHz translation, to 3718 MHz, so the normal LNB LO (5250 MHz) puts it at 1532 MHz IF: where our own downlink will sit. Leave the LNB alone and set Center 1532 MHz, Span 50 MHz, Min Amp -100 dBm, Max Amp -20 dBm, RBW Auto. The AGC levels the loop carrier like any other, so it reads around -55 dBm per RBW.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['enable-loopback'],
       timeLimitSeconds: 5 * 60,
@@ -805,19 +809,13 @@ export const scenario7Data: ScenarioData = {
           maintainUntilObjectiveComplete: true,
         },
         {
-          type: 'lnb-lo-set',
-          description: 'LNB LO Set to 7000 MHz',
-          params: {
-            loFrequency: 7000 as MHz,
-            loFrequencyTolerance: 1,
-          },
-          maintainUntilObjectiveComplete: true,
-        },
-        {
+          // Phase 28 D3 (nats-r3-s08-F1): the loop translator lands the loop
+          // carrier at the normal RX IF (5943 - 2225 = 3718 MHz RF, 5250 - 3718
+          // = 1532 MHz IF); no LNB LO retune
           type: 'speca-center-frequency',
-          description: 'Spectrum Analyzer at TX IF',
+          description: 'Spectrum Analyzer at 1532 MHz (Loop IF)',
           params: {
-            centerFrequency: 1057e6 as Hertz,
+            centerFrequency: 1532e6 as Hertz,
             centerFrequencyTolerance: 5e6,
           },
           maintainUntilObjectiveComplete: true,
@@ -853,16 +851,16 @@ export const scenario7Data: ScenarioData = {
           type: 'status-check',
           description: 'Loopback Signal Verified',
           params: {
-            question: 'With the LNB LO at 7000 MHz and spectrum analyzer centered at 1,057 MHz, what do you observe?',
+            question: 'What do you see on the spectrum analyzer in this window?',
             options: [
-              'A 36 MHz wide signal centered at 1,057 MHz - the TX modem output via loopback',
-              'No signal anywhere near 1,057 MHz - the loopback path is not visible on RX',
-              'Only a narrow CW spike at 1,074.5 MHz - the TIDEMARK-1 beacon, no loopback',
-              'A narrow CW carrier spike at 1,057 MHz - the BUC LO leaking through the loopback',
+              'A 36 MHz wide modulated carrier centered at 1,532 MHz - the TX modem output via the test loop',
+              'Nothing but the noise floor - the loop carrier would only show with the LNB LO retuned to the BUC LO',
+              'Only a narrow CW spike - the TIDEMARK-1 beacon, no loop carrier',
+              'A narrow CW carrier spike at 1,532 MHz - the BUC LO leaking through the loop',
             ],
             correctIndex: 0,
             explanation:
-              'By setting the LNB LO to 7000 MHz (matching the BUC LO), we can directly compare TX and RX IF frequencies. The loopback signal appears as a 36 MHz wide modulated carrier at 1,057 MHz, confirming the TX modem output and BUC loopback path are working correctly.',
+              "The modem's 1,057 MHz IF leaves the BUC at 5,943 MHz (7,000 - 1,057). The loop translator shifts that sample down by the satellite's 2,225 MHz translation to 3,718 MHz, and the normal 5,250 MHz LNB LO puts it at 1,532 MHz IF (5,250 - 3,718): a 36 MHz modulated carrier, the same place our downlink will appear once we are on the air. The modem and BUC path are working. A C-band LNB only receives 3.4-4.2 GHz, so nobody retunes it to look for the 6 GHz uplink itself.",
             pointPenalty: 10,
             character: Character.DANA_TORRES,
           },
@@ -994,35 +992,6 @@ export const scenario7Data: ScenarioData = {
       points: 5,
     },
     {
-      // nats-s07-F4: without this the scenario ended with the LNB still on the
-      // loopback LO (7000 MHz) and the receive chain broken
-      id: 'restore-lnb-frequency',
-      nice: ['T0153', 'K0740'],
-      title: 'Restore LNB LO Frequency',
-      description: 'On RX Analysis, return the LNB LO from the loopback setting (7000 MHz) to 5250 MHz for normal satellite reception.',
-      groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['disable-loopback'],
-      conditions: [
-        {
-          type: 'tab-active',
-          description: 'RX Analysis Tab Open',
-          params: { tab: 'rx-analysis' },
-          maintainUntilObjectiveComplete: true,
-        },
-        {
-          type: 'lnb-lo-set',
-          description: 'LNB LO Restored to 5250 MHz',
-          params: {
-            loFrequency: 5250 as MHz,
-            loFrequencyTolerance: 10 as MHz,
-          },
-          maintainUntilObjectiveComplete: true,
-        },
-      ],
-      conditionLogic: 'AND',
-      points: 5,
-    },
-    {
       id: 'enable-hpa-output',
       // S0421: Skill in operating network equipment
       // T1567: Equipment configuration happens throughout
@@ -1030,7 +999,7 @@ export const scenario7Data: ScenarioData = {
       title: 'Enable HPA Output',
       description: 'Enable the HPA output stage.',
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['restore-lnb-frequency'],
+      prerequisiteObjectiveIds: ['disable-loopback'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [

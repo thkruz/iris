@@ -182,6 +182,22 @@ describe('DialogManager', () => {
       expect(dialogManager.isShowing()).toBe(true);
     });
 
+    it('stays busy through the gap between two queued dialogs (nats-r3-s03-F3)', () => {
+      expect(dialogManager.isBusy()).toBe(false);
+      dialogManager.show('First message', Character.CHARLIE_BROOKS, '/audio/first.mp3');
+      dialogManager.show('Second message', Character.CATHERINE_VEGA, '/audio/second.mp3');
+      dialogManager.hide();
+      // After the fade-out the second line has left the queue but is not on screen yet
+      vi.advanceTimersByTime(320);
+      expect(dialogManager.isShowing()).toBe(false);
+      expect(dialogManager.isBusy()).toBe(true);
+      vi.advanceTimersByTime(100);
+      expect(dialogManager.isShowing()).toBe(true);
+      dialogManager.hide();
+      vi.advanceTimersByTime(400);
+      expect(dialogManager.isBusy()).toBe(false);
+    });
+
     it('should clear dialog queue', () => {
       // Show first dialog
       dialogManager.show('First message', Character.CHARLIE_BROOKS, '/audio/first.mp3');

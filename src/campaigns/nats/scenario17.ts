@@ -40,9 +40,20 @@ import { ses10Satellite, tidemark1Satellite, tidemark2Satellite } from './satell
  * spacecraft-side confirmation. All quizzes SYSTEM. 4 clips.
  *
  * Sim notes:
- *   - weatherEvents 'sun-transit': starts 20 s after 'observe-onset' activates
- *     (startAfterObjectiveId), 300s duration, 16 dB peak. Profile sin^2 ->
- *     >2 dB from ~A+55s, >6 dB ~A+83..257s, clear (<1 dB) by ~A+296s.
+ *   - Transit timing (nats-r3-s17-F1, decision D5): the engine has no solar
+ *     ephemeris for legacy GEO birds (DEV-PROP-04), so the geometry was
+ *     computed offline: the Sun crosses TIDEMARK-1 (53 W, Az 153.1 El 35.1
+ *     from VT-01) on 1-4 March 2026 at about 10:32-10:38 EST; on 2 March
+ *     (day 2 of 4) it is within ~0.7 deg of boresight 10:32:30-10:37:15, peak
+ *     ~10:35:00. The prediction sheet carries those times, and the sim is
+ *     pinned to them by 'stand-by-for-window', a skippable hold that ends at
+ *     10:32:30 on the station clock: the event starts when 'observe-onset'
+ *     activates, so the noise starts rising at the sheet's window-open for
+ *     every player who notifies before it (start 10:22 leaves 10 min).
+ *   - weatherEvents 'sun-transit': starts as 'observe-onset' activates
+ *     (startAfterObjectiveId, startTime 0), 300s duration, 16 dB peak. Profile
+ *     sin^2 -> >2 dB from ~A+55s, >6 dB ~A+83..257s, peak A+150s (10:35:00),
+ *     clear (<1 dB) by ~A+296s (10:37:26).
  *   - Since Phase 19.2 the transit raises the system noise temperature (the
  *     carrier keeps its power). The 16 dB peak takes the carrier C/N under
  *     the IF noise for ~90 s and under the demod threshold for ~2 min near
@@ -83,9 +94,10 @@ export const scenario17Data: ScenarioData = {
   timeLimitSeconds: 30 * 60,
   settings: {
     isSync: true,
-    // Brief: Thursday 1144 local, spring transit series (window ~1149-1154)
-    scenarioStartDate: '2026-02-26',
-    scenarioStartWallTime: '11:44:00',
+    // Brief: Monday 1022 local, spring transit series day 2 of 4 (window
+    // ~1032:30-1037:30, computed for VT-01 / TIDEMARK-1 at 53 W)
+    scenarioStartDate: '2026-03-02',
+    scenarioStartWallTime: '10:22:00',
     groundStations: [
       {
         ...vermontGroundStation,
@@ -100,9 +112,10 @@ export const scenario17Data: ScenarioData = {
         severity: 'severe',
         // Anchored to the onset objective: a mission-start schedule ran the
         // whole transit while slower players were still on the quizzes, and
-        // 'Sky Noise Rising' could never tick
+        // 'Sky Noise Rising' could never tick. The onset objective comes up
+        // when the stand-by hold reaches the sheet's 10:32:30 window-open
         startAfterObjectiveId: 'observe-onset',
-        startTime: 20, // Window opens 20 s after the onset objective comes up
+        startTime: 0, // Window opens as the onset objective comes up
         duration: 300, // ~5-minute transit
         // Peak noise rise, dB (Phase 19.2: a rise in system noise, not a carrier
         // loss). 16 dB on VT-01's ~13 dB link puts the carrier under the IF
@@ -419,12 +432,45 @@ export const scenario17Data: ScenarioData = {
     // PHASE 2: THE WINDOW
     // ============================================================
     {
+      // Waits for the sheet's window-open on the station clock, so the sim's
+      // onset lands on the prediction (nats-r3-s17-F1). Skippable; the mission
+      // countdown is held while it waits (Phase 28 D1)
+      id: 'stand-by-for-window',
+      nice: ['T0153', 'T1020'],
+      title: 'Stand By for the Window',
+      description:
+        'Notice is out. Hold the configuration until the window opens at 10:32:30 on the station clock, or use the skip control in the command bar: the mission clock is held while you wait, so both score the same.',
+      groundStation: 'VT-01',
+      // A watch: the uplink row is meant to stay as it is
+      intent: 'confirm',
+      prerequisiteObjectiveIds: ['notify-customer-quiz'],
+      timeLimitSeconds: 12 * 60,
+      timerStartTrigger: 'on-activate',
+      timeSkip: { label: 'wait for the transit window' },
+      conditions: [
+        {
+          type: 'tx-modem-transmitting',
+          description: 'Uplink Untouched - Modem Transmitting',
+          requiresChange: false,
+          mustMaintain: true,
+        },
+        {
+          type: 'scenario-time-reached',
+          description: 'Window Opens (10:32:30)',
+          params: { scenarioTime: '10:32:30' },
+          mustMaintain: false,
+        },
+      ],
+      conditionLogic: 'AND',
+      points: 5,
+    },
+    {
       id: 'observe-onset',
       nice: ['T0153', 'S0648'],
       title: 'Confirm Predicted Onset',
-      description: 'The window is opening. Confirm the sky-noise rise matches the prediction.',
+      description: 'The window is opening. Confirm the sky-noise rise matches the prediction sheet.',
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['notify-customer-quiz'],
+      prerequisiteObjectiveIds: ['stand-by-for-window'],
       timeLimitSeconds: 6 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -441,7 +487,7 @@ export const scenario17Data: ScenarioData = {
           description: 'Onset Read',
           params: {
             character: Character.SYSTEM,
-            question: 'The elevated sky-noise alarm is climbing on schedule. What does "on schedule" buy you?',
+            question: "The sky noise started climbing at the prediction sheet's window-open time. What does that agreement buy you?",
             options: [
               'Confidence this is the predicted transit, not a coincidental fault - the alarm tracking the sheet IS the diagnosis',
               'Nothing - every alarm gets the full fault-isolation procedure, and the sheet only tells you when to start it',
@@ -705,14 +751,14 @@ export const scenario17Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Which entry correctly records this event?',
             options: [
-              'TM-1 transit per SOP-SX-001, customer notified pre-window. Peak ~16 dB, brief demod loss, self-recovered, no residual alarms. Next window tomorrow, ~4 min earlier.',
+              'TM-1 transit per SOP-SX-001, customer notified pre-window. Peak ~16 dB, brief demod loss, self-recovered, no residual alarms. Next window tomorrow, about the same time.',
               'TM-1 outage this morning, cause solar. Customer notified after recovery. Peak ~16 dB, demod loss ~2 min, self-recovered, no residual alarms. Resolved, series closed.',
               'TM-1 transit per SOP-SX-001, event SLA-excused. No customer notification required. Peak ~16 dB, brief demod loss, self-recovered. No further entries this series.',
               'TM-1 solar interference, emergency response per SOP-SX-001. Customer notified pre-window. Uplink muted at peak, demod re-acquired by hand, no residual alarms.',
             ],
             correctIndex: 0,
             explanation:
-              "Including tomorrow's window in today's entry is the mark of someone who understands the series - this is day 2 of 4, and no operator intervention was needed. The next operator walks in pre-briefed.",
+              "Including tomorrow's window in today's entry is the mark of someone who understands the series - this is day 2 of 4, a GEO bird's transit comes back at nearly the same clock time each day (the Sun's declination shifts the window by seconds, not minutes), and no operator intervention was needed. The next operator walks in pre-briefed.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -726,10 +772,10 @@ export const scenario17Data: ScenarioData = {
     intro: {
       text: `
       <p>
-        <em>[Text message from Dana at 11:38]</em>
+        <em>[Text message from Dana at 10:16]</em>
       </p>
       <p>
-        "Sun transit window on TM-1 this morning - prediction sheet's attached. Window opens about 1149, peak around 1151:30, clear by 1154. You know the drill from the read-ahead: this one you don't fight. Notify, ride it through, document. The only way to fail a sun transit is to panic during one."
+        "Sun transit window on TM-1 this morning - prediction sheet's attached. Window opens about 1032:30, peak around 1035, clear by 1037:30. You know the drill from the read-ahead: this one you don't fight. Notify, ride it through, document. The only way to fail a sun transit is to panic during one."
       </p>
       `,
       character: Character.DANA_TORRES,
@@ -740,7 +786,7 @@ export const scenario17Data: ScenarioData = {
       'notify-customer-quiz': {
         text: `
         <p>
-          Notice is out and timestamped - good. Window opens in a couple of minutes. Eyes on the board, hands off the equipment. I'll be watching the same alarm you are.
+          Notice is out and timestamped - good. Window opens at 1032:30. Eyes on the board, hands off the equipment. I'll be watching the same alarm you are.
         </p>
         `,
         character: Character.DANA_TORRES,
@@ -766,7 +812,7 @@ export const scenario17Data: ScenarioData = {
           Textbook. You notified before the customer could ask, held still while the link looked terrible, and verified instead of assuming. Crisis work starts with the hardest skill there is - knowing when the right move is no move.
         </p>
         <p>
-          Same window tomorrow, four minutes earlier. Log's already got it.
+          Same window tomorrow, about the same time - the Sun goes nearly dead center, so expect it a touch deeper. Log's already got it.
         </p>
         `,
         character: Character.DANA_TORRES,

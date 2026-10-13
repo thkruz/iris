@@ -710,9 +710,19 @@ test.describe('Scenario 2 Full Completion', () => {
 
   test('Objective: Repoint Antenna at TIDEMARK-1', async () => {
     // Antenna movement can take up to 90 seconds
-    test.setTimeout(120000);
+    test.setTimeout(180000);
     const objective = SCENARIO_2_OBJECTIVES.find((o) => o.id === 'repoint-antenna')!;
     await executeObjective(page, missionControlPage, objective);
+    // The El 5 -> 35.2 slew is about 60 s at 0.5 deg/s, right at the movement
+    // helper's timeout: stay on the ACU tab until the objective has completed
+    await page.waitForFunction(
+      (id) => {
+        const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;
+        return typeof hook === 'function' && hook(id)?.isCompleted === true;
+      },
+      'repoint-antenna',
+      { timeout: 60000, polling: 500 }
+    );
   });
 
   // ============================================================

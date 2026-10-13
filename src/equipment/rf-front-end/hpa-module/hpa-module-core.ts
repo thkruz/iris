@@ -516,16 +516,35 @@ export abstract class HPAModuleCore extends RFFrontEndModule<HPAState> {
     this.processSignals_();
   }
 
-  handleHpaToggle(): void {
+  /**
+   * Why an HPA enable request would be refused, or null when it would be
+   * accepted. The panel shows the reason and logs it (nats-r3-s04-F2).
+   */
+  getEnableBlockReason(): string | null {
     if (!this.state.isPowered) {
+      return 'HPA power is off';
+    }
+
+    return null;
+  }
+
+  /**
+   * Flip the HPA output enable. Refused (no change) while the HPA is unpowered;
+   * see getEnableBlockReason().
+   */
+  handleHpaToggle(): void {
+    if (this.getEnableBlockReason() !== null) {
       return;
     }
 
-    this.state.isHpaSwitchEnabled = !this.state.isHpaSwitchEnabled;
-
-    if (this.state.isPowered) {
-      this.state.isHpaEnabled = this.state.isHpaSwitchEnabled;
-    }
+    // Toggle what the amplifier is doing, and keep the switch flag with it.
+    // Flipping the switch flag instead made the first Enable a no-op whenever
+    // the two disagreed (authored isHpaSwitchEnabled: true with
+    // isHpaEnabled: false, nats-r3-s04-F2): the click turned the flag off and
+    // left the output off, so only a second click worked.
+    const next = !this.state.isHpaEnabled;
+    this.state.isHpaSwitchEnabled = next;
+    this.state.isHpaEnabled = next;
 
     // Immediately recalculate derived values so UI updates instantly
     this.processSignals_();

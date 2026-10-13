@@ -92,7 +92,7 @@ export const scenario3Data: ScenarioData = {
             // Stowed at zenith where it last pointed (TIDEMARK-1's azimuth
             // from Maine), needs to be configured
             isPowered: true,
-            azimuth: 165.9 as Degrees,
+            azimuth: 157.0 as Degrees,
             elevation: 90 as Degrees,
             polarization: 0 as Degrees,
             isTracking: false,
@@ -784,12 +784,12 @@ export const scenario3Data: ScenarioData = {
         },
         {
           type: 'antenna-position',
-          // Maine's look angles (Vermont's are 161.8 / 34.2): phase 19.4
-          // per-station GEO geometry, nats-s03-F2
+          // Maine's program-track angles to 53 W (Vermont's are 153.2 / 35.2):
+          // phase 19.4 per-station GEO geometry, nats-s03-F2; Phase 28 D4
           description: 'Antenna Pointed at TIDEMARK-1',
           params: {
-            azimuth: 165.9 as Degrees,
-            elevation: 34.2 as Degrees,
+            azimuth: 157.1 as Degrees,
+            elevation: 35.4 as Degrees,
             tolerance: 0.5,
           },
           mustMaintain: true,
@@ -877,7 +877,7 @@ export const scenario3Data: ScenarioData = {
       nice: ['S0421', 'K0792'],
       title: 'Power Up LNB',
       description:
-        'Power on the LNB and configure it to match Vermont: LO frequency 5,250 MHz, Gain 60 dB. Wait for thermal stabilization: about 90 s after power-on (the LNB panel reads "Thermal: Warming m:ss" until it shows Stable).',
+        'Power on the LNB and configure it to match Vermont: LO frequency 5,250 MHz, Gain 65 dB (the gain Vermont runs at; the LNB powers up there). Wait for thermal stabilization: about 90 s after power-on (the LNB panel reads "Thermal: Warming m:ss" until it shows Stable).',
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['navigate-rx-maine-lnb'],
       timeLimitSeconds: 3 * 60,
@@ -906,9 +906,9 @@ export const scenario3Data: ScenarioData = {
         },
         {
           type: 'lnb-gain-set',
-          description: 'LNB Gain Set to 60 dB',
+          description: 'LNB Gain Set to 65 dB',
           params: {
-            gain: 60,
+            gain: 65,
             gainTolerance: 0,
           },
           maintainUntilObjectiveComplete: true,
@@ -1569,7 +1569,7 @@ export const scenario3Data: ScenarioData = {
       nice: ['S0421', 'K0741'],
       title: 'Stow Vermont Antenna',
       description:
-        'Click STOW, then press APPLY on the Antenna Positioning card to start the move. Stow position is straight up (El: 90°) to minimize wind loading and ice accumulation.',
+        'Click STOW, then press APPLY on the Antenna Positioning card to start the move. Stow position is straight up (El: 90°) to minimize wind loading. A face-up dish still collects snow, so leave the feed heater on.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['navigate-acu-vt01-stow'],
       timeLimitSeconds: 3 * 60,
@@ -1619,14 +1619,14 @@ export const scenario3Data: ScenarioData = {
           params: {
             question: 'Why does pointing the antenna straight up (90° elevation) protect it during a blizzard?',
             options: [
-              'Minimizes wind loading on the dish and prevents snow from accumulating in the reflector',
-              'Raises the dish above the snow level and keeps the reflector edge clear of drifts',
+              "Turns the reflector's face away from the horizontal wind, so the wind load and the torque on the pedestal and drives are at their minimum",
+              'Tips the reflector vertical, so falling snow slides off and nothing builds up in the dish',
               'Keeps the feed horn dry and prevents meltwater from running into the waveguide',
               'Reduces electrical interference from the storm and shields the LNB from lightning',
             ],
             correctIndex: 0,
             explanation:
-              "At 90° elevation (straight up), the dish presents minimal surface area to horizontal winds, dramatically reducing wind loading on the structure. Additionally, snow cannot accumulate in the reflector when it's vertical - it simply falls off. A dish pointed at typical satellite elevation (30-40°) would catch snow like a bowl and the wind would push against the full dish area.",
+              "At 90° elevation the dish looks straight up: the horizontal wind meets the reflector's rim, not its face, and the load is spread evenly around the pedestal, so the overturning torque on the structure and the drives is at its minimum. It does nothing for snow. A face-up reflector is the most bowl-like position there is (the ACU reads El 90°), so snow still collects - that is why the feed heater stays on while the antenna is stowed. Left at its 30-40° operating elevation, the dish would take the gusts on its full face.",
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -1742,7 +1742,7 @@ export const scenario3Data: ScenarioData = {
       'navigate-acu-vt01-heater': {
         text: `
         <p>
-          Find the feed heater toggle and enable it. Should be in the antenna status section.
+          Find the feed heater toggle and enable it. It's on the Environmental card on this tab.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -1925,7 +1925,7 @@ export const scenario3Data: ScenarioData = {
       'configure-maine-antenna': {
         text: `
         <p>
-          Antenna's slewing. Good. Catherine from Maine just called - she's almost at the station.
+          Antenna's on TIDEMARK-1 from Maine. Good. Catherine just called - she's almost at the station.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -1952,7 +1952,7 @@ export const scenario3Data: ScenarioData = {
       'navigate-rx-maine-lnb': {
         text: `
         <p>
-          While the antenna settles, let's get the receive chain configured. Power on the LNB and set it to match Vermont - LO 5,250 MHz, gain 60 dB.
+          While the antenna settles, let's get the receive chain configured. Power on the LNB and set it to match Vermont - LO 5,250 MHz, gain 65 dB. Check Vermont's LNB panel if you don't believe me.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -2170,7 +2170,7 @@ export const scenario3Data: ScenarioData = {
       'navigate-acu-vt01-stow': {
         text: `
         <p>
-          Click STOW, then APPLY. Points the antenna straight up - 90 degrees elevation. Minimizes wind loading and keeps snow from accumulating in the dish.
+          Click STOW, then APPLY. Points the antenna straight up - 90 degrees elevation. Takes the reflector's face out of the wind, so the load on the pedestal and drives drops to a minimum. Facing up, it'll still collect snow - leave the feed heater on.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,

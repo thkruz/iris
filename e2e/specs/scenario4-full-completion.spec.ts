@@ -329,8 +329,8 @@ async function waitForAntennaMovement(page: import('@playwright/test').Page, tim
       elDisplay = page.locator('[id*="el-fine"][id$="-value"]');
     }
 
-    // Azimuth too: TM-1 -> TM-2 finishes its 8 deg of elevation long before
-    // its 58 deg of azimuth (phase 19.4 servo)
+    // Azimuth too: TM-1 -> TM-2 is about 10 deg of azimuth and 3 deg of
+    // elevation (Phase 28 D4); wait for both axes to stop
     const azDisplay = page.locator('.fine-adjust-control', { hasText: 'Azimuth' }).locator('.fine-adjust-value-active');
 
     try {
@@ -641,7 +641,7 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
         await selectTidemark2AndMove(page);
       }
       if (objective.waitForAntennaPosition) {
-        // TM-1 -> TM-2 is 58 deg of azimuth: ~2 min at the 9 m's 0.5 deg/s (phase 19.4)
+        // TM-1 -> TM-2 is about 10 deg of azimuth since Phase 28 D4 (~20 s at 0.5 deg/s); the timeout keeps headroom
         await waitForAntennaMovement(page, 200000);
       }
       break;
@@ -757,7 +757,7 @@ test.describe('Scenario 4 Full Completion', () => {
   // ============================================================
 
   test('Objective: Command Antenna to Track TIDEMARK-2', async () => {
-    // 58 deg of azimuth at 0.5 deg/s is ~2 minutes of slew (phase 19.4)
+    // About 10 deg of azimuth at 0.5 deg/s since Phase 28 D4; generous timeout kept
     test.setTimeout(260000);
     const objective = SCENARIO_4_OBJECTIVES.find((o) => o.id === 'command-antenna')!;
     await executeObjective(page, missionControlPage, objective);
@@ -789,6 +789,17 @@ test.describe('Scenario 4 Full Completion', () => {
 
   test('Objective: Confirm the TIDEMARK-2 Beacon', async () => {
     const objective = SCENARIO_4_OBJECTIVES.find((o) => o.id === 'acquire-beacon')!;
+    // The quiz keys "between -60 and -40 dBm": read the level off the Peak
+    // readout first (nats-r3 S4 measured -43.3 dBm)
+    const readout = page.locator('#sa-peak-readout');
+    const peakDbm = async (): Promise<number> => {
+      await page.locator('#sa-peak-search').evaluate((btn) => (btn as HTMLButtonElement).click());
+      const match = /Peak:\s*(-?\d+(?:\.\d+)?)\s*MHz\s*@\s*(-?\d+(?:\.\d+)?)\s*dBm/u.exec((await readout.textContent()) ?? '');
+
+      return match ? Number.parseFloat(match[2]) : Number.NaN;
+    };
+    await expect.poll(peakDbm, { timeout: 15000 }).toBeGreaterThan(-60);
+    expect(await peakDbm()).toBeLessThan(-40);
     await executeObjective(page, missionControlPage, objective);
   });
 

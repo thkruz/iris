@@ -66,7 +66,9 @@ export const scenario16Data: ScenarioData = {
   number: 16,
   title: 'Cascade Failure',
   subtitle: 'Multi-System Recovery Under Customer Pressure',
-  duration: '35-45 min',
+  // Billed at what it takes (nats-r3-s15-F1 in S16): ~20 steps, about seven
+  // control actions and a 90 s LNB warm-up; the 45 min limit stays
+  duration: '15-20 min',
   difficulty: 'advanced',
   missionType: 'Incident Response',
   description: `Two minutes into your shift and the alarm board is lit up. BUC over-temperature, LNB reference unlocked, HPA overdriven - all on VT-01, all at once. The TIDEMARK-1 customer link is degraded and James Okafor (Atlantic Shipping Alliance, SeaLink's anchor customer) is on the line.<br><br>None of these faults are related. You have to triage them in the right order: protect the equipment and the spectrum first, restore customer impact next, then methodically clear each fault.<br><br>Dana is in the admin office. She trusts you with this one.`,
@@ -463,7 +465,8 @@ export const scenario16Data: ScenarioData = {
       id: 'wait-for-buc-cooling',
       nice: ['T1314', 'K0740'],
       title: 'Allow BUC to Cool',
-      description: 'With the BUC muted, watch the BUC temperature on TX Chain trend down. Wait for it to return below the 70°C threshold - about a minute.',
+      description:
+        'With the BUC muted, watch the BUC THERMAL readout on TX Chain: current drops to the 2.6 A idle at once, Trend (1 min) turns negative within about half a minute, and the temperature falls back below the 70°C threshold about a minute after the mute.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['correct-hpa-backoff'],
       timeLimitSeconds: 5 * 60,

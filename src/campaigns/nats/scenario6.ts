@@ -270,7 +270,7 @@ export const scenario6Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              "The ACU shows TIDEMARK-1 as the program-track target, and the dish sits at TIDEMARK-1's look angles (about 161.9 / 34.3). AURORA-7 is our target for this mission - we need to change the program-track target.",
+              "The ACU shows TIDEMARK-1 as the program-track target, and the dish sits at TIDEMARK-1's look angles (about 153.2 / 35.2). AURORA-7 is our target for this mission - we need to change the program-track target.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -612,10 +612,10 @@ export const scenario6Data: ScenarioData = {
           description: 'TX IF Calculated',
           params: {
             question: 'What TX IF frequency should you configure to transmit at 6053 MHz RF?',
-            options: ['1447 MHz (7500 - 6053 = 1447)', '13553 MHz (6053 + 7500 = 13553)', '2303 MHz (6053 - 7500 / 2 = 2303)', '755 MHz (7500 - 4170 = 755)'],
+            options: ['1447 MHz (7500 - 6053 = 1447)', '13553 MHz (6053 + 7500 = 13553)', '2303 MHz (6053 - 7500 / 2 = 2303)', '803 MHz (6053 - 5250 = 803)'],
             correctIndex: 0,
             explanation:
-              'The BUC LO (7500 MHz) sits above the uplink (6053 MHz), so the BUC outputs the lower sideband: RF = LO - IF, so IF = LO - RF = 7500 - 6053 = 1447 MHz. Same subtraction as the downlink, because both LOs sit above their RF.',
+              'The BUC LO (7500 MHz) sits above the uplink (6053 MHz), so the BUC outputs the lower sideband: RF = LO - IF, so IF = LO - RF = 7500 - 6053 = 1447 MHz. Same subtraction as the downlink, because both LOs sit above their RF. 803 MHz uses the LNB LO (5,250 MHz), which belongs to the receive side, not the BUC.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -866,7 +866,7 @@ export const scenario6Data: ScenarioData = {
           Beacon lock acquired. The antenna is now actively tracking AURORA-7. You'll see small corrections happening continuously as the satellite drifts.
         </p>
         <p>
-          Time to configure the receive chain. Widen the spectrum analyzer view to see the main downlink signal at 1,422 megahertz IF - 50 megahertz span is plenty.
+          Time to configure the receive chain. Widen the spectrum analyzer view to AURORA-7's carrier slot at 1,422 megahertz IF - 50 megahertz span is plenty. Don't expect a carrier there yet; let's see what's in the slot.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,

@@ -34,7 +34,17 @@ export class ScenarioSelectionPage extends BasePage {
   private completedScenarioIds_: string[] = [];
   /** Scenarios with score > 0 - used for UI display (currently showing as completed) */
   private currentlyCompletedScenarioIds_: string[] = [];
-  private checkpointsLoaded_ = false;
+  /**
+   * True while the progress and checkpoint probe is in flight: the cards'
+   * action area shows a disabled loading button instead of a Start that
+   * flips to Continue a few seconds later (nats-r3-s15-F3)
+   */
+  private isProgressLoading_ = false;
+  /** Set once a probe has answered; until then the lock state is unknown too */
+  private hasProgressLoaded_ = false;
+  /** Bumped per probe so only the latest one writes the cards */
+  private progressLoadToken_ = 0;
+  private progressLoad_: Promise<void> = Promise.resolve();
   /** Set once auth is ready; shows the not-saved warning in the header */
   private isSignedOut_ = false;
   private currentCampaignId_: string | null = null;
@@ -48,9 +58,10 @@ export class ScenarioSelectionPage extends BasePage {
 
   static getInstance(): ScenarioSelectionPage {
     if (!this.instance_) {
+      // Progress loads when the page is shown, not on creation: the router
+      // creates this page on every navigation (hideAll), and probing every
+      // scenario's checkpoint from the home page logged one 404 per scenario
       this.instance_ = new ScenarioSelectionPage();
-      // Start loading checkpoints after instance is created
-      this.instance_.startLoadingCheckpoints_();
     }
 
     return this.instance_;
@@ -82,24 +93,35 @@ export class ScenarioSelectionPage extends BasePage {
     return SCENARIOS;
   }
 
-  /**
-   * Start loading checkpoints in the background
-   */
-  private startLoadingCheckpoints_(): void {
-    if (this.checkpointsLoaded_) return;
-    this.checkpointsLoaded_ = true;
-
-    // Load checkpoints asynchronously and update the UI when ready
-    this.loadCheckpointsAndUpdate_().catch((error) => {
-      Logger.error('Failed to initialize checkpoint loading:', error);
-    });
+  /** Resolves when the latest progress and checkpoint probe has answered and the cards are final */
+  whenProgressLoaded(): Promise<void> {
+    return this.progressLoad_;
   }
 
   /**
-   * Load checkpoint status and update the UI
-   * Uses new batch API to get all progress + checkpoint info in one call
+   * Load progress and checkpoint status, then render the final card buttons.
+   * The cards show a loading state until this answers.
    */
-  private async loadCheckpointsAndUpdate_(): Promise<void> {
+  private loadCheckpointsAndUpdate_(): Promise<void> {
+    const token = ++this.progressLoadToken_;
+    this.isProgressLoading_ = true;
+    this.updateScenarioCards_();
+    this.progressLoad_ = this.probeProgress_(token).finally(() => {
+      if (token !== this.progressLoadToken_) return;
+      this.isProgressLoading_ = false;
+      this.hasProgressLoaded_ = true;
+      this.updateScenarioCards_();
+    });
+
+    return this.progressLoad_;
+  }
+
+  /**
+   * Fetch all progress in one call, then probe checkpoints for the scenarios
+   * on screen only (the progress payload carries no checkpoint flag, and the
+   * backend has no list call, so a probe per displayed scenario is the floor)
+   */
+  private async probeProgress_(token: number): Promise<void> {
     try {
       // Wait for auth to be initialized before trying to load user data
       const { App } = await import('@app/app');
@@ -115,7 +137,7 @@ export class ScenarioSelectionPage extends BasePage {
       // Get all scenarios progress in one call
       const progressResponse = await userDataService.getAllScenariosProgress().catch(() => null);
 
-      if (progressResponse) {
+      if (progressResponse && token === this.progressLoadToken_) {
         // Clear previous data
         this.scenarioCheckpoints_.clear();
         this.completedScenarioIds_ = [];
@@ -134,9 +156,9 @@ export class ScenarioSelectionPage extends BasePage {
           }
         }
 
-        // Check checkpoints for ALL scenarios in parallel (not just ones with progress records)
-        // This ensures we detect checkpoints even when no objectives have been completed yet
-        const checkpointChecks = SCENARIOS.map(async (scenario) => {
+        // Check checkpoints for every displayed scenario in parallel (not just ones with
+        // progress records): a checkpoint can exist before any objective is completed
+        const checkpointChecks = this.getScenariosToDisplay_().map(async (scenario) => {
           const hasCheckpoint = await userDataService.checkpointExists(scenario.id).catch(() => false);
           return { scenarioId: scenario.id, hasCheckpoint };
         });
@@ -147,9 +169,6 @@ export class ScenarioSelectionPage extends BasePage {
           }
         }
       }
-
-      // Re-render the scenario grid with checkpoint data
-      this.updateScenarioCards_();
     } catch (error) {
       Logger.error('Failed to load checkpoint status:', error);
       // Continue without checkpoint info - user may not be authenticated
@@ -269,7 +288,9 @@ export class ScenarioSelectionPage extends BasePage {
     const hasCheckpoint = this.scenarioCheckpoints_.get(scenario.id);
     // Use completedScenarioIds_ (based on completedAt) for prerequisite checks and badge
     // UNLOCK_ALL_SCENARIOS bypasses lock check for dev/testing
-    const isLocked = window.UNLOCK_ALL_SCENARIOS ? false : isScenarioLocked(scenario, this.completedScenarioIds_);
+    // Before the first probe answers, the completed list is empty and every card would read Locked
+    const isLockStateKnown = this.hasProgressLoaded_ || !this.isProgressLoading_;
+    const isLocked = window.UNLOCK_ALL_SCENARIOS || !isLockStateKnown ? false : isScenarioLocked(scenario, this.completedScenarioIds_);
     const prerequisiteNames = isLocked ? getPrerequisiteScenarioNames(scenario) : [];
     const isDisabledOrLocked = scenario.isDisabled || isLocked;
     // hasEverCompleted = has completedAt (for badge display)
@@ -298,7 +319,15 @@ export class ScenarioSelectionPage extends BasePage {
     }
 
     let actionButtons = '';
-    if (!isDisabledOrLocked) {
+    if (!isDisabledOrLocked && this.isProgressLoading_) {
+      actionButtons = `
+          <div class="scenario-checkpoint-actions">
+          <button type="button" class="btn-card-loading" data-scenario-id="${scenario.id}" disabled aria-busy="true">
+            <span class="btn-card-loading-spinner" aria-hidden="true"></span> Loading
+          </button>
+          </div>
+        `;
+    } else if (!isDisabledOrLocked) {
       if (isCurrentlyCompleted) {
         actionButtons = `
           <div class="scenario-checkpoint-actions">
@@ -330,14 +359,16 @@ export class ScenarioSelectionPage extends BasePage {
     }
 
     let progressBanner = '';
-    if (hasEverCompleted && !isDisabledOrLocked) {
+    if (this.isProgressLoading_ && !this.hasProgressLoaded_) {
+      progressBanner = '';
+    } else if (hasEverCompleted && !isDisabledOrLocked) {
       progressBanner = `
         <div class="completed-banner">
           <span class="completed-icon">🏆</span>
           Completed
         </div>
       `;
-    } else if (hasCheckpoint && !isDisabledOrLocked) {
+    } else if (hasCheckpoint && !isDisabledOrLocked && !this.isProgressLoading_) {
       progressBanner = `
         <div class="checkpoint-banner">
           <span class="checkpoint-icon">💾</span>

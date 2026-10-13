@@ -28,6 +28,16 @@ interface Scenario18Objective {
   stationId?: string;
   trackingMode?: string;
   autoWaitSeconds?: number;
+  /** Reads the panel the quiz is about and asserts the keyed option is what the screen shows */
+  checkScreen?: (page: import('@playwright/test').Page) => Promise<void>;
+}
+
+/** ME-02's ACU beacon C/N as the panel shows it (e.g. "28.0 dB") */
+async function readAcuBeaconCn(page: import('@playwright/test').Page): Promise<number> {
+  const text = (await page.locator('[id$="beacon-cn-value"]:visible').first().textContent()) ?? '';
+  const match = /[-+]?\d+(?:\.\d+)?/u.exec(text);
+  expect(match, `ACU beacon C/N reads a number (got "${text}")`).not.toBeNull();
+  return Number.parseFloat(match![0]);
 }
 
 const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
@@ -61,7 +71,7 @@ const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
     id: 'station-keeping-quiz',
     title: 'What Died on the Spacecraft',
     type: 'quiz',
-    correctAnswer: 'Residual inclination builds - the bird traces a daily figure-8 in az/el that grows over weeks, and the ephemeris gets steadily more wrong',
+    correctAnswer: 'A daily figure-8 - the bird swings about 1.3° north and south of its slot every day, and the ephemeris, computed before the burn, does not show it',
   },
   {
     id: 'read-program-track-decay-tab',
@@ -74,12 +84,24 @@ const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
     title: 'Read the Program-Track Decay',
     type: 'quiz',
     correctAnswer: 'Program-track IS on the ephemeris target - the satellite is somewhere else, and the gap between prediction and reality is paid in pattern loss',
+    // The sag the quiz names: ~28 dB on the stale ephemeris against ~34 under step-track
+    checkScreen: async (page) => {
+      const beaconCn = await readAcuBeaconCn(page);
+      expect(beaconCn).toBeGreaterThan(24);
+      expect(beaconCn).toBeLessThan(31);
+    },
   },
   {
     id: 'beamwidth-risk-quiz',
     title: 'How Long Until It Falls Off',
     type: 'quiz',
-    correctAnswer: 'Already lost - the excursion is several beamwidths and growing; any fix that follows the ephemeris fails until Halifax publishes a corrected one',
+    correctAnswer: 'Borrowed time - within the hour the gap passes about half a beamwidth and the carrier drops out of lock; by early afternoon the bird is far outside the beam',
+    // "about 0.4 deg now (beacon ~6 dB down)": the ACU still shows the sag
+    checkScreen: async (page) => {
+      const beaconCn = await readAcuBeaconCn(page);
+      expect(beaconCn).toBeGreaterThan(24);
+      expect(beaconCn).toBeLessThan(31);
+    },
   },
 
   // PHASE 2: TRANSITION TO STEP-TRACK
@@ -152,7 +174,7 @@ const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
     title: 'Log the Anomaly Response',
     type: 'quiz',
     correctAnswer:
-      'TM-2 vehicle anomaly (Halifax ref): N-S burns suspended, ephemeris stale. ME-02 step-track from ~0920, carrier recovered, no impact. Pointing history to Halifax. Anomaly OPEN.',
+      'TM-2 vehicle anomaly (Halifax ref): N-S burn overran, ~1.3° inclination, ephemeris stale. ME-02 step-track from ~0920, carrier recovered, no impact. Pointing history to Halifax. Anomaly OPEN.',
   },
 ];
 
@@ -184,6 +206,7 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);
+      await objective.checkScreen?.(page);
       await answerQuizByText(page, objective.correctAnswer!);
       break;
 

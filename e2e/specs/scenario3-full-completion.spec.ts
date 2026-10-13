@@ -229,7 +229,7 @@ const SCENARIO_3_OBJECTIVES: Scenario3Objective[] = [
     type: 'configure-lnb',
     lnbConfig: {
       loFrequency: 5250,
-      gain: 60,
+      gain: 65,
     },
   },
   {
@@ -380,7 +380,7 @@ const SCENARIO_3_OBJECTIVES: Scenario3Objective[] = [
     id: 'verify-stow-quiz',
     title: 'Understand Stow Position',
     type: 'quiz',
-    correctAnswer: 'Minimizes wind loading on the dish and prevents snow from accumulating in the reflector',
+    correctAnswer: "Turns the reflector's face away from the horizontal wind, so the wind load and the torque on the pedestal and drives are at their minimum",
   },
   // This is a single objective in the scenario with TWO quiz conditions.
   // The second quiz (Documentation Purpose) appears first in the UI, followed by the first quiz (What to Log).

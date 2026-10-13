@@ -29,6 +29,18 @@ const PASSBAND_DROP_DB = 60;
 export const LOOPBACK_COUPLING_DB = 66;
 
 /**
+ * Test loop translator (Phase 28 D3, nats-r3-s08-F1). A C-band receive LNB
+ * covers about 3.4-4.2 GHz: its input filter and LNA never see a 6 GHz
+ * uplink, and nobody retunes the LO to look for one. The station's loop
+ * translator mixes the coupled BUC sample down by the satellite's own
+ * translation frequency, so the loop carrier lands at the downlink-equivalent
+ * RF (uplink - 2225 MHz for standard 6/4 GHz C-band) and the normal LNB LO
+ * puts it at the normal receive IF: 6053 MHz -> 3828 MHz RF -> 1422 MHz IF
+ * with LO 5250. An LNB state's loopTranslationMHz overrides this default.
+ */
+export const LOOP_TRANSLATION_HZ = 2225e6;
+
+/**
  * Output P1dB of a C-band PLL LNB, dBm: +10 dBm is the typical datasheet
  * figure (e.g. Norsat 3000-series, NJR2836). Input P1dB = this - gain, so
  * -50 dBm at 60 dB gain. Rapp (s = 2) AM/AM on the LNB's total input.
@@ -78,6 +90,12 @@ export interface LNBState extends RFFrontEndModuleState {
    * Undefined: the set gain survives a power cycle.
    */
   powerOnGain?: dB;
+  /**
+   * Translation frequency of the station's test loop translator, MHz: the
+   * loop carrier reaches the LNB at uplink RF minus this (Phase 28 D3).
+   * Undefined: LOOP_TRANSLATION_HZ (2225 MHz, standard C-band 6/4 GHz).
+   */
+  loopTranslationMHz?: MHz;
 }
 
 /** Direct-sampling (SDR) passband limits, modeled on common RTL-SDR tuners */
@@ -256,12 +274,26 @@ export abstract class LNBModuleCore extends RFFrontEndModule<LNBState> {
 
   get rxSignalsIn(): RfSignal[] {
     const omtSignals = this.rfFrontEnd_.omtModule.rxSignalsOut;
-    // Loopback reaches the LNB through the test-loop coupler, not at full BUC output
+    // Loopback reaches the LNB through the test-loop coupler (not at full BUC
+    // output) and the loop translator (at the downlink-equivalent RF, not the
+    // 6 GHz uplink a C-band LNB cannot receive)
+    const translationHz = this.loopTranslationHz;
     const bucLoopback = this.rfFrontEnd_.bucModule.state.isLoopback
-      ? this.rfFrontEnd_.bucModule.outputSignals.map((sig) => ({ ...sig, power: (sig.power - LOOPBACK_COUPLING_DB) as dBm }))
+      ? this.rfFrontEnd_.bucModule.outputSignals.map((sig) => ({
+          ...sig,
+          frequency: (sig.frequency - translationHz) as RfFrequency,
+          power: (sig.power - LOOPBACK_COUPLING_DB) as dBm,
+        }))
       : [];
 
     return [...omtSignals, ...bucLoopback];
+  }
+
+  /** The loop translator's translation frequency, Hz (state override or LOOP_TRANSLATION_HZ) */
+  get loopTranslationHz(): number {
+    const overrideMHz = this.state.loopTranslationMHz;
+
+    return overrideMHz !== undefined && overrideMHz > 0 ? overrideMHz * 1e6 : LOOP_TRANSLATION_HZ;
   }
 
   /** Gain compression from the last update, dB (0 when linear) */

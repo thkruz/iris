@@ -414,6 +414,21 @@ export class WeatherManager {
   }
 
   /**
+   * Seconds of mission time until the event has run its course (0 once it
+   * has), or null when that is not known yet (unknown id, or still waiting on
+   * its anchor objective). An objective time skip reads it to stop at the end
+   * of the weather (Phase 28 D1).
+   */
+  getSecondsUntilEventEnds(eventId: string): number | null {
+    const event = this.weatherEvents_.find((e) => e.id === eventId);
+    if (!event || event.isAwaitingAnchor) {
+      return null;
+    }
+
+    return Math.max(0, event.startTime + event.duration - this.getElapsedMissionTime());
+  }
+
+  /**
    * An objective time skip (Phase 27 Q4) moved the clocks by `seconds` in one
    * jump. Event windows follow the mission clock on their own; ice is
    * integrated per update, so give it the skipped time here or a skipped wait

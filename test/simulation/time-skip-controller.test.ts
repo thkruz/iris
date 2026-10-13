@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import { EventBus } from '../../src/events/event-bus';
 import { Events, TimeSkipEndedData, TimeSkipStartedData } from '../../src/events/events';
+import type { TimeSkipOffer } from '../../src/objectives/objective-types';
 import { ObjectivesManager } from '../../src/objectives/objectives-manager';
 import { OpsLogManager } from '../../src/ops-log/ops-log-manager';
 import { getSkippedMs, missionNowMs, resetMissionClock } from '../../src/simulation/mission-clock';
@@ -242,8 +243,9 @@ describe('TimeSkipController', () => {
   });
 
   describe('objective skip (Phase 27 Q4)', () => {
-    let offer: { objectiveId: string; minutes: number; label: string } | null;
+    let offer: TimeSkipOffer | null;
     let otherTimerRunning: boolean;
+    let isObjectiveOpen: boolean;
     const objectives = {
       getAvailableTimeSkip: vi.fn(() => offer),
       markTimeSkipUsed: vi.fn(() => {
@@ -251,11 +253,14 @@ describe('TimeSkipController', () => {
       }),
       hasRunningObjectiveTimer: vi.fn(() => otherTimerRunning),
       applyTimeSkip: vi.fn(),
+      getObjectiveState: vi.fn(() => ({ isActive: true, isCompleted: !isObjectiveOpen, isFailed: false })),
     };
 
     beforeEach(() => {
-      offer = { objectiveId: 'ride-out-rain', minutes: 20, label: 'rain cell' };
+      // Phase 28 D1: the offer covers the rest of the hold
+      offer = { objectiveId: 'ride-out-rain', deltaMs: 20 * 60_000, landsAtMs: null, label: 'rain cell' };
       otherTimerRunning = false;
+      isObjectiveOpen = true;
       objectives.applyTimeSkip.mockClear();
       vi.spyOn(ObjectivesManager, 'hasInstance').mockReturnValue(true);
       vi.spyOn(ObjectivesManager, 'getInstance').mockReturnValue(objectives as unknown as ObjectivesManager);
@@ -311,6 +316,24 @@ describe('TimeSkipController', () => {
       expect(controller.startObjectiveSkip()).toBe(true);
       controller.step(controller.animationMs);
       expect(controller.findObjectiveSkip()).toBeNull();
+    });
+
+    it('stops as soon as the objective completes, so the next step pays nothing (nats-r3-s10-F1)', () => {
+      const controller = TimeSkipController.getInstance();
+      const scenarioBefore = missionNowMs();
+      controller.startObjectiveSkip();
+
+      controller.step(controller.animationMs / 2);
+      const halfway = missionNowMs() - scenarioBefore;
+      expect(halfway).toBeCloseTo(10 * 60_000, 0);
+
+      // The hold ended during the animation; the next frame must not advance
+      isObjectiveOpen = false;
+      const calls = objectives.applyTimeSkip.mock.calls.length;
+      expect(controller.step(controller.animationMs)).toBe(false);
+      expect(missionNowMs() - scenarioBefore).toBeCloseTo(halfway, 0);
+      expect(objectives.applyTimeSkip.mock.calls.length).toBe(calls);
+      expect(controller.isSkipping).toBe(false);
     });
 
     it('does not move run time for a pass skip', () => {

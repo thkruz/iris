@@ -10,6 +10,7 @@ import { antennaLockLabel, trackingModeLabel } from '@app/equipment/antenna/trac
 import { EventBus } from '@app/events/event-bus';
 import { AggregatedAlarm, Events } from '@app/events/events';
 import { AlarmService } from '@app/services/alarm-service';
+import { getSimulatedNowMs } from '@app/simulation/sim-time';
 import './dashboard-tab.css';
 
 interface AlarmEntry {
@@ -41,6 +42,8 @@ export class DashboardTab extends BaseElement {
   private readonly groundStation: GroundStation;
   private readonly domCache_: Map<string, HTMLElement> = new Map();
   private readonly alarms_: AlarmEntry[] = [];
+  /** Station-clock ms each alarm (by key) was first seen, so a standing alarm keeps its raise time */
+  private readonly alarmRaisedAtMs_ = new Map<string, number>();
   private updateHandler_: (() => void) | null = null;
   private lastSyncTime_: number = 0;
 
@@ -443,8 +446,9 @@ export class DashboardTab extends BaseElement {
     );
   }
 
+  /** `02:15:07` - station clock time of day (UTC), as the HUD clock writes it */
   private formatTime_(date: Date): string {
-    return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return date.toISOString().slice(11, 19);
   }
 
   private cacheDomElements_(): void {
@@ -575,7 +579,11 @@ export class DashboardTab extends BaseElement {
       modeEl.textContent = trackingModeLabel(state);
       // Color by mode type
       modeEl.className = 'status-badge';
-      if (state.trackingMode === 'stow') {
+      if (state.isAcuAutomationFaulted) {
+        // The ACU's automation is down: whatever the mode switch says, nothing
+        // is tracking, so the badge carries the alarm's colour (nats-r3-s23-F1)
+        modeEl.classList.add('status-badge-red');
+      } else if (state.trackingMode === 'stow') {
         modeEl.classList.add('status-badge-gray');
       } else if (state.trackingMode === 'program-track') {
         modeEl.classList.add('status-badge-green');
@@ -611,7 +619,7 @@ export class DashboardTab extends BaseElement {
     if (faultEl) {
       // Green when healthy, red on fault, grey only when the pedestal is off (s01-F14)
       let ledState = 'off';
-      if (state.hasFault) {
+      if (state.hasFault || state.isAcuAutomationFaulted) {
         ledState = 'error';
       } else if (state.isPowered) {
         ledState = 'success';
@@ -844,17 +852,27 @@ export class DashboardTab extends BaseElement {
    * (s08-F2, s16-F2, s17-F2, s23-F2). Already ordered most severe first.
    */
   private collectAlarms_(): void {
-    const now = new Date();
+    // Stamped on the scenario clock, not the wall clock (nats-r3-s08-F2), at
+    // the moment each alarm was first seen rather than at every refresh
+    const nowMs = getSimulatedNowMs();
     const alarms = AlarmService.getAlarms(this.groundStation);
+    const raisedAtMs = new Map<string, number>();
     this.alarms_.length = 0;
     alarms.forEach((alarm, index) => {
+      const key = `${alarm.equipmentType}-${alarm.equipmentIndex}-${alarm.message}`;
+      const raisedMs = this.alarmRaisedAtMs_.get(key) ?? nowMs;
+      raisedAtMs.set(key, raisedMs);
       this.alarms_.push({
         id: `${alarm.equipmentType}-${alarm.equipmentIndex}-${index}`,
         level: ALARM_LEVEL[alarm.severity],
         message: alarm.message,
-        timestamp: now,
+        timestamp: new Date(raisedMs),
       });
     });
+    this.alarmRaisedAtMs_.clear();
+    for (const [key, ms] of raisedAtMs) {
+      this.alarmRaisedAtMs_.set(key, ms);
+    }
 
     // Update the alarm list DOM
     const alarmListEl = this.domCache_.get('alarm-list');

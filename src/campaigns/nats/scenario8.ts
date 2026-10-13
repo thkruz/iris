@@ -971,7 +971,7 @@ export const scenario8Data: ScenarioData = {
       nice: ['T1313', 'S0582'],
       title: 'Prepare BUC for Loopback Test',
       description:
-        'Before transmitting on a new modem, take the faulted Modem 1 out of service (power it off: its fault alarm clears), disable the HPA output and enable BUC loopback for safe testing. The BUC stays unmuted so the loop carries the signal.',
+        "Before transmitting on a new modem, take the faulted Modem 1 out of service (power it off: its fault alarm clears), disable the HPA output, set the BUC gain to 15 dB and enable BUC loopback for safe testing. The BUC stays unmuted so the loop carries the signal. The loop couples the BUC output into the LNB about 66 dB down; at tonight's 65 dB LNB gain the LNB compresses at about -55 dBm in, so the standard 23 dB (-7 dBm drive, +16 dBm out, -50 dBm in) would overload it. 15 dB puts -58 dBm in, 3 dB under.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['configure-tx-modem'],
       timeLimitSeconds: 2 * 60,
@@ -987,6 +987,19 @@ export const scenario8Data: ScenarioData = {
           type: 'equipment-not-powered',
           description: 'Modem 1 Powered Off (Out of Service)',
           params: { equipment: 'transmitter', modemNumber: 1 },
+          mustMaintain: true,
+        },
+        {
+          // Phase 28 D3: the loop keeps the 66 dB coupler and the LNB's input
+          // compression. LNB gain 65 dB: input P1dB -55 dBm; at BUC 23 dB the
+          // loop puts -50 dBm in (~3.4 dB compressed, "LNB input overload").
+          // 15 dB: -58 dBm, ~0.2 dB (16 dB ~0.45; 17 dB trips the 0.5 dB alarm)
+          type: 'buc-gain-set',
+          description: 'BUC Gain Backed Off to 15 dB',
+          params: {
+            gain: 15 as dB,
+            gainTolerance: 1 as dB,
+          },
           mustMaintain: true,
         },
         {
@@ -1072,43 +1085,13 @@ export const scenario8Data: ScenarioData = {
       points: 10,
     },
     {
-      id: 'configure-lnb-for-loopback',
-      nice: ['T0153', 'K0740'],
-      title: 'Configure LNB for Loopback Test',
-      description:
-        'Set the LNB LO to 7000 MHz to view the BUC loopback signal. The BUC LO is 7100 MHz, so the 1047 MHz TX IF becomes 6053 MHz RF, which downconverts to 947 MHz with a 7000 MHz LNB.',
-      groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['test-modem2-loopback'],
-      timeLimitSeconds: 2 * 60,
-      timerStartTrigger: 'on-activate',
-      conditions: [
-        {
-          type: 'tab-active',
-          description: 'RX Analysis Tab Open',
-          params: { tab: 'rx-analysis' },
-          maintainUntilObjectiveComplete: true,
-        },
-        {
-          type: 'lnb-lo-set',
-          description: 'LNB LO Set to 7000 MHz',
-          params: {
-            loFrequency: 7000 as MHz,
-            loFrequencyTolerance: 10 as MHz,
-          },
-          maintainUntilObjectiveComplete: true,
-        },
-      ],
-      conditionLogic: 'AND',
-      points: 5,
-    },
-    {
       id: 'verify-loopback-signal',
       nice: ['T0153', 'K0740'],
       title: 'Verify Loopback Signal',
       description:
-        'Set the spectrum analyzer to center 947 MHz with a 40 MHz span, Min Amplitude -100 dBm and Max Amplitude -30 dBm, to confirm the BUC loopback signal is present.',
+        "Find the loop carrier on RX Analysis with the LNB left at its normal 5250 MHz LO. The loop translator shifts the 6053 MHz uplink down by the satellite's 2225 MHz translation to 3828 MHz, which the LNB puts at 1422 MHz IF. Set the spectrum analyzer to center 1422 MHz with a 40 MHz span, Min Amplitude -100 dBm and Max Amplitude -30 dBm.",
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['configure-lnb-for-loopback'],
+      prerequisiteObjectiveIds: ['test-modem2-loopback'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -1119,10 +1102,12 @@ export const scenario8Data: ScenarioData = {
           mustMaintain: true,
         },
         {
+          // Phase 28 D3 (nats-r3-s08-F1): loop translator, normal LNB LO:
+          // 6053 - 2225 = 3828 MHz RF, 5250 - 3828 = 1422 MHz IF
           type: 'speca-center-frequency',
-          description: 'Spectrum Analyzer at 947 MHz',
+          description: 'Spectrum Analyzer at 1422 MHz',
           params: {
-            centerFrequency: 947e6 as Hertz,
+            centerFrequency: 1422e6 as Hertz,
             centerFrequencyTolerance: 5e6,
           },
           mustMaintain: true,
@@ -1166,16 +1151,16 @@ export const scenario8Data: ScenarioData = {
           description: 'Loopback Signal Verified',
           params: {
             character: Character.SYSTEM,
-            question: 'What should you observe on the spectrum analyzer at 947 MHz?',
+            question: 'What do you see on the spectrum analyzer in this window?',
             options: [
-              'A 24 MHz wide modulated signal - confirming TX chain is working',
-              'A narrow CW spike like the beacon - confirming the BUC LO is present',
-              'No signal at all on the display - loopback does not produce visible output',
-              'The AURORA-7 beacon at 947 MHz - confirming the LNB LO change took effect',
+              'A 24 MHz wide modulated carrier at 1422 MHz - Modem 2 through the BUC and the test loop',
+              'A narrow CW spike at 1422 MHz - the BUC LO leaking through the loop',
+              'Nothing but the noise floor - the loop carrier only shows with the LNB LO retuned to the BUC LO',
+              'The AURORA-7 beacon at 1422 MHz - the loop only proves the receive side',
             ],
             correctIndex: 0,
             explanation:
-              'The loopback signal appears as a 24 MHz wide modulated carrier at 947 MHz (TX IF 1047 MHz upconverted by BUC LO 7100 MHz to 6053 MHz RF, then downconverted by LNB LO 7000 MHz). This confirms Modem 2 and the BUC are working correctly.',
+              "The loop carrier is a 24 MHz modulated carrier at 1422 MHz: TX IF 1047 MHz, up to 6053 MHz RF by the 7100 MHz BUC LO, down 2225 MHz by the loop translator to 3828 MHz, and to 1422 MHz IF by the normal 5250 MHz LNB LO. That is AURORA-7's TP-1 slot, where our own downlink sits once we are live (the beacon stays at 1085 MHz). Modem 2 and the BUC are working.",
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -1183,35 +1168,6 @@ export const scenario8Data: ScenarioData = {
       ],
       conditionLogic: 'AND',
       points: 10,
-    },
-    {
-      id: 'restore-lnb-frequency',
-      nice: ['T0153', 'K0740'],
-      title: 'Restore LNB Frequency',
-      description: 'Return the LNB LO to 5250 MHz for normal satellite reception.',
-      groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['verify-loopback-signal'],
-      timeLimitSeconds: 1 * 60,
-      timerStartTrigger: 'on-activate',
-      conditions: [
-        {
-          type: 'tab-active',
-          description: 'RX Analysis Tab Open',
-          params: { tab: 'rx-analysis' },
-          mustMaintain: true,
-        },
-        {
-          type: 'lnb-lo-set',
-          description: 'LNB LO Restored to 5250 MHz',
-          params: {
-            loFrequency: 5250 as MHz,
-            loFrequencyTolerance: 10 as MHz,
-          },
-          mustMaintain: true,
-        },
-      ],
-      conditionLogic: 'AND',
-      points: 5,
     },
 
     // ============================================================
@@ -1221,9 +1177,10 @@ export const scenario8Data: ScenarioData = {
       id: 'disable-loopback-prepare-uplink',
       nice: ['S0421', 'T1567'],
       title: 'Prepare for Live Uplink',
-      description: 'Disable loopback mode. The BUC stays unmuted for the HPA enable.',
+      description:
+        'Disable loopback mode and set the BUC gain back to the standard 23 dB (at 15 dB the HPA would be 8 dB short of drive). The BUC stays unmuted for the HPA enable.',
       groundStation: 'VT-01',
-      prerequisiteObjectiveIds: ['restore-lnb-frequency'],
+      prerequisiteObjectiveIds: ['verify-loopback-signal'],
       timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
@@ -1236,6 +1193,15 @@ export const scenario8Data: ScenarioData = {
         {
           type: 'buc-loopback-disabled',
           description: 'Loopback Disabled',
+          mustMaintain: true,
+        },
+        {
+          type: 'buc-gain-set',
+          description: 'BUC Gain Back to 23 dB',
+          params: {
+            gain: 23 as dB,
+            gainTolerance: 0.5 as dB,
+          },
           mustMaintain: true,
         },
       ],
@@ -1275,7 +1241,7 @@ export const scenario8Data: ScenarioData = {
       id: 'verify-link-operational',
       nice: ['T0153', 'K0741'],
       title: 'Verify Link Operational',
-      description: 'Confirm the AURORA-7 link is fully operational: Modem 2 carrier up, the receiver steady on it (about 10.5 dB C/N), no alarms.',
+      description: 'Confirm the AURORA-7 link is fully operational: Modem 2 carrier up, the receiver holding steady lock on it (no more dropouts), no alarms.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['enable-hpa-sequence'],
       timeLimitSeconds: 2 * 60,
@@ -1293,10 +1259,17 @@ export const scenario8Data: ScenarioData = {
           params: {
             character: Character.SYSTEM,
             question: 'What indicators confirm the AURORA-7 link is now operational?',
-            options: ['No active alarms on Dashboard', 'Antenna in step-track with beacon lock', 'HPA enabled and BUC unmuted', 'All of the above'],
-            correctIndex: 3,
+            // nats-r3-s08-F3: the receiver on our own carrier is the end-to-end proof
+            options: [
+              'No active alarms on Dashboard',
+              'Antenna in step-track with beacon lock',
+              'HPA enabled and BUC unmuted',
+              'Receiver holding steady lock on our own carrier',
+              'All of the above',
+            ],
+            correctIndex: 4,
             explanation:
-              "A fully operational link shows: no Dashboard alarms (Modem 1's fault alarm cleared when you took it out of service), antenna tracking with beacon lock (step-track for inclined orbit), and an active TX chain (HPA enabled, BUC unmuted). The receiver now holds steady lock on Modem 2's carrier at about 10.5 dB C/N, where Modem 1's dropouts kept knocking it off. All conditions must be met.",
+              "A fully operational link shows: no Dashboard alarms (Modem 1's fault alarm cleared when you took it out of service), antenna tracking with beacon lock (step-track for inclined orbit), an active TX chain (HPA enabled, BUC unmuted), and the receiver holding steady lock on Modem 2's carrier relayed back down by AURORA-7, where Modem 1's dropouts kept knocking it off. That last one is the end-to-end proof: our carrier went up, through the satellite and back. All conditions must be met.",
             pointPenalty: 10,
             preserveOptionOrder: true,
           },

@@ -4,7 +4,11 @@
  * Samples a reading every `sampleIntervalS` of SimClock run time and keeps
  * `windowS` of them, the way a station's monitor-and-control system logs a
  * BUC's case temperature. The trend is the least-squares slope over the last
- * `trendWindowS`, °C per minute.
+ * `trendWindowS`, °C per minute. That window is one minute (nats-r3-s02-F4,
+ * nats-r3-s24-F1): with a 10 min thermal time constant a warm-up or a de-rate
+ * turns the slope within about 30 s, where a five-minute window kept showing
+ * the previous cool-down or climb for minutes after the case had turned.
+ * "10 min ago" stays a rolling sample of the same log.
  *
  * A unit staged hot by a scenario has a past: `backfill` writes the
  * `windowS` before "now" along a first-order approach to `targetC` with time
@@ -22,9 +26,9 @@ export class ThermalTrendLog {
   private readonly samples_: ThermalSample[] = [];
 
   constructor(
-    readonly sampleIntervalS = 10,
+    readonly sampleIntervalS = 5,
     readonly windowS = 30 * 60,
-    readonly trendWindowS = 5 * 60
+    readonly trendWindowS = 60
   ) {}
 
   /** Record a reading if a sample is due (or the log is empty) */

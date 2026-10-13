@@ -45,6 +45,11 @@ export class QuizModal extends DraggableBox {
     return QuizModal.instance_;
   }
 
+  /** True while a quiz (question or its feedback) is on screen */
+  static isShowingQuiz(): boolean {
+    return QuizModal.instance_ !== null && QuizModal.instance_.currentQuiz_ !== null;
+  }
+
   protected getBoxContentHtml(): string {
     return html`
       <div class="quiz-modal-content">

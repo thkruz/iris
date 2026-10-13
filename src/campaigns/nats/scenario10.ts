@@ -600,21 +600,28 @@ export const scenario10Data: ScenarioData = {
     // ============================================================
     {
       // Q4 (r2-s10-F1): the setup finishes around 09:50; the window opens at
-      // 10:00. A real wait, offered as a skip once the station is ready
+      // 10:00. A real wait, offered as a skip once the station is ready.
+      // Phase 28 D1 (nats-r3-s10-F2): the wait ends on the station clock, not
+      // after a fixed 10 min, so the skip lands at 10:00 ("Skip to 10:00")
       id: 'stand-by-for-window',
       nice: ['T0153', 'K1032'],
       title: 'Stand By for the 10:00 Window',
       description:
-        'The station is in pass configuration and the SeaLink window opens at 10:00. Keep the beacon locked on step-track until then: wait it out, or use Skip 10 min in the command bar.',
+        'The station is in pass configuration and the SeaLink window opens at 10:00 on the station clock. Keep the beacon locked on step-track until then: wait it out, or use the skip control in the command bar (Skip to 10:00). The mission timer holds while you wait.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['imd-tradeoff-check'],
-      timeSkip: { minutes: 10, label: 'standby until the 10:00 window', availableAfterConditions: true },
+      timeSkip: { label: 'standby until the 10:00 window', availableAfterConditions: true },
       conditions: [
         {
           type: 'antenna-beacon-locked',
-          description: 'Beacon Held on Standby (10 min)',
+          description: 'Beacon Held on Standby',
           mustMaintain: true,
-          maintainDuration: 10 * 60,
+        },
+        {
+          type: 'scenario-time-reached',
+          description: 'Station Clock Reaches 10:00',
+          params: { scenarioTime: '10:00' },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',
@@ -646,29 +653,35 @@ export const scenario10Data: ScenarioData = {
       nice: ['K1032', 'T0153'],
       title: 'Hold Through the Window',
       description:
-        'Hold the link to 10:30: beacon locked on step-track as AURORA-7 drifts, C/N above 9 dB. Watch it through, or use Skip 30 min in the command bar to run the window; Marcus calls the close.',
+        'Hold the link to the 10:30 close on the station clock: beacon locked on step-track as AURORA-7 drifts, C/N above 9 dB. Watch it through, or use the skip control in the command bar (Skip to 10:30) to run the window; Marcus calls the close.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['sustain-rx-margin'],
-      timeSkip: { minutes: 30, label: 'SeaLink pass window to 10:30', availableAfterConditions: true },
+      // Phase 28 D1 (nats-r3-s10-F1): the hold ends at 10:30 on the station
+      // clock, so the skip stops at the close instead of overrunning it
+      timeSkip: { label: 'SeaLink pass window to 10:30', availableAfterConditions: true },
       conditions: [
         {
           type: 'antenna-beacon-locked',
           description: 'Beacon Stays Locked',
           mustMaintain: true,
-          maintainDuration: 29 * 60,
         },
         {
           type: 'receiver-snr-threshold',
           description: 'C/N Held Above 9 dB',
           params: { modemNumber: 1, minCNRatio: 9 },
           mustMaintain: true,
-          maintainDuration: 29 * 60,
         },
         {
           type: 'antenna-tracking-mode-set',
           description: 'Step-Track Held',
           params: { trackingMode: 'step-track' },
           mustMaintain: true,
+        },
+        {
+          type: 'scenario-time-reached',
+          description: 'Window Closes at 10:30',
+          params: { scenarioTime: '10:30' },
+          mustMaintain: false,
         },
       ],
       conditionLogic: 'AND',

@@ -67,7 +67,9 @@ export const scenario15Data: ScenarioData = {
   number: 15,
   title: 'Frequency Coordination',
   subtitle: 'Inter-Operator Spectrum Etiquette',
-  duration: '25-30 min',
+  // Billed at what it takes (nats-r3-s15-F1): 19 steps, one HPA change, one
+  // analyzer retune. The 0930 confirm / 0937 RedSky deadlines are story.
+  duration: '10-15 min',
   difficulty: 'intermediate',
   missionType: 'Spectrum Coordination',
   description: `A coordination notice from RedSky Teleport hit your inbox at 09:08. Their next scheduled uplink sits just 2 MHz from the edge of the SeaLink carrier currently riding TIDEMARK-3 TP-1. They want acknowledgment that our spectrum won't bleed into their slot when they light up in 25 minutes.<br><br>Standard inter-operator etiquette: verify the guard band, check that our transmit chain isn't producing IMD products that would fall in the neighbor's passband, document, and confirm back. If our skirts are dirty, clean them up before they go on the air.<br><br>This is good neighbor work, not combat.`,
@@ -81,12 +83,12 @@ export const scenario15Data: ScenarioData = {
         antennasState: [
           {
             ...vermontGroundStation.antennasState[0],
-            azimuth: 140.5 as Degrees,
-            elevation: 37.8 as Degrees,
+            azimuth: 145.7 as Degrees,
+            elevation: 32.7 as Degrees,
             polarization: 8 as Degrees,
             targetSatelliteId: 61527, // TIDEMARK-3
-            targetAzimuth: 140.5 as Degrees,
-            targetElevation: 37.8 as Degrees,
+            targetAzimuth: 145.7 as Degrees,
+            targetElevation: 32.7 as Degrees,
             targetPolarization: 8 as Degrees,
             beaconFrequencyHz: 4172e6 as Hertz, // TIDEMARK-3 beacon (RF)
           } as Partial<AntennaState>,
@@ -238,7 +240,8 @@ export const scenario15Data: ScenarioData = {
           description: 'Partner Band',
           params: {
             character: Character.SYSTEM,
-            question: "RedSky's notice: center 5961 MHz, bandwidth 8 MHz, V-pol on the TIDEMARK-3 cross-pol slot. What RF range will they occupy?",
+            // Read off the coordination notice in the brief, not the stem (nats-r3-s15-F2)
+            question: "Read RedSky's coordination notice in the brief. What RF range will their carrier occupy?",
             options: ['5957 - 5965 MHz', '5961 - 5969 MHz', '5953 - 5969 MHz', '5957 - 5961 MHz'],
             correctIndex: 0,
             explanation: 'Center plus or minus half-bandwidth: 5961 plus or minus 4 MHz equals 5957 to 5965 MHz. Their upper edge is 5965.',
@@ -265,7 +268,7 @@ export const scenario15Data: ScenarioData = {
           description: 'Our Band',
           params: {
             character: Character.SYSTEM,
-            question: 'Our SeaLink carrier on TIDEMARK-3 TP-1 is center 5985 MHz, 36 MHz BW, H-pol. What RF range are we occupying?',
+            question: 'Read our SeaLink carrier on the TIDEMARK-3 frequency plan in the brief. What RF range does it occupy?',
             options: ['5967 - 6003 MHz', '5949 - 6021 MHz', '5985 - 6021 MHz', '5967 - 5985 MHz'],
             correctIndex: 0,
             explanation: '5985 plus or minus 18 MHz equals 5967 to 6003 MHz. Our lower edge is 5967.',
@@ -292,7 +295,7 @@ export const scenario15Data: ScenarioData = {
           description: 'Guard Band',
           params: {
             character: Character.SYSTEM,
-            question: 'RedSky upper edge: 5965 MHz. Our lower edge: 5967 MHz. What is the edge-to-edge guard band?',
+            question: "From the two occupied ranges, what is the edge-to-edge guard band between RedSky's upper edge and our lower edge?",
             options: ['2 MHz', '4 MHz', '24 MHz', '0 MHz - we overlap'],
             correctIndex: 0,
             explanation: '5967 minus 5965 equals 2 MHz. Cross-pol isolation buys us additional margin, but the frequency gap is tight.',
@@ -366,7 +369,8 @@ export const scenario15Data: ScenarioData = {
       id: 'check-tx-modem-frequency',
       nice: ['K0792', 'K0773'],
       title: 'Verify TX Modem Configuration',
-      description: 'Confirm the TX modem is on the expected TIDEMARK-3 uplink IF.',
+      description:
+        "Scroll down TX Chain to the Transmitter Modems card (below the BUC and HPA panels) and read TX modem 1's Configuration: frequency and bandwidth. Confirm they put the carrier on the coordinated TP-1 slot.",
       groundStation: 'VT-01',
       intent: 'confirm',
       prerequisiteObjectiveIds: ['open-tx-chain'],
@@ -383,9 +387,15 @@ export const scenario15Data: ScenarioData = {
         {
           type: 'tx-modem-frequency-set',
           description: 'TX Modem at 1015 MHz IF',
+          // The field sits below the fold (nats-r3-s15-F2): a 5 s read on TX
+          // Chain before the quiz opens, and the quiz options differ by the
+          // IF the modem shows, so it cannot be answered without reading it
           params: {
             frequency: 1015e6,
             frequencyTolerance: 1e6,
+            requiresObservation: true,
+            observationTab: 'tx-chain',
+            observationDwellSeconds: 5,
           },
           // Read, not set: the customer carrier is already on this slot
           requiresChange: false,
@@ -406,15 +416,16 @@ export const scenario15Data: ScenarioData = {
           description: 'TX IF Sanity Check',
           params: {
             character: Character.SYSTEM,
-            question: 'BUC LO 7000 MHz, RF target 5985 MHz. Does the displayed TX IF match the expected value?',
+            question: "Read TX modem 1's frequency on the Transmitter Modems card. With the BUC LO on its LSB chain (RF = LO - IF), where does it put our uplink?",
             options: [
-              'Yes - 1015 MHz IF matches 7000 minus 5985, carrier on the right slot',
-              'No - TX IF should read 5985 MHz, the BUC LO is not subtracted on the TX side',
-              'No - 1057 MHz IF is what 7000 minus 5943 gives, carrier is on the wrong slot',
-              'Cannot tell - the RX IF at 1490 MHz has to be checked before the TX slot is known',
+              'Modem reads 1015 MHz: 7000 - 1015 = 5985 MHz, the coordinated TP-1 center - carrier on the right slot',
+              'Modem reads 1057 MHz: 7000 - 1057 = 5943 MHz, the TIDEMARK-1 slot - modem still on the TIDEMARK-1 config',
+              'Modem reads 1490 MHz: the TIDEMARK-3 downlink IF - the TX modem was set to the receive frequency',
+              'Modem reads 983 MHz: 7000 - 983 = 6017 MHz, the TIDEMARK-2 slot - 32 MHz above the coordinated carrier',
             ],
             correctIndex: 0,
-            explanation: 'TX IF equals BUC LO minus uplink RF: 7000 minus 5985 equals 1015 MHz. The TX modem is on the right slot.',
+            explanation:
+              'TX modem 1 reads 1015.0 MHz, 36 MHz wide. On this LSB chain RF = BUC LO - IF: 7000 - 1015 = 5985 MHz, the TP-1 center on the coordination sheet, so the carrier occupies 5967-6003 MHz exactly as the guard-band math assumed.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -445,7 +456,7 @@ export const scenario15Data: ScenarioData = {
           description: 'Read Current Backoff',
           params: {
             character: Character.SYSTEM,
-            question: 'The HPA is currently at 5 dB backoff. What does that imply for the transmit spectrum?',
+            question: 'Read Back-off and IM3 (2-tone) on the HPA panel. What do they say about the transmit spectrum?',
             options: [
               'Operating close to saturation - third-order IMD will be elevated and spill several MHz past the carrier edges',
               'Operating with comfortable margin - 5 dB keeps third-order IMD below the noise floor at the carrier edges',
@@ -454,7 +465,7 @@ export const scenario15Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              '5 dB is a marginal backoff for a modulated carrier. Third-order IMD scales aggressively as the HPA approaches compression - spectral skirts widen and adjacent-channel power rises.',
+              'The panel reads 5 dB back-off and IM3 about -33 dBc, 10 dB worse than the -43 dBc at the standard 10 dB. 5 dB is a marginal backoff for a modulated carrier: third-order IMD scales aggressively as the HPA approaches compression - spectral skirts widen and adjacent-channel power rises.',
             pointPenalty: 5,
             preserveOptionOrder: true,
           },

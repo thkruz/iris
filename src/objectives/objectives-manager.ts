@@ -37,6 +37,7 @@ import { TrafficControlManager } from '@app/traffic/traffic-control-manager';
 import { TransecManager } from '@app/transec/transec-manager';
 import { WeatherManager } from '@app/weather/weather-manager';
 import { Milliseconds } from 'ootk';
+import { conditionLabel, tabHintLabel } from './condition-label';
 import { holdsAtCompletion, isQuizCondition, resolveRequiresChange, TIME_GATED_CONDITION_TYPES, valueSnapshot } from './condition-semantics';
 import { CountdownHold } from './countdown-hold';
 import { EvidenceFactRegistry } from './evidence-facts';
@@ -49,6 +50,7 @@ import {
   Objective,
   ObjectiveState,
   TAB_HINT_DELAY_SECONDS,
+  TimeSkipOffer,
 } from './objective-types';
 import './objectives-manager.css';
 
@@ -187,12 +189,16 @@ export class ObjectivesManager {
     // clock skip: a jump must cost what waiting costs a player, so running
     // countdowns burn with it (and may fail). Without this a spec could jump
     // past a timed objective's deadline to an event no player could reach.
+    // Run time moves too (nats-r3 S8): a player who waits that long also
+    // waits out warm-ups, lock delays and stabilisation, so sim timers due
+    // inside the jump fire (SimClock.advanceRun).
     (window as unknown as { advanceClock: (deltaMs: number) => void }).advanceClock = (deltaMs: number) => {
       if (OpsLogManager.isInitialized()) {
         OpsLogManager.getInstance().advanceClock(deltaMs);
       } else {
         SimClock.skip(deltaMs);
       }
+      SimClock.advanceRun(deltaMs);
       this.applyTimeSkip(deltaMs);
     };
 
@@ -377,6 +383,11 @@ export class ObjectivesManager {
     const gating = required.length > 0 ? required : this.objectiveStates_;
 
     return gating.every((state) => state.isCompleted);
+  }
+
+  /** Mission Complete has fired: there are objectives and the required ones are done */
+  private isMissionComplete_(): boolean {
+    return this.objectiveStates_.length > 0 && this.areAllObjectivesCompleted();
   }
 
   /**
@@ -592,8 +603,14 @@ export class ObjectivesManager {
       return;
     }
 
-    // Update scenario timer
-    if (this.scenarioTimerRunning_ && this.scenarioTimeRemaining_ > 0) {
+    // A finished mission keeps the time it finished with: Mission Complete
+    // quotes it, so the HUD must not keep counting (nats-r3-s19-F2)
+    if (this.isMissionComplete_()) {
+      return;
+    }
+
+    // Update scenario timer (held through an objective's wait, Phase 28 D1)
+    if (this.scenarioTimerRunning_ && this.scenarioTimeRemaining_ > 0 && this.getMissionClockHold() === null) {
       this.scenarioTimeRemaining_--;
       if (this.scenarioTimeRemaining_ <= 0) {
         this.handleScenarioTimeout_();
@@ -625,9 +642,10 @@ export class ObjectivesManager {
    * objective case anyway rather than depending on a guardrail elsewhere.
    *
    * @param deltaMs Skipped interval in milliseconds
+   * @param exemptObjectiveId The objective whose wait an objective skip covers
    */
   applyTimeSkip(deltaMs: number, exemptObjectiveId?: string): void {
-    if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
+    if (!Number.isFinite(deltaMs) || deltaMs <= 0 || this.isMissionComplete_()) {
       return;
     }
 
@@ -648,22 +666,25 @@ export class ObjectivesManager {
     }
 
     // The scenario limit budgets the operator's working time. An objective
-    // skip is a wait the story compresses (a crew window, a pass window, a
-    // rain cell): the shift really sat through it, so it is not charged
-    // against the limit (S10 skips 40 min inside a 30 min limit)
-    if (exemptObjectiveId === undefined && this.scenarioTimerRunning_ && this.scenarioTimeRemaining_ > 0) {
+    // wait is one the story compresses (a crew window, a pass window, a rain
+    // cell): the mission countdown is held through it whether the operator
+    // waits or skips (Phase 28 D1), so neither charges the limit
+    if (exemptObjectiveId === undefined && this.scenarioTimerRunning_ && this.scenarioTimeRemaining_ > 0 && this.getMissionClockHold() === null) {
       this.scenarioTimeRemaining_ = Math.max(0, this.scenarioTimeRemaining_ - deltaS);
       if (this.scenarioTimeRemaining_ <= 0) {
         this.handleScenarioTimeout_();
       }
     }
 
+    // An objective skip charges no countdown at all. Another timed objective
+    // blocks it from starting, so any timer running now was opened by the
+    // skip itself (the wait ended mid-skip) and has not been seen yet
+    if (exemptObjectiveId !== undefined) {
+      return;
+    }
+
     for (const state of this.objectiveStates_) {
       if (!state.isTimerRunning || state.isCompleted || state.isFailed || this.isCountdownHeld_(state)) {
-        continue;
-      }
-      // The objective whose wait is being skipped does not pay for it
-      if (state.objective.id === exemptObjectiveId) {
         continue;
       }
       if (state.timeRemainingSeconds === undefined || state.timeRemainingSeconds <= 0) {
@@ -706,8 +727,13 @@ export class ObjectivesManager {
    * that drops again restarts it), so an objective that is only quizzes is
    * untimed. A quiz only becomes answerable after the doing it follows (B7),
    * so this is also the hold while a quiz sits pending behind its 5 s banner.
+   * Phase 28 D1: an objective that is waiting out its hold (timeSkip) is
+   * held as well; the wait is the clock's, not the operator's.
    */
   private isCountdownHeld_(state: ObjectiveState): boolean {
+    if (this.isWaitPhase_(state)) {
+      return true;
+    }
     const doing = state.conditionStates.filter((cs) => !isQuizCondition(cs.condition.type));
     if (doing.length === 0) {
       return true;
@@ -730,33 +756,158 @@ export class ObjectivesManager {
    * Phase 27 Q4: the objective time skip on offer right now, or null: the
    * first active, incomplete objective with an unused timeSkip whose
    * availability rule is met.
+   *
+   * Phase 28 D1: the skip covers exactly the rest of the hold (holdEnd_()),
+   * so it stops when the step's wait is over rather than a fixed N minutes
+   * past or short of it. `landsAtMs` is the station-clock moment it stops at
+   * when the hold ends on the clock (a time reached, a weather event over),
+   * so the button can say "Skip to 10:00"; null for a plain duration.
    */
-  getAvailableTimeSkip(): { objectiveId: string; minutes: number; label: string } | null {
+  getAvailableTimeSkip(): TimeSkipOffer | null {
     for (const state of this.objectiveStates_) {
       const skip = state.objective.timeSkip;
       if (!skip || !state.isActive || state.isCompleted || state.isFailed || state.timeSkipUsed) {
         continue;
       }
-      if (!(skip.minutes > 0)) {
+      if (!ObjectivesManager.isSkipReady_(state)) {
         continue;
       }
-      if (skip.availableAfterConditions) {
-        const ready = state.conditionStates.every(
-          (cs) =>
-            isQuizCondition(cs.condition.type) ||
-            TIME_GATED_CONDITION_TYPES.has(cs.condition.type) ||
-            (cs.condition.maintainDuration ?? 0) > 0 ||
-            ObjectivesManager.isConditionMet_(cs)
-        );
-        if (!ready) {
-          continue;
-        }
-      }
 
-      return { objectiveId: state.objective.id, minutes: skip.minutes, label: skip.label ?? `${skip.minutes} min wait` };
+      const holdEnd = this.holdEnd_(state);
+      const fallbackMs = (skip.minutes ?? 0) * 60_000;
+      const deltaMs = holdEnd ? holdEnd.remainingMs : fallbackMs;
+      // Nothing left to skip: the wait is over and the objective completes on the next frame
+      if (!(deltaMs >= ObjectivesManager.MIN_OBJECTIVE_SKIP_MS)) {
+        continue;
+      }
+      const minutes = Math.ceil(deltaMs / 60_000);
+
+      return {
+        objectiveId: state.objective.id,
+        deltaMs,
+        landsAtMs: holdEnd?.isClockAnchored ? SimClock.nowMs() + deltaMs : null,
+        label: skip.label ?? `${minutes} min wait`,
+      };
     }
 
     return null;
+  }
+
+  /** Shortest wait worth a skip control, ms */
+  private static readonly MIN_OBJECTIVE_SKIP_MS = 1000;
+
+  /**
+   * The timeSkip availability rule: with `availableAfterConditions`, every
+   * row the operator sets up is met; quizzes, clock-gated rows and the timed
+   * holds themselves are the wait and do not count.
+   */
+  private static isSkipReady_(state: ObjectiveState): boolean {
+    if (!state.objective.timeSkip?.availableAfterConditions) {
+      return true;
+    }
+
+    return state.conditionStates.every(
+      (cs) =>
+        isQuizCondition(cs.condition.type) || TIME_GATED_CONDITION_TYPES.has(cs.condition.type) || (cs.condition.maintainDuration ?? 0) > 0 || ObjectivesManager.isConditionMet_(cs)
+    );
+  }
+
+  /**
+   * How much of an objective's hold is left, read from its own rows: the
+   * latest of a scenario-time-reached clock time, a weather-event-ended
+   * event end and the time left on its maintainDuration holds. Null when no
+   * row says (or a weather event has not been scheduled yet).
+   */
+  private holdEnd_(state: ObjectiveState): { remainingMs: number; isClockAnchored: boolean } | null {
+    let remainingMs = 0;
+    let isClockAnchored = false;
+    let isKnown = false;
+    const consider = (ms: number, isClock: boolean): void => {
+      isKnown = true;
+      if (ms > remainingMs || (ms === remainingMs && isClock)) {
+        remainingMs = ms;
+        isClockAnchored = isClock;
+      }
+    };
+
+    for (const cs of state.conditionStates) {
+      const condition = cs.condition;
+      if (condition.type === 'scenario-time-reached') {
+        const targetMs = ObjectivesManager.scenarioTimeTargetMs(condition.params?.scenarioTime);
+        if (targetMs === null) {
+          return null;
+        }
+        consider(Math.max(0, targetMs - SimClock.nowMs()), true);
+      } else if (condition.type === 'weather-event-ended') {
+        const eventId = condition.params?.weatherEventId;
+        const untilEndS = eventId !== undefined && WeatherManager.hasInstance() ? WeatherManager.getInstance().getSecondsUntilEventEnds(eventId) : null;
+        if (untilEndS === null) {
+          return null;
+        }
+        consider(untilEndS * 1000, true);
+      } else if ((condition.maintainDuration ?? 0) > 0 && !cs.isMaintenanceComplete) {
+        consider(Math.max(0, ((condition.maintainDuration ?? 0) - cs.maintainedDuration) * 1000), false);
+      }
+    }
+
+    return isKnown ? { remainingMs, isClockAnchored } : null;
+  }
+
+  /**
+   * Phase 28 D1: the objective is waiting out its hold. It offers a timeSkip,
+   * its setup is done (the skip availability rule) and a clock-gated or
+   * timed-hold row is still running. The mission countdown and its own
+   * countdown are held meanwhile, so waiting and skipping score the same.
+   */
+  private isWaitPhase_(state: ObjectiveState): boolean {
+    if (!state.objective.timeSkip || !state.isActive || state.isCompleted || state.isFailed) {
+      return false;
+    }
+    const isWaiting = state.conditionStates.some(
+      (cs) => (TIME_GATED_CONDITION_TYPES.has(cs.condition.type) || (cs.condition.maintainDuration ?? 0) > 0) && !ObjectivesManager.isConditionMet_(cs)
+    );
+
+    return isWaiting && ObjectivesManager.isSkipReady_(state);
+  }
+
+  /**
+   * The objective whose wait is holding the mission countdown, or null. The
+   * HUD shows HOLD beside the MISSION timer while this is set.
+   */
+  getMissionClockHold(): { objectiveId: string; title: string; label: string } | null {
+    const state = this.objectiveStates_.find((s) => this.isWaitPhase_(s));
+    if (!state) {
+      return null;
+    }
+
+    return { objectiveId: state.objective.id, title: state.objective.title, label: state.objective.timeSkip?.label ?? 'wait' };
+  }
+
+  /**
+   * Absolute station-clock ms for a scenario-time-reached `HH:MM[:SS]` (UTC):
+   * the first such moment at or after the scenario start. Null when the
+   * string does not parse.
+   */
+  static scenarioTimeTargetMs(scenarioTime: string | undefined): number | null {
+    const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/u.exec(scenarioTime?.trim() ?? '');
+    if (!match) {
+      return null;
+    }
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const seconds = Number(match[3] ?? 0);
+    if (hours > 23 || minutes > 59 || seconds > 59) {
+      return null;
+    }
+
+    const epochMs = SimClock.nowMs() - SimClock.scenarioElapsedMs();
+    const epoch = new Date(epochMs);
+    let targetMs = Date.UTC(epoch.getUTCFullYear(), epoch.getUTCMonth(), epoch.getUTCDate(), hours, minutes, seconds);
+    if (targetMs < epochMs) {
+      targetMs += 86_400_000;
+    }
+
+    return targetMs;
   }
 
   /** Phase 27 Q4: mark an objective's one-shot skip used (TimeSkipController) */
@@ -1208,7 +1359,7 @@ export class ObjectivesManager {
         const isHintRequested = hasHint && hintManager.isHintRequested(objective.id, i);
 
         html += `<li class="condition-item ${conditionCompleted ? 'completed' : 'incomplete'}">`;
-        html += `<span class="condition-text">${condition.description}</span>`;
+        html += `<span class="condition-text">${conditionLabel(condition)}</span>`;
 
         // An observation-gated check only progresses while its tab is open;
         // say which, or it looks stuck (nats-s18-F5)
@@ -1240,7 +1391,7 @@ export class ObjectivesManager {
       if (isActive && !isCompleted) {
         for (const cs of objectiveState.conditionStates) {
           if (cs.condition.hidden && cs.condition.type === 'tab-active' && (cs.tabHintSeconds ?? 0) >= TAB_HINT_DELAY_SECONDS && cs.condition.params?.tab) {
-            html += `<li class="condition-item incomplete condition-tab-hint"><span class="condition-observe-hint">(open the ${ObjectivesManager.tabLabel_(cs.condition.params.tab)} tab to continue)</span></li>`;
+            html += `<li class="condition-item incomplete condition-tab-hint"><span class="condition-text condition-observe-hint">${tabHintLabel(cs.condition.params.tab)}</span></li>`;
           }
         }
       }
@@ -3081,6 +3232,13 @@ export class ObjectivesManager {
         if (!WeatherManager.hasInstance()) return false;
         const eventId = condition.params?.weatherEventId;
         return eventId !== undefined && WeatherManager.getInstance().hasEventEnded(eventId);
+      }
+
+      case 'scenario-time-reached': {
+        // The station clock has reached a time of day (a pass window opening
+        // at 10:00, a crew due at 06:30): a hold that waits on the clock
+        const targetMs = ObjectivesManager.scenarioTimeTargetMs(condition.params?.scenarioTime);
+        return targetMs !== null && SimClock.nowMs() >= targetMs;
       }
 
       case 'geolocation-ellipse-within': {

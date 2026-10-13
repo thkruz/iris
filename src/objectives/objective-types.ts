@@ -104,6 +104,7 @@ export type ConditionType =
   | 'geolocation-ellipse-within' // Computed fix converged with a 95% error ellipse no wider than N km (semi-major)
   | 'interference-event-ended' // A scripted interference event's envelope has closed (it ran and stopped)
   | 'weather-event-ended' // A scheduled weather event (rain cell, storm, sun transit) has run its course
+  | 'scenario-time-reached' // The station clock (scenario UTC) has reached params.scenarioTime, e.g. a pass window opening at 10:00
   // Electronic-attack / SATCOM denial conditions (Campaign 4)
   | 'jamming-uplink-active' // Jam waveform radiating in the target uplink band
   | 'jamming-effective' // J/S at the target transponder meets the denial threshold
@@ -485,6 +486,12 @@ export interface ConditionParams {
   interferenceEventId?: string;
   /** For weather-event-ended: the settings.weatherEvents id that must have run its course */
   weatherEventId?: string;
+  /**
+   * For scenario-time-reached: station clock time of day, UTC as the HUD
+   * shows it, 'HH:MM' or 'HH:MM:SS'. The first such moment at or after the
+   * scenario start, so a shift that crosses midnight still works.
+   */
+  scenarioTime?: string;
 
   // ── nats-eu (Campaign 2) condition parameters ──────────────────────────────
   /** For link-budget-computed / link-margin-met: minimum required margin in dB (default 0) */
@@ -680,18 +687,30 @@ export interface Objective {
   intent?: 'confirm';
   /**
    * Phase 27 Q4: a real-world wait the scenario compresses (a crew maintenance
-   * window, a pass window, a rain cell). Offers a one-shot "Skip N min"
-   * control in the command bar while this objective is active; the skip
-   * advances scenario AND run time (weather, thermal settling, sim timers and
-   * holds all progress) and is logged in the Ops Log.
+   * window, a pass window, a rain cell). Offers a one-shot skip control in the
+   * command bar while this objective is active; the skip advances scenario
+   * AND run time (weather, thermal settling, sim timers and holds all
+   * progress) and is logged in the Ops Log.
+   *
+   * Phase 28 D1: the skip runs to the end of the hold and stops there. The
+   * end is read from the objective's own rows: a `scenario-time-reached`
+   * clock time, a `weather-event-ended` event end, or the time left on its
+   * `maintainDuration` holds (the latest of these). The button says where it
+   * lands ("Skip to 10:00", "Skip 7 min"). While the wait is on (setup done,
+   * hold running) the mission countdown and the objective's own countdown are
+   * held, so waiting it out and skipping score the same.
    */
   timeSkip?: ObjectiveTimeSkip;
 }
 
 /** Objective.timeSkip */
 export interface ObjectiveTimeSkip {
-  /** Simulated minutes to advance */
-  minutes: number;
+  /**
+   * Fallback only: simulated minutes to advance when the objective has no
+   * row that says when the wait ends (no scenario-time-reached,
+   * weather-event-ended or maintainDuration row). Ignored otherwise.
+   */
+  minutes?: number;
   /** What the wait is, for the button tooltip and the Ops Log ("crew maintenance window") */
   label?: string;
   /**
@@ -701,6 +720,17 @@ export interface ObjectiveTimeSkip {
    * offered as soon as the objective is active.
    */
   availableAfterConditions?: boolean;
+}
+
+/** An objective wait the command bar can skip right now (ObjectivesManager.getAvailableTimeSkip) */
+export interface TimeSkipOffer {
+  objectiveId: string;
+  /** Scenario time the skip covers: the rest of the hold, ms */
+  deltaMs: number;
+  /** Station-clock ms the skip stops at when the hold ends on the clock, else null */
+  landsAtMs: number | null;
+  /** What the wait is ("rain cell"), for the tooltip and the Ops Log */
+  label: string;
 }
 
 /**

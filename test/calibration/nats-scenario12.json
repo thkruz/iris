@@ -43,11 +43,11 @@
           "kind": "fixed",
           "pass": null,
           "atPeak": {
-            "elevationDeg": 34.2,
+            "elevationDeg": 35.1,
             "frequencyMHz": 4175.5,
             "gainDbi": 50.7,
-            "gOverTDbPerK": 30.72,
-            "tsysK": 89.78
+            "gOverTDbPerK": 30.73,
+            "tsysK": 89.7
           },
           "carriers": [
             {
@@ -77,11 +77,11 @@
           "kind": "fixed",
           "pass": null,
           "atPeak": {
-            "elevationDeg": 26.3,
+            "elevationDeg": 31.8,
             "frequencyMHz": 4180,
             "gainDbi": 50.71,
-            "gOverTDbPerK": 30.69,
-            "tsysK": 90.74
+            "gOverTDbPerK": 30.72,
+            "tsysK": 90.03
           },
           "carriers": [
             {
@@ -98,11 +98,11 @@
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
               "peakRxIfDbm": null,
-              "noiseIfDbm": -95.85,
+              "noiseIfDbm": -95.89,
               "lockedSamples": 0
             }
           ],
-          "adjacentCarriers": 0,
+          "adjacentCarriers": 2,
           "transponders": []
         },
         {
@@ -111,11 +111,11 @@
           "kind": "fixed",
           "pass": null,
           "atPeak": {
-            "elevationDeg": 34.2,
+            "elevationDeg": 38.4,
             "frequencyMHz": 3644,
             "gainDbi": 49.53,
-            "gOverTDbPerK": 29.63,
-            "tsysK": 88.5
+            "gOverTDbPerK": 29.65,
+            "tsysK": 88.18
           },
           "carriers": [
             {
@@ -132,7 +132,7 @@
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
               "peakRxIfDbm": null,
-              "noiseIfDbm": -30.34,
+              "noiseIfDbm": -30.35,
               "lockedSamples": 0
             },
             {
@@ -149,23 +149,23 @@
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
               "peakRxIfDbm": null,
-              "noiseIfDbm": -95.9,
+              "noiseIfDbm": -95.91,
               "lockedSamples": 0
             }
           ],
-          "adjacentCarriers": 1,
+          "adjacentCarriers": 2,
           "transponders": [
             {
               "id": "TP-1",
-              "iboDb": 2.93,
-              "oboDb": 0.49,
+              "iboDb": 2.86,
+              "oboDb": 0.46,
               "carrierToImDb": null,
               "carriers": [
                 {
                   "signalId": "SES-10-TDMA-Composite",
-                  "eirpDbw": 29.5,
-                  "cnUpDbHz": 100.32,
-                  "upstreamCn0DbHz": 100.32
+                  "eirpDbw": 29.52,
+                  "cnUpDbHz": 100.4,
+                  "upstreamCn0DbHz": 100.4
                 }
               ]
             }
@@ -204,7 +204,7 @@
       "lnbLoMHz": 5250,
       "lnbNoiseTempK": 42.97,
       "agcOnNoiseAlone": {
-        "noiseInDbm": -40.27,
+        "noiseInDbm": -40.28,
         "filterMHz": 40,
         "settledGainDb": 10,
         "maxGainDb": 10,
@@ -217,11 +217,11 @@
           "kind": "fixed",
           "pass": null,
           "atPeak": {
-            "elevationDeg": 34.2,
+            "elevationDeg": 35.1,
             "frequencyMHz": 3718,
             "gainDbi": 49.7,
             "gOverTDbPerK": 30.19,
-            "tsysK": 80.92
+            "tsysK": 80.85
           },
           "carriers": [
             {
@@ -232,13 +232,13 @@
               "modulation": "QPSK",
               "fec": "3/4",
               "samples": 5,
-              "peakCnDb": 12.41,
-              "medianCnDb": 12.41,
-              "peakEsN0Db": 13.2,
+              "peakCnDb": 12.47,
+              "medianCnDb": 12.47,
+              "peakEsN0Db": 13.25,
               "requiredEsN0Db": 5.03,
-              "peakLockMarginDb": 8.17,
-              "peakRxIfDbm": -27.94,
-              "noiseIfDbm": -40.64,
+              "peakLockMarginDb": 8.22,
+              "peakRxIfDbm": -27.93,
+              "noiseIfDbm": -40.68,
               "lockedSamples": 5
             },
             {
@@ -249,13 +249,13 @@
               "modulation": "CW",
               "fec": "null",
               "samples": 5,
-              "peakCnDb": 52.53,
-              "medianCnDb": 52.53,
-              "peakEsN0Db": 43.06,
+              "peakCnDb": 52.57,
+              "medianCnDb": 52.57,
+              "peakEsN0Db": 43.07,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
               "peakRxIfDbm": -53.68,
-              "noiseIfDbm": -106.2,
+              "noiseIfDbm": -106.25,
               "lockedSamples": 0
             }
           ],
@@ -263,15 +263,15 @@
           "transponders": [
             {
               "id": "TP-1",
-              "iboDb": 2.94,
-              "oboDb": 0.49,
+              "iboDb": 2.9,
+              "oboDb": 0.47,
               "carrierToImDb": null,
               "carriers": [
                 {
                   "signalId": "TIDEMARK-1-Teleport",
-                  "eirpDbw": 26.5,
-                  "cnUpDbHz": 100.2,
-                  "upstreamCn0DbHz": 100.2
+                  "eirpDbw": 26.51,
+                  "cnUpDbHz": 100.25,
+                  "upstreamCn0DbHz": 100.25
                 }
               ]
             }
@@ -283,11 +283,11 @@
           "kind": "fixed",
           "pass": null,
           "atPeak": {
-            "elevationDeg": 26.3,
+            "elevationDeg": 31.8,
             "frequencyMHz": 4180,
             "gainDbi": 50.71,
-            "gOverTDbPerK": 31.08,
-            "tsysK": 82.99
+            "gOverTDbPerK": 31.11,
+            "tsysK": 82.27
           },
           "carriers": [
             {
@@ -298,17 +298,17 @@
               "modulation": "CW",
               "fec": "null",
               "samples": 5,
-              "peakCnDb": 53.41,
-              "medianCnDb": 53.41,
-              "peakEsN0Db": 43.14,
+              "peakCnDb": 53.69,
+              "medianCnDb": 53.69,
+              "peakEsN0Db": 43.16,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
-              "peakRxIfDbm": -48.14,
-              "noiseIfDbm": -106.57,
+              "peakRxIfDbm": -47.91,
+              "noiseIfDbm": -106.66,
               "lockedSamples": 0
             }
           ],
-          "adjacentCarriers": 1,
+          "adjacentCarriers": 2,
           "transponders": []
         },
         {
@@ -317,11 +317,11 @@
           "kind": "fixed",
           "pass": null,
           "atPeak": {
-            "elevationDeg": 34.2,
+            "elevationDeg": 38.4,
             "frequencyMHz": 3644,
             "gainDbi": 49.53,
-            "gOverTDbPerK": 30.03,
-            "tsysK": 80.75
+            "gOverTDbPerK": 30.05,
+            "tsysK": 80.43
           },
           "carriers": [
             {
@@ -332,13 +332,13 @@
               "modulation": "QPSK",
               "fec": "3/4",
               "samples": 5,
-              "peakCnDb": 14.92,
-              "medianCnDb": 14.92,
-              "peakEsN0Db": 15.7,
+              "peakCnDb": 15.06,
+              "medianCnDb": 15.06,
+              "peakEsN0Db": 15.84,
               "requiredEsN0Db": 5.03,
-              "peakLockMarginDb": 10.67,
-              "peakRxIfDbm": -28.34,
-              "noiseIfDbm": -43.75,
+              "peakLockMarginDb": 10.81,
+              "peakRxIfDbm": -28.31,
+              "noiseIfDbm": -43.87,
               "lockedSamples": 5
             },
             {
@@ -349,29 +349,29 @@
               "modulation": "CW",
               "fec": "null",
               "samples": 5,
-              "peakCnDb": 53.19,
-              "medianCnDb": 53.19,
-              "peakEsN0Db": 43.12,
+              "peakCnDb": 53.32,
+              "medianCnDb": 53.32,
+              "peakEsN0Db": 43.13,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
-              "peakRxIfDbm": -56.13,
-              "noiseIfDbm": -109.31,
+              "peakRxIfDbm": -56.11,
+              "noiseIfDbm": -109.43,
               "lockedSamples": 0
             }
           ],
-          "adjacentCarriers": 1,
+          "adjacentCarriers": 2,
           "transponders": [
             {
               "id": "TP-1",
-              "iboDb": 2.93,
-              "oboDb": 0.49,
+              "iboDb": 2.86,
+              "oboDb": 0.46,
               "carrierToImDb": null,
               "carriers": [
                 {
                   "signalId": "SES-10-TDMA-Composite",
-                  "eirpDbw": 29.5,
-                  "cnUpDbHz": 100.32,
-                  "upstreamCn0DbHz": 100.32
+                  "eirpDbw": 29.52,
+                  "cnUpDbHz": 100.4,
+                  "upstreamCn0DbHz": 100.4
                 }
               ]
             }
@@ -404,7 +404,7 @@
           {
             "signalId": "TIDEMARK-1-Teleport",
             "rfMHz": 5943,
-            "eirpDbm": 102.57
+            "eirpDbm": 102.56
           }
         ]
       }

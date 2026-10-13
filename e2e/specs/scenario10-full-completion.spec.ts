@@ -35,6 +35,16 @@ interface Scenario10Objective {
   logText?: string;
   /** Seconds to wait for an 'auto' objective with maintainDuration */
   autoWaitSeconds?: number;
+  /** For 'objective-skip': the station-clock time the skip lands at, 'HH:MM' (Phase 28 D1) */
+  skipLandsAt?: string;
+}
+
+/** Station clock (HUD #utc-clock) as minutes past midnight */
+async function readStationClockMinutes(page: import('@playwright/test').Page): Promise<number> {
+  const text = (await page.locator('#utc-clock').textContent()) ?? '';
+  const match = /(\d{2}):(\d{2})(?::(\d{2}))?/u.exec(text);
+
+  return match ? Number(match[1]) * 60 + Number(match[2]) + Number(match[3] ?? 0) / 60 : Number.NaN;
 }
 
 const SCENARIO_10_OBJECTIVES: Scenario10Objective[] = [
@@ -163,6 +173,7 @@ const SCENARIO_10_OBJECTIVES: Scenario10Objective[] = [
     id: 'stand-by-for-window',
     title: 'Stand By for the 10:00 Window',
     type: 'objective-skip',
+    skipLandsAt: '10:00',
   },
   {
     id: 'sustain-rx-margin',
@@ -174,6 +185,7 @@ const SCENARIO_10_OBJECTIVES: Scenario10Objective[] = [
     id: 'sustain-beacon-track',
     title: 'Hold Through the Window',
     type: 'objective-skip',
+    skipLandsAt: '10:30',
   },
 
   // ============================================================
@@ -319,8 +331,22 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
       // The objective's wait is offered as a command-bar skip once it is ready
       const skip = page.locator('#objective-skip-control');
       await expect(skip).toBeVisible({ timeout: 20000 });
+      if (objective.skipLandsAt) {
+        // Phase 28 D1 (nats-r3-s10-F1/F2): the skip runs to the end of the
+        // hold on the station clock, and the mission countdown holds meanwhile
+        await expect(page.locator('#objective-skip-control-label')).toHaveText(`Skip to ${objective.skipLandsAt}`, { timeout: 10000 });
+        await expect(page.locator('#scenario-timer-hold')).toBeVisible();
+      }
       await skip.click();
       await page.waitForTimeout(6000);
+      if (objective.skipLandsAt) {
+        const [hh, mm] = objective.skipLandsAt.split(':').map(Number);
+        const target = hh * 60 + mm;
+        const now = await readStationClockMinutes(page);
+        expect(now).toBeGreaterThanOrEqual(target);
+        // Lands at the end of the hold, not minutes past it
+        expect(now).toBeLessThan(target + 1);
+      }
       break;
     }
 

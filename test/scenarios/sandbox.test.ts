@@ -156,8 +156,8 @@ describe('sandbox scenario', () => {
       });
 
       it('should have correct position', () => {
-        expect(satellite().az).toBe(161.8);
-        expect(satellite().el).toBe(34.2);
+        expect(satellite().az).toBe(153.1);
+        expect(satellite().el).toBe(35.1);
       });
 
       it('has no authored uplink: its hub carrier is what a station radiates (phase 27, no stand-in)', () => {

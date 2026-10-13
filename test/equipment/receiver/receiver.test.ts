@@ -1606,6 +1606,31 @@ describe('Receiver class', () => {
       expect(info.interferencePower_dBm).toBeCloseTo(-95, 6);
     });
 
+    it('C/N0 counts interference like C/N does: C/N0 - C/N = 10 log10(modem bandwidth) with and without an interferer (nats-r3-s05-F3)', () => {
+      // A kTB floor that scales with bandwidth, as the real signal path does
+      const ktbFrontEnd = (signals: IfSignal[]) => {
+        const fe = createMockRfFrontEnd(signals, { totalRxGain: 0 }) as any;
+        fe.couplerModule.signalPathManager.getNoiseFloorAt = (_tap: TapPoint, bandwidth: Hertz) => {
+          const floor = -110 + 10 * Math.log10(bandwidth);
+          return { noiseFloorNoGain: floor, noiseFloor: floor, isInternalNoiseGreater: false };
+        };
+        return fe;
+      };
+      const modemBwDb = 10 * Math.log10(receiver.state.modems[0].bandwidth * 1e6);
+      const wanted = createMockIfSignal({ signalId: 'wanted', power: -30 as dBm });
+
+      receiver.connectRfFrontEnd(ktbFrontEnd([wanted]));
+      const clean = receiver.getSignalsInBandwidth();
+      expect((clean.cn0_dBHz as number) - clean.cnRatio_dB).toBeCloseTo(modemBwDb, 6);
+
+      const interferer = createMockIfSignal({ signalId: 'cw', power: -36 as dBm, bandwidth: 0.1e6 as Hertz, modulation: '8QAM' as ModulationType });
+      const rx2 = new Receiver('test-root', []);
+      rx2.connectRfFrontEnd(ktbFrontEnd([wanted, interferer]));
+      const jammed = rx2.getSignalsInBandwidth();
+      expect(jammed.cnRatio_dB).toBeLessThan(clean.cnRatio_dB - 2);
+      expect((jammed.cn0_dBHz as number) - jammed.cnRatio_dB).toBeCloseTo(modemBwDb, 6);
+    });
+
     it('decodes a carrier offset inside the passband and ignores one outside it (Hz compared with Hz)', () => {
       // 20 MHz modem at 1400 MHz; a 10 MHz carrier 6 MHz off centre is inside
       const inside = createMockIfSignal({ bandwidth: 10e6 as Hertz, frequency: 1406e6 as any });

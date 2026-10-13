@@ -230,10 +230,8 @@ const KNOWN_REQUIRES_CHANGE_ROWS: readonly string[] = [
   'nats-scenario2 enable-hpa-output[1] hpa-enabled "HPA Output Enabled"',
   'nats-scenario7 enable-loopback[1] buc-loopback-enabled "BUC Loopback Enabled"',
   'nats-scenario7 enable-loopback[2] buc-unmuted "BUC Unmuted"',
-  'nats-scenario7 restore-lnb-frequency[1] lnb-lo-set "LNB LO Restored to 5250 MHz"',
   'nats-level-8-night-shift verify-loopback-signal[3] speca-max-amplitude "Max Amplitude -30 dBm"',
   'nats-level-8-night-shift resolve-lnb-fault[1] equipment-powered "LNB Power-Cycled (Off, Then On)"',
-  'nats-level-8-night-shift restore-lnb-frequency[1] lnb-lo-set "LNB LO Restored to 5250 MHz"',
   'nats-level-8-night-shift enable-hpa-sequence[1] hpa-enabled "HPA Output Enabled"',
   'nats-scenario9 return-to-tidemark1[1] speca-center-frequency "Spectrum Analyzer at 1074.5 MHz IF"',
   'nats-scenario9 restore-vt-tx[1] hpa-enabled "HPA Output Enabled"',
@@ -243,6 +241,9 @@ const KNOWN_REQUIRES_CHANGE_ROWS: readonly string[] = [
   // overdriven HPA), so at activation they are false and requiresChange is
   // what the player does. Static false positives of this lint.
   'nats-scenario16 unmute-buc-restore-tx[1] buc-unmuted "BUC Unmuted"',
+  // S8 backs the BUC off to 15 dB for the loop (Phase 28 D3), so the 23 dB
+  // restore is false at activation
+  'nats-level-8-night-shift disable-loopback-prepare-uplink[2] buc-gain-set "BUC Gain Back to 23 dB"',
   'nats-scenario20 me-reenable-hpa[1] hpa-enabled "HPA Output Enabled"',
 ];
 
@@ -256,7 +257,7 @@ const KNOWN_CONTENT_ROWS: readonly string[] = [
   'nats-scenario9 return-to-tidemark1[0] antenna-locked "Locked on TIDEMARK-1"',
   'nats-scenario10 acquire-stable-beacon[0] antenna-beacon-locked "Beacon Lock Sustained"',
   'nats-scenario10 verify-no-overdrive[0] hpa-not-overdriven "HPA Not Overdriven"',
-  'nats-scenario10 stand-by-for-window[0] antenna-beacon-locked "Beacon Held on Standby (10 min)"',
+  'nats-scenario10 stand-by-for-window[0] antenna-beacon-locked "Beacon Held on Standby"',
   'nats-scenario10 sustain-rx-margin[0] receiver-snr-threshold "C/N Held Above 9 dB"',
   'nats-scenario10 sustain-beacon-track[0] antenna-beacon-locked "Beacon Stays Locked"',
   'nats-scenario10 restore-conservative-backoff[1] hpa-not-overdriven "HPA Healthy"',

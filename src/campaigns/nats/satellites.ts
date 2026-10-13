@@ -9,7 +9,7 @@ import type { Degrees } from 'ootk';
  * for: VT-01 (ground-stations.ts). Phase 19.4 derives each satellite's slot
  * from it, so ME-02 sees the real geometric difference (nats-s03-F2).
  */
-export const VERMONT_LOOK_ANGLE_SITE = { latitude: 44.5588, longitude: -72.5778, elevationM: 2 };
+export const VERMONT_LOOK_ANGLE_SITE = { latitude: 44.5588, longitude: -72.5778, elevationM: 210 };
 
 /**
  * Campaign 1 C-band transponder physics (phase 19.3). SFD and G/T are the
@@ -35,8 +35,9 @@ export const tidemark1Satellite = new Satellite(
   [], // No authored uplinks: the hub carrier is whatever VT-01 / ME-02 radiates (phase 27)
   [], // Beacons now defined in transponderConfigs
   {
-    az: 161.8 as Degrees,
-    el: 34.2 as Degrees,
+    // 53 W from VT-01 (Phase 28, D4: computed with geoLookAngles, was 161.8 / 34.2)
+    az: 153.1 as Degrees,
+    el: 35.1 as Degrees,
     rotation: 14 as Degrees,
     frequencyOffset: 2.225e9 as Hertz, // Legacy fallback
     // Ephemeris error: simulates TLE inaccuracy (~3 dB loss without step-track)
@@ -87,8 +88,9 @@ export const tidemark2Satellite = new Satellite(
   [], // No authored uplinks: the hub carrier is whatever VT-01 / ME-02 radiates (phase 27)
   [], // Beacons now defined in transponderConfigs
   {
-    az: 219.7 as Degrees,
-    el: 26.3 as Degrees,
+    // 45 W, south-east of VT-01 (Phase 28, D4: computed with geoLookAngles, was 219.7 / 26.3)
+    az: 143.3 as Degrees,
+    el: 31.8 as Degrees,
     rotation: -25 as Degrees,
     frequencyOffset: 2.225e9 as Hertz, // Legacy fallback
     // Ephemeris error: simulates TLE inaccuracy
@@ -137,7 +139,7 @@ export const tidemark2Satellite = new Satellite(
  * TIDEMARK-3: Newest TIDEMARK constellation bird
  *
  * Commissioned by the overnight commissioning crew post-S8. Sits at 47°W,
- * between TIDEMARK-1 (53°W) and SES-10 (67°W). Standard 36 MHz C-band
+ * between TIDEMARK-2 (45°W) and TIDEMARK-1 (53°W). Standard 36 MHz C-band
  * transponder with H-pol uplink, V-pol beacon.
  *
  * Frequency Plan:
@@ -157,8 +159,9 @@ export const tidemark3Satellite = new Satellite(
   [], // No authored uplinks: the hub carrier is whatever VT-01 / ME-02 radiates (phase 27)
   [], // Beacons defined in transponderConfigs
   {
-    az: 140.5 as Degrees,
-    el: 37.8 as Degrees,
+    // 47 W from VT-01 (Phase 28, D4: computed with geoLookAngles, was 140.5 / 37.8)
+    az: 145.7 as Degrees,
+    el: 32.7 as Degrees,
     rotation: 8 as Degrees,
     frequencyOffset: 2.225e9 as Hertz,
     // Ephemeris error: smallest of the constellation (newest bird, freshest TLE)
@@ -218,8 +221,9 @@ export const ses10Satellite = new Satellite(
   ],
   [], // Beacons now defined in transponderConfigs
   {
-    az: 151.8 as Degrees,
-    el: 34.2 as Degrees,
+    // 67 W from VT-01 (Phase 28, D4: computed with geoLookAngles, was 151.8 / 34.2, a 52 W slot)
+    az: 172.1 as Degrees,
+    el: 38.4 as Degrees,
     rotation: 34 as Degrees,
     frequencyOffset: 2.225e9 as Hertz, // Legacy fallback
     // Ephemeris error: simulates TLE inaccuracy

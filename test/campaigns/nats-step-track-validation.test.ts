@@ -200,7 +200,8 @@ describe('C1 step-track lessons (phase 19.4)', () => {
     // S22 engage-step-track: program-track under the 8.3 dB hold, step-track over it
     expect(ptBeacon).toBeLessThan(8.3);
     expect(stBeacon).toBeGreaterThan(8.5);
-    // The brief's trackability row: about 2.3 dB above the 6.5 dB floor (-6.3 vs -4.0 relative)
+    // The brief's trackability row: about 2.3 dB above the 6.5 dB floor. The beacon sits 6.3 dB down
+    // (Phase 28, D6: the story, quiz and beacon log now record the -6.3 dB the physics gives)
     expect(stBeacon - STEP_TRACK_FLOOR_DB).toBeGreaterThan(1.8);
     expect(stBeacon - STEP_TRACK_FLOOR_DB).toBeLessThan(2.8);
     expect(stCarrier).toBeGreaterThan(8);

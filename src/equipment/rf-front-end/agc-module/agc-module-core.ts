@@ -27,7 +27,7 @@ export interface AGCState extends RFFrontEndModuleState {
  * The detector measures carriers AND the receive noise in the IF filter's
  * bandwidth (Phase 19.2): with no carrier it levels the noise (at max gain
  * only if the noise alone is too weak to reach the target). A passband with
- * no carrier above the noise raises "AGC on noise only - no carrier", the
+ * no carrier above the noise raises "AGC on noise only - ...", the
  * pre-AOS warning on a LEO board (it replaced the old max-gain rail, which
  * only existed because the detector ignored noise).
  *
@@ -201,7 +201,11 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
 
     // Nothing to level but noise: the empty-sky (pre-AOS) indication
     if (this.isNoiseOnly_) {
-      alarms.push('AGC on noise only - no carrier in passband');
+      // The detector integrates the whole IF passband: a narrow CW beacon can
+      // show on the analyzer and still be far below that integrated noise, so
+      // the text says "no traffic carrier", not "no carrier" (nats-r3-s09-F2).
+      // Keep the "AGC on noise only" prefix: specs and quizzes match on it.
+      alarms.push('AGC on noise only - passband power is noise, no traffic carrier');
     } else if (!isRepositioning && this.state.currentGain >= this.state.maxGain - 0.5) {
       // Warn when at gain limits
       alarms.push(`AGC at max gain (${this.state.currentGain.toFixed(1)} dB) - weak signal`);

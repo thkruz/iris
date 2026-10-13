@@ -56,8 +56,10 @@ vi.mock('../../src/user-account/auth', () => ({
 
 // Import after mocks
 import { Logger } from '../../src/logging/logger';
+import { DialogManager } from '../../src/modal/dialog-manager';
 import { LevelCompleteModal } from '../../src/modal/level-complete-modal';
 import { QuizManager } from '../../src/modal/quiz-manager';
+import { QuizModal } from '../../src/modal/quiz-modal';
 import { ObjectivesManager } from '../../src/objectives/objectives-manager';
 import { Router } from '../../src/router';
 import { ScenarioManager } from '../../src/scenario-manager';
@@ -755,6 +757,61 @@ describe('ScenarioCompletionHandler', () => {
       await flushTimers();
 
       expect(mockUserDataService.updateScenarioProgress).toHaveBeenCalledWith('test-scenario', expect.objectContaining({ completedAt: expect.any(String) }));
+    });
+  });
+
+  describe('Mission Complete waits for the closing dialog (nats-r3-s03-F3)', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
+    it('opens only after the dialog queue drains and the quiz closes, with the score fixed at completion', async () => {
+      vi.useFakeTimers();
+      let isDialogBusy = true;
+      let isQuizOpen = true;
+      vi.spyOn(DialogManager.getInstance(), 'isBusy').mockImplementation(() => isDialogBusy);
+      vi.spyOn(QuizModal, 'isShowingQuiz').mockImplementation(() => isQuizOpen);
+      mockObjectivesManager.getScenarioTimeRemaining.mockReturnValue(60);
+
+      const handler = ScenarioCompletionHandler.getInstance();
+      handler.initialize();
+      const callback = mockEventBus.on.mock.calls[0][1];
+      const done = callback({ completedObjectives: [], totalTime: 406 });
+
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(mockLevelCompleteModal.showCompletion).not.toHaveBeenCalled();
+
+      isDialogBusy = false;
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(mockLevelCompleteModal.showCompletion).not.toHaveBeenCalled();
+
+      // Waiting did not re-read the clock: time remaining sampled once, elapsed as emitted
+      mockObjectivesManager.getScenarioTimeRemaining.mockReturnValue(0);
+      isQuizOpen = false;
+      await vi.advanceTimersByTimeAsync(ScenarioCompletionHandler.QUIET_POLL_MS);
+      await done;
+      expect(mockLevelCompleteModal.showCompletion).toHaveBeenCalledTimes(1);
+      expect(mockLevelCompleteModal.showCompletion).toHaveBeenCalledWith(
+        expect.objectContaining({ elapsedTimeSeconds: 406, score: expect.objectContaining({ timeBonus: 12 }) }),
+        expect.any(Function)
+      );
+      expect(mockObjectivesManager.getScenarioTimeRemaining).toHaveBeenCalledTimes(1);
+    });
+
+    it('never opens if the page is left while a dialog is still up', async () => {
+      vi.useFakeTimers();
+      vi.spyOn(DialogManager.getInstance(), 'isBusy').mockReturnValue(true);
+
+      const handler = ScenarioCompletionHandler.getInstance();
+      handler.initialize();
+      const callback = mockEventBus.on.mock.calls[0][1];
+      const done = callback({ completedObjectives: [], totalTime: 10 });
+      await vi.advanceTimersByTimeAsync(1_000);
+      ScenarioCompletionHandler.destroy();
+      await vi.advanceTimersByTimeAsync(1_000);
+      await done;
+      expect(mockLevelCompleteModal.showCompletion).not.toHaveBeenCalled();
     });
   });
 });

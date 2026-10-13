@@ -6,9 +6,11 @@ import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForS
  * Scenario 17 - "Solar Event": Sun Transit Outage.
  *
  * Phase 3 opener. A predicted sun transit (weather event type 'sun-transit')
- * raises VT-01's sky noise for 300 s with a 16 dB sin^2 peak, starting 20 s
- * after 'observe-onset' activates (startAfterObjectiveId). The slow-player
- * case lives in scenario17-late-onset.spec.ts.
+ * raises VT-01's sky noise for 300 s with a 16 dB sin^2 peak, starting as
+ * 'observe-onset' activates (startAfterObjectiveId). 'stand-by-for-window'
+ * holds until the prediction sheet's 10:32:30 window-open on the station
+ * clock (nats-r3-s17-F1); the spec takes its skip. The slow-player case
+ * lives in scenario17-late-onset.spec.ts.
  * The operator baselines the link, notifies the customer BEFORE the window,
  * holds configuration through the peak (demod loses lock and self-recovers),
  * verifies recovery, and documents predicted-vs-actual.
@@ -18,7 +20,7 @@ import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForS
  *    (skyNoiseDegradation_dB on VT-01's antenna) instead of sleeping.
  *  - Total wall-clock is dominated by the transit timeline (~5 min).
  */
-type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'auto' | 'wait-sky-noise';
+type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'auto' | 'wait-sky-noise' | 'objective-skip';
 
 interface Scenario17Objective {
   id: string;
@@ -31,6 +33,16 @@ interface Scenario17Objective {
   skyNoise?: { above?: number; below?: number };
   /** For wait-sky-noise: max seconds to wait */
   waitTimeoutSeconds?: number;
+  /** Reads the panel the quiz is about and asserts the keyed option is what the screen shows */
+  checkScreen?: (page: import('@playwright/test').Page) => Promise<void>;
+}
+
+/** First number in a visible readout (e.g. "13.0 dB") */
+async function readNumber(page: import('@playwright/test').Page, selector: string): Promise<number> {
+  const text = (await page.locator(`${selector}:visible`).first().textContent()) ?? '';
+  const match = /[-+]?\d+(?:\.\d+)?/u.exec(text);
+  expect(match, `${selector} reads a number (got "${text}")`).not.toBeNull();
+  return Number.parseFloat(match![0]);
 }
 
 const SCENARIO_17_OBJECTIVES: Scenario17Objective[] = [
@@ -89,6 +101,11 @@ const SCENARIO_17_OBJECTIVES: Scenario17Objective[] = [
     // Phase 27 Q3: the observation rows latch on RX Analysis, then the C/N read
     type: 'quiz',
     correctAnswer: 'About 13 dB',
+    checkScreen: async (page) => {
+      const rawCn = await readNumber(page, '#cn-raw-display');
+      expect(rawCn).toBeGreaterThan(12);
+      expect(rawCn).toBeLessThan(14.5);
+    },
   },
   {
     id: 'why-not-handover-quiz',
@@ -102,6 +119,14 @@ const SCENARIO_17_OBJECTIVES: Scenario17Objective[] = [
     type: 'quiz',
     correctAnswer:
       'Predicted solar transit on TIDEMARK-1, window and peak times attached; possible 1-3 minute carrier loss near peak, self-recovering; this is SLA advance notice.',
+  },
+
+  {
+    // Holds until 10:32:30 on the station clock; the mission clock reads HOLD
+    // meanwhile and the skip lands exactly on the sheet's window-open
+    id: 'stand-by-for-window',
+    title: 'Stand By for the Window',
+    type: 'objective-skip',
   },
 
   // ============================================================
@@ -176,7 +201,7 @@ const SCENARIO_17_OBJECTIVES: Scenario17Objective[] = [
     title: 'Log the Event',
     type: 'quiz',
     correctAnswer:
-      'TM-1 transit per SOP-SX-001, customer notified pre-window. Peak ~16 dB, brief demod loss, self-recovered, no residual alarms. Next window tomorrow, ~4 min earlier.',
+      'TM-1 transit per SOP-SX-001, customer notified pre-window. Peak ~16 dB, brief demod loss, self-recovered, no residual alarms. Next window tomorrow, about the same time.',
   },
 ];
 
@@ -215,8 +240,26 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);
+      await objective.checkScreen?.(page);
       await answerQuizByText(page, objective.correctAnswer!);
       break;
+
+    case 'objective-skip': {
+      const skip = page.locator('#objective-skip-control');
+      await expect(skip).toBeVisible({ timeout: 30000 });
+      // D1: waiting for the window costs no mission time
+      await expect(page.locator('#scenario-timer-hold')).toBeVisible({ timeout: 10000 });
+      await skip.click();
+      await page.waitForFunction(
+        (id) => {
+          const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;
+          return typeof hook === 'function' && hook(id)?.isCompleted === true;
+        },
+        objective.id,
+        { timeout: 30000, polling: 500 }
+      );
+      break;
+    }
 
     case 'select-station':
       await missionControlPage.selectGroundStation(objective.stationId || 'VT-01');

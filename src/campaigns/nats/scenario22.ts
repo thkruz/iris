@@ -249,7 +249,7 @@ export const scenario22Data: ScenarioData = {
       nice: ['S0421', 'K1032'],
       title: 'Step-Track for the Weak Beacon',
       description:
-        'Engage step-track on ACU Control - the beacon is 4 dB down from its prime and needs every bit of pointing accuracy. Watch the ACU beacon C/N climb from about 7 dB on program-track to about 9 dB as step-track finds the peak; the step-track floor is the 6.5 dB beacon lock.',
+        'Engage step-track on ACU Control - the beacon is about 6 dB down from its prime and needs every bit of pointing accuracy. Watch the ACU beacon C/N climb from about 7 dB on program-track to about 9 dB as step-track finds the peak; the step-track floor is the 6.5 dB beacon lock.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['acquire-aurora'],
       timeLimitSeconds: 2 * 60,
@@ -322,26 +322,27 @@ export const scenario22Data: ScenarioData = {
         },
         {
           // s22-F5: the player's Peak readout makes the measurement real.
-          // Headless 2026-10-07: step-tracked, carrier off (AGC on noise
-          // alone), the beacon reads -67.2 dBm at the RX IF tap the
-          // analyzer shows (-69.1 on program-track). The brief's 24-month
-          // reference is -63.2, so today reads 4.0 dB down. With our own
-          // carrier keyed the AGC backs off ~12 dB and it would read ~-79.
+          // nats-r3 2026-10-13 (decision D6, physics unchanged): step-tracked
+          // (ACU beacon C/N 9.0 dB), carrier off (AGC on noise alone), the
+          // beacon Peak reads -69.2 to -69.4 dBm at 1085 MHz / 2 kHz span.
+          // Against the brief's -63 dBm reference that is 6.3 dB down; the
+          // brief's monthly median is -6.3 and the step-track floor (6.5 dB
+          // beacon C/N, 2.3-2.5 dB under today's lock) sits near -8.6. With
+          // our own carrier keyed the AGC backs off ~12 dB (about -81).
           type: 'status-check',
           description: 'Beacon Level Read',
           params: {
             character: Character.SYSTEM,
-            question:
-              "Read the beacon off the analyzer's Peak readout. Against the brief's 24-month reference (about -63 dBm, logged the same way), what does today's reading say?",
+            question: "Read the beacon off the analyzer's Peak readout. Against the brief's reference (about -63 dBm, logged the same way), what does today's reading say?",
             options: [
-              'About -67 dBm: about 4 dB under the reference, in line with the -4.0 dB monthly median in the log',
+              'About -69 dBm: about 6 dB under the reference, in line with the -6.3 dB monthly median in the log',
               'About -63 dBm: level with the reference - no decline this month, the log median is wrong',
               'About -57 dBm: about 6 dB above the reference - the decline has reversed',
-              'About -73 dBm: about 10 dB under the reference - already past the step-track floor',
+              'About -75 dBm: about 12 dB under the reference - already past the step-track floor',
             ],
             correctIndex: 0,
             explanation:
-              "About -67 dBm against about -63 dBm is 4 dB down: today's spot reading agrees with the monthly median. A single reading wanders a few tenths with pointing and noise, which is why the trend is built from medians, but it is your own measurement and it matches.",
+              "About -69 dBm against about -63 dBm is about 6 dB down: today's spot reading agrees with this month's -6.3 dB median. A single reading wanders a few tenths with pointing and noise, which is why the trend is built from medians, but it is your own measurement and it matches. It is still about 2.3 dB above the step-track floor (about -8.6), the same margin the ACU shows between its beacon C/N and the 6.5 dB lock.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -457,17 +458,18 @@ export const scenario22Data: ScenarioData = {
             character: Character.SYSTEM,
             question: "What goes into the report as today's measured data?",
             options: [
-              'Beacon at -4.0 dB relative to the 24-month reference; step-track held lock at this level; carrier C/N above demod threshold',
-              'Beacon at -4.0 dB relative to the 24-month reference; step-track lost lock at this level; carrier C/N below demod threshold',
+              'Beacon at -6.3 dB relative to the 36-month reference; step-track held lock at this level; carrier C/N above demod threshold',
+              'Beacon at -6.3 dB relative to the 36-month reference; step-track lost lock at this level; carrier C/N below demod threshold',
               'Beacon declining, no number needed at this stage; step-track engaged as usual; carrier C/N nominal per the link budget on file',
-              'Beacon at -1.1 dB relative to the 12-month point; step-track held lock at this level; satellite will fail within the quarter',
+              'Beacon at -3.0 dB relative to the 12-month point; step-track held lock at this level; satellite will fail within the quarter',
             ],
             correctIndex: 0,
             explanation:
               'Measured values, stated as measured, not estimated. The number with its reference and the fact that step-track still holds at this level - that is data, and the report is built on data first.',
             pointPenalty: 5,
             documentSection: 'Data (measured today)',
-            documentLine: 'Beacon -4.0 dB vs 24-mo reference. Step-track holds lock at this level. Carrier C/N above demod threshold.',
+            documentLine:
+              'Beacon -6.3 dB vs 36-mo reference (about -69 dBm against -63). Step-track holds lock at this level, about 2.3 dB above the floor. Carrier C/N above demod threshold.',
           },
           mustMaintain: false,
         },
@@ -494,19 +496,19 @@ export const scenario22Data: ScenarioData = {
           description: 'Trend Shape',
           params: {
             character: Character.SYSTEM,
-            question: 'The history: -1.1 dB at 12 months, -2.4 at 6 months, -4.0 today. How do you characterize the trend?',
+            question: 'The history: -3.3 dB at 12 months, -4.7 at 6 months, -6.3 today. How do you characterize the trend?',
             options: [
-              'Accelerating - the last 6 months lost ~1.6 dB against ~1.3 dB in the 6 before; a steepening curve, not a straight line',
-              'Linear - roughly 0.3 dB per month from the 12-month point to today; a straight line, so extrapolation is safe a year out',
-              'Flattening - the first 12 months lost 1.1 dB and the last 6 only 1.6 dB more; the decline is slowing as the array settles',
-              'Random - three points six months apart are noise, not a trend; the -4.0 dB today could be rain fade on a single measurement',
+              'Accelerating - the last 6 months lost ~1.6 dB against ~1.4 dB in the 6 before; a steepening curve, not a straight line',
+              'Linear - roughly 0.25 dB per month from the 12-month point to today; a straight line, so extrapolation is safe a year out',
+              'Flattening - the first year of the record lost 1.3 dB and the last 6 months only 1.6 dB more; the decline is slowing as the array settles',
+              'Random - three points six months apart are noise, not a trend; the -6.3 dB today could be rain fade on a single measurement',
             ],
             correctIndex: 0,
             explanation:
-              'Reading acceleration vs linearity is the whole analysis. Per six months the losses run 0.55, 1.3, then 1.6 dB - the rate is rising, so naive linear extrapolation understates the near-term decline. A power subsystem shedding load tends to worsen non-linearly; calling it linear would sell the board a longer runway than the spacecraft has.',
+              'Reading acceleration vs linearity is the whole analysis. Per six months the losses run 0.6, 0.7, 0.9, 1.1, 1.4, then 1.6 dB - the rate keeps rising, so naive linear extrapolation understates the near-term decline. A power subsystem shedding load tends to worsen non-linearly; calling it linear would sell the board a longer runway than the spacecraft has.',
             pointPenalty: 5,
             documentSection: 'Trend',
-            documentLine: 'Beacon decline ACCELERATING: -1.1 (12mo) -> -2.4 (6mo) -> -4.0 (now). Non-linear - linear extrapolation understates near-term.',
+            documentLine: 'Beacon decline ACCELERATING: -3.3 (12mo) -> -4.7 (6mo) -> -6.3 (now). Non-linear - linear extrapolation understates near-term.',
           },
           mustMaintain: false,
         },
@@ -607,7 +609,7 @@ export const scenario22Data: ScenarioData = {
             question: 'What is the responsible recommendation?',
             options: [
               'Begin migration now and have customers moved inside two quarters; floor in two to three, reviewed monthly, firm trigger at the step-track floor',
-              'Retire immediately; the risk is unacceptable at -4.0 dB, migration forced this month, with no window for the customers to plan',
+              'Retire immediately; the risk is unacceptable at -6.3 dB, migration forced this month, with no window for the customers to plan',
               'Take no action for a year; the link still works today, reviewed at the next budget cycle, with a decision then if the beacon fades',
               'Set a retirement date 12 months out; the board can budget against a date, migration scheduled backward from it, with no review points',
             ],
@@ -678,9 +680,9 @@ export const scenario22Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'How should the report distinguish measured facts from projections?',
             options: [
-              "Explicitly: today's -4.0 dB and the historical points are measured; the sunset window is a projection under stated assumptions",
-              "Uniformly: today's -4.0 dB and the sunset window carry equal weight; a recommendation reads stronger with one confidence level",
-              "Conservatively: only today's -4.0 dB and the historical points go in; the projection is omitted until more data exists",
+              "Explicitly: today's -6.3 dB and the historical points are measured; the sunset window is a projection under stated assumptions",
+              "Uniformly: today's -6.3 dB and the sunset window carry equal weight; a recommendation reads stronger with one confidence level",
+              "Conservatively: only today's -6.3 dB and the historical points go in; the projection is omitted until more data exists",
               'Decisively: the historical points are the basis; the projection is rounded to a single date so the board has something to act on',
             ],
             correctIndex: 0,
@@ -688,7 +690,7 @@ export const scenario22Data: ScenarioData = {
               'Measured and projected carry different weight; conflating them is how a report loses credibility in a quarter. Label each so the board knows which is which: it can act on a clearly-labeled projection - it cannot trust a number it later learns was a guess dressed as a fact.',
             pointPenalty: 5,
             documentSection: 'Confidence',
-            documentLine: 'Measured: today -4.0 dB and the history table. Projected: sunset window, under stated assumptions.',
+            documentLine: 'Measured: today -6.3 dB and the history table. Projected: sunset window, under stated assumptions.',
           },
           mustMaintain: false,
         },
@@ -750,14 +752,14 @@ export const scenario22Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Which log entry closes the tasking?',
             options: [
-              'AURORA-7 EOL assessment to board: beacon -4.0 dB, trend accelerating; migrate now (inside 2 quarters), floor in 2-3, trigger at tracking floor',
-              'AURORA-7 EOL report to Francis: beacon -4.0 dB, trend linear; no action this year, review at next budget cycle, retire when it fails',
-              'AURORA-7 retirement recommended: beacon -4.0 dB, trend accelerating; retire immediately, migration forced, date set 8 months out',
-              'AURORA-7 data run complete: beacon -4.0 dB, step-track held; analysis pending, trend to be characterized, board note to follow',
+              'AURORA-7 EOL assessment to board: beacon -6.3 dB, trend accelerating; migrate now (inside 2 quarters), floor in 2-3, trigger at tracking floor',
+              'AURORA-7 EOL report to Francis: beacon -6.3 dB, trend linear; no action this year, review at next budget cycle, retire when it fails',
+              'AURORA-7 retirement recommended: beacon -6.3 dB, trend accelerating; retire immediately, migration forced, date set 8 months out',
+              'AURORA-7 data run complete: beacon -6.3 dB, step-track held; analysis pending, trend to be characterized, board note to follow',
             ],
             correctIndex: 0,
             explanation:
-              "The log mirrors the report's spine: data (beacon -4.0 dB, step-track held), trend, binding constraint (beacon trackability), recommendation, assumptions stated, measured vs projected labeled - delivered via Martin. Anyone reading it later knows exactly what was delivered and on what basis.",
+              "The log mirrors the report's spine: data (beacon -6.3 dB, step-track held), trend, binding constraint (beacon trackability), recommendation, assumptions stated, measured vs projected labeled - delivered via Martin. Anyone reading it later knows exactly what was delivered and on what basis.",
             pointPenalty: 5,
           },
           mustMaintain: false,

@@ -172,8 +172,8 @@ export class TxChainTab extends BaseElement {
                       <span id="buc-current-display" class="metric-value">0.00 A</span>
                     </div>
                     <div class="metric-row">
-                      <span class="metric-label">Trend:</span>
-                      <span id="buc-temp-trend-display" class="metric-value" title="Least-squares slope of the case temperature over the last 5 minutes">-- °C/min</span>
+                      <span class="metric-label">Trend (1 min):</span>
+                      <span id="buc-temp-trend-display" class="metric-value" title="Least-squares slope of the case temperature over the last minute">-- °C/min</span>
                     </div>
                     <div class="metric-row">
                       <span class="metric-label">10 min ago:</span>
@@ -251,6 +251,7 @@ export class TxChainTab extends BaseElement {
                     <div class="form-check form-switch mb-2">
                       <input type="checkbox" id="hpa-enable" class="form-check-input" role="switch" />
                       <label for="hpa-enable" class="form-check-label small">HPA Enable</label>
+                      <div id="hpa-enable-status" class="small text-warning d-none" role="status"></div>
                     </div>
                     <div class="form-check form-switch">
                       <input type="checkbox" id="hpa-alc" class="form-check-input" role="switch" checked />

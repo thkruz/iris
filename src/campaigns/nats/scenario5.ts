@@ -96,7 +96,7 @@ export const scenario5Data: ScenarioData = {
             // Phase 27 (plan Q8): set against VT-01's own TP-1 carrier (the
             // stand-in composite is gone) for the customer's story - degraded,
             // not down: 0.3-0.8 dB of Es/N0 lock margin (mean ~0.45 dB) over the
-            // QPSK 3/4 threshold. At that margin the hub's own LDPC decode is
+            // QPSK 3/4 threshold. At that margin the hub's own Viterbi + RS decode is
             // still error-free (PER ~1e-11: the payload panel reads BER < 1e-12,
             // 0 CRC errors); the customer's small ship terminals, with far less
             // G/T, are past the waterfall (the S5 quiz teaches the difference).
@@ -116,8 +116,8 @@ export const scenario5Data: ScenarioData = {
         ],
         [], // Beacons now defined in transponderConfigs
         {
-          az: 161.8 as Degrees,
-          el: 34.2 as Degrees,
+          az: 153.1 as Degrees, // 53 W (Phase 28 D4)
+          el: 35.1 as Degrees,
           rotation: 14 as Degrees,
           frequencyOffset: 2.225e9 as Hertz, // Legacy fallback
           lookAnglesFrom: VERMONT_LOOK_ANGLE_SITE,
@@ -134,15 +134,19 @@ export const scenario5Data: ScenarioData = {
               frequencyOffset: 2.225e9 as Hertz, // Downlink center: 3718 MHz
               polarization: 'H',
               beacon: {
+                // Phase 28 (nats-r3-s05-F4): the roster TIDEMARK-1 beacon (V-pol,
+                // 30 dBm, CW). This copy was H-pol at 40 dBm: cross-polar to the
+                // V receive port, it read ~-80 dBm on the analyzer, not the
+                // brief's level.
                 frequency: 4175.5e6 as RfFrequency,
                 signalId: 'TIDEMARK-1-Beacon',
                 serverId: 1,
                 noradId: 61525,
-                power: 40 as dBm,
-                bandwidth: 1e3 as Hertz,
+                power: 30 as dBm,
+                bandwidth: 10 as Hertz, // CW: short-term linewidth, far under any RBW
                 modulation: 'CW' as ModulationType,
                 fec: 'null' as FECType,
-                polarization: 'H',
+                polarization: 'V',
                 feed: '',
                 isDegraded: false,
                 origin: SignalOrigin.TRANSMITTER,
@@ -268,7 +272,7 @@ export const scenario5Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'C/N is around 5 dB against a nominal 14+ dB. The modem still holds lock - QPSK 3/4 needs Es/N0 5.0 dB (about 4.2 dB of C/N in the 36 MHz channel) - but with under 1 dB of margin it reads "Degraded margin". At the hub that is degraded, not down; one more dB and our own receiver loses it too.',
+              'C/N is around 5 dB against a nominal 14+ dB. The modem still holds lock - QPSK 3/4 needs Es/N0 5.0 dB, and the status bar shows the margin over that - but with under 1 dB of margin it reads "Degraded margin". At the hub that is degraded, not down; one more dB and our own receiver loses it too.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -299,7 +303,7 @@ export const scenario5Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'The interference rides through the transponder to every receiver in the beam, but each receiver adds its own noise. Our 9 m hub dish has a G/T near 30 dB/K; a 1-2 m maritime terminal has 15-20 dB less, so its C/N was always far closer to threshold. An LDPC-coded carrier decodes error-free until it is within a fraction of a dB of threshold, then falls off a cliff: we are just above the cliff (Degraded margin, BER still clean), the ships are over it (packet errors). Watch margin, not BER: by the time the hub shows CRC errors the remotes are down.',
+              'The interference rides through the transponder to every receiver in the beam, but each receiver adds its own noise. Our 9 m hub dish has a G/T near 30 dB/K; a 1-2 m maritime terminal has 15-20 dB less, so its C/N was always far closer to threshold. This carrier is concatenated-coded - the Payload Data Integrity card shows a Viterbi inner decoder (K=7, rate 3/4) and a Reed-Solomon 223/255 outer code - and that pair has a sharp threshold too: while the Viterbi output errors stay sparse, Reed-Solomon corrects every block and the output is clean; a fraction of a dB lower, the error bursts outrun its correction and packets fail. We are just above that knee (Degraded margin, BER still clean), the ships are below it (packet errors). Watch margin, not BER: by the time the hub shows CRC errors the remotes are down.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -552,13 +556,13 @@ export const scenario5Data: ScenarioData = {
             question: 'What is the most likely cause of this narrowband spike within our signal bandwidth?',
             options: [
               "Cross-polarization leakage from another operator's uplink",
-              'A faulty component in our own transmit chain',
-              'Terrestrial interference from nearby radio towers',
-              'Solar radio emissions during a flare event',
+              'A spur from our own transmit chain riding up with our carrier',
+              'A terrestrial microwave link near Vermont getting into our downlink',
+              'Solar radio noise from a flare event',
             ],
             correctIndex: 0,
             explanation:
-              "This is cross-polarization interference. Satellites use orthogonal polarizations (H and V) to allow frequency reuse - different operators can use the same frequency on opposite polarizations. But polarization isolation isn't perfect. Another operator's signal on the V polarization is leaking into our H polarization due to imperfect antenna alignment or atmospheric effects.",
+              "Work it from what you can see. The analyzer shows one steady carrier about 1 MHz wide, not a raised noise floor across the band, so it is not solar noise. SeaLink's ships out on the Atlantic see the damage too, so the spike is inside the transponder, not just in our downlink: a tower near Vermont would hurt only us. Our TX chain reads normal, and a spur from our BUC would be a CW line, not a modulated carrier a megahertz wide. What fits is another operator's uplink: TP-1 is horizontal, its twin on the same frequencies is vertical for frequency reuse, and the other operator's V-pol carrier is leaking into our H-pol transponder because their uplink's polarization isolation is imperfect.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -581,16 +585,16 @@ export const scenario5Data: ScenarioData = {
           type: 'status-check',
           description: 'Understand AGC Impact',
           params: {
-            question: 'Why is this narrowband spike causing the C/N to drop across our entire wideband signal?',
+            question: 'The AGC card shows the gain cut by a few dB since the spike appeared. Why has our C/N dropped?',
             options: [
-              'The AGC sees the spike as part of the total signal and reduces gain accordingly',
+              "The spike's own power sits inside our passband and takes a share of the transponder's output; the AGC gain cut is only the symptom",
+              'The AGC cut its gain, and turning the gain down lowers the C/N of our wanted carrier',
               'The spike is overloading the LNB and pushing the front end into compression',
-              'The interference is jamming the tracking beacon and pulling the antenna off peak',
               'The spike sits exactly on the carrier center frequency and corrupts the symbols',
             ],
             correctIndex: 0,
             explanation:
-              "The receiver's AGC (Automatic Gain Control) measures total power in the passband. It sees the strong spike and reduces gain to prevent overload. But this gain reduction affects our entire signal, degrading the C/N ratio for the wanted carrier. This is why even a narrowband interferer can impact a wideband signal.",
+              "The AGC levels total power: with the spike in the passband its Input rose, so it cut its Gain to hold the Output at -30 dBm. That gain applies to our carrier and the noise alike, so on its own it cannot change C/N - it is the symptom of more total power, not the cause of the loss. The C/N loss has two real causes: the spike's power lands inside our 36 MHz and the demodulator counts it as noise (C/(N+I)), and it shares the transponder's output power, so our carrier comes down weaker than before. The spike is not on our centre - the analyzer puts it at 1,515 MHz, near our lower edge, not 1,532 - and the LNB is nowhere near compression.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -922,19 +926,6 @@ export const scenario5Data: ScenarioData = {
         emotion: Emotion.NEUTRAL,
         audioUrl: getAssetUrl('/assets/campaigns/nats/6/obj-phase-5.mp3'),
       },
-      'measure-interference-frequency': {
-        text: `
-        <p>
-          Right - 1,515 megahertz IF. That's our target frequency. Now let's figure out what's causing this.
-        </p>
-        <p>
-          Think about what could put a narrowband signal inside our transponder bandwidth. We're using horizontal polarization on this transponder. Satellite transponders often have matching transponders on the orthogonal polarization for frequency reuse - another operator might be using that vertical pol slot.
-        </p>
-        `,
-        character: Character.CHARLIE_BROOKS,
-        emotion: Emotion.CONFIDENT,
-        audioUrl: getAssetUrl('/assets/campaigns/nats/6/obj-measure.mp3'),
-      },
       'phase-6-understand-cause': {
         text: `
         <p>
@@ -944,7 +935,7 @@ export const scenario5Data: ScenarioData = {
           In practice, nothing's perfect. Antenna feeds have finite cross-pol isolation, typically 25 to 35 dB. Rain, ice, and Faraday rotation in the ionosphere can degrade polarization purity further. The result is leakage between polarizations.
         </p>
         <p>
-          Another operator's signal on V-pol is leaking into our H-pol. But here's the puzzle - that spike is narrow, yet it's degrading our entire wideband signal. Think about how the receiver's AGC works.
+          Another operator's signal on V-pol is leaking into our H-pol. But here's the puzzle - that spike is narrow, yet it's degrading our entire wideband signal. Look at the AGC card while you think about why.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -954,10 +945,10 @@ export const scenario5Data: ScenarioData = {
       'phase-7-understand-impact': {
         text: `
         <p>
-          Exactly. The AGC measures total power in the IF passband and adjusts gain to keep the signal level optimal for the demodulator. It doesn't know the difference between wanted signal and interference - it just sees power.
+          Exactly. The AGC measures total power in the IF passband and sets its gain to hold the output steady for the demodulator. It can't tell wanted signal from interference - it just sees power. That's why its gain dropped when the spike showed up.
         </p>
         <p>
-          That spike adds power to the passband. The AGC responds by reducing gain. But reducing gain affects everything - including our wanted carrier. So even though the interference is narrowband, it degrades C/N across our entire wideband signal.
+          But gain turns our carrier and the noise up and down together, so the gain cut isn't what hurt us. The spike's own power sits inside our 36 megahertz, and the demodulator counts it as noise. And it's taking a share of the transponder's output, so our carrier comes down a little weaker. The AGC is just telling you there's more power in the passband than there should be.
         </p>
         <p>
           Now we know the problem. The question is: what's the best way to fix it? We have several options available.
@@ -973,7 +964,7 @@ export const scenario5Data: ScenarioData = {
           Right - a notch filter is the surgical solution. We configure it at exactly 1,515 megahertz with just enough bandwidth to cover the spike - probably 1 megahertz or so. The spike sits right at the lower edge of our carrier, so the notch takes the spike and a sliver of our own edge, and the rest of our 36 megahertz passes untouched.
         </p>
         <p>
-          With the spike removed, the AGC will see only our wanted signal power and set the gain appropriately. C/N should recover.
+          With the spike notched out, its power no longer reaches the demodulator, so C/N comes back up - and the AGC gain rises again, because there's less total power to level.
         </p>
         <p>
           Head to the Notch Filter card on RX Analysis to configure it. Set the center frequency to 1,515 megahertz, bandwidth to 1 megahertz, and depth to at least 40 dB. That should be enough to suppress the interference below the noise floor.
@@ -1040,6 +1031,23 @@ export const scenario5Data: ScenarioData = {
         character: Character.CHARLIE_BROOKS,
         emotion: Emotion.HAPPY,
         audioUrl: getAssetUrl('/assets/campaigns/nats/6/outro.mp3'),
+      },
+    },
+    objectivesOnStart: {
+      // Phase 28 (nats-r3-s05-F5): the cross-pol hint opens the step whose
+      // quiz rests on it (it used to play one objective early)
+      'phase-6-understand-cause': {
+        text: `
+        <p>
+          1,515 megahertz IF is our notch target. Now let's figure out what's putting it there. Work it from the evidence: is it a carrier or a raised noise floor? Is it only in our downlink, or are the ships seeing it too?
+        </p>
+        <p>
+          And think about polarization. We're using horizontal polarization on this transponder. Satellite transponders often have matching transponders on the orthogonal polarization for frequency reuse - another operator might be using that vertical pol slot.
+        </p>
+        `,
+        character: Character.CHARLIE_BROOKS,
+        emotion: Emotion.CONFIDENT,
+        audioUrl: getAssetUrl('/assets/campaigns/nats/6/obj-measure.mp3'),
       },
     },
   },

@@ -58,6 +58,7 @@ describe('HPAAdapter', () => {
         if (callback) callback(mockHpaModule.state);
       }),
       handleHpaToggle: vi.fn(),
+      getEnableBlockReason: vi.fn().mockReturnValue(null),
       getAlarms: vi.fn().mockReturnValue([]),
     } as unknown as Mocked<HPAModuleCore>;
 

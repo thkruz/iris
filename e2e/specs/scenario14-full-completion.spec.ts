@@ -31,6 +31,20 @@ interface Scenario14Objective {
   switchState?: boolean;
   /** Wait (ms) for the objective to report complete after its action */
   waitDoneMs?: number;
+  /**
+   * Reads the panel the quiz is about and asserts the keyed option is what
+   * the screen shows, before the answer is clicked (the answer comes from
+   * the sim state, not from matching the option text)
+   */
+  checkScreen?: (page: import('@playwright/test').Page) => Promise<void>;
+}
+
+/** First number in a visible readout (e.g. "13.1 dB") */
+async function readNumber(page: import('@playwright/test').Page, selector: string): Promise<number> {
+  const text = (await page.locator(`${selector}:visible`).first().textContent()) ?? '';
+  const match = /[-+]?\d+(?:\.\d+)?/u.exec(text);
+  expect(match, `${selector} reads a number (got "${text}")`).not.toBeNull();
+  return Number.parseFloat(match![0]);
 }
 
 const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
@@ -112,6 +126,12 @@ const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
     // Phase 27 Q3: the observation rows latch on RX Analysis, then the C/N read
     type: 'quiz',
     correctAnswer: 'About 13 dB',
+    // RX modem 1 Raw C/N, the readout the 7 dB action threshold is read on
+    checkScreen: async (page) => {
+      const rawCn = await readNumber(page, '#cn-raw-display');
+      expect(rawCn).toBeGreaterThan(12);
+      expect(rawCn).toBeLessThan(14.5);
+    },
   },
   {
     id: 'baseline-margin-quiz',
@@ -164,6 +184,10 @@ const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
     // Phase 27 Q3: the HPA rows latch on TX Chain, then the panel read
     type: 'quiz',
     correctAnswer: 'Output 50 dBm (100 W), back-off 10 dB, IM3 about -43 dBc, Overdrive Normal',
+    checkScreen: async (page) => {
+      expect(Math.abs((await readNumber(page, '#hpa-output-power-display')) - 50)).toBeLessThan(0.6);
+      expect(Math.abs((await readNumber(page, '#hpa-imd-display')) + 43)).toBeLessThan(1.5);
+    },
   },
 
   // ============================================================
@@ -173,7 +197,7 @@ const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
     id: 'handover-threshold-quiz',
     title: 'Handover Threshold',
     type: 'quiz',
-    correctAnswer: 'AGC at max with continued fade, or modem dropping lock',
+    correctAnswer: 'Raw C/N under the 7 dB action threshold and still falling, AGC at max with continued fade, or the modem dropping lock',
   },
   {
     id: 'decision-hold',
@@ -188,8 +212,9 @@ const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
   {
     id: 'sustained-monitor',
     title: 'Hold Through the Cell',
-    // Phase 27 Q4: the 20-min rain cell is a command-bar skip, offered once
-    // the lock / C/N hold rows are met; the objective ends with the weather event
+    // Phase 27 Q4 / Phase 28 D1: the 20-min rain cell is a command-bar skip,
+    // offered once the lock / C/N hold rows are met; it lands at the end of
+    // the cell and the mission clock reads HOLD while the step waits
     type: 'objective-skip',
     waitDoneMs: 120000,
   },
@@ -208,7 +233,7 @@ const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
     title: 'Log the Hold',
     type: 'quiz',
     correctAnswer:
-      'Heavy rain cell over VT-01, under 1 dB of C/N lost (mostly sky noise). Held TM-1 per customer SLA preference; AGC far from max, modem lock maintained, no handover.',
+      'Heavy rain cell over VT-01, under 1 dB of C/N lost (mostly sky noise). Held TM-1 per SeaLink SLA preference; watched Raw C/N 7 dB, AGC at max, modem unlock - none fired. SeaLink told service held.',
   },
 ];
 
@@ -271,6 +296,7 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);
+      await objective.checkScreen?.(page);
       await answerQuizByText(page, objective.correctAnswer!);
       break;
 
@@ -300,6 +326,8 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
       // The skip is offered on the command bar once its rows are met
       const skip = page.locator('#objective-skip-control');
       await expect(skip).toBeVisible({ timeout: 90000 });
+      // D1: waiting the cell out costs no mission time - the HUD shows HOLD
+      await expect(page.locator('#scenario-timer-hold')).toBeVisible({ timeout: 10000 });
       await skip.click({ timeout: 90000 });
       break;
     }

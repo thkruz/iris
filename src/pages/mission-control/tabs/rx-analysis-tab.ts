@@ -693,7 +693,7 @@ export class RxAnalysisTab extends BaseElement {
                       </div>
                       <div class="mb-2">
                         <div class="d-flex justify-content-between">
-                          <span class="text-muted small" title="Carrier to noise density (thermal noise in 1 Hz)">C/N0:</span>
+                          <span class="text-muted small" title="Carrier to noise-plus-interference density in 1 Hz: C/N plus 10 log10 of the modem bandwidth">C/N0:</span>
                           <span id="cn0-display" class="fw-bold font-monospace">-- dB-Hz</span>
                         </div>
                       </div>

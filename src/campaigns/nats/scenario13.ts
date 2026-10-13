@@ -4,7 +4,7 @@ import type { Objective } from '@app/objectives/objective-types';
 import type { ScenarioData } from '@app/ScenarioData';
 import type { dB, dBm, MHz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
-import { maineGroundStationOperational, vermontGroundStation } from './ground-stations';
+import { ME02_HOT_RF_FRONT_END, ME02_TM2_ANTENNA_STATE, ME02_TM2_TRANSMITTER, maineGroundStationOperational, vermontGroundStation } from './ground-stations';
 import { tidemark1Satellite, tidemark2Satellite } from './satellites';
 
 /**
@@ -49,8 +49,8 @@ export const scenario13Data: ScenarioData = {
   duration: '25-30 min',
   difficulty: 'intermediate',
   missionType: 'Trend Assessment',
-  description: `Mid-shift on VT-01. TIDEMARK-1 carrying normal customer traffic. The BUC temperature trend flagged at 0953 with the BUC at 57°C; at 1003 it reads 62°C and is still rising, now about a third of a degree per minute. TX Chain shows the curve: Trend, the 30-minute sparkline, and a rolling 10 min ago readout (it reads 57°C at 1003 and moves up with the clock). No over-temperature alarm yet, just a cooling-fault warning on the BUC fan.<br><br>Nothing else has moved. GPSDO locked, RX beacon clean, HPA in backoff. The question is whether to act now, schedule a swap and keep going, switch to backup, or hold and monitor.<br><br>The right answer is judgment, not a checklist. Read the trend, pick a course of action, and execute it without putting the customer in the dark.`,
-  equipment: ['9-meter C-band Antenna', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'ME-02: Operational'],
+  description: `Mid-shift on VT-01. TIDEMARK-1 carrying normal customer traffic. The BUC temperature trend flagged at 0953 with the BUC at 57°C; at 1003 it reads 62°C and is still rising, now about a third of a degree per minute. The BUC THERMAL readout on TX Chain shows the curve: Trend (1 min), the 30-minute sparkline, and a rolling 10 min ago readout (it reads 57°C at 1003 and moves up with the clock). No over-temperature alarm yet, just a cooling-fault warning on the BUC fan.<br><br>Nothing else has moved. GPSDO locked, RX beacon clean, HPA in backoff. The question is whether to act now, schedule a swap and keep going, switch to backup, or hold and monitor.<br><br>The right answer is judgment, not a checklist. Read the trend, pick a course of action, and execute it without putting the customer in the dark.`,
+  equipment: ['9-meter C-band Antenna', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'ME-02: Operational (TIDEMARK-2)'],
   timeLimitSeconds: 30 * 60,
   settings: {
     isSync: true,
@@ -89,7 +89,17 @@ export const scenario13Data: ScenarioData = {
           }),
         ],
       },
-      maineGroundStationOperational,
+      // ME-02 carrying TIDEMARK-2 in the background (nats-r2-s13-F2): with its
+      // TX cold and nothing in its passband, the ticker showed "ME-02(RF1): AGC
+      // on noise only" all shift on a VT-01-only story. On TM-2 with its hub
+      // carrier keyed, as in S16, Maine is the quiet sister station the brief
+      // implies.
+      {
+        ...maineGroundStationOperational,
+        antennasState: [ME02_TM2_ANTENNA_STATE],
+        rfFrontEnds: [ME02_HOT_RF_FRONT_END],
+        transmitters: [ME02_TM2_TRANSMITTER],
+      },
     ],
     satellites: [tidemark1Satellite, tidemark2Satellite],
     missionBriefUrl: 'https://docs.signalrange.space/campaign-1/scenario-13?content-only=true&dark=true',
@@ -102,8 +112,10 @@ export const scenario13Data: ScenarioData = {
     // draws 4.04 A (97 W from 24 V), so it heads for 25 + 1.38 x 0.30 x 96.6 =
     // 65 degC: from 62 that is a ~0.3 degC/min climb (10 min time constant).
     // At the 23 dB operating gain (3.07 A, 74 W) the target is 55.5 degC, so
-    // the de-rate turns the curve at once and it passes 61 degC in 2-3 min,
-    // never reaching the 70 degC trip.
+    // the de-rate turns the curve at once (Trend (1 min) goes negative within
+    // ~30 s) and it passes 61 degC about 3 min later: 10 ln((T0 - 55.5) / 5.5)
+    // min, 2.1 min from 62.3, 2.8 from 62.8, 3.5 from 63.3 (r3: 3:05 from
+    // 62.8). Never reaches the 70 degC trip.
     hardwareFaultEvents: [
       {
         id: 'vt-buc-thermal',
@@ -239,7 +251,7 @@ export const scenario13Data: ScenarioData = {
       id: 'read-buc-temp-trend',
       nice: ['T0153', 'K0064'],
       title: 'Read the Temperature Trend',
-      description: 'Read the BUC temperature and its trend on TX Chain (the Trend and 10 min ago readouts and the 30-minute curve) and call the trend.',
+      description: 'Read the BUC temperature and its trend on the TX Chain THERMAL readout (Temp, Trend (1 min), 10 min ago and the 30-minute curve) and call the trend.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['open-tx-chain'],
       timeLimitSeconds: 2 * 60,
@@ -250,16 +262,19 @@ export const scenario13Data: ScenarioData = {
           description: 'Trend Projection',
           params: {
             character: Character.SYSTEM,
-            question: 'BUC temperature is 62°C (57°C ten minutes ago) and still rising at about +0.3°C/min. If that slope holds, when does it cross the 70°C trip?',
+            // Read off the panel, not the stem (nats-r3-s13-F1): Temp ~62.3 and
+            // Trend (1 min) ~+0.27-0.30 C/min in the first two minutes, so
+            // (70 - T) / slope = 25-30 min, drifting toward 35 as the slope eases
+            question: 'Read Temp and Trend (1 min) on the BUC THERMAL readout. If that slope held, when would the BUC reach the 70°C trip?',
             options: [
-              'Roughly 25-30 minutes from now if nothing changes',
+              'In about half an hour (25-35 minutes) if nothing changes',
               'Already past it - the dashboard alarm is suppressed',
               'Never - thermal trends always self-stabilize before trip',
               'In a few seconds - the slope accelerates exponentially',
             ],
             correctIndex: 0,
             explanation:
-              'Linear extrapolation: 8°C of headroom at +0.3°C/min is roughly 25 minutes. The slope has been easing, so that is the worst case, not a forecast - the unit may level off short of the trip, or may not. Either way there is time for a deliberate response.',
+              'Linear extrapolation: about 8°C of headroom at about +0.3°C/min is roughly half an hour. The slope has been easing (10 min ago reads about 57°C, when it was climbing nearer 0.8°C/min), so that is the worst case, not a forecast - the unit may level off short of the trip, or may not. Either way there is time for a deliberate response.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -577,15 +592,15 @@ export const scenario13Data: ScenarioData = {
       nice: ['T0153', 'T0431'],
       title: 'Confirm the Trend Is Bending',
       description:
-        'Watch the BUC on TX Chain until the curve turns over: temperature below 61°C and current draw under 3.2 A. Then decide what evidence confirms the de-rate took.',
+        'Watch the BUC THERMAL readout on TX Chain until the curve turns over: current draw under 3.2 A (seconds) and temperature below 61°C (about 3 minutes after the de-rate). Then decide what evidence confirms the de-rate took.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['verify-hpa-headroom'],
       timeLimitSeconds: 6 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
         // The curve has to actually bend on the panel (nats-s13-F3): the
-        // de-rate drops the thermal target to ~56 degC, so from ~62-64 degC
-        // the reading passes 61 within about 2-3 minutes (r2 replay: ~3 min)
+        // de-rate drops the thermal target to ~56 degC, so from ~62-63 degC
+        // the reading passes 61 in about 3 minutes (2-4; r2 and r3: ~3 min)
         {
           type: 'buc-temperature-normal',
           description: 'BUC Temperature Below 61°C',
@@ -605,7 +620,7 @@ export const scenario13Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'How do you know the de-rate worked before you log the shift?',
             options: [
-              'Watch a few minutes: current drops to about 3.1 A at once, temperature turns down and passes 61°C in 2-3 minutes, carrier still locked',
+              'Watch a few minutes: current drops to about 3.1 A at once, Trend (1 min) turns negative, temperature passes 61°C about 3 minutes in, carrier still locked',
               'Trust the first reading: current drops the moment the gain changes, so the temperature needs no watching',
               'Check the setpoint: gain reads 23 dB, HPA output unchanged, no thermal verification is needed beyond that',
               'Mute and re-measure: carrier off for a minute, cold-start temperature recorded, then unmute and compare readings',
@@ -613,7 +628,7 @@ export const scenario13Data: ScenarioData = {
             correctIndex: 0,
             preserveOptionOrder: true,
             explanation:
-              'Current answers in seconds; temperature lags behind the thermal mass (about a 10-minute time constant). It turns down at once and needs 2-3 minutes to pass 61°C, then keeps easing toward the mid-50s. Watch the curve, not a single reading.',
+              'Current answers in seconds and Trend (1 min) goes negative within about half a minute; the temperature lags behind the thermal mass (about a 10-minute time constant). From 62-63°C it needs about 3 minutes to pass 61°C, then keeps easing toward the mid-50s. Watch the curve, not a single reading.',
             pointPenalty: 5,
           },
           mustMaintain: false,

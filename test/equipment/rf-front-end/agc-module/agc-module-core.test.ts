@@ -164,7 +164,7 @@ describe('AGCModuleCore', () => {
       expect(agcModule.state.inputPower).toBeCloseTo(spm.getExternalNoise() - spm.agcGain, 1);
       expect(agcModule.state.inputPower).toBeGreaterThan(AGCModuleCore.DETECTOR_FLOOR_DBM);
       expect(agcModule.isNoiseOnly).toBe(true);
-      expect(agcModule.getAlarms()).toContain('AGC on noise only - no carrier in passband');
+      expect(agcModule.getAlarms()).toContain('AGC on noise only - passband power is noise, no traffic carrier');
     });
 
     it('a carrier above the noise clears the no-carrier warning', () => {

@@ -34,9 +34,15 @@ import { c1TransponderPhysics, ses10Satellite, tidemark1Satellite, VERMONT_LOOK_
  *   - T0153: Monitor network capacity and performance
  *   - S0593: Skill in handling incidents
  *
- * Premise: Halifax reports TIDEMARK-2's north-south station-keeping thrusters
- * are degraded and burns are suspended. Residual inclination is building - the
- * bird traces a growing daily figure-8 the stale ephemeris no longer predicts.
+ * Premise (one story, nats-r3-s18-F1 / decision D9): this morning's
+ * north-south station-keeping burn ran long on a stuck thruster valve and
+ * left TIDEMARK-2 with about 1.3 deg of inclination; further burns are
+ * suspended. The bird now swings through a daily +-1.3 deg figure-8. The
+ * published ephemeris predates the burn, so program-track points at a
+ * station-kept bird: the gap opens from zero at the ~0800 node through the
+ * morning (~0.4 deg at 0915, ~0.3 deg/h, the full 1.3 deg around 1400).
+ * Pointing loss ~12 (gap/HPBW)^2 dB: ~6 dB now (beacon 28 dB, carrier still
+ * locked near 7 dB), carrier lock lost near 0.55 deg (within the hour).
  * Program-track is bleeding C/N. The operator (covering ME-02) must recognize
  * the signature, transition to step-track, hold the link, and feed the
  * spacecraft team ground-side observations - while staying inside the ground
@@ -60,8 +66,8 @@ const tidemark2DriftingSatellite = new Satellite(
   [], // No stand-in: TM-2's hub carrier is ME-02's own uplink (phase 27)
   [],
   {
-    az: 219.7 as Degrees,
-    el: 26.3 as Degrees,
+    az: 143.3 as Degrees, // 45 W from VT-01 (Phase 28 D4, was 219.7 / 26.3)
+    el: 31.8 as Degrees,
     rotation: -25 as Degrees,
     frequencyOffset: 2.225e9 as Hertz,
     // Stale ephemeris: station-keeping suspended, prediction no longer matches
@@ -73,10 +79,10 @@ const tidemark2DriftingSatellite = new Satellite(
     lookAnglesFrom: VERMONT_LOOK_ANGLE_SITE,
     orbitType: 'geosynchronous',
     geosyncConfig: {
-      minAz: 218.4 as Degrees, // Growing figure-8: ±1.3° and widening daily
-      maxAz: 221.0 as Degrees,
-      minEl: 25.0 as Degrees,
-      maxEl: 27.6 as Degrees,
+      minAz: 142.0 as Degrees, // Daily figure-8 from ~1.3° of inclination: ±1.3°
+      maxAz: 144.6 as Degrees,
+      minEl: 30.5 as Degrees,
+      maxEl: 33.1 as Degrees,
     },
     transponderConfigs: [
       {
@@ -126,13 +132,13 @@ export const scenario18Data: ScenarioData = {
   duration: '30-35 min',
   difficulty: 'advanced',
   missionType: 'Anomaly Response',
-  description: `Halifax called at 0850: TIDEMARK-2's station-keeping thrusters are degraded and north-south burns are suspended while the vehicle team investigates. Residual inclination is building - from Maine's dish the bird now traces a growing daily figure-eight that the published ephemeris no longer predicts.<br><br>Program-track follows the ephemeris. The ephemeris is wrong. You can watch the C/N bleed in real time.<br><br>You have flown an inclined bird before - AURORA-7 taught you everything this needs. The difference is that this time the satellite is the patient, the spacecraft team is the surgeon, and the ground operator's whole job is to keep the monitors attached: hold the lock, feed Halifax your track data, and know exactly where the ground role ends.`,
+  description: `Halifax called at 0850: TIDEMARK-2's north-south station-keeping burn this morning ran long on a stuck thruster valve and left the bird with about 1.3° of inclination. Further burns are suspended while the vehicle team investigates. From Maine's dish the satellite now swings through a daily figure-eight, about ±1.3°, that the published ephemeris (computed before the burn) does not show.<br><br>Program-track follows the ephemeris. The ephemeris is wrong, and the gap opens a little more every hour this morning. You can watch the C/N bleed in real time.<br><br>You have flown an inclined bird before - AURORA-7 taught you everything this needs. The difference is that this time the satellite is the patient, the spacecraft team is the surgeon, and the ground operator's whole job is to keep the monitors attached: hold the lock, feed Halifax your track data, and know exactly where the ground role ends.`,
   equipment: ['9-meter C-band Antenna (ME-02)', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'Halifax vehicle status feed'],
   timeLimitSeconds: 35 * 60,
   settings: {
     isSync: true,
-    // Brief: Monday 0915 local
-    scenarioStartDate: '2026-03-02',
+    // Brief: Tuesday 0915 local (the day after S17's Monday transit)
+    scenarioStartDate: '2026-03-03',
     scenarioStartWallTime: '09:15:00',
     groundStations: [
       // VT-01: standby on TIDEMARK-1, untouched this shift
@@ -153,15 +159,15 @@ export const scenario18Data: ScenarioData = {
         antennasState: [
           {
             isPowered: true,
-            azimuth: 222.66 as Degrees, // Maine sees TM-2 here, not at Vermont's angles (phase 19.4)
-            elevation: 24.44 as Degrees,
-            polarization: -26.3 as Degrees,
+            azimuth: 146.96 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
+            elevation: 32.42 as Degrees,
+            polarization: -27.6 as Degrees,
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61526,
-            targetAzimuth: 222.66 as Degrees,
-            targetElevation: 24.44 as Degrees,
-            targetPolarization: -26.3 as Degrees,
+            targetAzimuth: 146.96 as Degrees,
+            targetElevation: 32.42 as Degrees,
+            targetPolarization: -27.6 as Degrees,
             slewing: false,
             beaconCN: null, // measured live since 19.2: ~28 dB on the stale ephemeris, ~34 dB under step-track
             beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)
@@ -349,7 +355,7 @@ export const scenario18Data: ScenarioData = {
       id: 'station-keeping-quiz',
       nice: ['K1032', 'K0751'],
       title: 'What Died on the Spacecraft',
-      description: 'Confirm what suspended north-south station-keeping means for the ground.',
+      description: 'Confirm what the overrunning north-south burn did to TIDEMARK-2 as seen from the ground.',
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['dashboard-baseline'],
       timeLimitSeconds: 2 * 60,
@@ -360,16 +366,16 @@ export const scenario18Data: ScenarioData = {
           description: 'Orbit Mechanics',
           params: {
             character: Character.SYSTEM,
-            question: 'With N-S station-keeping burns suspended, what happens to TIDEMARK-2 from our point of view?',
+            question: "Halifax: this morning's north-south burn ran long and left TIDEMARK-2 with about 1.3° of inclination. What does that look like from Maine?",
             options: [
-              'Residual inclination builds - the bird traces a daily figure-8 in az/el that grows over weeks, and the ephemeris gets steadily more wrong',
-              'Orbital altitude decays - the bird drops below the GEO belt within days, and the ephemeris range figures get steadily more wrong',
-              'Longitude drifts east - the bird slides along the GEO arc toward the SES-10 slot within days, and the ephemeris azimuth goes wrong first',
-              'Nothing observable from Maine - N-S station-keeping only matters for collision avoidance, and the ephemeris stays valid for months',
+              'A daily figure-8 - the bird swings about 1.3° north and south of its slot every day, and the ephemeris, computed before the burn, does not show it',
+              'Orbital altitude decay - the bird drops below the GEO belt within days, and the ephemeris range figures get steadily more wrong',
+              'Longitude drift - the bird slides along the GEO arc toward the TIDEMARK-1 slot within days, and the ephemeris azimuth goes wrong first',
+              'Nothing observable from Maine - inclination only matters for collision avoidance, and the ephemeris stays valid for months',
             ],
             correctIndex: 0,
             explanation:
-              "Exactly AURORA-7's life story, fast-forwarded. Inclination is the axis N-S burns fight; without them the figure-8 starts small and grows roughly 0.8-0.9° per year - except this drift is days old and already past the prediction.",
+              'Inclination is the axis north-south burns control. A burn meant to trim a few hundredths of a degree that runs long leaves the orbit tilted: the satellite crosses the equator twice a day and swings about ±1.3° north and south of its slot, a daily figure-8 (the east-west part of the 8 is tiny at this inclination). The burn set its size; only another burn changes it. AURORA-7 got there slowly - with no burns at all inclination builds only 0.8-0.9° a year. TIDEMARK-2 got there in one bad burn this morning.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -423,7 +429,7 @@ export const scenario18Data: ScenarioData = {
       id: 'beamwidth-risk-quiz',
       nice: ['K0721', 'K1032'],
       title: 'How Long Until It Falls Off',
-      description: 'Project the risk: a growing figure-8 against a fixed beamwidth.',
+      description: 'Project the risk: the gap between the stale ephemeris and the real satellite, against a fixed beamwidth.',
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['read-program-track-decay'],
       timeLimitSeconds: 2 * 60,
@@ -434,16 +440,17 @@ export const scenario18Data: ScenarioData = {
           description: 'The Clock',
           params: {
             character: Character.SYSTEM,
-            question: 'The figure-8 is ±1.3° and growing; the dish beamwidth is ~0.6° (ACU HPBW). What does that mean for program-track as a strategy?',
+            question:
+              'The ephemeris predates the burn, so program-track points at a station-kept bird while the real one swings through its daily ±1.3° figure-8. The gap is about 0.4° now (beacon ~6 dB down) and opens about 0.3° an hour; the ACU HPBW is ~0.6°. What does that mean for program-track?',
             options: [
-              'Already lost - the excursion is several beamwidths and growing; any fix that follows the ephemeris fails until Halifax publishes a corrected one',
-              'Fine for another month - the excursion is under a beamwidth at the extremes; the margin holds until Halifax publishes a corrected set',
-              'Acceptable with more gain - a few dB of LNB gain covers the pattern loss; the strategy holds until Halifax publishes a corrected set',
-              'Self-correcting - program-track refines its ephemeris from the beacon as the drift grows; it converges before Halifax publishes a fix',
+              'Borrowed time - within the hour the gap passes about half a beamwidth and the carrier drops out of lock; by early afternoon the bird is far outside the beam',
+              'Fine for the shift - ±1.3° is the size of the figure-8, not the pointing error, and program-track already follows the figure-8 in the ephemeris',
+              'Fine with more gain - a few dB of LNB gain covers the pattern loss, and the strategy holds until Halifax publishes a corrected ephemeris',
+              'Self-correcting - program-track refines its ephemeris from the beacon as the gap grows, and converges before Halifax publishes a fix',
             ],
             correctIndex: 0,
             explanation:
-              'No gain knob recovers pointing loss. When reality has left the prediction by multiple beamwidths, the only thing worth tracking is the satellite itself - which is what the beacon is for.',
+              'Pointing loss grows with the square of the error, about 12 x (gap / beamwidth)² dB. 0.4° costs ~6 dB - what the ACU shows: beacon 28 dB, carrier still locked. Near 0.55° the loss reaches ~9-10 dB and the carrier falls under lock; at 1.3° it is tens of dB, off the beam entirely. The ephemeris knows nothing of the burn, so program-track keeps pointing at the old slot while the gap opens. No gain knob recovers pointing loss (the LNB lifts the noise with the signal): track the satellite itself, which is what the beacon is for.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -512,7 +519,7 @@ export const scenario18Data: ScenarioData = {
       id: 'verify-carrier-recovery',
       nice: ['T0153', 'T1314'],
       title: 'Carrier Recovery',
-      // Ledger (nats-scenario18.json): ME-02's own TM-2 carrier reads 7.2 dB
+      // Ledger (nats-scenario18.json): ME-02's own TM-2 carrier reads about 7.8 dB
       // on the stale ephemeris; step-track wins back ~6 dB (beacon 28 -> 34)
       description:
         'Open RX Analysis and confirm the customer carrier is back: locked with C/N at least 12 dB, held for 15 s. On the stale ephemeris it sat near 7, about 3 dB above the lock point.',
@@ -741,9 +748,9 @@ export const scenario18Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Which entry hands this off correctly?',
             options: [
-              'TM-2 vehicle anomaly (Halifax ref): N-S burns suspended, ephemeris stale. ME-02 step-track from ~0920, carrier recovered, no impact. Pointing history to Halifax. Anomaly OPEN.',
+              'TM-2 vehicle anomaly (Halifax ref): N-S burn overran, ~1.3° inclination, ephemeris stale. ME-02 step-track from ~0920, carrier recovered, no impact. Pointing history to Halifax. Anomaly OPEN.',
               'TM-2 tracking anomaly (ME-02 ref): program-track lost margin, ephemeris stale. Step-track from ~0920, carrier recovered, no impact. Fix confirmed, no further action. Anomaly CLOSED.',
-              'TM-2 vehicle anomaly (Halifax ref): N-S burns suspended, ephemeris stale. ME-02 step-track 0920 to 0930, carrier recovered, no impact. Returned to program-track. Anomaly CLOSED.',
+              'TM-2 vehicle anomaly (Halifax ref): N-S burn overran, ~1.3° inclination, ephemeris stale. ME-02 step-track 0920 to 0930, carrier recovered, no impact. Returned to program-track. Anomaly CLOSED.',
               'TM-2 vehicle anomaly (Halifax ref): thruster degradation under investigation. ME-02 carrier nominal, no impact. Halifax holds all detail and next steps. Anomaly OPEN, no ground actions.',
             ],
             correctIndex: 0,
@@ -765,7 +772,7 @@ export const scenario18Data: ScenarioData = {
         <em>[Text message from Dana at 09:07]</em>
       </p>
       <p>
-        "Marcus called the ops line at 0850 - TM-2's north-south burns are coming up short, thruster degradation, vehicle team on it. The bird's drifting past the ephemeris and Maine's link is paying for it. You're covering ME-02 today: keep the link, feed Halifax what you see, and know where your job ends. The vehicle is theirs. The lock is yours."
+        "Marcus called the ops line at 0850 - TM-2's north-south burn this morning ran long, stuck thruster valve, and left the bird with over a degree of inclination. Burns are suspended, vehicle team's on it. The ephemeris predates the burn and Maine's link is paying for it. You're covering ME-02 today: keep the link, feed Halifax what you see, and know where your job ends. The vehicle is theirs. The lock is yours."
       </p>
       `,
       character: Character.DANA_TORRES,
@@ -776,7 +783,7 @@ export const scenario18Data: ScenarioData = {
       'beamwidth-risk-quiz': {
         text: `
         <p>
-          Marcus here. Confirming what you're seeing: residual inclination is building faster than we'd like and the published ephemeris is days stale. Don't wait on a corrected set from us - it'll be a while. You've got a beacon; I'd trust it over my numbers right now.
+          Marcus here. Confirming what you're seeing: the burn left us about 1.3 degrees of inclination, and the published ephemeris predates it, so the gap only opens from here until early afternoon. Don't wait on a corrected set from us - it'll be a while. You've got a beacon; I'd trust it over my numbers right now.
         </p>
         `,
         character: Character.MARCUS_CHEN,
@@ -786,7 +793,7 @@ export const scenario18Data: ScenarioData = {
       'verify-carrier-recovery': {
         text: `
         <p>
-          And there it is - I can see your C/N from the payload side, right back where it belongs. The dish is flying the bird instead of the prediction. Nicely done, eh.
+          And there it is - your uplink's back up at the transponder, right where it belongs. The dish is flying the bird instead of the prediction. Nicely done, eh.
         </p>
         `,
         character: Character.MARCUS_CHEN,

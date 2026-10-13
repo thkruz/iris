@@ -307,6 +307,19 @@ describe('HPAModuleCore (phase 19.6 amplifier model)', () => {
       expect(hpa.state.isHpaEnabled).toBe(false);
     });
 
+    it('the first Enable works when the switch flag and the output disagree (nats-r3-s04-F2)', () => {
+      // S4 authors isHpaEnabled: false over a base with isHpaSwitchEnabled: true
+      const hpa = c1Hpa(fe, { isHpaEnabled: false, isHpaSwitchEnabled: true });
+      hpa.handleHpaToggle();
+      expect(hpa.state.isHpaEnabled).toBe(true);
+      expect(hpa.state.isHpaSwitchEnabled).toBe(true);
+    });
+
+    it('getEnableBlockReason says why an unpowered HPA refuses Enable', () => {
+      expect(c1Hpa(fe, { isPowered: false }).getEnableBlockReason()).toBe('HPA power is off');
+      expect(c1Hpa(fe).getEnableBlockReason()).toBeNull();
+    });
+
     it('handleHpaToggle does nothing when unpowered', () => {
       const hpa = c1Hpa(fe, { isPowered: false, isHpaEnabled: false, isHpaSwitchEnabled: false });
       hpa.handleHpaToggle();

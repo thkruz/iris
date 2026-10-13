@@ -88,7 +88,7 @@ const SCENARIO_22_OBJECTIVES: Scenario22Objective[] = [
     id: 'measure-beacon-quiz',
     title: "Measure Today's Beacon (read)",
     type: 'quiz',
-    correctAnswer: 'About -67 dBm: about 4 dB under the reference, in line with the -4.0 dB monthly median in the log',
+    correctAnswer: 'About -69 dBm: about 6 dB under the reference, in line with the -6.3 dB monthly median in the log',
   },
   {
     // Phase 27: VT-01 starts off the air; key the staged AURORA-7 test carrier
@@ -112,7 +112,7 @@ const SCENARIO_22_OBJECTIVES: Scenario22Objective[] = [
     id: 'record-data-point-quiz',
     title: "Report: Today's Measurement",
     type: 'quiz',
-    correctAnswer: 'Beacon at -4.0 dB relative to the 24-month reference; step-track held lock at this level; carrier C/N above demod threshold',
+    correctAnswer: 'Beacon at -6.3 dB relative to the 36-month reference; step-track held lock at this level; carrier C/N above demod threshold',
   },
 
   // PHASE 2: TREND ANALYSIS
@@ -120,7 +120,7 @@ const SCENARIO_22_OBJECTIVES: Scenario22Objective[] = [
     id: 'trend-slope-quiz',
     title: 'Report: the Trend',
     type: 'quiz',
-    correctAnswer: 'Accelerating - the last 6 months lost ~1.6 dB against ~1.3 dB in the 6 before; a steepening curve, not a straight line',
+    correctAnswer: 'Accelerating - the last 6 months lost ~1.6 dB against ~1.4 dB in the 6 before; a steepening curve, not a straight line',
   },
   {
     id: 'binding-constraint-quiz',
@@ -152,7 +152,7 @@ const SCENARIO_22_OBJECTIVES: Scenario22Objective[] = [
     id: 'false-precision-quiz',
     title: 'Confidence Discipline',
     type: 'quiz',
-    correctAnswer: "Explicitly: today's -4.0 dB and the historical points are measured; the sunset window is a projection under stated assumptions",
+    correctAnswer: "Explicitly: today's -6.3 dB and the historical points are measured; the sunset window is a projection under stated assumptions",
   },
 
   // Verify the report BEFORE the final quizzes (modal overlays the sidebar after)
@@ -173,7 +173,7 @@ const SCENARIO_22_OBJECTIVES: Scenario22Objective[] = [
     id: 'log-delivery',
     title: 'Deliver and Log',
     type: 'quiz',
-    correctAnswer: 'AURORA-7 EOL assessment to board: beacon -4.0 dB, trend accelerating; migrate now (inside 2 quarters), floor in 2-3, trigger at tracking floor',
+    correctAnswer: 'AURORA-7 EOL assessment to board: beacon -6.3 dB, trend accelerating; migrate now (inside 2 quarters), floor in 2-3, trigger at tracking floor',
   },
   {
     id: 'log-delivery-typed',
@@ -250,7 +250,8 @@ async function configureSpeca(page: import('@playwright/test').Page, centerFrequ
   await page.waitForTimeout(4000);
 
   // The quiz asks for the level off the Peak readout: read it from the
-  // screen first (about -67 dBm, ~4 dB under the -63 dBm reference)
+  // screen first (about -69 dBm, ~6 dB under the -63 dBm reference;
+  // nats-r3-s22-F1 read -69.2 to -69.4 step-tracked)
   await page.locator('#sa-peak-search').click();
   const readout = page.locator('#sa-peak-readout');
   await expect
@@ -261,9 +262,10 @@ async function configureSpeca(page: import('@playwright/test').Page, centerFrequ
       },
       { timeout: 15000 }
     )
-    .toBeGreaterThan(-70.5);
+    .toBeGreaterThan(-71);
   const peakDbm = Number.parseFloat(/@\s*(-?\d+(?:\.\d+)?)\s*dBm/u.exec((await readout.textContent()) ?? '')?.[1] ?? 'NaN');
-  expect(peakDbm).toBeLessThan(-63.5);
+  // The keyed option is "about -69 dBm, about 6 dB under": hold the screen to it
+  expect(peakDbm).toBeLessThan(-67.5);
 }
 
 /**

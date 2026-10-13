@@ -77,7 +77,8 @@ const SCENARIO_21_OBJECTIVES: Scenario21Objective[] = [
     id: 'signature-shape-quiz',
     title: 'Signature vs the Database',
     type: 'quiz',
-    correctAnswer: "It matches nothing in the database: cross-pol would mirror a neighbor's carrier, an errant uplink would sit at a known slot",
+    correctAnswer:
+      "It matches nothing benign: a featureless ~6 MHz noise band parked on our carrier's top edge is neither a neighbor's carrier nor a modulated uplink at a known slot",
   },
 
   // PHASE 2: DENIAL VS INTRUSION

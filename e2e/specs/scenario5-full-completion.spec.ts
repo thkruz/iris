@@ -138,7 +138,7 @@ const SCENARIO_5_OBJECTIVES: Scenario5Objective[] = [
     id: 'phase-7-understand-impact',
     title: 'Understand the AGC Impact',
     type: 'quiz',
-    correctAnswer: 'The AGC sees the spike as part of the total signal and reduces gain accordingly',
+    correctAnswer: "The spike's own power sits inside our passband and takes a share of the transponder's output; the AGC gain cut is only the symptom",
   },
 
   // ============================================================

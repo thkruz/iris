@@ -547,6 +547,17 @@ export class TransmitterAdapter {
     this.lastUpdateTime_ = now;
 
     this.updateOutputPowerDisplay_();
+
+    // Boot countdown ticks without a state change
+    if (this.getActiveModem_()?.isBooting) {
+      this.updateSwitchesAndLeds_();
+      this.updateStatusBar_();
+    }
+  }
+
+  /** Seconds left in the active modem's boot, rounded up (0 when not booting) */
+  private bootSecondsLeft_(): number {
+    return Math.ceil(this.transmitter.getBootRemainingMs() / 1000);
   }
 
   /**
@@ -605,7 +616,7 @@ export class TransmitterAdapter {
 
     const bootStatus = this.domCache_.get('boot-status');
     if (bootStatus) {
-      bootStatus.textContent = isBooting ? 'BOOTING' : '';
+      bootStatus.textContent = isBooting ? `BOOTING ${this.bootSecondsLeft_()} s` : '';
       bootStatus.classList.toggle('d-none', !isBooting);
     }
 
@@ -671,7 +682,8 @@ export class TransmitterAdapter {
     const activeModem = this.getActiveModem_();
     if (activeModem?.isBooting) {
       statusBar.className = 'alert alert-warning mt-3';
-      statusBar.textContent = `Modem ${activeModem.modem_number} BOOTING - TX modem still initializing`;
+      // Config entered now is applied and kept; only carrier keying waits
+      statusBar.textContent = `Modem ${activeModem.modem_number} BOOTING - TX modem still initializing, ready in ${this.bootSecondsLeft_()} s (config can be applied; Transmit unlocks when the boot completes)`;
     } else if (alarms.length === 0) {
       if (this.transmitter.state.modems[this.transmitter.state.activeModem - 1]?.isTransmitting) {
         statusBar.className = 'alert alert-success mt-3';

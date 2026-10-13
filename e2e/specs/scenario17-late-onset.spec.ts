@@ -12,8 +12,10 @@ import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForS
  * could never tick (sky noise stayed 0, Sky Temp read 10 K).
  *
  * Fix: the weather event is anchored to the objective
- * (startAfterObjectiveId: 'observe-onset', 20 s after it activates), and the
- * Sky Temp readout includes the transit's noise.
+ * (startAfterObjectiveId: 'observe-onset', as it activates), and the Sky Temp
+ * readout includes the transit's noise. Since nats-r3-s17-F1 a skippable
+ * hold, 'stand-by-for-window', sits between the notice and the onset step and
+ * ends at the prediction sheet's 10:32:30 window-open on the station clock.
  *
  * This spec plays a slow operator, the way the reported players were slow:
  * it spends most of each objective's countdown before acting, which walks the
@@ -164,9 +166,17 @@ test.describe('Scenario 17 Late Onset Regression', () => {
       page,
       'Predicted solar transit on TIDEMARK-1, window and peak times attached; possible 1-3 minute carrier loss near peak, self-recovering; this is SLA advance notice.'
     );
+
+    // The stand-by hold waits for the sheet's window-open; no transit before it
+    await expect.poll(async () => (await readObjective(page, 'stand-by-for-window'))?.isActive, { timeout: 15_000 }).toBe(true);
+    expect(await readObjective(page, 'observe-onset')).toEqual({ isActive: false, isCompleted: false });
+    expect(await readSkyNoiseDb(page)).toBe(0);
+    const skip = page.locator('#objective-skip-control');
+    await expect(skip).toBeVisible({ timeout: 15_000 });
+    await skip.click();
     await expect.poll(async () => (await readObjective(page, 'observe-onset'))?.isActive, { timeout: 15_000 }).toBe(true);
 
-    // Anchor + 20 s start, >2 dB ~40 s later: about a minute of run time
+    // Anchored start as the objective comes up, >2 dB ~55 s later: about a minute of run time
     await expect.poll(() => readSkyNoiseDb(page), { timeout: 120_000, intervals: [1000] }).toBeGreaterThan(2);
 
     // Phase 27 B7: the onset quiz waits for the sky-noise row listed before it

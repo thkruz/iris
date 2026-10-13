@@ -2,12 +2,15 @@ import { EventBus } from '@app/events/event-bus';
 import { Events, ObjectivesAllCompletedData } from '@app/events/events';
 import { Logger } from '@app/logging/logger';
 import { DecisionManager } from '@app/modal/decision-manager';
+import { DialogManager } from '@app/modal/dialog-manager';
 import { HintManager } from '@app/modal/hint-manager';
 import { LevelCompleteModal } from '@app/modal/level-complete-modal';
 import { QuizManager } from '@app/modal/quiz-manager';
+import { QuizModal } from '@app/modal/quiz-modal';
 import { ObjectivesManager } from '@app/objectives';
 import { Router } from '@app/router';
 import { ScenarioManager } from '@app/scenario-manager';
+import { ScenarioDialogManager } from '@app/scenarios/scenario-dialog-manager';
 import { Auth } from '@app/user-account/auth';
 import { getUserDataService } from '@app/user-account/user-data-service';
 import { ScoreBreakdown, ScoreCalculator } from './score-calculator';
@@ -38,6 +41,8 @@ export class ScenarioCompletionHandler {
   private static pendingCompletion_: PendingCompletion | null = null;
   /** The auth flush listener lives for the whole session - register it once */
   private static isAuthFlushRegistered_ = false;
+  /** How often the completion flow re-checks for open dialogs and quizzes, ms */
+  static readonly QUIET_POLL_MS = 200;
 
   private readonly eventBus_: EventBus;
   private boundHandler_: ((data: ObjectivesAllCompletedData) => void) | null = null;
@@ -153,7 +158,15 @@ export class ScenarioCompletionHandler {
       ScenarioCompletionHandler.pendingCompletion_ = { scenarioId, score, scenarioNumber };
     }
 
-    // Show the completion modal
+    // The score and "Completed in" were fixed above, at the moment of
+    // completion; holding the modal until the closing lines are read only
+    // changes when it opens (nats-r3-s03-F3)
+    const isStillOnPage = await this.waitForQuietScreen_();
+    if (!isStillOnPage) {
+      return;
+    }
+
+    // Show the completion modal on top of an empty screen
     LevelCompleteModal.getInstance().showCompletion(
       {
         score,
@@ -165,6 +178,33 @@ export class ScenarioCompletionHandler {
       },
       () => this.saveOnContinue_(scenarioId, score, scenarioNumber)
     );
+  }
+
+  /**
+   * Resolve once no character dialog is on screen, queued or about to be
+   * scheduled, and no quiz is open, so Mission Complete opens on top instead
+   * of underneath the closing dialog. Resolves false if the page was left
+   * while waiting.
+   */
+  private waitForQuietScreen_(): Promise<boolean> {
+    return new Promise((resolve) => {
+      const check = (): void => {
+        if (!this.isInitialized_) {
+          resolve(false);
+          return;
+        }
+        if (ScenarioCompletionHandler.isScreenQuiet_()) {
+          resolve(true);
+          return;
+        }
+        setTimeout(check, ScenarioCompletionHandler.QUIET_POLL_MS);
+      };
+      check();
+    });
+  }
+
+  private static isScreenQuiet_(): boolean {
+    return !ScenarioDialogManager.hasPendingClips() && !DialogManager.getInstance().isBusy() && !QuizModal.isShowingQuiz();
   }
 
   /**
@@ -243,7 +283,7 @@ export class ScenarioCompletionHandler {
    */
   private extractCampaignId_(): string {
     const path = Router.getInstance().getCurrentPath();
-    const match = path.match(/^\/campaigns\/([^/]+)/);
+    const match = path.match(/^\/campaigns\/([^/]+)/u);
     return match?.[1] ?? 'nats'; // Default to 'nats' if not found
   }
 

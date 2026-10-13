@@ -86,15 +86,15 @@ export const scenario9Data: ScenarioData = {
         antennasState: [
           {
             isPowered: true,
-            azimuth: 222.58 as Degrees, // Maine sees TM-2 here, not at Vermont's angles (phase 19.4)
-            elevation: 24.38 as Degrees,
-            polarization: -26.3 as Degrees,
+            azimuth: 146.96 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
+            elevation: 32.42 as Degrees,
+            polarization: -27.6 as Degrees,
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61526, // TIDEMARK-2
-            targetAzimuth: 222.58 as Degrees,
-            targetElevation: 24.38 as Degrees,
-            targetPolarization: -26.3 as Degrees,
+            targetAzimuth: 146.96 as Degrees,
+            targetElevation: 32.42 as Degrees,
+            targetPolarization: -27.6 as Degrees,
             slewing: false,
             beaconCN: 10.2 as dB,
             beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)
@@ -355,7 +355,7 @@ export const scenario9Data: ScenarioData = {
             correctIndex: 0,
             // Ledger: VT-01's own TP-1 carrier, 13.1 dB at shift start
             explanation:
-              'About 13 dB: the TP-1 carrier VT-01 uplinks, coming back down through TIDEMARK-1, with some 9 dB over the 4.2 dB QPSK 3/4 threshold. That is the clear-sky baseline to compare against on the next shift.',
+              'About 13 dB: the TP-1 carrier VT-01 uplinks, coming back down through TIDEMARK-1, some 9 dB above the QPSK 3/4 threshold (Es/N0 5.0 dB, about 4.2 dB of C/N on a clean carrier). That is the clear-sky baseline to compare against on the next shift.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -681,7 +681,7 @@ export const scenario9Data: ScenarioData = {
       nice: ['S0421', 'K0741'],
       title: 'Inhibit TX Before Repointing',
       description:
-        "The sister teleport is taking TIDEMARK-1's carrier for the check. On TX Chain, disable VT-01's HPA output before the dish moves: a keyed dish sweeping off TIDEMARK-1 would paint the neighbouring satellites, and two stations on one carrier interfere.",
+        "The sister teleport is taking TIDEMARK-1's carrier for the check. On TX Chain, disable VT-01's HPA output before the dish moves: a keyed dish sweeping off TIDEMARK-1 would paint the neighbouring satellites, and two stations on one carrier interfere. Expect VT-01's Dashboard to show 'AGC on noise only' until you take TM-1 back: with our carrier off, the receive modem's passband holds noise and no traffic carrier.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['switch-to-vermont'],
       timeLimitSeconds: 2 * 60,
@@ -707,7 +707,8 @@ export const scenario9Data: ScenarioData = {
       id: 'repoint-to-tidemark3',
       nice: ['S0421', 'K1032', 'T1567'],
       title: 'Repoint VT-01 to TIDEMARK-3',
-      description: 'With TX inhibited, command program-track to TIDEMARK-3 (NORAD 61527) at Az 140.5°, El 37.8°.',
+      description:
+        'With TX inhibited, command program-track to TIDEMARK-3 (NORAD 61527) at Az 145.7°, El 32.7°: pick it in Target Satellite (the pick only stages it), then press Move to Target.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['inhibit-vt-tx'],
       timeLimitSeconds: 3 * 60,
@@ -812,7 +813,8 @@ export const scenario9Data: ScenarioData = {
       id: 'return-to-tidemark1',
       nice: ['S0421', 'K1032'],
       title: 'Return VT-01 to TIDEMARK-1',
-      description: 'Repoint program-track back to TIDEMARK-1 and retune the spectrum analyzer to the TM-1 beacon IF (1074.5 MHz).',
+      description:
+        'Repoint program-track back to TIDEMARK-1 (pick it in Target Satellite, then Move to Target) and retune the spectrum analyzer to the TM-1 beacon IF (1074.5 MHz).',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['tidemark3-beacon-quality'],
       timeLimitSeconds: 2 * 60,
@@ -929,15 +931,18 @@ export const scenario9Data: ScenarioData = {
           description: 'Shift Log Entry',
           params: {
             character: Character.SYSTEM,
+            // nats-r3-s09-F1: no clock stamp in the options; the Ops Log stamps
+            // the station clock on the entry itself
             question: 'Which line correctly records this shift in the operations log?',
             options: [
-              '0700 - Morning rounds complete. VT-01/TM-1, ME-02/TM-2, TM-3 beacon verified via VT-01 spot-check (TM-1 on the sister teleport meanwhile). No anomalies.',
-              '0700 - Morning rounds incomplete. VT-01/TM-1, ME-02/TM-2 checked, TM-3 spot-check deferred to next shift. No anomalies.',
-              '0700 - Morning rounds complete. VT-01/TM-1, ME-02/TM-2 checked, multiple alarms cleared on VT-01. See trouble ticket.',
-              '0700 - Morning rounds complete. VT-01 repointed to TM-3 for spot-check, TM-1 traffic dropped during the check. No anomalies.',
+              'Morning rounds complete. VT-01/TM-1, ME-02/TM-2, TM-3 beacon verified via VT-01 spot-check (TM-1 on the sister teleport meanwhile). No anomalies.',
+              'Morning rounds incomplete. VT-01/TM-1, ME-02/TM-2 checked, TM-3 spot-check deferred to next shift. No anomalies.',
+              'Morning rounds complete. VT-01/TM-1, ME-02/TM-2 checked, multiple alarms cleared on VT-01. See trouble ticket.',
+              'Morning rounds complete. VT-01 repointed to TM-3 for spot-check, TM-1 traffic dropped during the check. No anomalies.',
             ],
             correctIndex: 0,
-            explanation: 'Routine work logged routinely. Next operator picks up with full context.',
+            explanation:
+              'Routine work logged routinely: what was checked, what the TM-3 check needed (TM-1 on the sister teleport meanwhile) and that nothing was found. The Operations Log stamps the station clock on the entry for you. Next operator picks up with full context.',
             pointPenalty: 5,
           },
           mustMaintain: false,

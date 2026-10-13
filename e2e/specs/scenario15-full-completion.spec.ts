@@ -39,6 +39,20 @@ interface Scenario15Objective {
     maxAmplitude?: number; // dBm
     rbwAuto?: boolean;
   };
+  /**
+   * For panel-read quizzes: read the panel the quiz is about and return the
+   * option to click (or assert the keyed one), so the answer comes from the
+   * sim state on screen, not from matching the option text
+   */
+  answerFromScreen?: (page: import('@playwright/test').Page) => Promise<string>;
+}
+
+/** First number in a visible readout (e.g. "1015.0 MHz", "-33.0 dBc") */
+async function readNumber(page: import('@playwright/test').Page, selector: string): Promise<number> {
+  const text = (await page.locator(selector).first().textContent()) ?? '';
+  const match = /[-+]?\d+(?:\.\d+)?/u.exec(text);
+  expect(match, `${selector} reads a number (got "${text}")`).not.toBeNull();
+  return Number.parseFloat(match![0]);
 }
 
 const SCENARIO_15_OBJECTIVES: Scenario15Objective[] = [
@@ -99,13 +113,27 @@ const SCENARIO_15_OBJECTIVES: Scenario15Objective[] = [
     id: 'check-tx-modem-frequency',
     title: 'Verify TX Modem Configuration',
     type: 'quiz',
-    correctAnswer: 'Yes - 1015 MHz IF matches 7000 minus 5985, carrier on the right slot',
+    // The options differ by the IF the modem shows (nats-r3-s15-F2): pick the
+    // one that names what TX modem 1 reads, below the fold of TX Chain
+    answerFromScreen: async (page) => {
+      const field = page.locator('#tx-frequency-current');
+      await field.scrollIntoViewIfNeeded();
+      const ifMhz = Math.round(await readNumber(page, '#tx-frequency-current'));
+      expect(ifMhz).toBe(1015);
+      return `Modem reads ${ifMhz} MHz: 7000 - ${ifMhz} = ${7000 - ifMhz} MHz, the coordinated TP-1 center - carrier on the right slot`;
+    },
   },
   {
     id: 'observe-current-hpa-backoff',
     title: 'Observe HPA Backoff',
     type: 'quiz',
     correctAnswer: 'Operating close to saturation - third-order IMD will be elevated and spill several MHz past the carrier edges',
+    answerFromScreen: async (page) => {
+      await page.locator('#hpa-imd-display').scrollIntoViewIfNeeded();
+      expect(Math.abs((await readNumber(page, '#hpa-obo-display')) - 5)).toBeLessThan(0.6);
+      expect(Math.abs((await readNumber(page, '#hpa-imd-display')) + 33)).toBeLessThan(1.5);
+      return 'Operating close to saturation - third-order IMD will be elevated and spill several MHz past the carrier edges';
+    },
   },
   {
     id: 'understand-imd-mechanism',
@@ -139,6 +167,12 @@ const SCENARIO_15_OBJECTIVES: Scenario15Objective[] = [
     // Phase 27 Q3: the HPA rows latch on TX Chain, then the panel read
     type: 'quiz',
     correctAnswer: 'Output 50 dBm (100 W), back-off 10 dB, IM3 about -43 dBc, Overdrive Normal',
+    answerFromScreen: async (page) => {
+      expect(Math.abs((await readNumber(page, '#hpa-output-power-display')) - 50)).toBeLessThan(0.6);
+      expect(Math.abs((await readNumber(page, '#hpa-obo-display')) - 10)).toBeLessThan(0.6);
+      expect(Math.abs((await readNumber(page, '#hpa-imd-display')) + 43)).toBeLessThan(1.5);
+      return 'Output 50 dBm (100 W), back-off 10 dB, IM3 about -43 dBc, Overdrive Normal';
+    },
   },
 
   // ============================================================
@@ -270,8 +304,9 @@ async function configureHpaBackoff(page: import('@playwright/test').Page, backof
 async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario15Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
+      // The TX IF read has a 5 s observation dwell before its quiz opens
       await waitForQuizToAppear(page);
-      await answerQuizByText(page, objective.correctAnswer!);
+      await answerQuizByText(page, objective.answerFromScreen ? await objective.answerFromScreen(page) : objective.correctAnswer!);
       break;
 
     case 'select-station':

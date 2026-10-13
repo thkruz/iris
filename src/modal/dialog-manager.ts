@@ -47,6 +47,8 @@ export class DialogManager {
   currentAudioUrl: string | null = null;
   private isHolding: boolean = false;
   private dialogQueue_: QueuedDialog[] = [];
+  /** A queued dialog has left the queue and shows after the 50 ms fade gap */
+  private isShowPending_ = false;
   private isTtsActive_ = false;
   /** True once the dialog has been on screen for REVEAL_DELAY_MS; click/keys close it from then on */
   private isRevealed_ = false;
@@ -66,6 +68,11 @@ export class DialogManager {
 
   isShowing(): boolean {
     return this.dialogElement !== null;
+  }
+
+  /** True while a dialog is on screen, queued, or between two queued dialogs */
+  isBusy(): boolean {
+    return this.dialogElement !== null || this.dialogQueue_.length > 0 || this.isShowPending_;
   }
 
   show(text: string, character: Character, audioUrl: string, title: string = 'Dialog', emotion?: Emotion): void {
@@ -334,13 +341,16 @@ export class DialogManager {
     if (!next) return;
 
     // Small delay to let fade-out complete visually
+    this.isShowPending_ = true;
     setTimeout(() => {
+      this.isShowPending_ = false;
       this.show(next.text, next.character, next.audioUrl, next.title, next.emotion);
     }, 50);
   }
 
   clearQueue(): void {
     this.dialogQueue_ = [];
+    this.isShowPending_ = false;
     if (!this.dialogElement) {
       CountdownHold.set('dialog', false);
     }

@@ -396,6 +396,7 @@ describe('Transmitter class', () => {
             frequency: 1600e6,
           }),
         }),
+        action: 'config',
       });
 
       emitSpy.mockRestore();
@@ -829,6 +830,71 @@ describe('Transmitter class', () => {
 
         expect(transmitter.activeModem.isPowered).toBe(true);
         expect(transmitter.activeModem.isBooting).toBe(false);
+      });
+
+      it('finishes the boot when the config is applied during it (nats-r3-s03-F1)', () => {
+        transmitter.handlePowerToggle(true);
+        advanceSimTime(1000);
+
+        transmitter.handleFrequencyChange(1057);
+        transmitter.handleModulationChange('QPSK');
+        transmitter.handleFecChange('3/4');
+        transmitter.applyChanges();
+
+        expect(transmitter.activeModem.ifSignal.frequency).toBe(1057e6);
+        expect(transmitter.activeModem.isBooting).toBe(true);
+
+        advanceSimTime(Transmitter.BOOT_TIME_MS);
+
+        expect(transmitter.activeModem.isBooting).toBe(false);
+        expect(transmitter.activeModem.isPowered).toBe(true);
+        expect(transmitter.activeModem.ifSignal.frequency).toBe(1057e6);
+        expect(transmitter.activeModem.ifSignal.fec).toBe('3/4');
+        expect(transmitter.handleTransmitToggle(true)).toBe(true);
+      });
+
+      it('finishes the boot even when state holds a new modem object (sync during boot)', () => {
+        transmitter.handlePowerToggle(true);
+        transmitter.sync({ modems: structuredClone(transmitter.state.modems) });
+
+        advanceSimTime(Transmitter.BOOT_TIME_MS + 100);
+
+        expect(transmitter.activeModem.isBooting).toBe(false);
+        expect(transmitter.activeModem.isPowered).toBe(true);
+      });
+
+      it('counts the boot down for the front panel', () => {
+        transmitter.handlePowerToggle(true);
+
+        expect(transmitter.getBootRemainingMs()).toBe(Transmitter.BOOT_TIME_MS);
+
+        advanceSimTime(1500);
+
+        expect(transmitter.getBootRemainingMs()).toBeCloseTo(Transmitter.BOOT_TIME_MS - 1500, -2);
+
+        advanceSimTime(Transmitter.BOOT_TIME_MS);
+
+        expect(transmitter.getBootRemainingMs()).toBe(0);
+      });
+
+      it('reports the switched modem itself, not modems[modem.id] (authored id 1 on modem 1, nats-r3-s11-F1)', () => {
+        const tx = new Transmitter('test-root', { modems: [{ modem_number: 1, id: 1 } as TransmitterModem] });
+        tx.activeModem.isPowered = true;
+        tx.activeModem.ifSignal.frequency = 1057e6 as IfFrequency;
+        const emitSpy = vi.spyOn(tx, 'emit');
+
+        tx.handleTransmitToggle(true);
+
+        expect(emitSpy).toHaveBeenCalledWith(
+          Events.TX_CONFIG_CHANGED,
+          expect.objectContaining({
+            modem: 1,
+            action: 'transmit-on',
+            config: expect.objectContaining({ modem_number: 1, ifSignal: expect.objectContaining({ frequency: 1057e6 }) }),
+          })
+        );
+
+        emitSpy.mockRestore();
       });
 
       it('drops the transmit switch on power-off so the next boot comes up unkeyed', () => {

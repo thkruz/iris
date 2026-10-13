@@ -45,6 +45,8 @@ interface Scenario12Objective {
   title: string;
   type: ObjectiveType;
   correctAnswer?: string;
+  /** Read the sim state the keyed answer depends on off the DOM before answering */
+  assertBeforeAnswer?: (page: import('@playwright/test').Page) => Promise<void>;
   tabId?: string;
   stationId?: string;
   trackingMode?: string;
@@ -184,6 +186,10 @@ const SCENARIO_12_OBJECTIVES: Scenario12Objective[] = [
     title: 'TX Chain Leftover Inspection',
     type: 'quiz',
     correctAnswer: 'BUC gain is at 50 dB - testing value left over from maintenance, operating value is 23 dB',
+    // The brief no longer names the leftover (nats-r3-s12-F2): read it off the panel
+    assertBeforeAnswer: async (page) => {
+      await expect(page.locator('#buc-gain:visible').first()).toHaveValue(/^50(\.0+)?$/u, { timeout: 10000 });
+    },
   },
   {
     id: 'correct-buc-gain',
@@ -501,6 +507,9 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
   switch (objective.type) {
     case 'quiz':
       await waitForQuizToAppear(page);
+      if (objective.assertBeforeAnswer) {
+        await objective.assertBeforeAnswer(page);
+      }
       await answerQuizByText(page, objective.correctAnswer!);
       break;
 
@@ -612,7 +621,7 @@ test.describe('Scenario 12 Full Completion', () => {
   for (const objective of SCENARIO_12_OBJECTIVES) {
     test(`[${objective.id}] ${objective.title}`, async () => {
       // Antenna repoint needs a longer timeout: the slew from stow (el 90)
-      // to TIDEMARK-1 (az 161.8, el 34.2) takes minutes of wall-clock.
+      // to TIDEMARK-1 (az 153.1, el 35.1) takes minutes of wall-clock.
       if (objective.type === 'set-tracking-mode' && objective.waitForAntennaPosition) {
         test.setTimeout(300000);
       }

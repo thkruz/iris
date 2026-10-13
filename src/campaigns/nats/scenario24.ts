@@ -75,7 +75,7 @@ export const scenario24Data: ScenarioData = {
   duration: '40-50 min',
   difficulty: 'advanced',
   missionType: 'Incident Command',
-  description: `Everything at once. A storm front is minutes from Vermont. Maine's BUC is running hot - the same unit, the same signature as the thermal trend you caught months ago, and the swap never cleared procurement. AURORA-7 has a SeaLink sync pass booked at 0800 on a beacon four dB weaker than the day you qualified. James is already calling. Francis wants a board note by end of morning.<br><br>Five tracks. Three are clocks you don't control - the storm, the pass window, the board deadline. Two are trends you can bend - the BUC heat, the customer's confidence.<br><br>You've done every piece of this before. Today you do all of it, in the right order, while everyone watches. Incident command is yours. Dana is your resource, not your safety net. This is the exam - fly it like any other shift.`,
+  description: `Everything at once. A storm front is minutes from Vermont. Maine's BUC is running hot - the same unit, the same signature as the thermal trend you caught months ago, and the swap never cleared procurement. AURORA-7 has a SeaLink sync pass booked at 0800 on a beacon about six dB under its reference level. James is already calling. Francis wants a board note by end of morning.<br><br>Five tracks. Three are clocks you don't control - the storm, the pass window, the board deadline. Two are trends you can bend - the BUC heat, the customer's confidence.<br><br>You've done every piece of this before. Today you do all of it, in the right order, while everyone watches. Incident command is yours. Dana is your resource, not your safety net. This is the exam - fly it like any other shift.`,
   equipment: ['9-meter C-band Antennas (VT-01 + ME-02)', 'RF Front Ends (both)', 'Spectrum Analyzers', 'RX/TX Modems', 'Incident-command log (Working Document)'],
   timeLimitSeconds: 50 * 60,
   settings: {
@@ -99,15 +99,15 @@ export const scenario24Data: ScenarioData = {
         antennasState: [
           {
             isPowered: true,
-            azimuth: 222.58 as Degrees, // Maine sees TM-2 here, not at Vermont's angles (phase 19.4)
-            elevation: 24.38 as Degrees,
-            polarization: -26.3 as Degrees,
+            azimuth: 146.96 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
+            elevation: 32.42 as Degrees,
+            polarization: -27.6 as Degrees,
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61526,
-            targetAzimuth: 222.58 as Degrees,
-            targetElevation: 24.38 as Degrees,
-            targetPolarization: -26.3 as Degrees,
+            targetAzimuth: 146.96 as Degrees,
+            targetElevation: 32.42 as Degrees,
+            targetPolarization: -27.6 as Degrees,
             slewing: false,
             beaconCN: 10.2 as dB,
             beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)
@@ -493,31 +493,39 @@ export const scenario24Data: ScenarioData = {
           mustMaintain: true,
         },
         {
+          // Held 45 s so the panel read below opens on a turned Trend
+          // (nats-r3-s24-F1). The Trend (1 min) readout is a least-squares
+          // slope over 60 s of 5 s samples: at the de-rate the target drops
+          // from ~65 to 55.5 degC (10 min time constant), the true slope flips
+          // from about +0.2 to about -0.75 C/min, and the fitted slope crosses
+          // zero 15-20 s later, reads below -0.05 (down arrow) by ~25 s and
+          // about -0.5 to -0.65 C/min at 45 s, while the reading is still
+          // 62.4-63.4 degC. No condition reads the trend, so time gates it.
           type: 'buc-current-normal',
-          description: 'BUC Current ≤ 3.5 A',
+          description: 'BUC Current ≤ 3.5 A, held 45 s (let the Trend turn)',
           params: { maxCurrentDraw: 3.5 },
           mustMaintain: true,
+          maintainDuration: 45,
         },
         {
           // The trend itself, read off the TX Chain panel (nats-s24-F5): the
           // rows were true the instant gain hit 23 dB with nothing to read.
-          // Same unit as S13: 3.1 A at 23 dB at once; from 63 degC the target
-          // drops to 55.5 degC (10 min time constant), so the Trend readout
-          // turns negative while the temperature still reads ~62 after a minute
+          // Same unit as S13: 3.1 A at 23 dB at once; the quiz opens after the
+          // 45 s hold above, when the Trend (1 min) already reads negative
           type: 'status-check',
           description: 'BUC Panel Read',
           params: {
             character: Character.SYSTEM,
-            question: 'What does the ME-02 BUC panel show a minute after the de-rate?',
+            question: 'Most of a minute after the de-rate, what does the ME-02 BUC panel show?',
             options: [
-              'Current about 3.1 A, temperature still in the low 60s but the Trend now negative, P1dB Margin about 12 dB - the curve has turned',
+              'Current about 3.1 A, temperature still in the low 60s but the Trend (1 min) now negative, P1dB Margin about 12 dB - the curve has turned',
               'Current still about 4.0 A, temperature climbing - the gain change has not reached the module yet',
               'Current about 3.1 A, temperature already back in the 40s - the BUC cools as fast as the current drops',
               'Current about 1 A, BUC output gone - the de-rate muted the carrier',
             ],
             correctIndex: 0,
             explanation:
-              'Current answers in seconds, temperature lags behind the thermal mass: the reading barely moves in a minute, but the Trend has turned over and the curve is heading for the mid-50s. That, plus 12 dB of P1dB margin and the TM-2 carrier still locked, is the de-rate taking.',
+              'Current answers in seconds, temperature lags behind the thermal mass: the reading barely moves in a minute, but the one-minute Trend has turned over (down arrow) and the curve is heading for the mid-50s. That, plus 12 dB of P1dB margin and the TM-2 carrier still locked, is the de-rate taking.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -877,7 +885,7 @@ export const scenario24Data: ScenarioData = {
         <em>[Dana, at the door, 07:00]</em>
       </p>
       <p>
-        "Everything at once this morning. Storm front on top of Vermont in minutes. Maine's BUC is running hot - same unit, same signature you caught before, swap never cleared procurement. AURORA's got a SeaLink pass at 0800 on a beacon four dB down. James is calling, Francis wants a board note. You've done every piece of this. Today you do all of it, in the right order, while everyone watches. Incident command is yours - I'm your resource, not your safety net."
+        "Everything at once this morning. Storm front on top of Vermont in minutes. Maine's BUC is running hot - same unit, same signature you caught before, swap never cleared procurement. AURORA's got a SeaLink pass at 0800 on a beacon six dB down. James is calling, Francis wants a board note. You've done every piece of this. Today you do all of it, in the right order, while everyone watches. Incident command is yours - I'm your resource, not your safety net."
       </p>
       `,
       character: Character.DANA_TORRES,

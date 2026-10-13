@@ -88,10 +88,31 @@ export class WaterfallDisplay extends RTSAScreen {
     }
   }
 
+  /**
+   * A retune (new centre or span) starts a fresh waterfall, as an analyzer
+   * does: the old rows were taken on another frequency axis, and at a narrow
+   * span's slow sweep (one row per 0.8 s at 3 Hz RBW) they took minutes to
+   * scroll out, so a 2 kHz view of a CW line showed the previous wide span's
+   * noise, 50 dB hotter in its wider RBW, as solid yellow (nats-r3-s19-F1)
+   */
   public setFrequencyRange(minFreq: Hertz, maxFreq: Hertz): void {
+    const isRetune = this.maxFreq > 0 && (minFreq !== this.minFreq || maxFreq !== this.maxFreq);
     this.minFreq = minFreq;
     this.maxFreq = maxFreq;
+    if (isRetune) {
+      this.clear();
+    }
   }
+
+  /** Blank every row: no data paints the bottom of the colour scale */
+  public clear(): void {
+    for (const row of this.buffer) {
+      row.fill(WaterfallDisplay.NO_DATA_DB);
+    }
+  }
+
+  /** Below any amplitude window, so an empty row renders as the darkest colour */
+  static readonly NO_DATA_DB = -1000;
 
   public update(): void {
     if (!this.specA.state.isPaused && this.running) {
@@ -104,6 +125,7 @@ export class WaterfallDisplay extends RTSAScreen {
         // TODO: This causes old data to have the wrong colors - low priority but it causes a graphical glitch
         this.cacheMaxDb = this.specA.state.maxAmplitude;
         this.cacheMinDb = this.specA.state.minAmplitude;
+        this.cacheGain = this.specA.rfFrontEnd_.lnbModule.getTotalGain();
       }
 
       const now = Date.now();

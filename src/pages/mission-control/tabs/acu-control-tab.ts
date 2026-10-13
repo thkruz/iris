@@ -8,6 +8,8 @@ import { TrackingMode } from '@app/equipment/antenna/antenna-core';
 import { antennaLockLabel, trackingModeLabel } from '@app/equipment/antenna/tracking-mode-label';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
+import { EventAutoLogger } from '@app/ops-log/event-auto-logger';
+import { stationTagForAntennaState } from '@app/ops-log/station-tag';
 import { SimulationManager } from '@app/simulation/simulation-manager';
 import { parseLocalizedNumber } from '@app/utils/parse-number';
 import { WeatherManager } from '@app/weather/weather-manager';
@@ -52,6 +54,12 @@ export class ACUControlTab extends BaseElement {
 
   // Satellite list the target dropdown was last built from (rebuilt when it changes)
   private satelliteOptionsKey_: string = '';
+  /**
+   * Target picked in the dropdown but not yet commanded. Like MAINT/STOW and
+   * the Az/El edits (staged until APPLY), a pick moves nothing until Move to
+   * Target commits it (nats-r3-s12-F3). undefined: nothing staged.
+   */
+  private stagedTargetId_: number | undefined = undefined;
 
   // Event handler cleanup tracking
   private readonly boundHandlers_: Map<string, { element: Element; event: string; handler: EventListener }> = new Map();
@@ -176,6 +184,7 @@ export class ACUControlTab extends BaseElement {
                     <option value="">-- Select Satellite --</option>
                   </select>
                 </div>
+                <div id="${p}target-staged-hint" class="form-text text-warning mb-2" style="display: none;"></div>
                 <button id="${p}move-to-target-btn" class="btn btn-primary w-100" disabled>
                   Move to Target
                 </button>
@@ -591,7 +600,8 @@ export class ACUControlTab extends BaseElement {
     buttons.forEach((btn, index) => {
       const handler = () => {
         const mode = (btn as HTMLElement).dataset.mode as TrackingMode;
-        // handleTrackingModeChange clears state.targetSatelliteId on any mode change
+        // handleTrackingModeChange clears state.targetSatelliteId on any mode
+        // change. A staged pick is kept: it is committed by Move to Target
         antenna.handleTrackingModeChange(mode);
       };
       this.addHandler_(`tracking-mode-${index}`, btn, 'click', handler);
@@ -612,17 +622,28 @@ export class ACUControlTab extends BaseElement {
     // Populate satellite dropdown (rebuilt by syncUiWithState_ if the list changes)
     this.syncSatelliteOptions_(select);
 
-    // Handle selection change
+    // Handle selection change: stage the pick; Move to Target commits it
     const selectHandler = () => {
-      const noradId = parseInt(select.value) || null;
-      antenna.handleTargetSatelliteChange(noradId);
-      moveBtn.disabled = noradId === null;
+      const noradId = Number.parseInt(select.value, 10) || null;
+      // Picking the placeholder or the current target unstages
+      this.stagedTargetId_ = noradId === null || noradId === antenna.state.targetSatelliteId ? undefined : noradId;
+      this.syncTargetStaging_(antenna);
     };
     this.addHandler_('satellite-select', select, 'change', selectHandler);
 
-    // Handle move button
+    // Handle move button: commit a staged pick, then slew to the target
     const moveHandler = () => {
+      const staged = this.stagedTargetId_;
+      this.stagedTargetId_ = undefined;
+      if (staged !== undefined && staged !== antenna.state.targetSatelliteId) {
+        antenna.handleTargetSatelliteChange(staged);
+      }
       antenna.moveToTargetSatellite();
+      this.syncTargetStaging_(antenna);
+      if (antenna.state.targetSatelliteId !== null) {
+        const name = this.targetSatelliteName_(antenna.state.targetSatelliteId);
+        EventAutoLogger.getInstance().logAction(`PROGRAM: slewing to ${name}`, 'ANT', stationTagForAntennaState(antenna.state));
+      }
     };
     this.addHandler_('move-to-target', moveBtn, 'click', moveHandler);
   }
@@ -871,10 +892,7 @@ export class ACUControlTab extends BaseElement {
     }
 
     // Sync move-to-target button disabled state (also disabled under ACU fault)
-    const moveToTargetBtn = this.qs_<HTMLButtonElement>('move-to-target-btn');
-    if (moveToTargetBtn) {
-      moveToTargetBtn.disabled = acuFaulted || state.trackingMode !== 'program-track' || state.targetSatelliteId === null;
-    }
+    this.syncTargetStaging_(antenna);
     const satelliteSelectEl = this.qs_<HTMLSelectElement>('satellite-select');
     if (satelliteSelectEl) {
       satelliteSelectEl.disabled = acuFaulted;
@@ -888,7 +906,9 @@ export class ACUControlTab extends BaseElement {
     const satelliteSelect = this.qs_<HTMLSelectElement>('satellite-select');
     if (satelliteSelect && document.activeElement !== satelliteSelect) {
       this.syncSatelliteOptions_(satelliteSelect);
-      satelliteSelect.value = state.targetSatelliteId?.toString() ?? '';
+      // A staged pick stays showing until Move to Target or a mode change
+      const shown = this.stagedTargetId_ !== undefined ? this.stagedTargetId_ : state.targetSatelliteId;
+      satelliteSelect.value = shown?.toString() ?? '';
     }
 
     // Sync current target display from the antenna's own target. Program-track
@@ -931,6 +951,34 @@ export class ACUControlTab extends BaseElement {
 
     // Sync RF metrics display
     this.syncRfMetrics_(antenna);
+  }
+
+  /**
+   * Move to Target and the staged-pick hint. Move is live in PROGRAM with a
+   * target picked (staged or committed) and no ACU automation fault.
+   */
+  private syncTargetStaging_(antenna: (typeof this.groundStation.antennas)[0]): void {
+    const state = antenna.state;
+    if (this.stagedTargetId_ !== undefined && this.stagedTargetId_ === state.targetSatelliteId) {
+      this.stagedTargetId_ = undefined;
+    }
+    const pick = this.stagedTargetId_ !== undefined ? this.stagedTargetId_ : state.targetSatelliteId;
+
+    const moveToTargetBtn = this.qs_<HTMLButtonElement>('move-to-target-btn');
+    if (moveToTargetBtn) {
+      moveToTargetBtn.disabled = state.isAcuAutomationFaulted === true || state.trackingMode !== 'program-track' || pick === null;
+    }
+
+    const hint = this.qs_('target-staged-hint');
+    if (hint) {
+      let text = '';
+      if (this.stagedTargetId_ !== undefined) {
+        const name = this.targetSatelliteName_(this.stagedTargetId_);
+        text = state.trackingMode === 'program-track' ? `${name} staged: press Move to Target to slew` : `${name} staged: select PROGRAM, then Move to Target`;
+      }
+      hint.textContent = text;
+      hint.style.display = text ? 'block' : 'none';
+    }
   }
 
   /** Display name for the antenna's target, 'No Target' when there is none. */

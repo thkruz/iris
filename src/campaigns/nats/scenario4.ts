@@ -113,12 +113,12 @@ export const scenario4Data: ScenarioData = {
         antennasState: [
           {
             ...vermontGroundStation.antennasState![0],
-            azimuth: 167.27 as Degrees,
-            elevation: 34.38 as Degrees,
-            polarization: 10.2 as Degrees,
-            targetAzimuth: 167.27 as Degrees,
-            targetElevation: 34.38 as Degrees,
-            targetPolarization: 10.2 as Degrees,
+            azimuth: 158.27 as Degrees, // 53 W from Maine (Phase 28 D4)
+            elevation: 35.66 as Degrees,
+            polarization: 10.3 as Degrees,
+            targetAzimuth: 158.27 as Degrees,
+            targetElevation: 35.66 as Degrees,
+            targetPolarization: 10.3 as Degrees,
           },
         ],
       },
@@ -247,7 +247,7 @@ export const scenario4Data: ScenarioData = {
             options: ['TIDEMARK-1', 'TIDEMARK-2', 'SES-10', 'None - antenna is stowed'],
             correctIndex: 0,
             explanation:
-              'VT-01 is currently tracking TIDEMARK-1. The antenna is pointed at Az: 161.9°, El: 34.2° with beacon lock confirmed. We need to switch to TIDEMARK-2 at Az: 219.7°, El: 26.3°.',
+              'VT-01 is currently tracking TIDEMARK-1. The antenna is pointed at Az: 153.2°, El: 35.2° with beacon lock confirmed. We need to switch to TIDEMARK-2 at Az: 143.4°, El: 31.9°.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -310,7 +310,7 @@ export const scenario4Data: ScenarioData = {
       // positions and the relationship between azimuth/elevation and satellite location
       nice: ['S0421', 'K1032'],
       title: 'Command Antenna to Track TIDEMARK-2',
-      description: 'Slew the antenna to TIDEMARK-2 (Az: 219.7°, El: 26.3°): with PROGRAM selected, pick TIDEMARK-2 as the target satellite and press Move to Target.',
+      description: 'Slew the antenna to TIDEMARK-2 (Az: 143.4°, El: 31.9°): with PROGRAM selected, pick TIDEMARK-2 as the target satellite and press Move to Target.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['verify-antenna-initial-state'],
       timeLimitSeconds: 3 * 60,
@@ -320,8 +320,9 @@ export const scenario4Data: ScenarioData = {
           type: 'antenna-position',
           description: 'Antenna at TIDEMARK-2 Position',
           params: {
-            azimuth: 219.7 as Degrees,
-            elevation: 26.3 as Degrees,
+            // Program-track angles to 45 W (Phase 28 D4: 143.3 / 31.8 plus the ephemeris offset)
+            azimuth: 143.4 as Degrees,
+            elevation: 31.9 as Degrees,
             tolerance: 0.5 as Degrees,
           },
           mustMaintain: false,
@@ -348,7 +349,7 @@ export const scenario4Data: ScenarioData = {
           type: 'status-check',
           description: 'Understand Antenna Movement',
           params: {
-            question: 'The antenna slewed about 58° in azimuth and dropped 8° in elevation. Why such a large change?',
+            question: 'To reach TIDEMARK-2 the antenna swung east in azimuth and dropped a few degrees in elevation. Why did the pointing change?',
             options: [
               'TIDEMARK-2 sits at a different orbital slot (45°W vs 53°W), so the look angles differ',
               'The antenna was mispointed at TIDEMARK-1 before (off-peak), so the slew corrected it',
@@ -357,7 +358,7 @@ export const scenario4Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              "TIDEMARK-1 sits at 53°W and TIDEMARK-2 is at 45°W - that's 8 degrees of orbital separation. From Vermont's perspective, this translates to about 58° of azimuth change and 8° of elevation change. Different satellites require different pointing angles even when both are GEO.",
+              "TIDEMARK-1 sits at 53°W and TIDEMARK-2 at 45°W, 8 degrees further east along the GEO arc. Vermont is at 72.6°W, so both slots are east of us and both sit in the south-east sky. Moving 8° east along the arc swings the dish about 10° further east in azimuth (153° to 143°) and drops it about 3° in elevation (35° to 32°): the farther a slot is from the station's own longitude, the further it sits from due south and the lower it rides. Different GEO satellites need different pointing angles from the same station.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -525,7 +526,7 @@ export const scenario4Data: ScenarioData = {
           description: 'Beacon Level Stable',
           params: {
             signalId: 'TIDEMARK-2-Beacon',
-            // On-axis the beacon reads about -50 to -44 dBm; sidelobe pickup
+            // On-axis the beacon reads about -43 dBm (nats-r3 S4: Peak -43.3); sidelobe pickup
             // while the dish is elsewhere is far below this
             minPower: -60 as dBm,
             requiresObservation: true,
@@ -545,10 +546,10 @@ export const scenario4Data: ScenarioData = {
               'No line at 1,070 MHz: the beacon is not on screen',
             ],
             correctIndex: 0,
-            // Ledger: -49.7 dBm at the RX IF with VT-01 off-air (the AGC lifts
-            // the beacon a few dB when there is no carrier in its passband)
+            // Analyzer Peak -43.3 dBm with VT-01 off-air (nats-r3 S4; the AGC
+            // lifts the beacon a few dB when there is no carrier in its passband)
             explanation:
-              'The beacon reads around -50 to -45 dBm, more than 60 dB over the noise floor in a 30 Hz RBW. VT-01 is not transmitting yet and nobody else uplinks to a brand-new bird, so the beacon and noise are all the AGC sees, and it lifts the beacon a few dB. A strong, steady line at the calculated IF proves the pointing and the LNB setup.',
+              'The beacon reads about -43 dBm (within a couple of dB), more than 50 dB over the noise floor in a 30 Hz RBW. VT-01 is not transmitting yet and nobody else uplinks to a brand-new bird, so the beacon and noise are all the AGC sees, and it lifts the beacon a few dB. A strong, steady line at the calculated IF proves the pointing and the LNB setup.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -873,7 +874,7 @@ export const scenario4Data: ScenarioData = {
       id: 'verify-rx-lock',
       // T0153: Analyze network traffic to identify anomalous activity - verifying receiver
       // lock status and monitoring signal-to-noise ratio for link quality assessment
-      // K0740: Knowledge of system performance indicators - understanding SNR thresholds
+      // K0740: Knowledge of system performance indicators - understanding C/N thresholds
       // required for reliable QPSK demodulation and what constitutes healthy link margin
       nice: ['T0153', 'K0740'],
       title: 'Verify RX Signal Lock',
@@ -895,7 +896,7 @@ export const scenario4Data: ScenarioData = {
         },
         {
           type: 'receiver-snr-threshold',
-          description: 'SNR Above 10 dB',
+          description: 'Raw C/N Above 10 dB',
           params: {
             minCNRatio: 10,
             modemNumber: 1,
@@ -1011,7 +1012,7 @@ export const scenario4Data: ScenarioData = {
           Since you're new, I'll be handling your training directly. Once I think you're ready, you'll be assigned to a shift rotation with a supervisor like Dana Torres. She runs second shift and keeps her crew sharp. But for now, you're with me.
         </p>
         <p>
-          VT-01 is currently locked on TIDEMARK-1 at azimuth 161.8, elevation 34.2. TIDEMARK-2 is about 58 degrees away in azimuth, at a lower elevation - that's a significant slew across the sky.
+          VT-01 is currently locked on TIDEMARK-1 at azimuth 153.2, elevation 35.2. TIDEMARK-2 is about 10 degrees further east in azimuth and a few degrees lower - a short slew, but we still do it by the book.
         </p>
         <p>
           Before we move anything, let's verify exactly where we're starting from. Select Vermont Ground Station in the asset tree and we'll check the current antenna status.
@@ -1082,13 +1083,13 @@ export const scenario4Data: ScenarioData = {
       'command-antenna': {
         text: `
         <p>
-          Antenna's slewing. Nice and smooth. You can see the position indicators updating as it moves across the sky.
+          Antenna's on TIDEMARK-2. Nice and smooth - you watched the position indicators walk it across.
         </p>
         <p>
-          That was a big move - about 58 degrees in azimuth and 8 degrees in elevation. Takes a little while for a dish this size to cover that distance safely. The ACU limits slew rate to prevent mechanical stress.
+          About 10 degrees east in azimuth and 3 degrees down in elevation. A short hop for a dish this size, and the ACU still holds it to a safe slew rate to spare the mount.
         </p>
         <p>
-          While it's settling, think about why the position change was so significant.
+          Before we go on, think about why the angles changed.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,

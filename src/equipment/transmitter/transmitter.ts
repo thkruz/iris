@@ -4,6 +4,7 @@ import { html } from '@app/engine/utils/development/formatter';
 import { qs } from '@app/engine/utils/query-selector';
 import { AlarmStatus, BaseEquipment } from '@app/equipment/base-equipment';
 import { EventBus } from '@app/events/event-bus';
+import type { TxModemAction } from '@app/events/events';
 import { Events } from '@app/events/events';
 import { SignalOrigin } from '@app/signal-origin';
 import { SimClock } from '@app/simulation/sim-clock';
@@ -60,6 +61,8 @@ export class Transmitter extends BaseEquipment {
 
   /** Firmware boot time after power-on (ms of run time) */
   static readonly BOOT_TIME_MS = 4000;
+  /** Overdue margin after which update() finishes a boot whose timer never fired */
+  private static readonly BOOT_GRACE_MS = 1000;
   /** Power-down time (ms of run time) */
   private static readonly POWER_DOWN_MS = 250;
   /** Pending power-sequence timer per modem_number */
@@ -609,38 +612,29 @@ export class Transmitter extends BaseEquipment {
   }
 
   private toggleFaultReset(): void {
+    const modemNumber = this.activeModem.modem_number;
     this.activeModem.isFaultSwitchUp = true;
 
-    // Wait 3 seconds and then clear fault and reset switch
+    // Clear the fault and release the reset switch after a short press
     SimClock.setTimeout(() => {
-      if (!this.activeModem.isTransmitting) {
-        this.activeModem.isFaulted = false;
+      const modem = this.findModem_(modemNumber);
+      if (!modem) return;
+      if (!modem.isTransmitting) {
+        modem.isFaulted = false;
       }
       this.faultResetSwitch.deactivate();
-      this.activeModem.isFaultSwitchUp = false;
+      modem.isFaultSwitchUp = false;
 
-      this.emit(Events.TX_CONFIG_CHANGED, {
-        uuid: this.uuid,
-        modem: this.state.activeModem,
-        config: this.state.modems[this.activeModem.id],
-      });
+      this.emitModemChanged_(modem);
     }, 250);
 
-    this.emit(Events.TX_CONFIG_CHANGED, {
-      uuid: this.uuid,
-      modem: this.state.activeModem,
-      config: this.state.modems[this.activeModem.id],
-    });
+    this.emitModemChanged_(this.activeModem, 'fault-reset');
   }
 
   private toggleTestMode(): void {
     this.activeModem.isLoopback = !this.activeModem.isLoopback;
 
-    this.emit(Events.TX_CONFIG_CHANGED, {
-      uuid: this.uuid,
-      modem: this.state.activeModem,
-      config: this.state.modems[this.activeModem.id],
-    });
+    this.emitModemChanged_(this.activeModem, this.activeModem.isLoopback ? 'loopback-on' : 'loopback-off');
     this.syncDomWithState();
   }
 
@@ -745,21 +739,21 @@ export class Transmitter extends BaseEquipment {
    * @returns how many modems were stopped
    */
   public stopTransmittingFor(noradId: number): number {
-    let stopped = 0;
+    const stoppedModems: TransmitterModem[] = [];
     for (const modem of this.state.modems) {
       if (modem.isTransmitting && modem.ifSignal?.noradId === noradId) {
         modem.isTransmitting = false;
         modem.isTransmittingSwitchUp = false;
-        stopped++;
+        stoppedModems.push(modem);
       }
     }
+    const stopped = stoppedModems.length;
     if (stopped > 0) {
       this.updateTransmissionState();
-      this.emit(Events.TX_CONFIG_CHANGED, {
-        uuid: this.uuid,
-        modem: this.state.activeModem,
-        config: this.state.modems[this.activeModem.id],
-      });
+      // One event per stopped modem, so each stop is logged like a manual one
+      for (const modem of stoppedModems) {
+        this.emitModemChanged_(modem, 'transmit-off');
+      }
       this.syncDomWithState();
     }
 
@@ -791,15 +785,19 @@ export class Transmitter extends BaseEquipment {
       return false;
     }
 
+    const wasTransmitting = this.state.modems[modemIndex].isTransmitting;
     this.activeModem.isTransmittingSwitchUp = isEnabled;
     this.state.modems[modemIndex].isTransmitting = isEnabled;
     this.updateTransmissionState();
 
-    this.emit(Events.TX_CONFIG_CHANGED, {
-      uuid: this.uuid,
-      modem: this.state.activeModem,
-      config: this.state.modems[this.activeModem.id],
-    });
+    // The event carries the modem that was switched (not modems[modem.id]:
+    // an authored id that is not the array index named the wrong modem in
+    // the Ops Log, nats-r3-s11-F1)
+    let action: TxModemAction | undefined;
+    if (isEnabled !== wasTransmitting) {
+      action = isEnabled ? 'transmit-on' : 'transmit-off';
+    }
+    this.emitModemChanged_(this.state.modems[modemIndex], action);
 
     this.syncDomWithState();
 
@@ -811,13 +809,14 @@ export class Transmitter extends BaseEquipment {
   }
 
   public handleLoopbackToggle(isEnabled: boolean): void {
+    const changed = this.activeModem.isLoopback !== isEnabled;
     this.activeModem.isLoopback = isEnabled;
 
-    this.emit(Events.TX_CONFIG_CHANGED, {
-      uuid: this.uuid,
-      modem: this.state.activeModem,
-      config: this.state.modems[this.activeModem.id],
-    });
+    let action: TxModemAction | undefined;
+    if (changed) {
+      action = isEnabled ? 'loopback-on' : 'loopback-off';
+    }
+    this.emitModemChanged_(this.activeModem, action);
 
     this.syncDomWithState();
   }
@@ -848,12 +847,12 @@ export class Transmitter extends BaseEquipment {
 
       modem.isBooting = true;
       this.bootStartRunMs_.set(modemNumber, SimClock.runMs());
-      this.emitModemChanged_(modem);
+      this.emitModemChanged_(modem, 'power-on');
       this.syncDomWithState();
 
       this.powerTimers_.set(
         modemNumber,
-        SimClock.setTimeout(() => this.completeBoot_(modem), Transmitter.BOOT_TIME_MS)
+        SimClock.setTimeout(() => this.completeBoot_(modemNumber), Transmitter.BOOT_TIME_MS)
       );
 
       return;
@@ -876,8 +875,11 @@ export class Transmitter extends BaseEquipment {
       modemNumber,
       SimClock.setTimeout(() => {
         this.powerTimers_.delete(modemNumber);
-        modem.isPowered = false;
-        this.emitModemChanged_(modem);
+        // Look the modem up again: state may hold a new object by now
+        const current = this.findModem_(modemNumber);
+        if (!current) return;
+        current.isPowered = false;
+        this.emitModemChanged_(current, 'power-off');
         this.syncDomWithState();
       }, Transmitter.POWER_DOWN_MS)
     );
@@ -888,12 +890,35 @@ export class Transmitter extends BaseEquipment {
     return this.state.modems.find((m) => m.modem_number === modemNumber)?.isBooting === true;
   }
 
-  private completeBoot_(modem: TransmitterModem): void {
-    this.powerTimers_.delete(modem.modem_number);
-    this.bootStartRunMs_.delete(modem.modem_number);
+  /**
+   * Run time left in the given modem's boot (ms), or 0 when it is not booting.
+   * The front panel shows it as the boot countdown.
+   */
+  public getBootRemainingMs(modemNumber: number = this.state.activeModem): number {
+    const startedAt = this.bootStartRunMs_.get(modemNumber);
+    if (startedAt === undefined || !this.isModemBooting(modemNumber)) return 0;
+
+    return Math.max(0, Transmitter.BOOT_TIME_MS - (SimClock.runMs() - startedAt));
+  }
+
+  private findModem_(modemNumber: number): TransmitterModem | undefined {
+    return this.state.modems.find((m) => m.modem_number === modemNumber);
+  }
+
+  /**
+   * Finish a boot. The modem is looked up by number at completion time, not
+   * captured at power-on: an Apply or a sync during the boot may have put a
+   * new modem object into state, and finishing the stale one left the live
+   * modem in BOOTING forever (nats-r3-s03-F1).
+   */
+  private completeBoot_(modemNumber: number): void {
+    this.powerTimers_.delete(modemNumber);
+    this.bootStartRunMs_.delete(modemNumber);
+    const modem = this.findModem_(modemNumber);
+    if (!modem) return;
     modem.isBooting = false;
     modem.isPowered = true;
-    this.emitModemChanged_(modem);
+    this.emitModemChanged_(modem, 'boot-complete');
     this.syncDomWithState();
   }
 
@@ -907,17 +932,21 @@ export class Transmitter extends BaseEquipment {
     const now = SimClock.runMs();
     for (const modem of this.state.modems) {
       const startedAt = this.bootStartRunMs_.get(modem.modem_number);
-      if (modem.isBooting && startedAt !== undefined && now < startedAt) {
-        this.completeBoot_(modem);
+      if (startedAt === undefined) continue;
+      // Timer dropped by a clock reset, or overdue (the boot must always finish)
+      const overdue = now - startedAt > Transmitter.BOOT_TIME_MS + Transmitter.BOOT_GRACE_MS;
+      if (modem.isBooting && (now < startedAt || overdue)) {
+        this.completeBoot_(modem.modem_number);
       }
     }
   }
 
-  private emitModemChanged_(modem: TransmitterModem): void {
+  private emitModemChanged_(modem: TransmitterModem, action?: TxModemAction): void {
     this.emit(Events.TX_CONFIG_CHANGED, {
       uuid: this.uuid,
       modem: modem.modem_number,
       config: modem,
+      ...(action ? { action } : {}),
     });
   }
 
@@ -934,21 +963,18 @@ export class Transmitter extends BaseEquipment {
       return;
     }
 
-    // Update the modem configuration, merging ifSignal properties
-    this.state.modems[modemIndex] = {
-      ...this.activeModem,
-      antenna_id: this.inputData.antenna_id ?? this.activeModem.antenna_id,
-      ifSignal: {
-        ...this.activeModem.ifSignal,
-        ...this.inputData.ifSignal,
-      },
+    // Update the modem configuration in place, merging ifSignal properties.
+    // In place keeps the modem's identity, so a boot in progress (and any other
+    // holder of the object) sees the applied config; replacing the object
+    // wedged a boot started before the Apply (nats-r3-s03-F1).
+    const modem = this.state.modems[modemIndex];
+    modem.antenna_id = this.inputData.antenna_id ?? modem.antenna_id;
+    modem.ifSignal = {
+      ...modem.ifSignal,
+      ...this.inputData.ifSignal,
     };
 
-    this.emit(Events.TX_CONFIG_CHANGED, {
-      uuid: this.uuid,
-      modem: this.state.activeModem,
-      config: this.state.modems[modemIndex],
-    });
+    this.emitModemChanged_(modem, 'config');
 
     // Reset inputData to match the newly applied state
     this.inputData = structuredClone(this.state.modems[modemIndex]);

@@ -38,6 +38,7 @@ import {
   formatTxTransmitEvent,
 } from './event-formatters';
 import { OpsLogManager } from './ops-log-manager';
+import { stationSource, stationTagForAntennaState, stationTagForModemUuid, stationTagForRfState } from './station-tag';
 
 /**
  * Auto-logs equipment events to the operations log.
@@ -51,8 +52,11 @@ export class EventAutoLogger {
 
   // Throttling and deduplication
   private static readonly THROTTLE_MS = 500;
-  private readonly lastLogTime_: Map<Events, number> = new Map();
-  private readonly lastLoggedMessage_: Map<Events, string> = new Map();
+  /** Keyed by event and station, so two stations' identical lines both log */
+  private readonly lastLogTime_: Map<string, number> = new Map();
+  private readonly lastLoggedMessage_: Map<string, string> = new Map();
+  /** Last antenna mode/staging seen per station, to spot a mode command */
+  private readonly lastAntennaModeKey_: Map<string, string> = new Map();
 
   // Bound handlers for cleanup
   private readonly boundAntennaHandler_: (data: Partial<AntennaState>) => void;
@@ -144,27 +148,29 @@ export class EventAutoLogger {
    * Check if this message should be skipped due to throttling or being a duplicate.
    * Returns true if the message should NOT be logged.
    */
-  private shouldSkip_(event: Events, message: string | null, skipThrottle: boolean = false): boolean {
+  private shouldSkip_(event: Events, message: string | null, skipThrottle: boolean = false, station: string = ''): boolean {
+    const key = `${event}|${station}`;
+
     // No message to log
     if (!message) return true;
 
     // Skip if same message as last logged for this event type
-    if (this.lastLoggedMessage_.get(event) === message) {
+    if (this.lastLoggedMessage_.get(key) === message) {
       return true;
     }
 
     // Check time-based throttling
     if (!skipThrottle) {
       const now = SimClock.runMs();
-      const lastTime = this.lastLogTime_.get(event) ?? -Infinity;
+      const lastTime = this.lastLogTime_.get(key) ?? -Infinity;
       if (now >= lastTime && now - lastTime < EventAutoLogger.THROTTLE_MS) {
         return true;
       }
-      this.lastLogTime_.set(event, now);
+      this.lastLogTime_.set(key, now);
     }
 
     // Record this message as the last logged
-    this.lastLoggedMessage_.set(event, message);
+    this.lastLoggedMessage_.set(key, message);
     return false;
   }
 
@@ -176,112 +182,147 @@ export class EventAutoLogger {
     OpsLogManager.getInstance().log(message, 'action', source);
   }
 
+  /**
+   * Log an equipment action that no EventBus event reports: a panel toggle
+   * (HPA enable, BUC mute) or an automatic action (handover safing). Logged
+   * like the event-driven lines: same difficulty gate, station-tagged source.
+   * @param message the log line
+   * @param system the equipment tag, e.g. "RF FE", "TX", "HANDOVER"
+   * @param stationId the station's id in a multi-station scenario, else undefined
+   */
+  logAction(message: string, system: string, stationId?: string): void {
+    this.log_(message, stationSource(system, stationId));
+  }
+
   // ════════════════════════════════════════════════════════════════════════════
   // Event Handlers
   // ════════════════════════════════════════════════════════════════════════════
 
   private handleAntennaEvent_(data: Partial<AntennaState>): void {
     const message = formatAntennaEvent(data);
-    if (this.shouldSkip_(Events.ANTENNA_STATE_CHANGED, message)) return;
-    this.log_(message, 'ANT');
+    const station = stationTagForAntennaState(data);
+    // A mode command (staged or applied) is an operator action: never throttle
+    // it away, so an APPLY right after MAINT still logs (nats-r3-s11-F2)
+    const modeKey = `${data.trackingMode}|${data.hasStagedChanges === true && data.stagedTargetElevation != null}`;
+    const modeChanged = this.lastAntennaModeKey_.get(station ?? '') !== modeKey;
+    this.lastAntennaModeKey_.set(station ?? '', modeKey);
+    if (this.shouldSkip_(Events.ANTENNA_STATE_CHANGED, message, modeChanged, station)) return;
+    this.log_(message, stationSource('ANT', station));
   }
 
   private handleTxConfigEvent_(data: TxConfigChangedData): void {
     const message = formatTxConfigEvent(data);
-    if (this.shouldSkip_(Events.TX_CONFIG_CHANGED, message)) return;
-    this.log_(message, 'TX');
+    const station = stationTagForModemUuid(data.uuid, data.config);
+    // Every logged TX line is a discrete action (config, transmit, power):
+    // skip the throttle so two modems stopped in one tick both log; still dedupe
+    if (this.shouldSkip_(Events.TX_CONFIG_CHANGED, message, true, station)) return;
+    this.log_(message, stationSource('TX', station));
   }
 
   private handleTxModemEvent_(data: TxActiveModemChangedData): void {
     const message = formatTxActiveModemEvent(data);
+    const station = stationTagForModemUuid(data.uuid);
     // Skip throttle for intentional user action, but still dedupe
-    if (this.shouldSkip_(Events.TX_ACTIVE_MODEM_CHANGED, message, true)) return;
-    this.log_(message, 'TX');
+    if (this.shouldSkip_(Events.TX_ACTIVE_MODEM_CHANGED, message, true, station)) return;
+    this.log_(message, stationSource('TX', station));
   }
 
   private handleTxTransmitEvent_(data: TxTransmitChangedData): void {
     const message = formatTxTransmitEvent(data);
+    const station = stationTagForModemUuid(data.uuid);
     // Skip throttle for critical state change, but still dedupe
-    if (this.shouldSkip_(Events.TX_TRANSMIT_CHANGED, message, true)) return;
-    this.log_(message, 'TX');
+    if (this.shouldSkip_(Events.TX_TRANSMIT_CHANGED, message, true, station)) return;
+    this.log_(message, stationSource('TX', station));
   }
 
   private handleRxConfigEvent_(data: RxConfigChangedData): void {
     const message = formatRxConfigEvent(data);
-    if (this.shouldSkip_(Events.RX_CONFIG_CHANGED, message)) return;
-    this.log_(message, 'RX');
+    const station = stationTagForModemUuid(data.uuid);
+    if (this.shouldSkip_(Events.RX_CONFIG_CHANGED, message, false, station)) return;
+    this.log_(message, stationSource('RX', station));
   }
 
   private handleRxModemEvent_(data: RxActiveModemChangedData): void {
     const message = formatRxActiveModemEvent(data);
+    const station = stationTagForModemUuid(data.uuid);
     // Skip throttle for intentional user action, but still dedupe
-    if (this.shouldSkip_(Events.RX_ACTIVE_MODEM_CHANGED, message, true)) return;
-    this.log_(message, 'RX');
+    if (this.shouldSkip_(Events.RX_ACTIVE_MODEM_CHANGED, message, true, station)) return;
+    this.log_(message, stationSource('RX', station));
   }
 
   private handleRfPowerEvent_(data: Partial<RFFrontEndState>): void {
     const message = formatRfFePowerEvent(data);
+    const station = stationTagForRfState(data.lnb);
     // Skip throttle for important state change, but still dedupe
-    if (this.shouldSkip_(Events.RF_FE_POWER_CHANGED, message, true)) return;
-    this.log_(message, 'RF FE');
+    if (this.shouldSkip_(Events.RF_FE_POWER_CHANGED, message, true, station)) return;
+    this.log_(message, stationSource('RF FE', station));
   }
 
   private handleBucEvent_(data: Partial<BUCState>): void {
     const message = formatBucEvent(data);
-    if (this.shouldSkip_(Events.RF_FE_BUC_CHANGED, message)) return;
-    this.log_(message, 'RF FE');
+    const station = stationTagForRfState(data);
+    if (this.shouldSkip_(Events.RF_FE_BUC_CHANGED, message, false, station)) return;
+    this.log_(message, stationSource('RF FE', station));
   }
 
   private handleHpaEvent_(data: Partial<HPAState>): void {
     const message = formatHpaEvent(data);
+    const station = stationTagForRfState(data);
     // Skip throttle for HPA enable/disable, but still dedupe
-    if (this.shouldSkip_(Events.RF_FE_HPA_CHANGED, message, true)) return;
-    this.log_(message, 'RF FE');
+    if (this.shouldSkip_(Events.RF_FE_HPA_CHANGED, message, true, station)) return;
+    this.log_(message, stationSource('RF FE', station));
   }
 
   private handleAgcEvent_(data: Partial<AGCState>): void {
     const message = formatAgcEvent(data);
-    if (this.shouldSkip_(Events.RF_FE_AGC_CHANGED, message)) return;
-    this.log_(message, 'RF FE');
+    const station = stationTagForRfState(data);
+    if (this.shouldSkip_(Events.RF_FE_AGC_CHANGED, message, false, station)) return;
+    this.log_(message, stationSource('RF FE', station));
   }
 
   private handleLnbEvent_(data: Partial<LNBState>): void {
     const message = formatLnbEvent(data);
-    if (this.shouldSkip_(Events.RF_FE_LNB_CHANGED, message)) return;
-    this.log_(message, 'RF FE');
+    const station = stationTagForRfState(data);
+    if (this.shouldSkip_(Events.RF_FE_LNB_CHANGED, message, false, station)) return;
+    this.log_(message, stationSource('RF FE', station));
   }
 
   private handleOmtEvent_(data: Partial<OMTState>): void {
     const message = formatOmtEvent(data);
+    const station = stationTagForRfState(data);
     // Skip throttle for intentional user action, but still dedupe
-    if (this.shouldSkip_(Events.RF_FE_OMT_CHANGED, message, true)) return;
-    this.log_(message, 'RF FE');
+    if (this.shouldSkip_(Events.RF_FE_OMT_CHANGED, message, true, station)) return;
+    this.log_(message, stationSource('RF FE', station));
   }
 
   private handleCouplerEvent_(data: Partial<CouplerState>): void {
     const message = formatCouplerEvent(data);
+    const station = stationTagForRfState(data);
     // Skip throttle for intentional user action, but still dedupe
-    if (this.shouldSkip_(Events.RF_FE_COUPLER_CHANGED, message, true)) return;
-    this.log_(message, 'RF FE');
+    if (this.shouldSkip_(Events.RF_FE_COUPLER_CHANGED, message, true, station)) return;
+    this.log_(message, stationSource('RF FE', station));
   }
 
   private handleFilterEvent_(data: Partial<IfFilterBankState>): void {
     const message = formatFilterEvent(data);
-    if (this.shouldSkip_(Events.RF_FE_FILTER_CHANGED, message)) return;
-    this.log_(message, 'RF FE');
+    const station = stationTagForRfState(data);
+    if (this.shouldSkip_(Events.RF_FE_FILTER_CHANGED, message, false, station)) return;
+    this.log_(message, stationSource('RF FE', station));
   }
 
   private handleNotchFilterEvent_(data: Partial<NotchFilterState>): void {
     const message = formatNotchFilterEvent(data);
-    if (this.shouldSkip_(Events.RF_FE_NOTCH_FILTER_CHANGED, message)) return;
-    this.log_(message, 'RF FE');
+    const station = stationTagForRfState(data);
+    if (this.shouldSkip_(Events.RF_FE_NOTCH_FILTER_CHANGED, message, false, station)) return;
+    this.log_(message, stationSource('RF FE', station));
   }
 
   private handleGpsdoEvent_(data: Partial<GPSDOState>): void {
     const message = formatGpsdoEvent(data);
+    const station = stationTagForRfState(data);
     // Skip throttle for important state change, but still dedupe
-    if (this.shouldSkip_(Events.RF_FE_GPSDO_CHANGED, message, true)) return;
-    this.log_(message, 'RF FE');
+    if (this.shouldSkip_(Events.RF_FE_GPSDO_CHANGED, message, true, station)) return;
+    this.log_(message, stationSource('RF FE', station));
   }
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -314,6 +355,7 @@ export class EventAutoLogger {
     this.isEnabled_ = false;
     this.lastLogTime_.clear();
     this.lastLoggedMessage_.clear();
+    this.lastAntennaModeKey_.clear();
   }
 
   /**

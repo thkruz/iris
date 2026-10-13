@@ -26,6 +26,11 @@ export class ScenarioDialogManager {
     return ScenarioDialogManager.instance;
   }
 
+  /** True while an objective clip is scheduled (the 500 ms beat) but not yet handed to the DialogManager */
+  static hasPendingClips(): boolean {
+    return (ScenarioDialogManager.instance?.pendingClips_ ?? 0) > 0;
+  }
+
   initialize(): void {
     this.eventBus.on(Events.OBJECTIVE_COMPLETED, this.boundHandleObjectiveCompleted);
     this.eventBus.on(Events.OBJECTIVE_ACTIVATED, this.boundHandleObjectiveActivated);

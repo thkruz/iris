@@ -3,8 +3,8 @@
  *
  * Every Campaign 2 scenario opens before AOS with the tracker parked on empty
  * sky, so the receive AGC is levelling receive noise with no carrier in its
- * passband and the Dashboard lists "AGC on noise only - no carrier in
- * passband" under Active Alarms (phase 19.2: the AGC detector measures noise;
+ * passband and the Dashboard lists "AGC on noise only - passband power is
+ * noise, no traffic carrier" under Active Alarms (phase 19.2: the AGC detector measures noise;
  * before that it ignored noise and sat at its 10 dB max-gain rail). Phase 16
  * shipped nine sweep quizzes that graded "No active alarms" as correct; the
  * Playwright specs answered them by the quiz's own text and never read the
@@ -52,7 +52,7 @@ import { AntennaUIHeadless } from '@app/equipment/antenna/antenna-ui-headless';
 import { createRFFrontEnd } from '@app/equipment/rf-front-end/rf-front-end-factory';
 import { EventBus } from '@app/events/event-bus';
 
-const AGC_NO_CARRIER = /AGC on noise only - no carrier/u;
+const AGC_NO_CARRIER = /AGC on noise only - passband power is noise, no traffic carrier/u;
 
 describe('nats-eu board sweep: the pre-AOS board carries the RX AGC no-carrier warning', () => {
   beforeEach(() => {

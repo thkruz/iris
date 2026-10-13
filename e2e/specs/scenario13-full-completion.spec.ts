@@ -30,6 +30,22 @@ interface Scenario13Objective {
   bucGain?: number;
   /** Wait (ms) for the objective to complete after its action - for steps gated on a live reading */
   waitDoneMs?: number;
+  /** Wait (ms) for a quiz gated on a live reading to open (default 30 s) */
+  quizTimeoutMs?: number;
+  /**
+   * Reads the panel the quiz is about and asserts the keyed option is what
+   * the screen shows, before the answer is clicked: the answer comes from
+   * the sim state, not from matching the option text
+   */
+  checkScreen?: (page: import('@playwright/test').Page) => Promise<void>;
+}
+
+/** First number in a visible readout (e.g. "62.3 °C", "+0.27 °C/min") */
+async function readNumber(page: import('@playwright/test').Page, selector: string): Promise<number> {
+  const text = (await page.locator(`${selector}:visible`).first().textContent()) ?? '';
+  const match = /[-+]?\d+(?:\.\d+)?/u.exec(text);
+  expect(match, `${selector} reads a number (got "${text}")`).not.toBeNull();
+  return Number.parseFloat(match![0]);
 }
 
 const SCENARIO_13_OBJECTIVES: Scenario13Objective[] = [
@@ -74,7 +90,16 @@ const SCENARIO_13_OBJECTIVES: Scenario13Objective[] = [
     id: 'read-buc-temp-trend',
     title: 'Read the Temperature Trend',
     type: 'quiz',
-    correctAnswer: 'Roughly 25-30 minutes from now if nothing changes',
+    correctAnswer: 'In about half an hour (25-35 minutes) if nothing changes',
+    // (70 - Temp) / Trend (1 min), as the player works it off the panel
+    checkScreen: async (page) => {
+      const temperature = await readNumber(page, '#buc-temperature-display');
+      const trend = await readNumber(page, '#buc-temp-trend-display');
+      expect(trend).toBeGreaterThan(0);
+      const minutesToTrip = (70 - temperature) / trend;
+      expect(minutesToTrip).toBeGreaterThanOrEqual(25);
+      expect(minutesToTrip).toBeLessThanOrEqual(35);
+    },
   },
   {
     id: 'check-current-draw',
@@ -94,6 +119,11 @@ const SCENARIO_13_OBJECTIVES: Scenario13Objective[] = [
     // Phase 27 Q3: the receive-side read is a quiz on what RX Analysis shows
     type: 'quiz',
     correctAnswer: 'Beacon steady on the analyzer, RX modem locked at about 14 dB C/N - the receive chain is clean',
+    checkScreen: async (page) => {
+      const rawCn = await readNumber(page, '#cn-raw-display');
+      expect(rawCn).toBeGreaterThan(12.5);
+      expect(rawCn).toBeLessThan(15.5);
+    },
   },
   {
     id: 'record-baseline-readings',
@@ -145,15 +175,26 @@ const SCENARIO_13_OBJECTIVES: Scenario13Objective[] = [
     // Phase 27 Q3: the linearity rows latch on TX Chain, then the panel read
     type: 'quiz',
     correctAnswer: 'BUC output about 16 dBm, P1dB margin about 12 dB; HPA output still 52 dBm at 8 dB back-off, Overdrive Normal',
+    checkScreen: async (page) => {
+      expect(Math.abs((await readNumber(page, '#buc-output-power-display')) - 16)).toBeLessThan(1);
+      expect(Math.abs((await readNumber(page, '#buc-p1db-margin-display')) - 12)).toBeLessThan(1);
+      expect(Math.abs((await readNumber(page, '#hpa-output-power-display')) - 52)).toBeLessThan(0.6);
+    },
   },
   {
     id: 'verify-trend-stabilizing',
     title: 'Confirm the Trend Is Bending',
     type: 'quiz',
-    correctAnswer: 'Watch a few minutes: current drops to about 3.1 A at once, temperature turns down and passes 61°C in 2-3 minutes, carrier still locked',
-    // The BUC must read below 61 degC on TX Chain: real cooling after the
-    // de-rate (~1.5-3 min of sim time; advanceClock does not run physics)
-    waitDoneMs: 240000,
+    correctAnswer: 'Watch a few minutes: current drops to about 3.1 A at once, Trend (1 min) turns negative, temperature passes 61°C about 3 minutes in, carrier still locked',
+    // The quiz opens once the BUC reads below 61 degC on TX Chain: real
+    // cooling after the de-rate (about 3 min of sim time)
+    quizTimeoutMs: 300000,
+    waitDoneMs: 60000,
+    checkScreen: async (page) => {
+      expect(await readNumber(page, '#buc-current-display')).toBeLessThan(3.2);
+      expect(await readNumber(page, '#buc-temperature-display')).toBeLessThan(61);
+      expect(await readNumber(page, '#buc-temp-trend-display')).toBeLessThan(0);
+    },
   },
 
   // ============================================================
@@ -227,7 +268,8 @@ async function configureBucGain(page: import('@playwright/test').Page, gain: num
 async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario13Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
-      await waitForQuizToAppear(page);
+      await waitForQuizToAppear(page, objective.quizTimeoutMs);
+      await objective.checkScreen?.(page);
       await answerQuizByText(page, objective.correctAnswer!);
       break;
 
@@ -302,11 +344,11 @@ test.describe('Scenario 13 Full Completion', () => {
   });
 
   // verify-trend-stabilizing waits out real BUC cooling
-  const longestWaitMs = Math.max(...SCENARIO_13_OBJECTIVES.map((o) => o.waitDoneMs ?? 0));
+  const longestWaitMs = Math.max(...SCENARIO_13_OBJECTIVES.map((o) => (o.waitDoneMs ?? 0) + (o.quizTimeoutMs ?? 0)));
 
   for (const objective of SCENARIO_13_OBJECTIVES) {
     test(`[${objective.id}] ${objective.title}`, async () => {
-      if (objective.waitDoneMs) {
+      if (objective.waitDoneMs || objective.quizTimeoutMs) {
         test.setTimeout(60000 + longestWaitMs);
       }
       await executeObjective(page, missionControlPage, objective);
