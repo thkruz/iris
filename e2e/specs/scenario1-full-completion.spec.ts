@@ -136,7 +136,7 @@ const SCENARIO_1_OBJECTIVES: Scenario1Objective[] = [
     id: 'verify-polarization',
     title: 'Polarization Check',
     type: 'quiz',
-    correctAnswer: '14° - matched to TIDEMARK-1 satellite polarization',
+    correctAnswer: 'About +18.8° - matched to TIDEMARK-1 satellite polarization as seen from VT-01',
   },
   // Phase 7: Final Verification
   {

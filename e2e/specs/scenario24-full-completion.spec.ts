@@ -41,6 +41,10 @@ interface Scenario24Objective {
   quizWaitMs?: number;
   /** For quiz: read the BUC panel (current down, Trend negative) before answering */
   assertBucTrendTurned?: boolean;
+  /** For quiz: a timed hold row comes first; advance the clock this far (s) so it completes */
+  holdSeconds?: number;
+  /** For quiz: VT-01 is under the rain band, feed clear, beacon still locked (Phase 29 D13) */
+  assertRainBand?: boolean;
 }
 
 const SCENARIO_24_OBJECTIVES: Scenario24Objective[] = [
@@ -179,10 +183,19 @@ const SCENARIO_24_OBJECTIVES: Scenario24Objective[] = [
     correctAnswer: 'Per-trunk cause/action/next-update, thirty seconds each: TM-1 on its booked backup for the window (VT-01 feed heated), TM-2 stabilized (BUC de-rated)',
   },
   {
+    // Phase 29 D13: the quiz waits behind "Watch the beacon on ACU Control (held 60 s)"
+    id: 'storm-hold-check-tab',
+    title: 'Open ACU Control for the storm read',
+    type: 'click-tab',
+    tabId: 'acu-control',
+  },
+  {
     id: 'storm-hold-check',
     title: 'Storm Holding',
     type: 'quiz',
-    correctAnswer: 'The feed stays clear as fast as ice tries to form - no accumulation, the weak beacon keeps every tenth of a dB; monitor the ACU ice reading only',
+    holdSeconds: 62,
+    assertRainBand: true,
+    correctAnswer: 'The heater keeps the feed clear (Ice 0.0 dB); the rain costs the beacon about a dB (Sky Temp up), still above the 6.5 dB lock - ride it on the margin',
   },
   {
     id: 'board-note-quiz',
@@ -360,6 +373,29 @@ async function assertBucTrendTurned(page: import('@playwright/test').Page): Prom
   expect(await readNumber('#buc-temp-trend-display')).toBeLessThan(0);
 }
 
+/** VT-01 under the rain band: rain falling, feed clear (heater), AURORA-7 beacon still locked. */
+async function assertRainBand(page: import('@playwright/test').Page): Promise<void> {
+  const vt = await page.evaluate(() => {
+    const w = window as unknown as {
+      signalRange?: {
+        simulationManager?: {
+          groundStations?: Array<{
+            state?: { id?: string };
+            antennas?: Array<{ state?: { rainRate_mmh?: number; iceAccumulation_dB?: number; isBeaconLocked?: boolean; beaconCN?: number | null } }>;
+          }>;
+        };
+      };
+    };
+    const gs = w.signalRange?.simulationManager?.groundStations?.find((g) => g.state?.id === 'VT-01');
+    return gs?.antennas?.[0]?.state ?? null;
+  });
+  expect(vt, 'VT-01 antenna state').not.toBeNull();
+  expect(vt!.rainRate_mmh ?? 0).toBeGreaterThan(20);
+  expect(vt!.iceAccumulation_dB ?? 99).toBeLessThan(0.1);
+  expect(vt!.isBeaconLocked).toBe(true);
+  expect(vt!.beaconCN ?? 0).toBeGreaterThan(6.5);
+}
+
 /** Wait until the objective reports complete, via the debugObjective dev hook. */
 async function waitForObjectiveDone(page: import('@playwright/test').Page, objectiveId: string, timeout: number): Promise<void> {
   await page.waitForFunction(
@@ -375,7 +411,17 @@ async function waitForObjectiveDone(page: import('@playwright/test').Page, objec
 async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario24Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
+      if (objective.holdSeconds) {
+        // advanceClock moves the weather (the rain band ramps in) but credits no
+        // maintainDuration hold: the 60 s hold accrues in real time while ACU
+        // Control is open, and waitForQuizToAppear waits for it
+        await page.evaluate((ms) => (window as unknown as { advanceClock: (deltaMs: number) => void }).advanceClock(ms), objective.holdSeconds * 1000);
+        await page.waitForTimeout(1500);
+      }
       await waitForQuizToAppear(page, objective.quizWaitMs);
+      if (objective.assertRainBand) {
+        await assertRainBand(page);
+      }
       if (objective.assertBucTrendTurned) {
         await assertBucTrendTurned(page);
       }

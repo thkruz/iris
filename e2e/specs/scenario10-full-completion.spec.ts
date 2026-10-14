@@ -37,6 +37,8 @@ interface Scenario10Objective {
   autoWaitSeconds?: number;
   /** For 'objective-skip': the station-clock time the skip lands at, 'HH:MM' (Phase 28 D1) */
   skipLandsAt?: string;
+  /** For 'objective-skip': the hold's label as the tooltip names it (Phase 29 D15) */
+  skipLabel?: string;
 }
 
 /** Station clock (HUD #utc-clock) as minutes past midnight */
@@ -174,6 +176,7 @@ const SCENARIO_10_OBJECTIVES: Scenario10Objective[] = [
     title: 'Stand By for the 10:00 Window',
     type: 'objective-skip',
     skipLandsAt: '10:00',
+    skipLabel: 'the standby',
   },
   {
     id: 'sustain-rx-margin',
@@ -186,6 +189,7 @@ const SCENARIO_10_OBJECTIVES: Scenario10Objective[] = [
     title: 'Hold Through the Window',
     type: 'objective-skip',
     skipLandsAt: '10:30',
+    skipLabel: 'the SeaLink pass window',
   },
 
   // ============================================================
@@ -335,6 +339,11 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
         // Phase 28 D1 (nats-r3-s10-F1/F2): the skip runs to the end of the
         // hold on the station clock, and the mission countdown holds meanwhile
         await expect(page.locator('#objective-skip-control-label')).toHaveText(`Skip to ${objective.skipLandsAt}`, { timeout: 10000 });
+        if (objective.skipLabel) {
+          // Phase 29 D15 (nats-r4-s10-F3): the tooltip names the hold once, without restating the time
+          const title = await skip.getAttribute('title');
+          expect(title?.startsWith(`Skip to ${objective.skipLandsAt}, the end of ${objective.skipLabel}.`)).toBe(true);
+        }
         await expect(page.locator('#scenario-timer-hold')).toBeVisible();
       }
       await skip.click();

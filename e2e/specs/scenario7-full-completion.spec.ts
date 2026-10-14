@@ -253,7 +253,8 @@ const SCENARIO_7_OBJECTIVES: Scenario7Objective[] = [
     id: 'enable-loopback-quiz',
     title: 'Loopback Mode Understanding',
     type: 'quiz',
-    correctAnswer: 'Routes the TX RF signal to the LNB instead of the HPA',
+    correctAnswer:
+      'A directional coupler samples the BUC output, a pad drops it about 66 dB and the loop translator shifts it 2,225 MHz down into the LNB; the HPA path stays connected',
   },
   {
     id: 'verify-loopback-signal-tab',

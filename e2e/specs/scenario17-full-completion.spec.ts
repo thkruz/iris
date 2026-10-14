@@ -18,9 +18,12 @@ import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForS
  * Spec notes:
  *  - 'wait-sky-noise' steps poll the simulation state directly
  *    (skyNoiseDegradation_dB on VT-01's antenna) instead of sleeping.
+ *  - 'wait-objective' steps wait for the objective itself (Phase 29 D10):
+ *    Hold Through the Peak ticks at the transit midpoint (onset + 150 s), and
+ *    Verify Self-Recovery needs the modem to have lost lock and locked again.
  *  - Total wall-clock is dominated by the transit timeline (~5 min).
  */
-type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'auto' | 'wait-sky-noise' | 'objective-skip';
+type ObjectiveType = 'quiz' | 'select-station' | 'click-tab' | 'auto' | 'wait-sky-noise' | 'wait-objective' | 'objective-skip';
 
 interface Scenario17Objective {
   id: string;
@@ -31,7 +34,7 @@ interface Scenario17Objective {
   stationId?: string;
   /** For wait-sky-noise: condition to await */
   skyNoise?: { above?: number; below?: number };
-  /** For wait-sky-noise: max seconds to wait */
+  /** For wait-sky-noise / wait-objective: max seconds to wait */
   waitTimeoutSeconds?: number;
   /** Reads the panel the quiz is about and asserts the keyed option is what the screen shows */
   checkScreen?: (page: import('@playwright/test').Page) => Promise<void>;
@@ -147,12 +150,13 @@ const SCENARIO_17_OBJECTIVES: Scenario17Objective[] = [
     correctAnswer: 'Confidence this is the predicted transit, not a coincidental fault - the alarm tracking the sheet IS the diagnosis',
   },
   {
-    // ride-through-peak completes on its own at >6 dB as long as the spec
-    // touches nothing - which is the whole point of the objective.
+    // ride-through-peak completes on its own once the transit has passed its
+    // peak (weather-event-peaked, onset + 150 s) as long as the spec touches
+    // nothing - which is the whole point of the objective. The receiver has
+    // lost lock by then (Phase 29 D10).
     id: 'ride-through-peak',
     title: 'Hold Through the Peak',
-    type: 'wait-sky-noise',
-    skyNoise: { above: 6 },
+    type: 'wait-objective',
     waitTimeoutSeconds: 300,
   },
   {
@@ -166,11 +170,19 @@ const SCENARIO_17_OBJECTIVES: Scenario17Objective[] = [
   // PHASE 3: RECOVERY AND DOCUMENTATION
   // ============================================================
   {
-    id: 'verify-recovery',
-    title: 'Verify Self-Recovery',
+    // Sky noise under 1 dB first, then the objective: Receiver Re-Locked is
+    // receiver-relocked (lock lost after onset, then regained)
+    id: 'verify-recovery-sky',
+    title: 'Wait for Sky Noise to Clear',
     type: 'wait-sky-noise',
     skyNoise: { below: 1 },
     waitTimeoutSeconds: 420,
+  },
+  {
+    id: 'verify-recovery',
+    title: 'Verify Self-Recovery',
+    type: 'wait-objective',
+    waitTimeoutSeconds: 120,
   },
   {
     id: 'post-event-sweep-tab',
@@ -236,6 +248,18 @@ async function waitForSkyNoise(page: import('@playwright/test').Page, condition:
   await page.waitForTimeout(2500);
 }
 
+/** Wait until the objective reports completed (window.debugObjective). */
+async function waitForObjectiveComplete(page: import('@playwright/test').Page, id: string, timeoutSeconds: number): Promise<void> {
+  await page.waitForFunction(
+    (objectiveId) => {
+      const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;
+      return typeof hook === 'function' && hook(objectiveId)?.isCompleted === true;
+    },
+    id,
+    { timeout: timeoutSeconds * 1000, polling: 500 }
+  );
+}
+
 async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario17Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
@@ -250,14 +274,7 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
       // D1: waiting for the window costs no mission time
       await expect(page.locator('#scenario-timer-hold')).toBeVisible({ timeout: 10000 });
       await skip.click();
-      await page.waitForFunction(
-        (id) => {
-          const hook = (window as unknown as { debugObjective?: (id: string) => { isCompleted?: boolean } }).debugObjective;
-          return typeof hook === 'function' && hook(id)?.isCompleted === true;
-        },
-        objective.id,
-        { timeout: 30000, polling: 500 }
-      );
+      await waitForObjectiveComplete(page, objective.id, 30);
       break;
     }
 
@@ -275,6 +292,10 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
 
     case 'wait-sky-noise':
       await waitForSkyNoise(page, objective.skyNoise!, objective.waitTimeoutSeconds ?? 420);
+      break;
+
+    case 'wait-objective':
+      await waitForObjectiveComplete(page, objective.id, objective.waitTimeoutSeconds ?? 420);
       break;
 
     case 'auto':
@@ -328,7 +349,7 @@ test.describe('Scenario 17 Full Completion', () => {
   for (const objective of SCENARIO_17_OBJECTIVES) {
     test(`[${objective.id}] ${objective.title}`, async () => {
       // Transit-timeline waits run on astronomy's clock, not ours
-      if (objective.type === 'wait-sky-noise') {
+      if (objective.type === 'wait-sky-noise' || objective.type === 'wait-objective') {
         test.setTimeout(((objective.waitTimeoutSeconds ?? 420) + 60) * 1000);
       }
       await executeObjective(page, missionControlPage, objective);

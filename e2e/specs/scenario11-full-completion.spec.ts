@@ -322,9 +322,16 @@ async function setTrackingMode(page: import('@playwright/test').Page, trackingMo
   await page.waitForTimeout(300);
 
   if (trackingMode === 'maintenance' || trackingMode === 'stow') {
-    const applyBtn = page.locator('button[id$="apply-changes-btn"]');
+    // Phase 29 D4 (nats-r3-s11-F2): MAINT/STOW only stage; the ACU card shows
+    // the pending badge and the mode (and the objective) commit at APPLY
+    // Scoped to the active station's ACU tab (the visible one), not the first in the DOM
+    const acuTab = page.locator('.acu-control-tab:visible');
+    const stagedBadge = acuTab.locator('[id$="staged-mode-badge"]');
+    await expect(stagedBadge).toHaveText(`${trackingMode === 'stow' ? 'STOW' : 'MAINTENANCE'} pending APPLY`, { timeout: 3000 });
+    const applyBtn = acuTab.locator('button[id$="apply-changes-btn"]');
     await expect(applyBtn).toBeEnabled({ timeout: 3000 });
     await applyBtn.click();
+    await expect(stagedBadge).toBeHidden({ timeout: 3000 });
     await page.waitForTimeout(200);
   }
 }

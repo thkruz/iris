@@ -237,7 +237,7 @@ async function configureHpaBackoff(page: import('@playwright/test').Page, backof
   await page.waitForTimeout(400);
 }
 
-/** Centre the analyzer and set its span, then hold for the 5 s observation dwell. */
+/** Centre the analyzer and set its span; analyzer rows tick on the next frame (Phase 29 D7, no dwell). */
 async function configureSpeca(page: import('@playwright/test').Page, centerFrequencyMhz: number, spanMhz: number): Promise<void> {
   const centerFreqInput = page.locator('#sa-center-freq');
   await expect(centerFreqInput).toBeVisible({ timeout: 5000 });
@@ -247,7 +247,7 @@ async function configureSpeca(page: import('@playwright/test').Page, centerFrequ
   const spanInput = page.locator('#sa-span');
   await spanInput.fill(spanMhz.toString());
   await spanInput.press('Tab');
-  await page.waitForTimeout(7000);
+  await page.waitForTimeout(1500);
 }
 
 /** Wait for VT-01's feed ice to melt below the objective threshold. */

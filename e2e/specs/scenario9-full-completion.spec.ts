@@ -167,6 +167,13 @@ const SCENARIO_9_OBJECTIVES: Scenario9Objective[] = [
     correctAnswer: 'GEO satellite holding station - ephemeris is accurate enough; no need to hunt the beacon',
   },
   {
+    // nats-r4-s09-F1: the payload spot-check reads RX Analysis > Payload Data Integrity
+    id: 'me-tx-payload-spot-tab',
+    title: 'Open RX Analysis',
+    type: 'click-tab',
+    tabId: 'rx-analysis',
+  },
+  {
     id: 'me-tx-payload-spot',
     title: 'ME-02 Customer Traffic Indicator',
     type: 'quiz',

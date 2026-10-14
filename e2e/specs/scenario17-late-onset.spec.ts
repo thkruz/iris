@@ -29,6 +29,11 @@ import { answerQuizByText, dismissDialogIfPresent, waitForQuizToAppear, waitForS
  *  - AFTER the onset objective activates: the transit arrives on cue, the
  *    checklist condition ticks, the objective completes, and Sky Temp climbs
  *    far above the clear-sky 10 K. (Old engine: sky noise stays 0 - fails.)
+ *  - Phase 29 D10 (nats-r4-s17-F1): Hold Through the Peak ticks at the
+ *    transit midpoint (onset + 150 s), not on a >6 dB crossing ~90 s early,
+ *    and Verify Self-Recovery's "Receiver Re-Locked" needs the modem to have
+ *    lost lock after onset and locked again. The clock is walked in 5 s steps
+ *    so the objectives manager sees the unlock (one long jump would skip it).
  */
 
 type SimWindow = {
@@ -37,7 +42,11 @@ type SimWindow = {
   signalRange?: {
     simulationManager?: {
       groundStations?: Array<{ state?: { id?: string }; antennas?: Array<{ state?: { skyNoiseDegradation_dB?: number } }> }>;
-      objectivesManager?: { getObjectiveState: (id: string) => { isActive: boolean; isCompleted: boolean } | undefined };
+      objectivesManager?: {
+        getObjectiveState: (
+          id: string
+        ) => { isActive: boolean; isCompleted: boolean; conditionStates?: Array<{ condition: { type: string }; lockLostSeen?: boolean }> } | undefined;
+      };
     };
   };
 };
@@ -81,6 +90,26 @@ async function dwell(page: Page, seconds: number): Promise<void> {
   await page.waitForTimeout(1500);
 }
 
+/** Walk the scenario clock to a mission-elapsed second in short steps, letting the sim tick between them. */
+async function stepMissionTo(page: Page, targetSeconds: number, stepSeconds = 5): Promise<void> {
+  for (;;) {
+    const elapsedS = await page.evaluate(() => (window as unknown as SimWindow).missionElapsedMs!() / 1000);
+    const remaining = targetSeconds - elapsedS;
+    if (remaining <= 0.05) return;
+    const step = Math.min(stepSeconds, remaining);
+    await page.evaluate((ms) => (window as unknown as SimWindow).advanceClock!(ms), step * 1000);
+    await page.waitForTimeout(400);
+  }
+}
+
+/** Has verify-recovery's receiver-relocked row latched a lock loss? */
+async function readLockLostSeen(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const s = (window as unknown as SimWindow).signalRange?.simulationManager?.objectivesManager?.getObjectiveState('verify-recovery');
+    return s?.conditionStates?.find((c) => c.condition.type === 'receiver-relocked')?.lockLostSeen === true;
+  });
+}
+
 async function answerQuiz(page: Page, answer: string): Promise<void> {
   await waitForQuizToAppear(page);
   await answerQuizByText(page, answer);
@@ -93,6 +122,8 @@ test.describe('Scenario 17 Late Onset Regression', () => {
   let page: Page;
   let missionControlPage: MissionControlPage;
   let context: import('@playwright/test').BrowserContext;
+  /** Mission-elapsed second at which observe-onset (and the transit) started */
+  let onsetElapsedS = 0;
 
   test.beforeAll(async ({ browser }) => {
     context = await browser.newContext();
@@ -174,7 +205,8 @@ test.describe('Scenario 17 Late Onset Regression', () => {
     const skip = page.locator('#objective-skip-control');
     await expect(skip).toBeVisible({ timeout: 15_000 });
     await skip.click();
-    await expect.poll(async () => (await readObjective(page, 'observe-onset'))?.isActive, { timeout: 15_000 }).toBe(true);
+    await expect.poll(async () => (await readObjective(page, 'observe-onset'))?.isActive, { timeout: 15_000, intervals: [250] }).toBe(true);
+    onsetElapsedS = await page.evaluate(() => (window as unknown as SimWindow).missionElapsedMs!() / 1000);
 
     // Anchored start as the objective comes up, >2 dB ~55 s later: about a minute of run time
     await expect.poll(() => readSkyNoiseDb(page), { timeout: 120_000, intervals: [1000] }).toBeGreaterThan(2);
@@ -195,6 +227,40 @@ test.describe('Scenario 17 Late Onset Regression', () => {
     // Clear-sky antenna temperature is ~14 K. Since phase 19.2 the transit is a
     // rise in system noise: >2 dB on VT-01's ~83 K system adds >50 K of solar
     // noise at the aperture, so the readout climbs past ~65 K
-    await expect.poll(async () => parseFloat(((await skyTemp.textContent()) ?? '').replace(/[^\d.]/g, '')), { timeout: 15_000 }).toBeGreaterThan(50);
+    await expect.poll(async () => parseFloat(((await skyTemp.textContent()) ?? '').replace(/[^\d.]/gu, '')), { timeout: 15_000 }).toBeGreaterThan(50);
+  });
+
+  test('Hold Through the Peak waits for the midpoint, not the >6 dB crossing', async () => {
+    test.setTimeout(180_000);
+
+    // Onset + 120 s: sky noise is well past 6 dB (about 14.5 dB on the sin^2
+    // profile) but still rising, so the peak row must not have ticked
+    // (nats-r4-s17-F1: the old >6 dB evaluator fired here)
+    await stepMissionTo(page, onsetElapsedS + 120);
+    expect(await readSkyNoiseDb(page)).toBeGreaterThan(6);
+    expect(await readObjective(page, 'ride-through-peak')).toEqual({ isActive: true, isCompleted: false });
+
+    // Past the midpoint (onset + 150 s): the row ticks and the step completes
+    await stepMissionTo(page, onsetElapsedS + 160);
+    await expect.poll(async () => (await readObjective(page, 'ride-through-peak'))?.isCompleted, { timeout: 15_000 }).toBe(true);
+    // The demod has dropped by the peak, and the relock row has latched it
+    expect(await readLockLostSeen(page)).toBe(true);
+
+    await answerQuiz(page, 'The downlink is buried in solar noise at OUR antenna only - the uplink is fine, and the demod relocks on its own as the Sun moves off');
+    await expect.poll(async () => (await readObjective(page, 'verify-recovery'))?.isActive, { timeout: 15_000 }).toBe(true);
+  });
+
+  test('Verify Self-Recovery completes only after the drop and the relock', async () => {
+    test.setTimeout(180_000);
+
+    // The Sun is still close to boresight just after the peak: not recovered yet
+    expect((await readObjective(page, 'verify-recovery'))?.isCompleted).toBe(false);
+
+    // Walk through the fall (relock about onset + 220 s, clear under 1 dB by
+    // about onset + 296 s)
+    await stepMissionTo(page, onsetElapsedS + 305);
+    await expect.poll(() => readSkyNoiseDb(page), { timeout: 15_000 }).toBeLessThan(1);
+    await expect.poll(async () => (await readObjective(page, 'verify-recovery'))?.isCompleted, { timeout: 30_000 }).toBe(true);
+    expect(await readLockLostSeen(page)).toBe(true);
   });
 });

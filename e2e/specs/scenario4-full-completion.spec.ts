@@ -126,8 +126,8 @@ const SCENARIO_4_OBJECTIVES: Scenario4Objective[] = [
     specaConfig: {
       centerFrequency: 1070, // MHz
       span: 10, // kHz (RBW stays on Auto, ~30 Hz)
-      minAmplitude: -100, // dBm
-      maxAmplitude: -20, // dBm
+      minAmplitude: -115, // dBm
+      maxAmplitude: -35, // dBm
     },
   },
   {
@@ -220,7 +220,7 @@ const SCENARIO_4_OBJECTIVES: Scenario4Objective[] = [
     id: 'verify-rx-margin-quiz',
     title: 'Understand Link Margin',
     type: 'quiz',
-    correctAnswer: 'Lock can occur at C/N as low as about 4.2 dB, with no fade margin left - we need margin',
+    correctAnswer: 'Lock holds at C/N as low as about 3.7 dB, with no fade margin left - we need margin',
   },
   {
     id: 'verify-full-duplex-quiz',

@@ -95,7 +95,8 @@ const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
     id: 'beamwidth-risk-quiz',
     title: 'How Long Until It Falls Off',
     type: 'quiz',
-    correctAnswer: 'Borrowed time - within the hour the gap passes about half a beamwidth and the carrier drops out of lock; by early afternoon the bird is far outside the beam',
+    correctAnswer:
+      'Borrowed time - within the hour the gap reaches about one beamwidth (~0.55-0.6°) and the carrier drops out of lock; by early afternoon the bird is far outside the beam',
     // "about 0.4 deg now (beacon ~6 dB down)": the ACU still shows the sag
     checkScreen: async (page) => {
       const beaconCn = await readAcuBeaconCn(page);

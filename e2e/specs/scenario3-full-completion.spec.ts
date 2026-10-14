@@ -351,7 +351,7 @@ const SCENARIO_3_OBJECTIVES: Scenario3Objective[] = [
     id: 'verify-handover-success-quiz',
     title: 'Confirm Handover Success',
     type: 'quiz',
-    correctAnswer: 'Traffic indicator shows ME-02 as active, VT-01 TX disabled, no alarms, continuous data flow',
+    correctAnswer: 'Traffic indicator shows ME-02 as active, VT-01 TX disabled, no ME-02 alarms, continuous data flow',
   },
 
   // ============================================================

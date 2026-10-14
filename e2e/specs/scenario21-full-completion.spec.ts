@@ -32,6 +32,8 @@ interface Scenario21Objective {
   specaConfig?: { centerFrequencyMhz: number; spanMhz: number };
   notchConfig?: { centerFrequency: number; bandwidth: number; depth: number; notchIndex: number };
   autoWaitSeconds?: number;
+  /** Quiz behind a timed hold: advance the clock this far (s) before the quiz may open */
+  holdSeconds?: number;
 }
 
 const SCENARIO_21_OBJECTIVES: Scenario21Objective[] = [
@@ -65,7 +67,9 @@ const SCENARIO_21_OBJECTIVES: Scenario21Objective[] = [
     id: 'duty-cycle-quiz',
     title: 'Characterize the Duty Cycle',
     type: 'quiz',
-    correctAnswer: 'About 90 s on, 60 s off, repeating - against accident, toward deliberation: a clean minute-scale on/off cadence implies a switch',
+    // Phase 29 D11: the quiz opens after a 150 s hold on RX Analysis (one full cycle)
+    holdSeconds: 155,
+    correctAnswer: 'About 90 s on, 60 s off, repeating - a regular minute-scale cadence: toward a switch, not an accident',
   },
   {
     id: 'transponder-vs-local-quiz',
@@ -222,6 +226,17 @@ async function configureNotchFilter(
 async function executeObjective(page: import('@playwright/test').Page, missionControlPage: MissionControlPage, objective: Scenario21Objective): Promise<void> {
   switch (objective.type) {
     case 'quiz':
+      if (objective.holdSeconds) {
+        // The hold row must tick on the tab first; the quiz is not offered yet
+        await page.waitForTimeout(2000);
+        await expect(page.locator('#quiz-modal, .quiz-box')).toBeHidden();
+        // The indicator hides by opacity (no .show class), which Playwright still counts as visible
+        await expect(page.locator('.pending-quiz-indicator.show')).toHaveCount(0);
+        // Watch one full on/off cycle in real time: advanceClock burns countdowns but
+        // credits no maintainDuration hold (only an objective skip does), so wait it out
+        test.setTimeout((objective.holdSeconds + 90) * 1000);
+        await page.waitForTimeout(objective.holdSeconds * 1000);
+      }
       await waitForQuizToAppear(page);
       await answerQuizByText(page, objective.correctAnswer!);
       break;

@@ -697,10 +697,13 @@ test.describe('Scenario 2 Full Completion', () => {
 
   test('Objective: Hold for the Maintenance Window', async () => {
     const objective = SCENARIO_2_OBJECTIVES.find((o) => o.id === 'maintenance-complete')!;
-    // Phase 27 Q4: a 15-minute hold at the maintenance position; skip the wait
+    // Phase 29 D15: the crew window ends at 09:50 on the station clock; skip the wait
     const skip = page.locator('#objective-skip-control');
     await skip.waitFor({ state: 'visible', timeout: 15000 });
+    await expect(skip).toContainText('09:50');
     await skip.click();
+    // The skip lands on the crew window's end, 09:50 on the station clock
+    await expect(page.locator('#utc-clock')).toContainText('09:50', { timeout: 5000 });
     await executeObjective(page, missionControlPage, objective);
   });
 
