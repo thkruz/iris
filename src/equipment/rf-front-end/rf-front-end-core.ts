@@ -329,18 +329,24 @@ export abstract class RFFrontEndCore extends BaseEquipment {
     const alarms: AlarmStatus[] = [];
 
     // Collect alarm messages from all modules
-    let moduleAlarms = [];
+    let moduleAlarms: string[] = [];
 
     if (rfcase === 1) {
       moduleAlarms = [...this.omtModule.getAlarms(), ...this.bucModule.getAlarms(), ...this.hpaModule.getAlarms()];
     } else if (rfcase === 2) {
-      moduleAlarms = [
+      // A powered-off LNB is a station alarm (no receive path), so the ticker
+      // never reads SYSTEM STABLE with it off (nats-r4-s16-F1). Raised here,
+      // not by the LNB module, whose own card LED goes grey when off (phase 29 D4)
+      if (!this.lnbModule.state.isPowered) {
+        moduleAlarms.push('LNB powered off - no receive path');
+      }
+      moduleAlarms.push(
         ...this.agcModule.getAlarms(),
         ...this.notchFilterModule.getAlarms(),
         ...this.filterModule.getAlarms(),
         ...this.lnbModule.getAlarms(),
-        ...this.gpsdoModule.getAlarms(),
-      ];
+        ...this.gpsdoModule.getAlarms()
+      );
     }
 
     // Convert module alarm strings to AlarmStatus objects

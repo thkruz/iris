@@ -69,14 +69,7 @@ export class SatelliteDashboardTab extends BaseElement {
                   <span class="text-muted small">NORAD ID:</span>
                   <span class="fw-bold font-monospace">${this.satellite.noradId}</span>
                 </div>
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <span class="text-muted small">Azimuth:</span>
-                  <span id="sat-azimuth" class="fw-bold font-monospace">${this.satellite.az.toFixed(1)}&deg;</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <span class="text-muted small">Elevation:</span>
-                  <span id="sat-elevation" class="fw-bold font-monospace">${this.satellite.el.toFixed(1)}&deg;</span>
-                </div>
+                ${this.renderLookAngles_()}
                 <div class="d-flex justify-content-between align-items-center mb-2">
                   <span class="text-muted small">Rotation:</span>
                   <span id="sat-rotation" class="fw-bold font-monospace">${this.satellite.rotation.toFixed(1)}&deg;</span>
@@ -202,11 +195,63 @@ export class SatelliteDashboardTab extends BaseElement {
     return lines.map((line) => html`<div class="transponder-freq">${line}</div>`).join('');
   }
 
+  /**
+   * Look angles name the station they are seen from (phase 29 D4,
+   * nats-r4-s03-F2): one "Az / El (station)" row per ground station in the
+   * scenario, each from that station's antenna. With no station (a bare
+   * satellite page) the satellite's own az/el rows remain.
+   */
+  private renderLookAngles_(): string {
+    const stations = this.lookAngleStations_();
+    if (stations.length === 0) {
+      return html`
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted small">Azimuth:</span>
+          <span id="sat-azimuth" class="fw-bold font-monospace">${this.satellite.az.toFixed(1)}&deg;</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted small">Elevation:</span>
+          <span id="sat-elevation" class="fw-bold font-monospace">${this.satellite.el.toFixed(1)}&deg;</span>
+        </div>
+      `;
+    }
+
+    return stations
+      .map(
+        ({ id }) => html`
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small">Az / El from ${id}:</span>
+            <span id="sat-look-angles-${id}" data-look-station="${id}" class="sat-look-angles fw-bold font-monospace">--</span>
+          </div>
+        `
+      )
+      .join('');
+  }
+
+  /** Every scenario ground station with an antenna to see the satellite from */
+  private lookAngleStations_(): { id: string; antenna: { viewOf(sat: Satellite): { az: number; el: number } } }[] {
+    const stations = SimulationManager.getInstance().groundStations ?? [];
+
+    return stations.flatMap((gs) => {
+      const antenna = gs.antennas?.[0];
+      return antenna && typeof antenna.viewOf === 'function' ? [{ id: gs.state.id, antenna }] : [];
+    });
+  }
+
+  private syncLookAngles_(): void {
+    for (const { id, antenna } of this.lookAngleStations_()) {
+      const el = this.dom_?.querySelector<HTMLElement>(`[data-look-station="${id}"]`);
+      if (!el) continue;
+      const view = antenna.viewOf(this.satellite);
+      el.textContent = `${view.az.toFixed(1)}° / ${view.el.toFixed(1)}°`;
+    }
+  }
+
   private cacheDomElements_(): void {
     const ids = ['sat-azimuth', 'sat-elevation', 'sat-rotation', 'sat-health-badge', 'sat-active-transponders'];
 
     ids.forEach((id) => {
-      const el = qs(`#${id}`, this.dom_);
+      const el = this.dom_?.querySelector<HTMLElement>(`#${id}`);
       if (el) {
         this.domCache_.set(id, el);
       }
@@ -219,6 +264,8 @@ export class SatelliteDashboardTab extends BaseElement {
 
     const elEl = this.domCache_.get('sat-elevation');
     if (elEl) elEl.textContent = `${this.satellite.el.toFixed(1)}\u00B0`;
+
+    this.syncLookAngles_();
 
     const rotEl = this.domCache_.get('sat-rotation');
     if (rotEl) rotEl.textContent = `${this.satellite.rotation.toFixed(1)}\u00B0`;

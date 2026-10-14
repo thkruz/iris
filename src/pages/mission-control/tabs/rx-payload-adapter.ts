@@ -62,7 +62,15 @@ export interface RxPayloadState {
  * - FaultInjector: Applies scenario fault overrides
  */
 export class RxPayloadAdapter {
-  private static readonly UPDATE_INTERVAL_MS = 1000;
+  /**
+   * The modem status bar's cadence (ReceiverAdapter, 250 ms): the two read the
+   * same lock, so a 1 s dropout cannot show "Searching for signal" beside a
+   * Locked payload (phase 29 D4, nats-r4-s08-F2)
+   */
+  private static readonly UPDATE_INTERVAL_MS = 250;
+
+  /** Shown for a figure that has no measurement (no frame sync) */
+  private static readonly NO_READING = '--';
 
   private readonly containerEl_: HTMLElement;
   private readonly receiver_: Receiver | null;
@@ -156,14 +164,18 @@ export class RxPayloadAdapter {
   private initialize_(): void {
     this.setupDomCache_();
     EventBus.getInstance().on(Events.UPDATE, this.boundUpdateHandler_);
-    this.syncDomWithState_();
+    // First paint from the receiver, never the template's healthy defaults
+    this.refresh_();
   }
 
   private throttledSync_(): void {
     const now = Date.now();
     if (now - this.lastSyncTime_ < RxPayloadAdapter.UPDATE_INTERVAL_MS) return;
     this.lastSyncTime_ = now;
+    this.refresh_();
+  }
 
+  private refresh_(): void {
     // Update FEC metrics from receiver signal quality
     this.updateFecFromReceiver_();
 
@@ -293,14 +305,24 @@ export class RxPayloadAdapter {
       frameSyncEl.className = state.frameSyncLocked ? 'status-badge status-badge-green' : 'status-badge status-badge-red';
     }
 
+    // No frame sync: nothing is being decoded, so the decoder figures have no
+    // measurement and read "--", never a healthy last value (phase 29 D4)
+    const isSynced = state.frameSyncLocked;
+    const none = RxPayloadAdapter.NO_READING;
+
     this.updateTextContent_('syncPattern', state.frameSyncPattern);
-    this.updateTextContent_('ber', this.formatBer_(state.ber));
+    this.updateTextContent_('ber', isSynced ? this.formatBer_(state.ber) : none);
     this.updateTextContent_('crcType', state.crcType);
 
     const crcStatusEl = this.domCache_.get('crcStatus');
     if (crcStatusEl) {
-      crcStatusEl.textContent = state.crcValid ? 'Valid' : 'Errors';
-      crcStatusEl.className = state.crcValid ? 'status-badge status-badge-green' : 'status-badge status-badge-red';
+      if (isSynced) {
+        crcStatusEl.textContent = state.crcValid ? 'Valid' : 'Errors';
+        crcStatusEl.className = state.crcValid ? 'status-badge status-badge-green' : 'status-badge status-badge-red';
+      } else {
+        crcStatusEl.textContent = none;
+        crcStatusEl.className = 'status-badge status-badge-off';
+      }
     }
 
     this.updateTextContent_('crcErrors', this.formatCount_(state.crcErrorCount));
@@ -337,7 +359,7 @@ export class RxPayloadAdapter {
     this.updateTextContent_('viterbiK', `K=${state.viterbiConstraintLength}`);
 
     // Channel section
-    this.updateTextContent_('dataRate', state.dataRate);
+    this.updateTextContent_('dataRate', isSynced ? state.dataRate : none);
 
     const channelStatusEl = this.domCache_.get('channelStatus');
     if (channelStatusEl) {
@@ -363,16 +385,27 @@ export class RxPayloadAdapter {
 
     this.updateTextContent_('decExpires', `${state.decryptionExpiresInDays} days`);
 
+    // No frames, nothing to authenticate or decrypt: "--", not a stale Success
     const decAuthTagEl = this.domCache_.get('decAuthTag');
     if (decAuthTagEl) {
-      decAuthTagEl.textContent = state.decryptionAuthTagVerified ? 'Verified' : 'Failed';
-      decAuthTagEl.className = state.decryptionAuthTagVerified ? 'status-badge status-badge-green' : 'status-badge status-badge-red';
+      if (isSynced) {
+        decAuthTagEl.textContent = state.decryptionAuthTagVerified ? 'Verified' : 'Failed';
+        decAuthTagEl.className = state.decryptionAuthTagVerified ? 'status-badge status-badge-green' : 'status-badge status-badge-red';
+      } else {
+        decAuthTagEl.textContent = none;
+        decAuthTagEl.className = 'status-badge status-badge-off';
+      }
     }
 
     const decSuccessEl = this.domCache_.get('decSuccess');
     if (decSuccessEl) {
-      decSuccessEl.textContent = state.decryptionSuccess ? 'Success' : 'Failed';
-      decSuccessEl.className = state.decryptionSuccess ? 'status-badge status-badge-green' : 'status-badge status-badge-red';
+      if (isSynced) {
+        decSuccessEl.textContent = state.decryptionSuccess ? 'Success' : 'Failed';
+        decSuccessEl.className = state.decryptionSuccess ? 'status-badge status-badge-green' : 'status-badge status-badge-red';
+      } else {
+        decSuccessEl.textContent = none;
+        decSuccessEl.className = 'status-badge status-badge-off';
+      }
     }
 
     // Update alarm badge
@@ -412,6 +445,9 @@ export class RxPayloadAdapter {
   private getRsStatus_(state: RxPayloadState): { text: string; class: string } {
     if (!state.rsEnabled) {
       return { text: 'Disabled', class: 'status-badge-yellow' };
+    }
+    if (!state.frameSyncLocked) {
+      return { text: 'No Sync', class: 'status-badge-off' };
     }
     if (state.rsUncorrectableBlocks > 0) {
       return { text: 'Overload', class: 'status-badge-red' };

@@ -187,6 +187,12 @@ export interface AntennaState {
   stagedBeaconFrequencyHz: number | null;
   /** Staged beacon search bandwidth - pending user approval */
   stagedBeaconSearchBwHz: number | null;
+  /**
+   * STOW or MAINT picked on the ACU and waiting for APPLY (phase 29 D4,
+   * nats-r3-s11-F2). The applied `trackingMode` keeps running until APPLY
+   * commits this mode and the park elevation together.
+   */
+  stagedTrackingMode?: TrackingMode | null;
   /** Are there pending changes to apply */
   hasStagedChanges: boolean;
 
@@ -225,6 +231,8 @@ export abstract class AntennaCore extends BaseEquipment {
   protected stationLocation_: { latitude: number; longitude: number; elevationM: number } | null = null;
   /** Same location as an orbital observer; null until the station attaches */
   protected stationObserver_: OrbitalObserver | null = null;
+  /** Phase 29 D8: the feed has been set to its target's skew once (seedPolarizationFromSlot_) */
+  private isPolarizationSeeded_ = false;
 
   /**
    * Uplinks this antenna pushed onto each satellite last frame (the objects)
@@ -357,6 +365,7 @@ export abstract class AntennaCore extends BaseEquipment {
       stagedTargetPolarization: null,
       stagedBeaconFrequencyHz: null,
       stagedBeaconSearchBwHz: null,
+      stagedTrackingMode: null,
       hasStagedChanges: false,
       // Fault State
       hasFault: false,
@@ -441,6 +450,10 @@ export abstract class AntennaCore extends BaseEquipment {
     // step-track, lock logic) is offline. Servos and manual control still
     // work - updateSlew_ keeps running so manual/stow/maintenance moves do.
     const automationAvailable = !this.state.isAcuAutomationFaulted;
+
+    if (!this.isPolarizationSeeded_) {
+      this.seedPolarizationFromSlot_();
+    }
 
     // Update program-track position continuously when tracking a satellite
     // This is the base tracking - always follows ephemeris
@@ -667,6 +680,34 @@ export abstract class AntennaCore extends BaseEquipment {
   }
 
   /**
+   * Phase 29 D8 (nats-r4-s04-F1): on the first update, a linear feed authored
+   * on a GEO target that has a slot (Satellite.lookAnglesFrom) starts at that
+   * satellite's skew at THIS station, whatever polarization the scenario
+   * authored. The skew is geometry (geoPolarizationSkewDeg, east of the
+   * station positive), so content never hand-writes it; program-track keeps
+   * following it afterwards. Satellites without a slot keep the authored
+   * angle (a deliberately misaligned feed elsewhere stays misaligned).
+   */
+  private seedPolarizationFromSlot_(): void {
+    this.isPolarizationSeeded_ = true;
+    const targetId = this.state.targetSatelliteId;
+    if (targetId === null || targetId === undefined || (this.config.polType ?? 'linear') !== 'linear' || !this.stationLocation_) {
+      return;
+    }
+    const sat = SimulationManager.getInstance().getSatByNoradId(targetId);
+    if (!sat || sat instanceof OrbitalSatellite || sat.slotLongitudeDeg === null) {
+      return;
+    }
+    const rotation = this.satView_(sat).rotation as number;
+    if (!Number.isFinite(rotation)) {
+      return;
+    }
+    const skew = Math.max(-90, Math.min(90, rotation)) as Degrees;
+    this.state.polarization = skew;
+    this.state.targetPolarization = skew;
+  }
+
+  /**
    * Update antenna target position continuously based on satellite ephemeris.
    * Called every update cycle when in program-track mode with a target satellite.
    * If step-track optimization is enabled, applies az/el offsets on top of predicted position.
@@ -867,6 +908,7 @@ export abstract class AntennaCore extends BaseEquipment {
       this.state.stagedTargetAzimuth = null;
       this.state.stagedTargetElevation = null;
       this.state.stagedTargetPolarization = null;
+      this.state.stagedTrackingMode = null;
       this.state.hasStagedChanges = false;
       this.notifyStateChange_();
       this.updateSignals_();
@@ -885,10 +927,44 @@ export abstract class AntennaCore extends BaseEquipment {
    * Manual: Operator controls Az/El/Pol directly
    * Program Track: Continuously follow TLE ephemeris (with optional step-track optimization)
    */
+  /**
+   * The ACU mode buttons. STOW and MAINT stage the mode with its park
+   * elevation: the applied mode keeps running (and the card keeps showing it)
+   * until APPLY commits both (phase 29 D4, nats-r3-s11-F2). MANUAL and
+   * PROGRAM switch at once, dropping any staged park mode.
+   */
+  stageTrackingModeChange(mode: TrackingMode): void {
+    if (!this.state.isPowered || !this.state.isOperational) {
+      return;
+    }
+    const isParkMode = mode === 'stow' || mode === 'maintenance';
+    if (!isParkMode || mode === this.state.trackingMode) {
+      this.handleTrackingModeChange(mode);
+      return;
+    }
+
+    this.state.stagedTrackingMode = mode;
+    // Zenith for STOW (at the current azimuth), 5 deg for feed access
+    this.state.stagedTargetElevation = (mode === 'stow' ? 90 : 5) as Degrees;
+    this.state.hasStagedChanges = true;
+    this.notifyStateChange_();
+    this.syncDomWithState();
+  }
+
   handleTrackingModeChange(mode: TrackingMode): void {
     if (!this.state.isPowered || !this.state.isOperational) {
       return;
     }
+
+    this.switchTrackingMode_(mode);
+    this.updateSignals_();
+    this.notifyStateChange_();
+    this.syncDomWithState();
+  }
+
+  /** The mode switch itself, without notifying (APPLY notifies once for all it commits) */
+  private switchTrackingMode_(mode: TrackingMode): void {
+    this.state.stagedTrackingMode = null;
 
     // Clear any existing lock acquisition timeout
     if (this.lockAcquisitionTimeout_) {
@@ -947,10 +1023,6 @@ export abstract class AntennaCore extends BaseEquipment {
         this.state.hasStagedChanges = false;
         break;
     }
-
-    this.updateSignals_();
-    this.notifyStateChange_();
-    this.syncDomWithState();
   }
 
   /**
@@ -1497,6 +1569,14 @@ export abstract class AntennaCore extends BaseEquipment {
       return;
     }
 
+    // A staged STOW/MAINT commits first: the mode switch (lock and tracking
+    // dropped) re-stages its park elevation, which is applied below
+    const stagedMode = this.state.stagedTrackingMode;
+    if (stagedMode) {
+      this.switchTrackingMode_(stagedMode);
+      this.updateSignals_();
+    }
+
     // Clear any previous fault
     this.state.hasFault = false;
     this.state.faultMessage = null;
@@ -1577,6 +1657,7 @@ export abstract class AntennaCore extends BaseEquipment {
     this.state.stagedTargetPolarization = null;
     this.state.stagedBeaconFrequencyHz = null;
     this.state.stagedBeaconSearchBwHz = null;
+    this.state.stagedTrackingMode = null;
     this.state.hasStagedChanges = false;
     this.state.hasFault = false;
     this.state.faultMessage = null;
@@ -1854,40 +1935,30 @@ export abstract class AntennaCore extends BaseEquipment {
       alarms.push({ severity: 'error', message: 'ACU AUTOMATION FAULT - MANUAL CONTROL ONLY' });
     }
 
-    // Elevated sky-noise warning (sun transit)
+    // Weather alarms keep one label for their whole life; only the severity
+    // (and the live dB) moves with the level. Relabelling "ELEVATED SKY NOISE"
+    // to "SUN TRANSIT: ELEVATED SKY NOISE" and back read as three alarms
+    // (nats-r4-s17-F3).
+    // Elevated sky noise (only sun transit raises it)
     if (this.state.skyNoiseDegradation_dB > 0.5) {
       const sky = this.state.skyNoiseDegradation_dB;
-      if (sky >= 6) {
-        alarms.push({ severity: 'error', message: `SUN TRANSIT: SKY NOISE CRITICAL (${sky.toFixed(1)} dB)` });
-      } else if (sky >= 2) {
-        alarms.push({ severity: 'warning', message: `SUN TRANSIT: ELEVATED SKY NOISE (${sky.toFixed(1)} dB)` });
-      } else {
-        alarms.push({ severity: 'info', message: `ELEVATED SKY NOISE (${sky.toFixed(1)} dB)` });
-      }
+      alarms.push({ severity: AntennaCore.levelSeverity_(sky, 2, 6), message: `SUN TRANSIT: ELEVATED SKY NOISE (${sky.toFixed(1)} dB)` });
     }
 
-    // Rain fade (frequency dependent: C-band rarely clears the 0.5 dB floor)
+    // Rain fade: the C/N the rain costs (attenuation plus the sky-noise rise
+    // it adds). At C-band the noise rise is most of it: 80 mm/h is 0.3 dB of
+    // attenuation but about 1.1 dB of C/N (nats S24, Phase 29).
     if (this.state.rainRate_mmh > 0) {
-      const rain = this.rainAttenuationDb;
-      if (rain >= 6) {
-        alarms.push({ severity: 'error', message: `RAIN FADE SEVERE (${rain.toFixed(1)} dB)` });
-      } else if (rain >= 2) {
-        alarms.push({ severity: 'warning', message: `RAIN FADE (${rain.toFixed(1)} dB)` });
-      } else if (rain >= 0.5) {
-        alarms.push({ severity: 'info', message: `LIGHT RAIN FADE (${rain.toFixed(1)} dB)` });
+      const rain = this.rainCnLossDb();
+      if (rain >= 0.5) {
+        alarms.push({ severity: AntennaCore.levelSeverity_(rain, 2, 6), message: `RAIN FADE (${rain.toFixed(1)} dB)` });
       }
     }
 
-    // Ice accumulation warning
+    // Ice accumulation on the feed
     if (this.state.iceAccumulation_dB > 0) {
       const ice = this.state.iceAccumulation_dB;
-      if (ice >= 5) {
-        alarms.push({ severity: 'error', message: `CRITICAL ICE BUILDUP (${ice.toFixed(1)} dB)` });
-      } else if (ice >= 2) {
-        alarms.push({ severity: 'warning', message: `ICE ACCUMULATING (${ice.toFixed(1)} dB)` });
-      } else {
-        alarms.push({ severity: 'info', message: `ICE DETECTED (${ice.toFixed(1)} dB)` });
-      }
+      alarms.push({ severity: AntennaCore.levelSeverity_(ice, 2, 5), message: `ICE ON FEED (${ice.toFixed(1)} dB)` });
     }
 
     // No signal reception warning
@@ -1927,6 +1998,12 @@ export abstract class AntennaCore extends BaseEquipment {
   // ========================================================================
   // PRIVATE METHODS
   // ========================================================================
+
+  /** Severity of a weather level in dB: info below `warnDb`, warning below `errorDb`, error above */
+  private static levelSeverity_(levelDb: number, warnDb: number, errorDb: number): AlarmStatus['severity'] {
+    if (levelDb >= errorDb) return 'error';
+    return levelDb >= warnDb ? 'warning' : 'info';
+  }
 
   private notifyStateChange_(): void {
     this.emit(Events.ANTENNA_STATE_CHANGED, this.state);
@@ -2501,10 +2578,11 @@ export abstract class AntennaCore extends BaseEquipment {
    *
    * @param weather include rain and ice (false: clear-sky reference)
    * @param sun include sun-transit noise (defaults to `weather`)
+   * @param ice include ice on the feed (defaults to `weather`)
    */
-  systemNoise(frequency: number = this.noiseReferenceHz, elevation: number = this.state.elevation, weather = true, sun = weather): SystemNoise {
+  systemNoise(frequency: number = this.noiseReferenceHz, elevation: number = this.state.elevation, weather = true, sun = weather, ice = weather): SystemNoise {
     const el = Math.max(1, elevation);
-    const feedLossDb = this.feedLossAt_(frequency) + (weather ? this.state.iceAccumulation_dB : 0);
+    const feedLossDb = this.feedLossAt_(frequency) + (ice ? this.state.iceAccumulation_dB : 0);
     const spilloverK = this.config.spilloverK ?? AntennaCore.DEFAULT_SPILLOVER_K[this.config.gainModel === 'fixed' ? 'fixed' : 'parabolic'];
     const inputs = {
       frequencyHz: frequency,
@@ -2547,6 +2625,19 @@ export abstract class AntennaCore extends BaseEquipment {
     const attenuation = this.rainAttenuation_dB(frequency, el) + this.state.iceAccumulation_dB;
 
     return attenuation + noiseRiseDb(clear, wet);
+  }
+
+  /**
+   * C/N the rain alone is costing this antenna right now, dB: rain attenuation
+   * plus the sky-noise rise behind the rain layer (no ice, no sun), at the band
+   * reference frequency and the current elevation. Keys the RAIN FADE alarm.
+   */
+  rainCnLossDb(frequency: number = this.noiseReferenceHz): number {
+    const el = this.state.elevation;
+    const clear = this.systemNoise(frequency, el, false).systemK;
+    const wet = this.systemNoise(frequency, el, true, false, false).systemK;
+
+    return this.rainAttenuation_dB(frequency, el) + noiseRiseDb(clear, wet);
   }
 
   /**

@@ -103,9 +103,12 @@ export function geoLongitudeFromAzimuth(site: GeoSite, azDeg: number): number {
  * Polarization skew (degrees) of a linearly polarized GEO downlink at a site:
  * the angle the feed must rotate from local horizontal to match the
  * satellite's horizontal, atan(sin(dLon) / tan(lat)) with dLon = slot - site.
- * Sign follows the C1 authored values: from a northern site a slot to the
- * east is positive (TIDEMARK-1 from Vermont, +14) and one to the west negative
- * (TIDEMARK-2, -25).
+ * Sign convention (the one the whole sim uses, Phase 29 D8): from a northern
+ * site a slot to the EAST of the station is POSITIVE and one to the west is
+ * negative; a slot on the station's meridian is 0. From VT-01 TIDEMARK-1
+ * (53 W) is about +18.8 and TIDEMARK-2 (45 W) about +25.2. A satellite with a
+ * slot (Satellite.lookAnglesFrom) takes its skew from here, never from an
+ * authored number, and the antenna feed follows it at each station.
  */
 export function geoPolarizationSkewDeg(site: GeoSite, satLongitudeDeg: number): number {
   const dLon = (satLongitudeDeg - site.longitude) * D2R;

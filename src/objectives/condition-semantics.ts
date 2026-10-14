@@ -83,12 +83,39 @@ export const QUIZ_CONDITION_TYPES: ReadonlySet<ConditionType> = new Set<Conditio
  */
 export const TIME_GATED_CONDITION_TYPES: ReadonlySet<ConditionType> = new Set<ConditionType>([
   'weather-event-ended',
+  'weather-event-peaked',
   'scenario-time-reached',
   'interference-event-ended',
   'hardware-fault-tripped',
   'gpsdo-time-offset-stable',
   'gpsdo-time-offset-exceeds',
 ]);
+
+/**
+ * Phase 29 D7 (nats-r4-s20-F1): analyzer settings the player applies. Their
+ * row ticks on the first frame the applied value is in tolerance (on its
+ * observation tab, if it has one); an authored observationDwellSeconds is
+ * ignored, because a hidden 5 s read of a value the player just typed looked
+ * like the checklist had missed it. A row that really must be held says so:
+ * mustMaintain + maintainDuration, with "held N s" in its description.
+ */
+export const ANALYZER_SETTING_CONDITIONS: ReadonlySet<ConditionType> = new Set<ConditionType>([
+  'speca-span-set',
+  'speca-rbw-set',
+  'speca-reference-level-set',
+  'speca-center-frequency',
+  'speca-min-amplitude',
+  'speca-max-amplitude',
+]);
+
+/** Seconds a requiresObservation row must read true on its tab before it latches */
+export function observationDwellSeconds(condition: Condition, defaultSeconds: number): number {
+  if (ANALYZER_SETTING_CONDITIONS.has(condition.type)) {
+    return 0;
+  }
+
+  return condition.params?.observationDwellSeconds ?? defaultSeconds;
+}
 
 export function isSetTypeCondition(type: ConditionType): boolean {
   return SET_TYPE_CONDITIONS.has(type);
@@ -104,8 +131,28 @@ export function isQuizCondition(type: ConditionType): boolean {
  * completes. It used to latch after one tick, so a transient true (a C/N
  * spike) completed a "keep it above" row.
  */
-export function holdsAtCompletion(condition: Condition): boolean {
+export function holdsAtCompletion(condition: Condition, objective?: Pick<Objective, 'conditions'>): boolean {
+  if (objective && isTabGate(condition, objective) && condition.maintainUntilObjectiveComplete !== true && !condition.maintainDuration) {
+    return false; // D5: a quiz-step tab gate latches once opened
+  }
+
   return condition.maintainUntilObjectiveComplete === true || (condition.mustMaintain && !condition.maintainDuration);
+}
+
+/**
+ * Phase 29 D5 (nats-r4-s08-F5, s17-F2): a tab-active row on an objective that
+ * asks a quiz or decision is a GATE: "look at this tab, then answer". It is
+ * shown from the step's start (even when authored `hidden`) and LATCHES once
+ * the tab has been opened, so answering the quiz on another tab does not leave
+ * the step In Progress until the tab is reopened.
+ *
+ * `mustMaintain: true` alone does not keep it held: 230 of 283 authored tab
+ * rows carry it as boilerplate. A step whose text says to STAY on the tab opts
+ * in with `maintainUntilObjectiveComplete: true` (or a `maintainDuration`,
+ * which accrues only while the tab is open).
+ */
+export function isTabGate(condition: Condition, objective: Pick<Objective, 'conditions'>): boolean {
+  return condition.type === 'tab-active' && objective.conditions.some((other) => isQuizCondition(other.type));
 }
 
 /** Stable comparison key for "the same check": type plus its params, keys sorted */

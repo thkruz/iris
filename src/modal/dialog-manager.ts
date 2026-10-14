@@ -7,6 +7,7 @@ import SoundManager from '@app/sound/sound-manager';
 import { Character, CharacterCompany, CharacterNames, CharacterTitles, Emotion, getCharacterAvatarUrl } from './character-enum';
 import { DialogHistoryManager } from './dialog-history-manager';
 import './dialog-manager.css';
+import { fillDialogTokens } from './dialog-tokens';
 
 /**
  * Strip HTML tags from text for TTS fallback
@@ -82,11 +83,16 @@ export class DialogManager {
       return;
     }
 
+    // Stamp {{stationTime}} now, when the dialog opens (a queued one when it
+    // leaves the queue), so a notice header never reads in the future
+    // (nats-r4-s21-F1); history keeps the stamped text
+    const shownText = fillDialogTokens(text);
+
     // Objective countdowns stop while a dialog is on screen (released when the queue drains)
     CountdownHold.set('dialog', true);
 
     // Track this dialog in history
-    DialogHistoryManager.getInstance().addEntry(text, character, audioUrl, title, emotion);
+    DialogHistoryManager.getInstance().addEntry(shownText, character, audioUrl, title, emotion);
 
     const avatarUrl = getCharacterAvatarUrl(character, emotion);
     const characterName = CharacterNames[character];
@@ -116,7 +122,7 @@ export class DialogManager {
             </div>
           </div>
           <div class="dialog-text-container col-8">
-            <div class="dialog-text">${text}</div>
+            <div class="dialog-text">${shownText}</div>
             <div class="dialog-continue-hint">Click or press Space to continue</div>
           </div>
           <div class="dialog-skip-indicator">
@@ -139,7 +145,7 @@ export class DialogManager {
     });
 
     // Play audio with TTS fallback
-    const plainText = stripHtmlTags(text);
+    const plainText = stripHtmlTags(shownText);
     SoundManager.getInstance().playCustom(audioUrl, plainText, (isTts) => {
       this.isTtsActive_ = isTts;
       this.updateTtsIndicator_();

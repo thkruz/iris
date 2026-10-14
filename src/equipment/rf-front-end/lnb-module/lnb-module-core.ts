@@ -493,7 +493,7 @@ export abstract class LNBModuleCore extends RFFrontEndModule<LNBState> {
     const alarms: string[] = [];
 
     if (!this.state.isPowered) {
-      return alarms; // No alarms when powered off
+      return alarms; // No module alarms when powered off (the station raises "LNB powered off")
     }
 
     const extRefPresent = this.isExtRefPresent();
@@ -503,9 +503,11 @@ export abstract class LNBModuleCore extends RFFrontEndModule<LNBState> {
       alarms.push('LNB not locked to reference');
     }
 
-    // High noise temperature alarm
+    // High noise temperature alarm. No number: the noise temperature settles
+    // within seconds of power-on, faster than the ticker refreshes, so a
+    // quoted value read stale against the LNB panel (nats-r4-s16-F3)
     if (this.state.noiseTemperature > 100) {
-      alarms.push(`LNB noise temperature high (${this.state.noiseTemperature.toFixed(0)}K)`);
+      alarms.push('LNB noise temperature high');
     }
 
     // High noise figure alarm
@@ -587,6 +589,11 @@ export abstract class LNBModuleCore extends RFFrontEndModule<LNBState> {
       }
     } else {
       this.powerOnTimestamp_ = null;
+    }
+
+    // RX restored before TX reads back from the log (nats-r4-s12-F2)
+    if (this.state.isPowered !== wasPowered) {
+      this.logOperatorAction_(this.state.isPowered ? 'LNB Power ON' : 'LNB Power OFF');
     }
   }
 

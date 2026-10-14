@@ -117,6 +117,7 @@ export class ACUControlTab extends BaseElement {
               <button type="button" class="btn btn-tracking ${p}btn-tracking active" data-mode="manual">MANUAL</button>
               <button type="button" class="btn btn-tracking ${p}btn-tracking" data-mode="program-track">PROGRAM</button>
             </div>
+            <span id="${p}staged-mode-badge" class="status-badge status-badge-amber" style="display: none;" title="Staged mode: the applied mode keeps running until APPLY"></span>
 
             <!-- Power & Loopback -->
             <div class="d-flex gap-3">
@@ -254,7 +255,7 @@ export class ACUControlTab extends BaseElement {
                     <span id="${p}lock-status-display" class="fw-bold">UNLOCKED</span>
                   </div>
                   <div class="d-flex justify-content-between">
-                    <span class="text-muted">Signals:</span>
+                    <span class="text-muted" title="RF carriers arriving at the feed from where the dish points, locked or not. The Dashboard's Signals count is locked carriers.">RF signals in view:</span>
                     <span id="${p}signals-count-display" class="fw-bold font-monospace">0</span>
                   </div>
                 </div>
@@ -600,9 +601,10 @@ export class ACUControlTab extends BaseElement {
     buttons.forEach((btn, index) => {
       const handler = () => {
         const mode = (btn as HTMLElement).dataset.mode as TrackingMode;
+        // STOW/MAINT stage until APPLY; MANUAL/PROGRAM switch at once.
         // handleTrackingModeChange clears state.targetSatelliteId on any mode
         // change. A staged pick is kept: it is committed by Move to Target
-        antenna.handleTrackingModeChange(mode);
+        antenna.stageTrackingModeChange(mode);
       };
       this.addHandler_(`tracking-mode-${index}`, btn, 'click', handler);
     });
@@ -748,6 +750,7 @@ export class ACUControlTab extends BaseElement {
     modeButtons.forEach((btn) => {
       const mode = (btn as HTMLElement).dataset.mode;
       btn.classList.toggle('active', mode === state.trackingMode);
+      btn.classList.toggle('pending', mode === state.stagedTrackingMode);
       if (mode === 'program-track') {
         (btn as HTMLButtonElement).disabled = acuFaulted;
         btn.classList.toggle('disabled', acuFaulted);
@@ -764,9 +767,16 @@ export class ACUControlTab extends BaseElement {
     // Beacon C/N display visible in active tracking modes (not stow/maintenance)
     if (beaconDisplaySection) beaconDisplaySection.style.display = ['manual', 'program-track'].includes(state.trackingMode) ? 'block' : 'none';
 
-    // Update tracking mode display
+    // Update tracking mode display: the APPLIED mode; a staged STOW/MAINT is
+    // a pending badge until APPLY (phase 29 D4, nats-r3-s11-F2)
     const modeDisplay = this.qs_('tracking-mode-display');
     if (modeDisplay) modeDisplay.textContent = trackingModeLabel(state);
+    const stagedModeBadge = this.qs_<HTMLElement>('staged-mode-badge');
+    if (stagedModeBadge) {
+      const staged = state.stagedTrackingMode;
+      stagedModeBadge.textContent = staged ? `${trackingModeLabel({ trackingMode: staged, isStepTrackEnabled: false })} pending APPLY` : '';
+      stagedModeBadge.style.display = staged ? '' : 'none';
+    }
 
     // Update lock status
     const lockDisplay = this.qs_('lock-status-display');
@@ -1008,7 +1018,11 @@ export class ACUControlTab extends BaseElement {
     const polLossEl = this.qs_('rf-metric-pol-loss');
     const skyTempEl = this.qs_('rf-metric-sky-temp');
 
-    if (freqEl) freqEl.textContent = `${metrics.frequency_GHz.toFixed(3)} GHz`;
+    // No target (and not a MANUAL operator entry): no beacon is tracked, so no
+    // frequency, never the last target's (phase 29 D4, nats-r4-s12-F1)
+    const state = antenna.state;
+    const hasBeaconTarget = state.targetSatelliteId !== null || state.trackingMode === 'manual';
+    if (freqEl) freqEl.textContent = hasBeaconTarget ? `${metrics.frequency_GHz.toFixed(3)} GHz` : '-- GHz';
     if (gainEl) gainEl.textContent = `${metrics.gain_dBi.toFixed(1)} dBi`;
     if (bwEl) bwEl.textContent = `${metrics.beamwidth_deg.toFixed(2)}°`;
     if (gtEl) gtEl.textContent = `${metrics.gOverT_dBK.toFixed(1)} dB/K`;

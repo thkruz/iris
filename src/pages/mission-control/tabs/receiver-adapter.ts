@@ -49,6 +49,8 @@ export class ReceiverAdapter {
   // Payload decoder status (frame sync / RS), so the modem status never claims
   // "Good margin" while Payload Data Integrity reports sync loss or overload
   private payloadStatusProvider_: (() => RxPayloadStatus | null) | null = null;
+  /** Gets every signal sample the modem readouts show (null: modem off), for readouts that must match them */
+  private signalSampleListener_: ((info: IQSignalInfo | null) => void) | null = null;
 
   constructor(receiver: Receiver, containerEl: HTMLElement) {
     this.receiver = receiver;
@@ -84,6 +86,16 @@ export class ReceiverAdapter {
    */
   public setPayloadStatusProvider(provider: (() => RxPayloadStatus | null) | null): void {
     this.payloadStatusProvider_ = provider;
+  }
+
+  /**
+   * Hand each sample the modem's C/N readouts are drawn from to `listener`
+   * (null when the modem is off): the constellation header shows the modem's
+   * Effective C/N from the same sample at the same moment (phase 29 D4,
+   * nats-r3-s06-F3).
+   */
+  public setSignalSampleListener(listener: ((info: IQSignalInfo | null) => void) | null): void {
+    this.signalSampleListener_ = listener;
   }
 
   private getPayloadProblem_(): string | null {
@@ -611,6 +623,7 @@ export class ReceiverAdapter {
         signalStatus.textContent = 'Off';
       }
       this.clearSignalDisplays_();
+      this.signalSampleListener_?.(null);
       // Update alarm badge for powered-off state
       const alarms = this.getAlarmsFromReceiver_();
       this.alarmBadge_.update(alarms);
@@ -619,6 +632,7 @@ export class ReceiverAdapter {
 
     // Get signal info for C/N and ADC data (only when powered on)
     const signalInfo = this.receiver.getSignalsInBandwidth(activeModem);
+    this.signalSampleListener_?.(signalInfo);
 
     // Signal Quality Status Badge - the shared grading (lock tracker + MODCOD margin)
     if (signalStatus) {

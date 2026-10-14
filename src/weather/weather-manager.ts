@@ -429,6 +429,44 @@ export class WeatherManager {
   }
 
   /**
+   * Mission-elapsed second at which an event's degradation is at its maximum
+   * and starts to fall (Phase 29 D10): the midpoint of a sun transit (its
+   * sin^2 profile), the start of the ramp-down for rain, storm and wind
+   * (their plateau ends there), and the end of anything else (ice and snow
+   * build for as long as the event runs).
+   */
+  static peakSeconds(event: WeatherEventRuntime): number {
+    if (event.type === 'sun-transit') {
+      return event.startTime + event.duration / 2;
+    }
+    if (event.type === 'rain' || event.type === 'storm' || event.type === 'wind') {
+      const rampS = Math.min(WeatherManager.RAIN_RAMP_MAX_S, event.duration * WeatherManager.RAIN_RAMP_FRACTION);
+      return event.startTime + event.duration - rampS;
+    }
+
+    return event.startTime + event.duration;
+  }
+
+  /**
+   * Seconds of mission time until the event is `pastPeakSeconds` beyond its
+   * peak (0 once it is), or null when that is not known yet (unknown id, or
+   * still waiting on its anchor objective). Backs weather-event-peaked.
+   */
+  getSecondsUntilEventPeaks(eventId: string, pastPeakSeconds = 0): number | null {
+    const event = this.weatherEvents_.find((e) => e.id === eventId);
+    if (!event || event.isAwaitingAnchor) {
+      return null;
+    }
+
+    return Math.max(0, WeatherManager.peakSeconds(event) + pastPeakSeconds - this.getElapsedMissionTime());
+  }
+
+  /** Whether the event's degradation has passed its maximum (plus pastPeakSeconds) */
+  hasEventPeaked(eventId: string, pastPeakSeconds = 0): boolean {
+    return this.getSecondsUntilEventPeaks(eventId, pastPeakSeconds) === 0;
+  }
+
+  /**
    * An objective time skip (Phase 27 Q4) moved the clocks by `seconds` in one
    * jump. Event windows follow the mission clock on their own; ice is
    * integrated per update, so give it the skipped time here or a skipped wait

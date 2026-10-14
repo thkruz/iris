@@ -11,7 +11,9 @@ import { EventBus } from '@app/events/event-bus';
 import { AggregatedAlarm, Events } from '@app/events/events';
 import { AlarmService } from '@app/services/alarm-service';
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
+import { formatBucOutputPower } from './buc-adapter';
 import './dashboard-tab.css';
+import { formatHpaOutputPower } from './hpa-adapter';
 
 interface AlarmEntry {
   id: string;
@@ -42,8 +44,6 @@ export class DashboardTab extends BaseElement {
   private readonly groundStation: GroundStation;
   private readonly domCache_: Map<string, HTMLElement> = new Map();
   private readonly alarms_: AlarmEntry[] = [];
-  /** Station-clock ms each alarm (by key) was first seen, so a standing alarm keeps its raise time */
-  private readonly alarmRaisedAtMs_ = new Map<string, number>();
   private updateHandler_: (() => void) | null = null;
   private lastSyncTime_: number = 0;
 
@@ -667,16 +667,10 @@ export class DashboardTab extends BaseElement {
       }
     }
 
-    // Warm-up time
+    // Warm-up time: the same wording as the GPS Timing tab badge (READY / m:ss / OFF)
     const warmupEl = this.domCache_.get('gpsdo-warmup');
     if (warmupEl) {
-      if (state.warmupTimeRemaining > 0) {
-        const mins = Math.floor(state.warmupTimeRemaining / 60);
-        const secs = Math.floor(state.warmupTimeRemaining % 60);
-        warmupEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-      } else {
-        warmupEl.textContent = '--';
-      }
+      warmupEl.textContent = state.isPowered ? rfFe.gpsdoModule.formatWarmupTime_() : 'OFF';
     }
   }
 
@@ -731,13 +725,13 @@ export class DashboardTab extends BaseElement {
     // BUC Output
     const bucOutEl = this.domCache_.get('buc-output');
     if (bucOutEl && rfFe.bucModule) {
-      bucOutEl.textContent = `${rfFe.bucModule.state.outputPower.toFixed(1)} dBm`;
+      bucOutEl.textContent = formatBucOutputPower(rfFe.bucModule);
     }
 
     // HPA Power
     const hpaPowerEl = this.domCache_.get('hpa-power');
     if (hpaPowerEl && rfFe.hpaModule) {
-      hpaPowerEl.textContent = `${rfFe.hpaModule.state.outputPower.toFixed(1)} dBm`;
+      hpaPowerEl.textContent = formatHpaOutputPower(rfFe.hpaModule);
     }
 
     // HPA Status
@@ -852,27 +846,20 @@ export class DashboardTab extends BaseElement {
    * (s08-F2, s16-F2, s17-F2, s23-F2). Already ordered most severe first.
    */
   private collectAlarms_(): void {
-    // Stamped on the scenario clock, not the wall clock (nats-r3-s08-F2), at
-    // the moment each alarm was first seen rather than at every refresh
+    // Stamped on the scenario clock (nats-r3-s08-F2) at the moment the alarm
+    // was RAISED, as AlarmService recorded it, not when this list first
+    // rendered it (nats-r4-s01-F2)
     const nowMs = getSimulatedNowMs();
     const alarms = AlarmService.getAlarms(this.groundStation);
-    const raisedAtMs = new Map<string, number>();
     this.alarms_.length = 0;
     alarms.forEach((alarm, index) => {
-      const key = `${alarm.equipmentType}-${alarm.equipmentIndex}-${alarm.message}`;
-      const raisedMs = this.alarmRaisedAtMs_.get(key) ?? nowMs;
-      raisedAtMs.set(key, raisedMs);
       this.alarms_.push({
         id: `${alarm.equipmentType}-${alarm.equipmentIndex}-${index}`,
         level: ALARM_LEVEL[alarm.severity],
         message: alarm.message,
-        timestamp: new Date(raisedMs),
+        timestamp: new Date(alarm.raisedAtMs ?? nowMs),
       });
     });
-    this.alarmRaisedAtMs_.clear();
-    for (const [key, ms] of raisedAtMs) {
-      this.alarmRaisedAtMs_.set(key, ms);
-    }
 
     // Update the alarm list DOM
     const alarmListEl = this.domCache_.get('alarm-list');

@@ -346,11 +346,16 @@ export class FECSimulator {
 
   /** Format an information rate for display */
   private static formatRate_(bps: number): string {
-    if (bps >= 1e6) {
-      return `${(bps / 1e6).toFixed(3)} Mbps`;
-    } else if (bps >= 1e3) {
-      return `${(bps / 1e3).toFixed(1)} kbps`;
-    }
-    return `${bps.toFixed(0)} bps`;
+    return formatDataRate(bps);
   }
+}
+
+/** An information rate as the payload cards print it (RX and TX read the same format) */
+export function formatDataRate(bps: number): string {
+  if (bps >= 1e6) {
+    return `${(bps / 1e6).toFixed(3)} Mbps`;
+  } else if (bps >= 1e3) {
+    return `${(bps / 1e3).toFixed(1)} kbps`;
+  }
+  return `${bps.toFixed(0)} bps`;
 }

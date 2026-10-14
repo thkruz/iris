@@ -56,6 +56,25 @@ export interface TxConfigChangedData {
   config: TransmitterModem;
   /** The operator or automation action behind the change (Ops Log wording) */
   action?: TxModemAction;
+  /**
+   * Why an automatic action happened, e.g. 'handover'; the Ops Log line ends
+   * "(handover)" like the sibling automatic lines (nats-r4-s11-F3). Absent
+   * for an operator action.
+   */
+  reason?: string;
+}
+
+/**
+ * An operator action on an equipment core that no state event reports on its
+ * own (BUC gain, HPA back-off, LNB / HPA power), for the Ops Log
+ * (nats-r4-s07-F1, s12-F2). `module` is the module object, so the logger can
+ * tag the line with its station.
+ */
+export interface EquipmentActionData {
+  message: string;
+  /** Equipment tag for the log source, e.g. "RF FE" */
+  system: string;
+  module: unknown;
 }
 
 export interface TxActiveModemChangedData {
@@ -296,9 +315,16 @@ export interface AggregatedAlarm {
   assetId: string;
   equipmentType: string;
   equipmentIndex: number;
+  /**
+   * Station-clock ms when AlarmService first saw this alarm (its raise time),
+   * kept for the alarm's whole life even as a live number in its text moves
+   * (nats-r4-s01-F2)
+   */
+  raisedAtMs?: number;
 }
 
 export interface AlarmStateChangedData {
+  /** Every active alarm, most severe first (nats-r4-s16-F1: not only the top tier) */
   alarms: AggregatedAlarm[];
   highestSeverity: 'error' | 'warning' | 'info' | 'success';
 }
@@ -536,6 +562,7 @@ export enum Events {
 
   // Ops Log events
   OPS_LOG_ENTRY_ADDED = 'ops-log:entry:added',
+  EQUIPMENT_ACTION = 'ops-log:equipment-action',
 
   // Simulated Time events
   SIMULATED_TIME_TICK = 'simulated-time:tick',
@@ -662,6 +689,7 @@ export interface EventMap {
 
   // Ops Log events
   [Events.OPS_LOG_ENTRY_ADDED]: [OpsLogEntry];
+  [Events.EQUIPMENT_ACTION]: [EquipmentActionData];
 
   // Simulated Time events
   [Events.SIMULATED_TIME_TICK]: [SimulatedTimeTickData];

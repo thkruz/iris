@@ -16,6 +16,21 @@ import './quiz-modal.css';
 const random = (): number => Rng.stream('ui:quiz').next();
 
 /**
+ * Letter label for an option at a display position: A..Z, then AA, AB, ...
+ * Covers any option count; a fixed ['A'..'D'] array rendered the fifth option
+ * as "undefined" (nats-r4-s08-F1).
+ */
+export function optionLetter(displayIndex: number): string {
+  let n = Math.max(0, Math.floor(displayIndex));
+  let label = '';
+  do {
+    label = String.fromCharCode(65 + (n % 26)) + label;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return label;
+}
+
+/**
  * Singleton non-modal box for presenting status-check quizzes
  * Unlike a modal, this allows interaction with background elements
  */
@@ -191,7 +206,6 @@ export class QuizModal extends DraggableBox {
     penaltyEl.innerHTML = '';
 
     // Create option buttons with randomized order
-    const optionLabels = ['A', 'B', 'C', 'D'];
     this.shuffledIndices_ = this.shuffleIndices_();
 
     const quiz = this.currentQuiz_;
@@ -218,7 +232,7 @@ export class QuizModal extends DraggableBox {
             class="quiz-option-btn"
             data-index="${originalIndex}"
           >
-            <span class="quiz-option-label">${optionLabels[displayIndex]}</span>
+            <span class="quiz-option-label">${optionLetter(displayIndex)}</span>
             <span class="quiz-option-text">${option}</span>
           </button>
         `;

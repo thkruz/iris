@@ -5,6 +5,9 @@
  * blank, so a condition authored without one falls back to a label derived
  * from its type (and its tab, for tab-active). The hidden tab-active row's
  * late hint (B5) gets a real label too, so the row names what it needs.
+ * Phase 29 D5: a tab gate on a quiz step (isTabGate) is shown from the
+ * step's start; when authored hidden or without a description it reads
+ * tabGateLabel ("Open the Dashboard tab").
  */
 
 import type { Condition } from './objective-types';
@@ -44,10 +47,15 @@ export function conditionLabel(condition: Pick<Condition, 'type' | 'description'
   }
   const tab = condition.params?.tab;
   if (condition.type === 'tab-active' && tab) {
-    return `${tabLabel(tab)} tab open`;
+    return tabGateLabel(tab);
   }
 
   return humanizeType(condition.type);
+}
+
+/** The instruction a tab row reads when it has no authored label: 'Open the Dashboard tab' */
+export function tabGateLabel(tabId: string): string {
+  return `Open the ${tabLabel(tabId)} tab`;
 }
 
 /** The B5 row that names a hidden tab-active condition once it is the only blocker */

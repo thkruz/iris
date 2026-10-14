@@ -402,7 +402,12 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
   }
 
   handleGainChange(gain: number): void {
+    const previous = this.state.gain;
     this.state.gain = gain as dB;
+    // The power setting the shift is about logs like the mute does (nats-r4-s07-F1)
+    if (previous !== gain) {
+      this.logOperatorAction_(`BUC gain set to ${RFFrontEndModule.formatLevel_(gain, 'dB')} (was ${RFFrontEndModule.formatLevel_(previous, 'dB')})`);
+    }
   }
 
   handleMuteToggle(isMuted: boolean): void {

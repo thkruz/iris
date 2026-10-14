@@ -1047,6 +1047,8 @@ export class RxAnalysisTab extends BaseElement {
 
     // Modem status bar must agree with Payload Data Integrity (frame sync / RS)
     this.receiverAdapter?.setPayloadStatusProvider(() => this.rxPayloadAdapter_?.getPayloadStatus() ?? null);
+    // Constellation header C/N = the modem's Effective C/N, same sample (phase 29 D4)
+    this.receiverAdapter?.setSignalSampleListener((info) => this.iqConstellationAdapter?.showHeaderSample(info));
   }
 
   /**

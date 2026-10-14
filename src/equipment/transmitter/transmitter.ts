@@ -736,9 +736,10 @@ export class Transmitter extends BaseEquipment {
   /**
    * Stop every modem carrying traffic for a satellite (handover safing,
    * nats-s11-F6): the carrier leaves the IF, not just the muted BUC.
+   * @param reason why, for the Ops Log ("handover" logs "... STOPPED (handover)")
    * @returns how many modems were stopped
    */
-  public stopTransmittingFor(noradId: number): number {
+  public stopTransmittingFor(noradId: number, reason?: string): number {
     const stoppedModems: TransmitterModem[] = [];
     for (const modem of this.state.modems) {
       if (modem.isTransmitting && modem.ifSignal?.noradId === noradId) {
@@ -750,9 +751,10 @@ export class Transmitter extends BaseEquipment {
     const stopped = stoppedModems.length;
     if (stopped > 0) {
       this.updateTransmissionState();
-      // One event per stopped modem, so each stop is logged like a manual one
+      // One event per stopped modem, so each stop is logged like a manual one,
+      // marked with its reason so it does not read as an operator action
       for (const modem of stoppedModems) {
-        this.emitModemChanged_(modem, 'transmit-off');
+        this.emitModemChanged_(modem, 'transmit-off', reason);
       }
       this.syncDomWithState();
     }
@@ -941,12 +943,13 @@ export class Transmitter extends BaseEquipment {
     }
   }
 
-  private emitModemChanged_(modem: TransmitterModem, action?: TxModemAction): void {
+  private emitModemChanged_(modem: TransmitterModem, action?: TxModemAction, reason?: string): void {
     this.emit(Events.TX_CONFIG_CHANGED, {
       uuid: this.uuid,
       modem: modem.modem_number,
       config: modem,
       ...(action ? { action } : {}),
+      ...(reason ? { reason } : {}),
     });
   }
 

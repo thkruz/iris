@@ -493,18 +493,29 @@ export abstract class HPAModuleCore extends RFFrontEndModule<HPAState> {
     const bucPowered = this.rfFrontEnd_.state.buc.isPowered;
 
     // HPA can only be enabled if BUC is powered
+    const wasPowered = this.state.isPowered;
     if (bucPowered) {
       this.state.isPowered = isEnabled;
     } else {
       // Disable if conditions not met
       this.state.isPowered = false;
     }
+    // The restoration order (RX before TX, low power before high) reads back
+    // from the log (nats-r4-s12-F2)
+    if (this.state.isPowered !== wasPowered) {
+      this.logOperatorAction_(this.state.isPowered ? 'HPA Power ON' : 'HPA Power OFF');
+    }
 
     callback(this.state);
   }
 
   handleBackOffChange(backOff: number): void {
+    const previous = this.state.backOff;
     this.state.backOff = Math.max(this.minBackOffDb_, Math.min(this.maxBackOffDb_, backOff));
+    // The power setting the shift is about logs (nats-r4-s07-F1)
+    if (this.state.backOff !== previous) {
+      this.logOperatorAction_(`HPA back-off set to ${RFFrontEndModule.formatLevel_(this.state.backOff, 'dB')} (was ${RFFrontEndModule.formatLevel_(previous, 'dB')})`);
+    }
 
     // Immediately recalculate derived values so UI updates instantly
     this.processSignals_();

@@ -402,11 +402,12 @@ export class TrafficControlManager {
       this.logHandover_('BUC output MUTED (handover)', groundStationId, 'RF FE');
     }
 
-    // Each stopped modem logs its own "Transmission STOPPED" line (TX event)
+    // Each stopped modem logs its own "Transmission STOPPED (handover)" line
+    // (TX event), marked like the HPA and BUC lines above (nats-r4-s11-F3)
 
     if (satelliteId !== undefined) {
       for (const transmitter of gs.transmitters ?? []) {
-        transmitter.stopTransmittingFor?.(satelliteId);
+        transmitter.stopTransmittingFor?.(satelliteId, 'handover');
       }
     }
   }

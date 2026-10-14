@@ -219,6 +219,19 @@ export class ScenarioSelectionPage extends BasePage {
           </a>
         </div>
         ${
+          // Phase 29 D16 (nats-r4-s24-F2): the page says so at 100 %, not only the Mission Complete modal
+          progress.totalScenarios > 0 && progress.completedScenarios.length >= progress.totalScenarios
+            ? html`
+          <div class="campaign-complete-banner" role="status">
+            <span class="campaign-complete-icon">🏆</span>
+            <span class="campaign-complete-text">
+              <strong>Campaign complete</strong>: all ${progress.totalScenarios} scenarios finished. Play any scenario again to beat your score.
+            </span>
+          </div>
+        `
+            : ''
+        }
+        ${
           this.isSignedOut_
             ? html`
           <div class="login-warning">
@@ -328,12 +341,22 @@ export class ScenarioSelectionPage extends BasePage {
           </div>
         `;
     } else if (!isDisabledOrLocked) {
-      if (isCurrentlyCompleted) {
+      // Phase 29 D16 (nats-r4-s24-F2): a completed scenario (the card says
+      // Completed) offers PLAY AGAIN first, RESTART LEVEL as the secondary
+      // when a checkpoint is left over, and never CONTINUE
+      if (hasEverCompleted || isCurrentlyCompleted) {
         actionButtons = `
           <div class="scenario-checkpoint-actions">
           <button type="button" class="btn-play-again" data-scenario-id="${scenario.id}" data-scenario-url="${scenario.url}">
             Play Again
           </button>
+          ${
+            hasCheckpoint
+              ? `<button type="button" class="btn-start-fresh" data-scenario-id="${scenario.id}">
+            Restart Level
+          </button>`
+              : ''
+          }
           </div>
         `;
       } else if (hasCheckpoint) {

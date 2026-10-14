@@ -120,7 +120,12 @@ export interface GeosyncOrbitConfig {
 }
 
 export interface SatelliteState {
-  rotation?: Degrees; // Random rotation if not specified
+  /**
+   * Linear polarization skew, degrees. Ignored when the satellite has a slot
+   * (`lookAnglesFrom`): the skew is then derived from geometry (Phase 29 D8).
+   * Otherwise random per NORAD id if not specified.
+   */
+  rotation?: Degrees;
   az: Degrees;
   el: Degrees;
   /** Legacy: single frequency offset for all transponders (used when transponderConfigs not provided) */
@@ -255,14 +260,20 @@ export class Satellite {
     this.lookAnglesFrom = satelliteState.lookAnglesFrom ?? null;
     const centerAz = satelliteState.geosyncConfig ? (satelliteState.geosyncConfig.minAz + satelliteState.geosyncConfig.maxAz) / 2 : satelliteState.az;
     this.slotLongitudeDeg = this.lookAnglesFrom ? geoLongitudeFromAzimuth(this.lookAnglesFrom, centerAz) : null;
-    // Authored skew wins. Unauthored: the geometric skew at the reference
-    // station when the slot is known, else fixed per NORAD id (a property of
-    // the satellite, not of the run; DEV-ANT-04)
+    // Phase 29 D8 (nats-r4-s04-F1): a satellite with a slot gets its skew
+    // from geometry, never from an authored number. `rotation` is the skew at
+    // the reference station (geoPolarizationSkewDeg; from a northern site a
+    // slot EAST of the station is POSITIVE, one west negative) and
+    // stationOffsets() adds the difference to any other site, so the ACU
+    // polarization readout and the cross-pol physics both read the skew at
+    // the station that is looking. An authored `rotation` was written per
+    // satellite by hand and disagreed with the geometry (TIDEMARK-1 +14 and
+    // TIDEMARK-2 -25 from Vermont, both of them east of it). Without a slot:
+    // the authored skew, else fixed per NORAD id (DEV-ANT-04).
     this.rotation =
-      satelliteState.rotation ??
-      (this.lookAnglesFrom && this.slotLongitudeDeg !== null
+      this.lookAnglesFrom && this.slotLongitudeDeg !== null
         ? (geoPolarizationSkewDeg(this.lookAnglesFrom, this.slotLongitudeDeg) as Degrees)
-        : ((Rng.hashUniform(`satellite-rotation:${norad}`) * 90 - 45) as Degrees));
+        : (satelliteState.rotation ?? ((Rng.hashUniform(`satellite-rotation:${norad}`) * 90 - 45) as Degrees));
     this.ephemerisErrorAz = satelliteState.ephemerisErrorAz ?? (0 as Degrees);
     this.ephemerisErrorEl = satelliteState.ephemerisErrorEl ?? (0 as Degrees);
 

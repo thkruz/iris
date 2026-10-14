@@ -56,6 +56,7 @@ export type ConditionType =
   | 'hpa-not-overdriven' // HPA not in overdrive (IMD check)
   | 'hpa-output-power-set' // HPA output power above threshold
   | 'receiver-signal-locked' // Receiver modem has demodulation lock
+  | 'receiver-relocked' // Receiver modem lost lock during the watch and has locked again (Phase 29 D10)
   | 'receiver-snr-threshold' // Receiver modem C/N ratio meets threshold
   | 'rx-modem-frequency-set' // Receiver modem center frequency set
   | 'rx-modem-bandwidth-set' // Receiver modem bandwidth set
@@ -104,6 +105,7 @@ export type ConditionType =
   | 'geolocation-ellipse-within' // Computed fix converged with a 95% error ellipse no wider than N km (semi-major)
   | 'interference-event-ended' // A scripted interference event's envelope has closed (it ran and stopped)
   | 'weather-event-ended' // A scheduled weather event (rain cell, storm, sun transit) has run its course
+  | 'weather-event-peaked' // A scheduled weather event's degradation has passed its maximum (Phase 29 D10)
   | 'scenario-time-reached' // The station clock (scenario UTC) has reached params.scenarioTime, e.g. a pass window opening at 10:00
   // Electronic-attack / SATCOM denial conditions (Campaign 4)
   | 'jamming-uplink-active' // Jam waveform radiating in the target uplink band
@@ -484,8 +486,25 @@ export interface ConditionParams {
   maxSemiMajorKm?: number;
   /** For geolocation conditions and interference-event-ended: the interference event in question */
   interferenceEventId?: string;
-  /** For weather-event-ended: the settings.weatherEvents id that must have run its course */
+  /**
+   * For weather-event-ended: the settings.weatherEvents id that must have run
+   * its course. For weather-event-peaked: the event whose degradation must
+   * have passed its maximum.
+   */
   weatherEventId?: string;
+  /**
+   * For weather-event-peaked: seconds past the event's peak before the row
+   * ticks (default 0). The peak is the sun-transit midpoint (sin^2 profile),
+   * the start of a rain/storm/wind ramp-down, and the end of any other event.
+   */
+  pastPeakSeconds?: number;
+  /**
+   * For receiver-relocked: the objective whose activation starts the watch
+   * for a lock loss (default: the row's own objective). Name an earlier
+   * objective when the lock may drop before this one comes up, or a player
+   * who reaches it after the drop would wait for a second one.
+   */
+  lockLostAfterObjectiveId?: string;
   /**
    * For scenario-time-reached: station clock time of day, UTC as the HUD
    * shows it, 'HH:MM' or 'HH:MM:SS'. The first such moment at or after the
@@ -824,6 +843,11 @@ export interface ConditionState {
    * once this passes TAB_HINT_DELAY_SECONDS.
    */
   tabHintSeconds?: number;
+  /**
+   * Phase 29 D10, receiver-relocked: the modem has been seen without lock
+   * since the watch started. Latches; the row then ticks on the next lock.
+   */
+  lockLostSeen?: boolean;
 }
 
 /**

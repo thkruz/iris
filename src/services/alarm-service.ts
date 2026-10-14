@@ -3,20 +3,21 @@ import { AlarmStatus } from '@app/equipment/base-equipment';
 import { EventBus } from '@app/events/event-bus';
 import { AggregatedAlarm, AlarmStateChangedData, Events } from '@app/events/events';
 import { SimClock } from '@app/simulation/sim-clock';
+import { getSimulatedNowMs } from '@app/simulation/sim-time';
 import { SimulationManager } from '@app/simulation/simulation-manager';
 import { Milliseconds } from 'ootk';
 
 /**
  * AlarmService - Centralized alarm aggregation service
  *
- * Polls all equipment for alarms every second, aggregates them by severity,
- * and emits ALARM_STATE_CHANGED events when the alarm state changes.
+ * Polls all equipment for alarms every second and emits ALARM_STATE_CHANGED
+ * with EVERY active alarm, most severe first, when the set changes. The ticker
+ * used to get only the highest tier, so a warning hid behind an error and an
+ * info entry vanished whenever a warning was up (nats-r4-s16-F1, s17-F3).
  *
- * Display logic:
- * - If any error alarms exist, show ALL errors (red)
- * - Else if any warning alarms, show ALL warnings (yellow)
- * - Else if any info alarms, show ALL info (blue)
- * - Else show "SYSTEM STABLE" (green)
+ * Each alarm carries the station-clock time it was raised (first seen by the
+ * service), kept for its whole life, so the Dashboard stamps the raise time
+ * rather than the moment the list was first rendered (nats-r4-s01-F2).
  */
 export class AlarmService {
   private static instance_: AlarmService | null = null;
@@ -24,6 +25,8 @@ export class AlarmService {
   private lastPollTime_ = -Infinity;
   private readonly pollInterval_ = 1000; // 1 second
   private readonly boundOnUpdate_: (dt: Milliseconds) => void;
+  /** Station-clock ms each live alarm was first seen, by raiseKey_ */
+  private static readonly raisedAtMs_ = new Map<string, number>();
 
   private constructor() {
     this.boundOnUpdate_ = this.onUpdate_.bind(this);
@@ -55,7 +58,39 @@ export class AlarmService {
 
     // Future: for (const sat of sim.satellites) { ... }
 
-    this.emitIfChanged_(alarms);
+    // The poll sees every station, so an alarm missing here has cleared:
+    // forget its raise time, so a re-raise stamps afresh
+    AlarmService.stampRaisedAt_(alarms, true);
+    this.emitIfChanged_(AlarmService.sortBySeverity_(alarms));
+  }
+
+  /**
+   * Identity of one alarm for its raise time: station, equipment and the text
+   * with its live numbers masked, so "BUC over-temperature (72.3 °C)" is the
+   * same alarm at 72.0 °C
+   */
+  private static raiseKey_(alarm: AggregatedAlarm): string {
+    return `${alarm.assetId}|${alarm.equipmentType}|${alarm.equipmentIndex}|${alarm.message.replace(/-?\d+(?:\.\d+)?/gu, '#')}`;
+  }
+
+  /**
+   * Set `raisedAtMs` on each alarm: the station-clock time it was first seen.
+   * @param prune true when `alarms` is every station's full set (the poll)
+   */
+  private static stampRaisedAt_(alarms: AggregatedAlarm[], prune: boolean): void {
+    const nowMs = getSimulatedNowMs();
+    const seen = new Set<string>();
+    for (const alarm of alarms) {
+      const key = AlarmService.raiseKey_(alarm);
+      seen.add(key);
+      const raisedAtMs = AlarmService.raisedAtMs_.get(key) ?? nowMs;
+      AlarmService.raisedAtMs_.set(key, raisedAtMs);
+      alarm.raisedAtMs = raisedAtMs;
+    }
+    if (!prune) return;
+    for (const key of [...AlarmService.raisedAtMs_.keys()]) {
+      if (!seen.has(key)) AlarmService.raisedAtMs_.delete(key);
+    }
   }
 
   /**
@@ -70,7 +105,9 @@ export class AlarmService {
   static getAlarms(station: GroundStation | string): AggregatedAlarm[] {
     const gs = typeof station === 'string' ? SimulationManager.getInstance().groundStations.find((g) => g.state.id === station) : station;
     if (!gs) return [];
-    return AlarmService.sortBySeverity_(AlarmService.collectGroundStationAlarms_(gs));
+    const alarms = AlarmService.collectGroundStationAlarms_(gs);
+    AlarmService.stampRaisedAt_(alarms, false);
+    return AlarmService.sortBySeverity_(alarms);
   }
 
   /** Stable sort: error, warning, info (success last; never collected). */
@@ -158,31 +195,15 @@ export class AlarmService {
     return alarm.severity === 'error' || alarm.severity === 'warning' || alarm.severity === 'info';
   }
 
-  private filterToHighestSeverity_(alarms: AggregatedAlarm[]): {
-    filtered: AggregatedAlarm[];
-    severity: 'error' | 'warning' | 'info' | 'success';
-  } {
-    const errors = alarms.filter((a) => a.severity === 'error');
-    if (errors.length > 0) return { filtered: errors, severity: 'error' };
-
-    const warnings = alarms.filter((a) => a.severity === 'warning');
-    if (warnings.length > 0) return { filtered: warnings, severity: 'warning' };
-
-    const infos = alarms.filter((a) => a.severity === 'info');
-    if (infos.length > 0) return { filtered: infos, severity: 'info' };
-
-    return { filtered: [], severity: 'success' };
-  }
-
+  /** @param alarms every active alarm, most severe first */
   private emitIfChanged_(alarms: AggregatedAlarm[]): void {
-    const { filtered, severity } = this.filterToHighestSeverity_(alarms);
-    const hash = JSON.stringify(filtered);
+    const hash = JSON.stringify(alarms);
     if (hash === this.previousAlarmsHash_) return;
     this.previousAlarmsHash_ = hash;
 
     const data: AlarmStateChangedData = {
-      alarms: filtered,
-      highestSeverity: severity,
+      alarms,
+      highestSeverity: alarms[0]?.severity ?? 'success',
     };
 
     EventBus.getInstance().emit(Events.ALARM_STATE_CHANGED, data);
@@ -193,5 +214,6 @@ export class AlarmService {
       EventBus.getInstance().off(Events.UPDATE, AlarmService.instance_.boundOnUpdate_);
       AlarmService.instance_ = null;
     }
+    AlarmService.raisedAtMs_.clear();
   }
 }

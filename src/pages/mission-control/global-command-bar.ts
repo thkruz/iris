@@ -23,10 +23,12 @@ import { TimeSkipOverlay } from './time-skip-overlay';
  * Displays AOS countdown and a static alarm bar.
  * Subscribes to ALARM_STATE_CHANGED events to update the display immediately.
  *
- * Static alarm bar shows:
+ * Static alarm bar shows every active alarm (AlarmService sends all tiers,
+ * not only the most severe: nats-r4-s16-F1):
  * - Severity count badges (errors, warnings, info)
  * - Top 3 most severe alarms inline
- * - "+N more" overflow indicator
+ * - "+N more" overflow indicator, with the full list in the bar's tooltip
+ * - "SYSTEM STABLE" only when no alarm of any severity is active
  */
 export class GlobalCommandBar {
   readonly id = 'global-command-bar-container';
@@ -343,8 +345,7 @@ export class GlobalCommandBar {
     const blockedReason = controller.getObjectiveSkipBlockedReason(offer.objectiveId);
     const buttonText = GlobalCommandBar.objectiveSkipText(offer);
     this.objectiveSkipBtn_.disabled = blockedReason !== null;
-    this.objectiveSkipBtn_.title =
-      blockedReason ?? `${buttonText}: the end of the ${offer.label}. The mission clock is held while you wait, so waiting and skipping score the same.`;
+    this.objectiveSkipBtn_.title = blockedReason ?? GlobalCommandBar.objectiveSkipTitle(offer);
     const labelEl = this.objectiveSkipBtn_.querySelector('#objective-skip-control-label');
     if (labelEl) {
       labelEl.textContent = buttonText;
@@ -367,6 +368,19 @@ export class GlobalCommandBar {
     }
 
     return `Skip ${Math.ceil(offer.deltaMs / 60_000)} min`;
+  }
+
+  /**
+   * Tooltip for an objective skip (Phase 29 D15, nats-r4-s10-F3): "Skip to
+   * 10:00, the end of the standby. The mission clock is held while you wait,
+   * so waiting and skipping score the same." A label that does not start with
+   * an article gets "the".
+   */
+  static objectiveSkipTitle(offer: TimeSkipOffer): string {
+    const label = offer.label.trim();
+    const what = /^(?:the|a|an|this|that|your|our)\s/iu.test(label) ? label : `the ${label}`;
+
+    return `${GlobalCommandBar.objectiveSkipText(offer)}, the end of ${what}. The mission clock is held while you wait, so waiting and skipping score the same.`;
   }
 
   private handleTimeSkipClick_(): void {
@@ -547,12 +561,15 @@ export class GlobalCommandBar {
         </span>
       `;
       this.alarmBarEl_.classList.add('healthy');
+      this.messagesEl_.removeAttribute('title');
     } else {
       // Get top alarms by severity
       const topAlarms = this.getTopAlarms_(alarms, this.MAX_INLINE_ALARMS_);
       const overflowCount = alarms.length - topAlarms.length;
 
       this.renderAlarmMessages_(topAlarms, overflowCount);
+      // Every name, for the ones "+N more" hides
+      this.messagesEl_.title = alarms.map((a) => `${a.assetId}(${a.equipmentType}${a.equipmentIndex + 1}): ${a.message}`).join('\n');
 
       // Set container background based on severity
       if (severity === 'error') this.alarmBarEl_.classList.add('alarm');

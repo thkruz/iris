@@ -17,7 +17,15 @@ import type { NotchFilterState } from '@app/equipment/rf-front-end/notch-filter-
 import type { OMTState } from '@app/equipment/rf-front-end/omt-module/omt-module';
 import type { RFFrontEndState } from '@app/equipment/rf-front-end/rf-front-end-core';
 import { EventBus } from '@app/events/event-bus';
-import { Events, RxActiveModemChangedData, RxConfigChangedData, TxActiveModemChangedData, TxConfigChangedData, TxTransmitChangedData } from '@app/events/events';
+import {
+  EquipmentActionData,
+  Events,
+  RxActiveModemChangedData,
+  RxConfigChangedData,
+  TxActiveModemChangedData,
+  TxConfigChangedData,
+  TxTransmitChangedData,
+} from '@app/events/events';
 import { ScenarioManager } from '@app/scenario-manager';
 import {
   formatAgcEvent,
@@ -38,7 +46,7 @@ import {
   formatTxTransmitEvent,
 } from './event-formatters';
 import { OpsLogManager } from './ops-log-manager';
-import { stationSource, stationTagForAntennaState, stationTagForModemUuid, stationTagForRfState } from './station-tag';
+import { stationSource, stationTagForAntennaState, stationTagForModemUuid, stationTagForRfModule, stationTagForRfState } from './station-tag';
 
 /**
  * Auto-logs equipment events to the operations log.
@@ -75,6 +83,7 @@ export class EventAutoLogger {
   private readonly boundFilterHandler_: (data: Partial<IfFilterBankState>) => void;
   private readonly boundNotchFilterHandler_: (data: Partial<NotchFilterState>) => void;
   private readonly boundGpsdoHandler_: (data: Partial<GPSDOState>) => void;
+  private readonly boundEquipmentActionHandler_: (data: EquipmentActionData) => void;
 
   private constructor() {
     this.eventBus_ = EventBus.getInstance();
@@ -96,6 +105,7 @@ export class EventAutoLogger {
     this.boundFilterHandler_ = this.handleFilterEvent_.bind(this);
     this.boundNotchFilterHandler_ = this.handleNotchFilterEvent_.bind(this);
     this.boundGpsdoHandler_ = this.handleGpsdoEvent_.bind(this);
+    this.boundEquipmentActionHandler_ = this.handleEquipmentAction_.bind(this);
   }
 
   static getInstance(): EventAutoLogger {
@@ -142,6 +152,7 @@ export class EventAutoLogger {
     this.eventBus_.on(Events.RF_FE_FILTER_CHANGED, this.boundFilterHandler_);
     this.eventBus_.on(Events.RF_FE_NOTCH_FILTER_CHANGED, this.boundNotchFilterHandler_);
     this.eventBus_.on(Events.RF_FE_GPSDO_CHANGED, this.boundGpsdoHandler_);
+    this.eventBus_.on(Events.EQUIPMENT_ACTION, this.boundEquipmentActionHandler_);
   }
 
   /**
@@ -202,8 +213,9 @@ export class EventAutoLogger {
     const message = formatAntennaEvent(data);
     const station = stationTagForAntennaState(data);
     // A mode command (staged or applied) is an operator action: never throttle
-    // it away, so an APPLY right after MAINT still logs (nats-r3-s11-F2)
-    const modeKey = `${data.trackingMode}|${data.hasStagedChanges === true && data.stagedTargetElevation != null}`;
+    // it away, so an APPLY right after MAINT still logs (nats-r3-s11-F2), nor
+    // the step-track switch (nats-r4-s10-F1)
+    const modeKey = `${data.trackingMode}|${data.hasStagedChanges === true && data.stagedTargetElevation != null}|${data.isStepTrackEnabled === true}`;
     const modeChanged = this.lastAntennaModeKey_.get(station ?? '') !== modeKey;
     this.lastAntennaModeKey_.set(station ?? '', modeKey);
     if (this.shouldSkip_(Events.ANTENNA_STATE_CHANGED, message, modeChanged, station)) return;
@@ -325,6 +337,15 @@ export class EventAutoLogger {
     this.log_(message, stationSource('RF FE', station));
   }
 
+  /**
+   * An operator action an equipment core reports itself (BUC gain, HPA
+   * back-off, LNB / HPA power: nats-r4-s07-F1, s12-F2). Each is a discrete
+   * action: never throttled or deduped, so setting the same gain twice logs twice.
+   */
+  private handleEquipmentAction_(data: EquipmentActionData): void {
+    this.log_(data.message, stationSource(data.system, stationTagForRfModule(data.module)));
+  }
+
   // ════════════════════════════════════════════════════════════════════════════
   // Cleanup
   // ════════════════════════════════════════════════════════════════════════════
@@ -351,6 +372,7 @@ export class EventAutoLogger {
     this.eventBus_.off(Events.RF_FE_FILTER_CHANGED, this.boundFilterHandler_);
     this.eventBus_.off(Events.RF_FE_NOTCH_FILTER_CHANGED, this.boundNotchFilterHandler_);
     this.eventBus_.off(Events.RF_FE_GPSDO_CHANGED, this.boundGpsdoHandler_);
+    this.eventBus_.off(Events.EQUIPMENT_ACTION, this.boundEquipmentActionHandler_);
 
     this.isEnabled_ = false;
     this.lastLogTime_.clear();

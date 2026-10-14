@@ -60,6 +60,20 @@ export abstract class RFFrontEndModule<TState extends RFFrontEndModuleState> {
   }
 
   /**
+   * Ops Log line for an operator action no state event reports on its own
+   * (BUC gain, HPA back-off, LNB / HPA power: nats-r4-s07-F1, s12-F2). The
+   * EventAutoLogger writes it, tagged with this module's station.
+   */
+  protected logOperatorAction_(message: string): void {
+    EventBus.getInstance().emit(Events.EQUIPMENT_ACTION, { message, system: 'RF FE', module: this });
+  }
+
+  /** A level for a log line: "23 dB", or one decimal when it has a fraction */
+  protected static formatLevel_(value: number, unit: string): string {
+    return `${Number.isInteger(value) ? value : value.toFixed(1)} ${unit}`;
+  }
+
+  /**
    * Build the module DOM and initialize components
    * Called by UI subclasses after component initialization
    */

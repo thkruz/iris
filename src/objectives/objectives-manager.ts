@@ -37,8 +37,8 @@ import { TrafficControlManager } from '@app/traffic/traffic-control-manager';
 import { TransecManager } from '@app/transec/transec-manager';
 import { WeatherManager } from '@app/weather/weather-manager';
 import { Milliseconds } from 'ootk';
-import { conditionLabel, tabHintLabel } from './condition-label';
-import { holdsAtCompletion, isQuizCondition, resolveRequiresChange, TIME_GATED_CONDITION_TYPES, valueSnapshot } from './condition-semantics';
+import { conditionLabel, tabGateLabel, tabHintLabel } from './condition-label';
+import { holdsAtCompletion, isQuizCondition, isTabGate, observationDwellSeconds, resolveRequiresChange, TIME_GATED_CONDITION_TYPES, valueSnapshot } from './condition-semantics';
 import { CountdownHold } from './countdown-hold';
 import { EvidenceFactRegistry } from './evidence-facts';
 import {
@@ -717,8 +717,8 @@ export class ObjectivesManager {
   }
 
   /** Whether a condition counts as met for gating: live for hold-at-completion rows, latched otherwise */
-  private static isConditionMet_(cs: ConditionState): boolean {
-    return holdsAtCompletion(cs.condition) ? cs.isSatisfied : cs.isMaintenanceComplete;
+  private static isConditionMet_(cs: ConditionState, objective: Objective): boolean {
+    return holdsAtCompletion(cs.condition, objective) ? cs.isSatisfied : cs.isMaintenanceComplete;
   }
 
   /**
@@ -739,10 +739,10 @@ export class ObjectivesManager {
       return true;
     }
     if ((state.objective.conditionLogic ?? 'AND') === 'OR') {
-      return doing.some((cs) => ObjectivesManager.isConditionMet_(cs));
+      return doing.some((cs) => ObjectivesManager.isConditionMet_(cs, state.objective));
     }
 
-    return doing.every((cs) => ObjectivesManager.isConditionMet_(cs));
+    return doing.every((cs) => ObjectivesManager.isConditionMet_(cs, state.objective));
   }
 
   /** Public view of the Q1 hold, for the command-bar timer */
@@ -808,7 +808,10 @@ export class ObjectivesManager {
 
     return state.conditionStates.every(
       (cs) =>
-        isQuizCondition(cs.condition.type) || TIME_GATED_CONDITION_TYPES.has(cs.condition.type) || (cs.condition.maintainDuration ?? 0) > 0 || ObjectivesManager.isConditionMet_(cs)
+        isQuizCondition(cs.condition.type) ||
+        TIME_GATED_CONDITION_TYPES.has(cs.condition.type) ||
+        (cs.condition.maintainDuration ?? 0) > 0 ||
+        ObjectivesManager.isConditionMet_(cs, state.objective)
     );
   }
 
@@ -845,6 +848,14 @@ export class ObjectivesManager {
           return null;
         }
         consider(untilEndS * 1000, true);
+      } else if (condition.type === 'weather-event-peaked') {
+        const eventId = condition.params?.weatherEventId;
+        const untilPeakS =
+          eventId !== undefined && WeatherManager.hasInstance() ? WeatherManager.getInstance().getSecondsUntilEventPeaks(eventId, condition.params?.pastPeakSeconds ?? 0) : null;
+        if (untilPeakS === null) {
+          return null;
+        }
+        consider(untilPeakS * 1000, true);
       } else if ((condition.maintainDuration ?? 0) > 0 && !cs.isMaintenanceComplete) {
         consider(Math.max(0, ((condition.maintainDuration ?? 0) - cs.maintainedDuration) * 1000), false);
       }
@@ -864,7 +875,7 @@ export class ObjectivesManager {
       return false;
     }
     const isWaiting = state.conditionStates.some(
-      (cs) => (TIME_GATED_CONDITION_TYPES.has(cs.condition.type) || (cs.condition.maintainDuration ?? 0) > 0) && !ObjectivesManager.isConditionMet_(cs)
+      (cs) => (TIME_GATED_CONDITION_TYPES.has(cs.condition.type) || (cs.condition.maintainDuration ?? 0) > 0) && !ObjectivesManager.isConditionMet_(cs, state.objective)
     );
 
     return isWaiting && ObjectivesManager.isSkipReady_(state);
@@ -1213,6 +1224,7 @@ export class ObjectivesManager {
           // undo work to tick it
           currentCondState.changeArmed = savedCondState.changeArmed ?? true;
           currentCondState.changeBaseline = savedCondState.changeBaseline;
+          currentCondState.lockLostSeen = savedCondState.lockLostSeen;
         }
       });
     }
@@ -1342,7 +1354,10 @@ export class ObjectivesManager {
         // Hidden conditions are still enforced for completion but not shown
         // (e.g. the tab-active requirement on qualified-operator scenarios,
         // where we don't spell out which tab to open).
-        if (condition.hidden) {
+        // Phase 29 D5: a tab gate on a quiz step is always shown, from the
+        // step's start, or the quiz looks answerable with nothing left to do
+        const isGate = isTabGate(condition, objective);
+        if (condition.hidden && !isGate) {
           continue;
         }
 
@@ -1359,7 +1374,8 @@ export class ObjectivesManager {
         const isHintRequested = hasHint && hintManager.isHintRequested(objective.id, i);
 
         html += `<li class="condition-item ${conditionCompleted ? 'completed' : 'incomplete'}">`;
-        html += `<span class="condition-text">${conditionLabel(condition)}</span>`;
+        const rowLabel = isGate && condition.hidden && condition.params?.tab ? tabGateLabel(condition.params.tab) : conditionLabel(condition);
+        html += `<span class="condition-text">${rowLabel}</span>`;
 
         // An observation-gated check only progresses while its tab is open;
         // say which, or it looks stuck (nats-s18-F5)
@@ -1390,7 +1406,13 @@ export class ObjectivesManager {
       // named, or the objective looks stuck (nats-s16-F5, r2-s24-F1)
       if (isActive && !isCompleted) {
         for (const cs of objectiveState.conditionStates) {
-          if (cs.condition.hidden && cs.condition.type === 'tab-active' && (cs.tabHintSeconds ?? 0) >= TAB_HINT_DELAY_SECONDS && cs.condition.params?.tab) {
+          if (
+            cs.condition.hidden &&
+            cs.condition.type === 'tab-active' &&
+            !isTabGate(cs.condition, objective) &&
+            (cs.tabHintSeconds ?? 0) >= TAB_HINT_DELAY_SECONDS &&
+            cs.condition.params?.tab
+          ) {
             html += `<li class="condition-item incomplete condition-tab-hint"><span class="condition-text condition-observe-hint">${tabHintLabel(cs.condition.params.tab)}</span></li>`;
           }
         }
@@ -1412,6 +1434,7 @@ export class ObjectivesManager {
 
     this.advanceCountdowns_();
     this.failOnClosedCommandWindow_();
+    this.watchLockLoss_();
 
     for (const objectiveState of this.objectiveStates_) {
       // Skip already completed objectives
@@ -1518,7 +1541,7 @@ export class ObjectivesManager {
       // Hold-at-completion rows (maintainUntilObjectiveComplete, or B8:
       // mustMaintain with no duration) must be satisfied now; the rest must
       // have completed their maintenance
-      return objectiveState.conditionStates.every((cs) => ObjectivesManager.isConditionMet_(cs));
+      return objectiveState.conditionStates.every((cs) => ObjectivesManager.isConditionMet_(cs, objectiveState.objective));
     } else {
       // At least one condition must be maintenance-complete
       // OR logic with indefinite conditions is handled the same way
@@ -1621,6 +1644,7 @@ export class ObjectivesManager {
       condState.changeArmed = undefined;
       condState.changeBaseline = undefined;
       condState.tabHintSeconds = 0;
+      condState.lockLostSeen = undefined;
     }
   }
 
@@ -1654,7 +1678,7 @@ export class ObjectivesManager {
     for (let condIndex = 0; condIndex < objectiveState.conditionStates.length; condIndex++) {
       const conditionState = objectiveState.conditionStates[condIndex];
 
-      const holds = holdsAtCompletion(conditionState.condition);
+      const holds = holdsAtCompletion(conditionState.condition, objectiveState.objective);
 
       // Skip already completed maintenance (unless it must hold at completion)
       if (conditionState.isMaintenanceComplete && !holds) {
@@ -1686,7 +1710,7 @@ export class ObjectivesManager {
           conditionState.observedGapSeconds = 0;
           isNowSatisfied = false; // value not yet observed on the right tab
         } else if (isNowSatisfied) {
-          const dwellSeconds = condParams.observationDwellSeconds ?? DEFAULT_OBSERVATION_DWELL_SECONDS;
+          const dwellSeconds = observationDwellSeconds(conditionState.condition, DEFAULT_OBSERVATION_DWELL_SECONDS);
           conditionState.observedSeconds = (conditionState.observedSeconds ?? 0) + dtSeconds;
           conditionState.observedGapSeconds = 0;
           if (conditionState.observedSeconds >= dwellSeconds) {
@@ -1725,8 +1749,9 @@ export class ObjectivesManager {
         conditionState.satisfiedAt = SimClock.nowMs();
         conditionState.maintainedDuration = 0;
 
-        // Mark as complete based on condition type
-        if (holds || !conditionState.condition.mustMaintain) {
+        // Mark as complete based on condition type (a mustMaintain row with
+        // no duration that does not hold is a D5 tab gate: it latches now)
+        if (holds || !conditionState.condition.mustMaintain || !conditionState.condition.maintainDuration) {
           conditionState.isMaintenanceComplete = true;
         }
 
@@ -1844,13 +1869,54 @@ export class ObjectivesManager {
    */
   private trackTabHints_(objectiveState: ObjectiveState, dtSeconds: number): void {
     for (const cs of objectiveState.conditionStates) {
-      if (!cs.condition.hidden || cs.condition.type !== 'tab-active') {
+      if (!cs.condition.hidden || cs.condition.type !== 'tab-active' || isTabGate(cs.condition, objectiveState.objective)) {
         continue;
       }
       const isBlocking =
-        !ObjectivesManager.isConditionMet_(cs) &&
-        objectiveState.conditionStates.every((other) => other === cs || isQuizCondition(other.condition.type) || ObjectivesManager.isConditionMet_(other));
+        !ObjectivesManager.isConditionMet_(cs, objectiveState.objective) &&
+        objectiveState.conditionStates.every(
+          (other) => other === cs || isQuizCondition(other.condition.type) || ObjectivesManager.isConditionMet_(other, objectiveState.objective)
+        );
       cs.tabHintSeconds = isBlocking ? (cs.tabHintSeconds ?? 0) + dtSeconds : 0;
+    }
+  }
+
+  /** Whether the receiver modem a condition names (default: the active one) has lock */
+  private isReceiverLocked_(gs: GroundStation, params: ConditionParams | undefined): boolean {
+    return this.evaluateEquipment_(gs.receivers, params, (receiver) => {
+      const modemNum = params?.modemNumber ?? receiver.state.activeModem;
+      const modem = receiver.state.modems.find((m) => m.modemNumber === modemNum);
+      if (!modem?.isPowered) return false;
+
+      return receiver.getSignalsInBandwidth(modem).hasLock;
+    });
+  }
+
+  /**
+   * Phase 29 D10: receiver-relocked rows watch for a lock loss from the
+   * activation of `lockLostAfterObjectiveId` (default their own objective),
+   * even while their own objective still waits on prerequisites, so a drop
+   * during an earlier step still counts. The loss latches on the row.
+   */
+  private watchLockLoss_(): void {
+    for (const objectiveState of this.objectiveStates_) {
+      if (objectiveState.isCompleted || objectiveState.isFailed) {
+        continue;
+      }
+      for (const cs of objectiveState.conditionStates) {
+        if (cs.condition.type !== 'receiver-relocked' || cs.lockLostSeen) {
+          continue;
+        }
+        const anchorId = cs.condition.params?.lockLostAfterObjectiveId;
+        const anchor = anchorId ? this.objectiveStates_.find((o) => o.objective.id === anchorId) : objectiveState;
+        if (!anchor || !(anchor.isActive || anchor.isCompleted)) {
+          continue;
+        }
+        const gs = this.getGroundStation_(objectiveState);
+        if (gs && !this.isReceiverLocked_(gs, cs.condition.params)) {
+          cs.lockLostSeen = true;
+        }
+      }
     }
   }
 
@@ -1958,7 +2024,7 @@ export class ObjectivesManager {
     }
 
     return objectiveState.conditionStates.every(
-      (cs, index) => isQuizCondition(cs.condition.type) || (gate !== true && index > conditionIndex) || ObjectivesManager.isConditionMet_(cs)
+      (cs, index) => isQuizCondition(cs.condition.type) || (gate !== true && index > conditionIndex) || ObjectivesManager.isConditionMet_(cs, objectiveState.objective)
     );
   }
 
@@ -2612,14 +2678,15 @@ export class ObjectivesManager {
       }
 
       case 'receiver-signal-locked': {
-        return this.evaluateEquipment_(gs.receivers, condition.params, (receiver) => {
-          const modemNum = condition.params?.modemNumber ?? receiver.state.activeModem;
-          const modem = receiver.state.modems.find((m) => m.modemNumber === modemNum);
-          if (!modem?.isPowered) return false;
+        return this.isReceiverLocked_(gs, condition.params);
+      }
 
-          const signalInfo = receiver.getSignalsInBandwidth(modem);
-          return signalInfo.hasLock;
-        });
+      case 'receiver-relocked': {
+        // Phase 29 D10: lock lost during the watch (watchLockLoss_), then
+        // regained. A lock that has not dropped yet does not count
+        // (nats-r4-s17-F1: "Receiver Re-Locked" was ticked before the drop)
+        const cs = objectiveState.conditionStates.find((c) => c.condition === condition);
+        return !!cs?.lockLostSeen && this.isReceiverLocked_(gs, condition.params);
       }
 
       case 'receiver-snr-threshold': {
@@ -3232,6 +3299,15 @@ export class ObjectivesManager {
         if (!WeatherManager.hasInstance()) return false;
         const eventId = condition.params?.weatherEventId;
         return eventId !== undefined && WeatherManager.getInstance().hasEventEnded(eventId);
+      }
+
+      case 'weather-event-peaked': {
+        // Phase 29 D10: the named event's degradation has passed its maximum
+        // (a sun transit's midpoint), not merely crossed a threshold on the
+        // way up (nats-r4-s17-F1)
+        if (!WeatherManager.hasInstance()) return false;
+        const eventId = condition.params?.weatherEventId;
+        return eventId !== undefined && WeatherManager.getInstance().hasEventPeaked(eventId, condition.params?.pastPeakSeconds ?? 0);
       }
 
       case 'scenario-time-reached': {

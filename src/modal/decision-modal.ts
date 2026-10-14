@@ -16,6 +16,7 @@ import { DecisionAnsweredData, DecisionDismissedData, DecisionEvidenceStatus, De
 import { Character, CharacterNames, Emotion, getCharacterAvatarUrl } from './character-enum';
 import { DecisionManager } from './decision-manager';
 import './decision-modal.css';
+import { optionLetter } from './quiz-modal';
 import './quiz-modal.css';
 
 /** Seeded draws for this module (see simulation/rng.ts). */
@@ -170,14 +171,13 @@ export class DecisionModal extends DraggableBox {
     penaltyEl.style.display = 'none';
     this.renderEvidence_(this.current_.evidence);
 
-    const labels = ['A', 'B', 'C', 'D', 'E', 'F'];
     this.shuffledIndices_ = this.shuffleIndices_();
     const options = this.current_.options;
     optionsEl.innerHTML = this.shuffledIndices_
       .map(
         (originalIndex, displayIndex) => html`
           <button id="decision-option-${displayIndex}" class="quiz-option-btn" data-index="${originalIndex}">
-            <span class="quiz-option-label">${labels[displayIndex]}</span>
+            <span class="quiz-option-label">${optionLetter(displayIndex)}</span>
             <span class="quiz-option-text">${options[originalIndex]}</span>
           </button>
         `

@@ -81,6 +81,20 @@ export class IQConstellationAdapter {
     this.lockIndicator_ = lockSpan;
   }
 
+  /** The header is fed the modem readouts' samples (showHeaderSample), not this adapter's own per-frame reads */
+  private hasExternalHeader_ = false;
+
+  /**
+   * Show the header C/N and lock from the sample the modem readouts were drawn
+   * from (ReceiverAdapter.setSignalSampleListener), so the header and the
+   * modem's Effective C/N are the same number at the same moment (phase 29 D4,
+   * nats-r3-s06-F3). Null: modem off.
+   */
+  public showHeaderSample(state: IQSignalInfo | null): void {
+    this.hasExternalHeader_ = true;
+    this.updateStatusIndicators_(state);
+  }
+
   private startRendering_(): void {
     this.render_();
   }
@@ -104,13 +118,13 @@ export class IQConstellationAdapter {
     const activeModem = this.receiver_.state.modems[this.receiver_.state.activeModem - 1];
     if (!activeModem?.isPowered) {
       this.drawNoPower_(ctx, centerX, centerY);
-      this.updateStatusIndicators_(null);
+      if (!this.hasExternalHeader_) this.updateStatusIndicators_(null);
       return;
     }
 
     // Get signal info using relaxed filtering (for IQ display)
     const signalState = this.receiver_.getSignalsInBandwidth(activeModem);
-    this.updateStatusIndicators_(signalState);
+    if (!this.hasExternalHeader_) this.updateStatusIndicators_(signalState);
 
     if (!signalState.hasCarrier) {
       // No carrier - show pure noise
@@ -144,7 +158,7 @@ export class IQConstellationAdapter {
     if (!this.cnIndicator_ || !this.lockIndicator_) return;
 
     if (!state) {
-      this.cnIndicator_.textContent = 'C/N: ---';
+      this.cnIndicator_.textContent = 'Eff C/N: ---';
       this.cnIndicator_.className = 'iq-status-cn font-monospace text-muted';
       this.lockIndicator_.textContent = 'OFF';
       this.lockIndicator_.className = 'iq-status-lock font-monospace text-muted';
@@ -153,7 +167,8 @@ export class IQConstellationAdapter {
 
     // Use effective C/N (with ADC penalty) for display
     const displayCn = state.effectiveCnRatio_dB ?? state.cnRatio_dB;
-    const cnText = displayCn > -50 ? `C/N: ${displayCn.toFixed(1)} dB` : 'C/N: ---';
+    // Labelled as the modem's readout it equals ("Effective C/N")
+    const cnText = state.hasCarrier && displayCn > -50 ? `Eff C/N: ${displayCn.toFixed(1)} dB` : 'Eff C/N: ---';
 
     // Color based on effective C/N AND ADC status
     let cnClass: string;

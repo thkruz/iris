@@ -1,6 +1,7 @@
 import { RFFrontEndCore } from '@app/equipment/rf-front-end/rf-front-end-core';
 import { RFFrontEndModule, RFFrontEndModuleState } from '@app/equipment/rf-front-end/rf-front-end-module';
 import { SignalOrigin } from '@app/signal-origin';
+import { SimClock } from '@app/simulation/sim-clock';
 import { dB, dBm, IfSignal } from '@app/types';
 
 /**
@@ -57,6 +58,26 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
   /** The passband holds receive noise and no carrier above it (updated each frame) */
   private isNoiseOnly_ = false;
 
+  /**
+   * Hang time, ms (phase 29 D19, nats-r4-s08-F3). After the passband power
+   * drops suddenly from a levelled state, the gain is held this long before
+   * the release starts, as a hang AGC does, so a carrier that drops out for a
+   * second (S8's intermittent Modem 1, a TDMA burst gap) does not pump every
+   * other carrier in the IF: without it the AURORA-7 beacon jumped 12 dB on
+   * the analyzer each time the station's own 24 MHz carrier blinked off, while
+   * its C/N (a ratio) never moved. Attack is never held.
+   */
+  static readonly HANG_MS = 2000;
+
+  /** A release larger than this, dB, from a levelled loop starts the hang; smaller ones track at once */
+  static readonly HANG_THRESHOLD_DB = 1;
+
+  /** The loop was within HANG_THRESHOLD_DB of its target on the last update */
+  private isLevelled_ = false;
+
+  /** Run time the current hang started (null: not hanging) */
+  private hangStartMs_: number | null = null;
+
   /** True when the AGC is levelling noise alone: no carrier above the noise in its passband */
   get isNoiseOnly(): boolean {
     return this.isNoiseOnly_;
@@ -112,6 +133,8 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
 
     // Handle bypass mode - pass signals through unchanged
     if (this.state.isBypassed) {
+      this.isLevelled_ = false;
+      this.hangStartMs_ = null;
       this.state.currentGain = 0 as dB;
       this.state.outputPower = this.state.inputPower;
       this.outputSignals = inputs.map((sig) => ({
@@ -133,7 +156,10 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
     // Calculate alpha for exponential smoothing at ~60 FPS (16.67ms per frame)
     const alpha = 1 - Math.exp(-16.67 / timeConstant);
 
-    this.state.currentGain = (this.state.currentGain + (targetGain - this.state.currentGain) * alpha) as dB;
+    if (!this.isHanging_(targetGain)) {
+      this.state.currentGain = (this.state.currentGain + (targetGain - this.state.currentGain) * alpha) as dB;
+    }
+    this.isLevelled_ = Math.abs(targetGain - this.state.currentGain) <= AGCModuleCore.HANG_THRESHOLD_DB;
 
     // Clamp to gain limits
     this.state.currentGain = Math.max(this.state.minGain, Math.min(this.state.maxGain, this.state.currentGain)) as dB;
@@ -148,6 +174,26 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
     // Calculate actual output power (carriers plus the levelled noise)
     const outputPowerLinear = this.outputSignals.reduce((sum, sig) => sum + 10 ** (sig.power / 10), 0) + noiseLinear * 10 ** (this.state.currentGain / 10);
     this.state.outputPower = AGCModuleCore.toDetectorReading_(outputPowerLinear);
+  }
+
+  /**
+   * True while a release is held by the hang: the passband dropped more than
+   * HANG_THRESHOLD_DB below a levelled loop under HANG_MS ago. A release that
+   * outlasts the hang proceeds at the release time constant.
+   */
+  private isHanging_(targetGain: number): boolean {
+    const isBigRelease = targetGain - this.state.currentGain > AGCModuleCore.HANG_THRESHOLD_DB;
+    if (!isBigRelease || (!this.isLevelled_ && this.hangStartMs_ === null)) {
+      this.hangStartMs_ = null;
+      return false;
+    }
+    const now = SimClock.runMs();
+    // Run time restarts at 0 on a scenario load
+    if (this.hangStartMs_ === null || now < this.hangStartMs_) {
+      this.hangStartMs_ = now;
+    }
+
+    return now - this.hangStartMs_ < AGCModuleCore.HANG_MS;
   }
 
   /**

@@ -515,7 +515,7 @@ export class TxChainTab extends BaseElement {
                     <div class="metric-group-title">Source Status</div>
                     <div class="metric-row">
                       <span class="metric-label">Data Rate:</span>
-                      <span id="tx-payload-data-rate" class="metric-value">2.048 Mbps</span>
+                      <span id="tx-payload-data-rate" class="metric-value">--</span>
                     </div>
                     <div class="metric-row">
                       <span class="metric-label">Payload Type:</span>
@@ -575,7 +575,7 @@ export class TxChainTab extends BaseElement {
                     <div class="metric-group-title">Throughput</div>
                     <div class="metric-row">
                       <span class="metric-label">Frames/sec:</span>
-                      <span id="tx-payload-frames-sec" class="metric-value font-monospace">1,024</span>
+                      <span id="tx-payload-frames-sec" class="metric-value font-monospace">--</span>
                     </div>
                     <div class="metric-row">
                       <span class="metric-label">Efficiency:</span>
@@ -655,7 +655,7 @@ export class TxChainTab extends BaseElement {
 
     // Setup payload adapter (static display for training)
     if (this.dom_) {
-      this.payloadAdapter_ = new TxPayloadAdapter(this.dom_, this.groundStation.uuid);
+      this.payloadAdapter_ = new TxPayloadAdapter(this.dom_, this.groundStation.uuid, transmitter ?? null);
 
       // Traffic-key re-key (phase 16, nats-eu S4). The payload crypto is one
       // symmetric key for both directions, so one load clears a Mismatch or

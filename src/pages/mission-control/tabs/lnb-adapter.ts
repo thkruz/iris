@@ -129,7 +129,7 @@ export class LNBAdapter {
 
     // Update alarm badge
     const alarms = this.getAlarmsFromModule_();
-    this.alarmBadge_.update(alarms);
+    this.alarmBadge_.update(alarms, this.lnbModule.state.isPowered);
   }
 
   private setupDomCache_(): void {
@@ -398,7 +398,7 @@ export class LNBAdapter {
 
     // Update alarm badge - immediate feedback
     const alarms = this.getAlarmsFromModule_();
-    this.alarmBadge_.update(alarms);
+    this.alarmBadge_.update(alarms, this.lnbModule.state.isPowered);
   }
 
   /**

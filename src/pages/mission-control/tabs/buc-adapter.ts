@@ -9,6 +9,23 @@ import { stationTagForRfModule } from '@app/ops-log/station-tag';
 import { parseLocalizedNumber } from '@app/utils/parse-number';
 
 /**
+ * The BUC output readout, shared by the TX Chain card and the Dashboard RF
+ * Chain TX card so both read the same quantity (phase 29 D4). No measurement
+ * shows no level: "MUTED" while the BUC is muted (the muted path carries a
+ * numerical floor, never a level) and "-- dBm" when off or with nothing in band
+ * (no modem transmitting, or a modem in an intermittent dropout).
+ */
+export function formatBucOutputPower(buc: BUCModuleCore): string {
+  if (buc.state.isPowered && buc.state.isMuted) {
+    return 'MUTED';
+  }
+  if (!buc.hasRfOutput()) {
+    return '-- dBm';
+  }
+  return `${buc.outputSignals[0].power.toFixed(1)} dBm`;
+}
+
+/**
  * BUCAdapter - Bridges BUCModuleCore state to web controls
  *
  * Provides bidirectional synchronization between:
@@ -161,11 +178,7 @@ export class BUCAdapter {
     // Update RF Status displays - show actual output signal power for consistency with HPA input
     const outputPowerDisplay = this.domCache_.get('outputPowerDisplay');
     if (outputPowerDisplay) {
-      if (isPowered && this.bucModule.outputSignals.length > 0) {
-        outputPowerDisplay.textContent = `${this.bucModule.outputSignals[0].power.toFixed(1)} dBm`;
-      } else {
-        outputPowerDisplay.textContent = '-- dBm';
-      }
+      outputPowerDisplay.textContent = formatBucOutputPower(this.bucModule);
     }
 
     // Display RF output frequency (after LO mixing and bandpass filter)
@@ -258,7 +271,7 @@ export class BUCAdapter {
 
     // Update alarm badge
     const alarms = this.getAlarmsFromModule_();
-    this.alarmBadge_.update(alarms);
+    this.alarmBadge_.update(alarms, this.bucModule.state.isPowered);
   }
 
   private setupDomCache_(): void {
@@ -576,11 +589,7 @@ export class BUCAdapter {
     // Update RF Status displays - show actual output signal power for consistency with HPA input
     const outputPowerDisplay = this.domCache_.get('outputPowerDisplay');
     if (outputPowerDisplay) {
-      if (isPowered && this.bucModule.outputSignals.length > 0) {
-        outputPowerDisplay.textContent = `${this.bucModule.outputSignals[0].power.toFixed(1)} dBm`;
-      } else {
-        outputPowerDisplay.textContent = '-- dBm';
-      }
+      outputPowerDisplay.textContent = formatBucOutputPower(this.bucModule);
     }
 
     // Display RF output frequency (after LO mixing and bandpass filter)
@@ -658,7 +667,7 @@ export class BUCAdapter {
 
     // Update alarm badge - immediate feedback
     const alarms = this.getAlarmsFromModule_();
-    this.alarmBadge_.update(alarms);
+    this.alarmBadge_.update(alarms, this.bucModule.state.isPowered);
   }
 
   /**

@@ -6,6 +6,7 @@
 
 import type { AntennaState } from '@app/equipment/antenna';
 import type { TrackingMode } from '@app/equipment/antenna/antenna-core';
+import { antennaLockLabel } from '@app/equipment/antenna/tracking-mode-label';
 import type { ReceiverModemState } from '@app/equipment/receiver/receiver';
 import type { AGCState } from '@app/equipment/rf-front-end/agc-module';
 import type { BUCState } from '@app/equipment/rf-front-end/buc-module';
@@ -43,24 +44,34 @@ export function formatAntennaEvent(data: Partial<AntennaState>): string | null {
     // the staged mode as staged, without the lock flags the mode switch
     // momentarily cleared: the dish is still where it was (nats-r3-s11-F2).
     // The APPLY logs the mode again with the state at that moment.
+    // Since phase 29 the ACU stages STOW/MAINT as `stagedTrackingMode` while
+    // the applied mode keeps running.
     const pendingEl = data.stagedTargetElevation;
-    const isParkMode = data.trackingMode === 'stow' || data.trackingMode === 'maintenance';
+    const parkMode = data.stagedTrackingMode ?? data.trackingMode;
+    const isParkMode = parkMode === 'stow' || parkMode === 'maintenance';
     if (isParkMode && data.hasStagedChanges && pendingEl !== undefined && pendingEl !== null) {
-      return `Tracking mode: ${label} staged (El ${pendingEl.toFixed(1)} pending APPLY)`;
+      return `Tracking mode: ${TRACKING_MODE_LABELS[parkMode] ?? parkMode.toUpperCase()} staged (El ${pendingEl.toFixed(1)} pending APPLY)`;
     }
-    parts.push(`Tracking mode: ${label}`);
+    // Step-track is an overlay on program-track, so engaging it changes the
+    // line and logs (nats-r4-s10-F1)
+    const stepTrack = data.trackingMode === 'program-track' && data.isStepTrackEnabled ? ' + STEP-TRACK' : '';
+    parts.push(`Tracking mode: ${label}${stepTrack}`);
   }
 
   if (data.isPowered !== undefined) {
     parts.push(data.isPowered ? 'Power ON' : 'Power OFF');
   }
 
-  if (data.isLocked !== undefined) {
-    parts.push(data.isLocked ? 'Satellite LOCKED' : 'Satellite UNLOCKED');
-  }
-
-  if (data.isBeaconLocked !== undefined) {
-    parts.push(data.isBeaconLocked ? 'Beacon LOCKED' : 'Beacon UNLOCKED');
+  // One lock, as the ACU and Dashboard print it: the satellite and beacon
+  // flags trade places while acquisition settles, and printing both wrote two
+  // contradictory start-of-shift lines (nats-r4-s10-F1)
+  if (data.isLocked !== undefined || data.isBeaconLocked !== undefined) {
+    const lock = antennaLockLabel({
+      isLocked: data.isLocked ?? false,
+      isBeaconLocked: data.isBeaconLocked ?? false,
+      isAcuAutomationFaulted: data.isAcuAutomationFaulted,
+    });
+    parts.push(lock === 'UNKNOWN' ? 'Antenna lock UNKNOWN' : `Antenna ${lock}`);
   }
 
   // Only log position if we have both values and not other changes
@@ -72,7 +83,11 @@ export function formatAntennaEvent(data: Partial<AntennaState>): string | null {
     parts.push(`Polarization skew: ${data.polarization.toFixed(1)}°`);
   }
 
-  if (data.beaconFrequencyHz !== undefined) {
+  // A beacon frequency belongs to a target (or the operator's MANUAL entry):
+  // PROGRAM with no target yet carries the last satellite's, so it is left out
+  // until Move to Target sets the new one (phase 29 D4, nats-r4-s12-F1)
+  const hasBeaconTarget = data.targetSatelliteId !== null || data.trackingMode === 'manual';
+  if (data.beaconFrequencyHz !== undefined && hasBeaconTarget) {
     const freqMHz = data.beaconFrequencyHz / 1e6;
     parts.push(`Beacon freq: ${freqMHz.toFixed(2)} MHz`);
   }
@@ -98,8 +113,14 @@ export function formatTxConfigEvent(data: TxConfigChangedData): string | null {
   const carrier = `${freqMHz} MHz${modFec ? `, ${modFec}` : ''}`;
 
   // The event names the modem that changed and what changed (nats-r3-s11-F1);
-  // an event with no action is a state refresh and logs nothing
-  switch (data.action) {
+  // an event with no action is a state refresh and logs nothing. An automatic
+  // action says why, like the sibling handover lines (nats-r4-s11-F3)
+  const line = formatTxAction_(data.action, modemNum, carrier);
+  return line && data.reason ? `${line} (${data.reason})` : line;
+}
+
+function formatTxAction_(action: TxConfigChangedData['action'], modemNum: number, carrier: string): string | null {
+  switch (action) {
     case 'config':
       return `M${modemNum}: Config ${carrier}`;
     case 'transmit-on':

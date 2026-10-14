@@ -52,6 +52,37 @@
   font-weight: bold;
 }
 
+/* Phase 29 D16: shown when every scenario of the campaign is completed */
+.campaign-complete-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.18) 0%, rgba(255, 183, 0, 0.1) 100%);
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  border-radius: 6px;
+  max-width: 700px;
+}
+
+.campaign-complete-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.campaign-complete-text {
+  font-size: 0.875rem;
+  color: #ddd;
+  line-height: 1.5;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.campaign-complete-text strong {
+  color: #ffd700;
+}
+
 /*
  * Beta/alpha disclaimer under the campaign title. This is the last screen before
  * a player commits to a scenario and, unlike the campaign card, nothing here is

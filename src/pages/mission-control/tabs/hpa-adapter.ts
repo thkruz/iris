@@ -8,6 +8,20 @@ import { EventAutoLogger } from '@app/ops-log/event-auto-logger';
 import { stationTagForRfModule } from '@app/ops-log/station-tag';
 import { parseLocalizedNumber } from '@app/utils/parse-number';
 
+/** True while the HPA is putting RF out: powered, enabled and driven */
+export function isHpaRadiating(hpa: HPAModuleCore, state: HPAState = hpa.state): boolean {
+  return state.isPowered && state.isHpaEnabled && hpa.outputSignals.length > 0;
+}
+
+/**
+ * The HPA output readout, shared by the TX Chain card and the Dashboard RF
+ * Chain TX card (phase 29 D4): "-- dBm" when the HPA is not radiating, never the
+ * no-output floor as a level.
+ */
+export function formatHpaOutputPower(hpa: HPAModuleCore): string {
+  return isHpaRadiating(hpa) ? `${hpa.state.outputPower.toFixed(1)} dBm` : '-- dBm';
+}
+
 /**
  * HPAAdapter - Bridges HPAModuleCore state to web controls
  *
@@ -134,12 +148,12 @@ export class HPAAdapter {
 
     // Update alarm badge
     const alarms = this.getAlarmsFromModule_();
-    this.alarmBadge_.update(alarms);
+    this.alarmBadge_.update(alarms, this.hpaModule.state.isPowered);
   }
 
   /** True while the HPA is putting RF out (powered, enabled, driven) */
   private isRadiating_(state: HPAState): boolean {
-    return state.isPowered && state.isHpaEnabled && this.hpaModule.outputSignals.length > 0;
+    return isHpaRadiating(this.hpaModule, state);
   }
 
   /**
@@ -464,7 +478,7 @@ export class HPAAdapter {
 
     // Update alarm badge - immediate feedback
     const alarms = this.getAlarmsFromModule_();
-    this.alarmBadge_.update(alarms);
+    this.alarmBadge_.update(alarms, this.hpaModule.state.isPowered);
   }
 
   /**
