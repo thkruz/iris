@@ -845,7 +845,7 @@ export const natsEuScenario11Data: ScenarioData = {
       'uplink-cold-check': {
         text: `
         <p>
-          <em>[Text message from Anneke Visser at 09:02]</em>
+          <em>[Text message from Anneke Visser at {{stationTime}}]</em>
         </p>
         <p>
           "Cold chain logged on my side as well. I know it feels like a formality. On Wednesday, when we send the first command, the fact that nothing went up today is the reason a rejected command will mean something."

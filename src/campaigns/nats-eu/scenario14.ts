@@ -896,7 +896,7 @@ export const natsEuScenario14Data: ScenarioData = {
       'protect-the-feed': {
         text: `
         <p>
-          <em>[Text message from Fiona MacLeod at 11:25]</em>
+          <em>[Text message from Fiona MacLeod at {{stationTime}}]</em>
         </p>
         <p>
           "Heater? Good. Mine's been on since dawn. Sleet's the one that gets you - it doesn't fade, it just sits on the horn and gets heavier. If you want the quarter-to pass I'd rather you had it; I've got the seventy-five if it goes wrong."
@@ -909,7 +909,7 @@ export const natsEuScenario14Data: ScenarioData = {
       'ride-it-out': {
         text: `
         <p>
-          <em>[Text message from Fiona MacLeod at 11:52]</em>
+          <em>[Text message from Fiona MacLeod at {{stationTime}}]</em>
         </p>
         <p>
           "Told you it'd clear. Watched your number from here - eleven on a clean horn in sleet. That's the heater, not the weather. Right call keeping it."

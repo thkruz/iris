@@ -962,7 +962,7 @@ export const natsEuScenario13Data: ScenarioData = {
       'read-the-galway-lnb': {
         text: `
         <p>
-          <em>[Text message from Fiona MacLeod at 13:41]</em>
+          <em>[Text message from Fiona MacLeod at {{stationTime}}]</em>
         </p>
         <p>
           "Mine's reading 60 K and change, same as the day it was fitted. Yours is cooking. Don't power-cycle it, that just starts the number higher. Send Erik's collect up here - I'll be on the pedestal with a torch from ten to, so the console's yours."
@@ -975,7 +975,7 @@ export const natsEuScenario13Data: ScenarioData = {
       'reallocate-the-collect': {
         text: `
         <p>
-          <em>[Text message from Fiona MacLeod at 13:45]</em>
+          <em>[Text message from Fiona MacLeod at {{stationTime}}]</em>
         </p>
         <p>
           "Seen it on the board. SAR-3 is on its own numbers, mind: 1340 for the video, 1315 for the beacon. Thirty-two degrees from the south-east. It's a good one."
@@ -988,7 +988,7 @@ export const natsEuScenario13Data: ScenarioData = {
       'fly-the-collect-from-shetland': {
         text: `
         <p>
-          <em>[Text message from Fiona MacLeod at 13:59]</em>
+          <em>[Text message from Fiona MacLeod at {{stationTime}}]</em>
         </p>
         <p>
           "Watched the dish from the pedestal. Never wobbled, and I'd guess eleven and a bit at the top from the way the alarm panel stayed dark. That's your comparison. Same bird class, two sites, one of them cooking."
