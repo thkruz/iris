@@ -232,13 +232,13 @@
               "modulation": "QPSK",
               "fec": "3/4",
               "samples": 5,
-              "peakCnDb": 12.4,
-              "medianCnDb": 12.4,
-              "peakEsN0Db": 13.19,
+              "peakCnDb": 13,
+              "medianCnDb": 13,
+              "peakEsN0Db": 13.79,
               "requiredEsN0Db": 5.03,
-              "peakLockMarginDb": 8.16,
-              "peakRxIfDbm": -27.94,
-              "noiseIfDbm": -40.64,
+              "peakLockMarginDb": 8.76,
+              "peakRxIfDbm": -27.79,
+              "noiseIfDbm": -41.13,
               "lockedSamples": 5
             },
             {
@@ -254,8 +254,8 @@
               "peakEsN0Db": 43.07,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
-              "peakRxIfDbm": -53.63,
-              "noiseIfDbm": -106.2,
+              "peakRxIfDbm": -54.13,
+              "noiseIfDbm": -106.69,
               "lockedSamples": 0
             }
           ],
@@ -303,8 +303,8 @@
               "peakEsN0Db": 43.16,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
-              "peakRxIfDbm": -47.88,
-              "noiseIfDbm": -106.61,
+              "peakRxIfDbm": -48.15,
+              "noiseIfDbm": -107.13,
               "lockedSamples": 0
             }
           ],
@@ -332,13 +332,13 @@
               "modulation": "QPSK",
               "fec": "3/4",
               "samples": 5,
-              "peakCnDb": 15.06,
-              "medianCnDb": 15.06,
-              "peakEsN0Db": 15.84,
+              "peakCnDb": 15.67,
+              "medianCnDb": 15.67,
+              "peakEsN0Db": 16.44,
               "requiredEsN0Db": 5.03,
-              "peakLockMarginDb": 10.81,
-              "peakRxIfDbm": -28.3,
-              "noiseIfDbm": -43.86,
+              "peakLockMarginDb": 11.41,
+              "peakRxIfDbm": -28.21,
+              "noiseIfDbm": -44.45,
               "lockedSamples": 5
             },
             {
@@ -354,8 +354,8 @@
               "peakEsN0Db": 43.13,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
-              "peakRxIfDbm": -56.11,
-              "noiseIfDbm": -109.42,
+              "peakRxIfDbm": -56.69,
+              "noiseIfDbm": -110.01,
               "lockedSamples": 0
             }
           ],

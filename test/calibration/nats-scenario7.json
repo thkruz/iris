@@ -92,13 +92,13 @@
               "modulation": "QPSK",
               "fec": "3/4",
               "samples": 5,
-              "peakCnDb": 15.3,
-              "medianCnDb": 15.3,
-              "peakEsN0Db": 16.08,
+              "peakCnDb": 15.63,
+              "medianCnDb": 15.63,
+              "peakEsN0Db": 16.4,
               "requiredEsN0Db": 5.03,
-              "peakLockMarginDb": 11.05,
-              "peakRxIfDbm": -28.19,
-              "noiseIfDbm": -44.02,
+              "peakLockMarginDb": 11.37,
+              "peakRxIfDbm": -28.11,
+              "noiseIfDbm": -44.31,
               "lockedSamples": 5
             },
             {
@@ -114,8 +114,8 @@
               "peakEsN0Db": 43.13,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
-              "peakRxIfDbm": -56.25,
-              "noiseIfDbm": -109.58,
+              "peakRxIfDbm": -56.53,
+              "noiseIfDbm": -109.87,
               "lockedSamples": 0
             }
           ],

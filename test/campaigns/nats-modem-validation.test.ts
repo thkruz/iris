@@ -224,7 +224,10 @@ describe('C1 modem lessons (phase 19.5)', () => {
     // 10 log(1 + 10^(shelf/10)) over the carrier's own level
     expect(10 * Math.log10(1 + 10 ** (shelfDb / 10))).toBeGreaterThan(2);
     expect(jammed.meanMargin).toBeLessThan(2);
-    expect(jammed.minMargin).toBeLessThan(1);
+    // Within a minute the slow ±0.3 dB downlink fade (Phase 30 D10) moves the
+    // jammed margin by tenths of a dB, about 1.1-1.2 dB here: most of the
+    // ~9 dB clean margin is gone either way
+    expect(jammed.minMargin).toBeLessThan(1.5);
     expect(jammed.lockedFraction).toBeGreaterThan(0.95);
     sat.externalSignal = sat.externalSignal.filter((s) => s.signalId !== 'mv-jammer');
   });

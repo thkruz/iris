@@ -177,6 +177,26 @@ describe('C1 step-track lessons (phase 19.4)', () => {
     expect(stCarrier).toBeGreaterThan(13.2);
   });
 
+  it('S18: the stale-ephemeris gap opens on scenario time, so program-track bleeds about 1.5 dB in five minutes (Phase 30 D16)', () => {
+    const sat = (scenario18Data.settings.satellites as Satellite[]).find((s) => s.noradId === 61526)!;
+    const { antenna, fly, lossToSat } = chain(scenario18Data, 'ME-02', sat);
+
+    fly(30_000);
+    const lossStart = lossToSat();
+    const beaconStart = antenna.state.beaconCN!;
+    fly(300_000);
+    const lossEnd = lossToSat();
+    const beaconEnd = antenna.state.beaconCN!;
+
+    console.info(`S18 bleed over 5 min: loss ${lossStart.toFixed(2)} -> ${lossEnd.toFixed(2)} dB, beacon ${beaconStart.toFixed(1)} -> ${beaconEnd.toFixed(1)} dB`);
+
+    expect(lossEnd - lossStart).toBeGreaterThan(1.1);
+    expect(lossEnd - lossStart).toBeLessThan(2.2);
+    expect(beaconStart - beaconEnd).toBeGreaterThan(0.8);
+    // Program-track still reads LOCKED on its stale track while it bleeds
+    expect(antenna.state.isLocked).toBe(true);
+  });
+
   it('S22: AURORA-7 under step-track sits a measurable margin above the step-track floor', () => {
     const sat = (scenario22Data.settings.satellites as Satellite[]).find((s) => s.name === 'AURORA-7')!;
     // VT-01 starts off the air with its chain staged for AURORA-7 (TP-1 6053
