@@ -20,6 +20,8 @@ export class ACMkrBtn extends BaseControlButton {
 
     // Trigger marker update if marker is turned on
     this.analyzerControl.specA.state.isUpdateMarkers = this.analyzerControl.specA.state.isMarkerOn;
+    // Turning the marker off (or on by hand) ends Peak Search tracking (Phase 30 D11)
+    this.analyzerControl.specA.state.isPeakTracking = false;
 
     // Note: Marker drawing would need to be implemented in SpectrumAnalyzer
 
@@ -43,6 +45,8 @@ export class ACMkrBtn extends BaseControlButton {
     }
 
     const numMarkers = this.analyzerControl.specA.state.topMarkers.length;
+    // A marker stepped by hand stops following the peak
+    this.analyzerControl.specA.state.isPeakTracking = false;
     this.analyzerControl.specA.state.markerIndex = (this.analyzerControl.specA.state.markerIndex + delta + numMarkers) % numMarkers;
 
     Logger.info('ACMkrBtn', 'changeMarkerIndex', `Marker index changed to ${this.analyzerControl.specA.state.markerIndex}`);

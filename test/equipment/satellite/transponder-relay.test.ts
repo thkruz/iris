@@ -6,6 +6,7 @@
 import { Satellite, type TransponderConfig } from '@app/equipment/satellite/satellite';
 import { fluxToIsoPowerDbm, outputBackoffDb } from '@app/equipment/satellite/transponder-model';
 import { SignalOrigin } from '@app/signal-origin';
+import { SimClock } from '@app/simulation/sim-clock';
 import type { dBi, dBm, FECType, Hertz, ModulationType, RfFrequency, RfSignal } from '@app/types';
 import type { Degrees } from 'ootk';
 
@@ -147,5 +148,29 @@ describe('transponder relay (phase 19.3)', () => {
     expect(point?.carrierToImDb).toBeLessThan(30);
     // IM rides on each carrier's upstream C/N0, below its thermal uplink C/N0
     expect(point?.carriers[0].upstreamCn0DbHz).toBeLessThan(point?.carriers[0].cn0UpDbHz as number);
+  });
+
+  it('the downlink fade is slow and shallow by default: about 0.3 dB, tens of seconds per swing (Phase 30 D10)', () => {
+    const steady = makeSat();
+    const fading = makeSat();
+    fading.configureDegradation({ powerVariation: true });
+    const powers: number[] = [];
+    let clear = 0;
+    // Ten minutes of run time, read once a second like the modem panel
+    for (let s = 0; s < 600; s++) {
+      for (const sat of [steady, fading]) {
+        sat.rxSignal = [carrier({ power: isoAt(3) })];
+        sat.update();
+      }
+      clear = relayed(steady)[0].power;
+      powers.push(relayed(fading)[0].power - clear);
+      SimClock.advanceRun(1000);
+    }
+    const deviation = Math.max(...powers.map(Math.abs));
+    const maxStep = Math.max(...powers.slice(1).map((p, i) => Math.abs(p - powers[i])));
+    expect(deviation).toBeGreaterThan(0.02);
+    expect(deviation).toBeLessThanOrEqual(Satellite.DEFAULT_POWER_VARIATION_RANGE_DB + 1e-6);
+    // A 1 dB lock hysteresis band is never crossed by one second of fading
+    expect(maxStep).toBeLessThan(0.06);
   });
 });

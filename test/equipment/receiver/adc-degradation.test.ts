@@ -1,6 +1,6 @@
 import { dBm } from '@app/types';
 import { ADCConfig, DEFAULT_ADC_CONFIG } from '../../../src/equipment/receiver/adc-constants';
-import { calculateADCDegradation, clippingSdrLinear, quantizationSnrLinear } from '../../../src/equipment/receiver/adc-degradation';
+import { adcStatusForLevel, calculateADCDegradation, clippingSdrLinear, quantizationSnrLinear } from '../../../src/equipment/receiver/adc-degradation';
 
 /** A 30 Msps carrier that is the whole composite, at 15 dB Es/N0 */
 const carrierAt = (power: number, esN0 = 15, symbolRate = 30e6) => ({ power_dBm: power, esN0_dB: esN0, symbolRate_Hz: symbolRate });
@@ -78,6 +78,26 @@ describe('adc-degradation (phase 19.5 quantization + clipping model)', () => {
       const clean = calculateADCDegradation(-22 as dBm, carrierAt(-22, 20));
       const noisy = calculateADCDegradation(-22 as dBm, carrierAt(-22, 5));
       expect(clean.clipPenalty_dB).toBeGreaterThan(noisy.clipPenalty_dB);
+    });
+  });
+
+  describe('status is one function of level (Phase 30 D8, nats-r5-s07-F1)', () => {
+    it('reads OPTIMAL at the -8 dBFS AGC target on a 40 dB test loop and on a 13 dB downlink alike', () => {
+      const loop = calculateADCDegradation(-30 as dBm, carrierAt(-30, 40.3));
+      const live = calculateADCDegradation(-30 as dBm, carrierAt(-30, 13.5));
+      expect(loop.inputLevel_dBFS).toBeCloseTo(-8, 6);
+      expect(loop.status).toBe('optimal');
+      expect(live.status).toBe('optimal');
+      // The clean loop still pays its real ADC penalty in the penalty readouts
+      expect(loop.clipPenalty_dB).toBeGreaterThan(live.clipPenalty_dB);
+    });
+
+    it('never gives two carriers at the same level different statuses', () => {
+      for (const level of [-70, -55, -40, -30, -25, -23, -20, -16]) {
+        const statuses = [3, 10, 20, 40].map((esN0) => calculateADCDegradation(level as dBm, carrierAt(level, esN0)).status);
+        expect(new Set(statuses).size, `${level} dBm`).toBe(1);
+        expect(statuses[0]).toBe(adcStatusForLevel(level + 22));
+      }
     });
   });
 

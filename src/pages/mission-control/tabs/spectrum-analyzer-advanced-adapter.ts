@@ -349,11 +349,16 @@ export class SpectrumAnalyzerAdvancedAdapter {
     this.syncLiveReadouts_();
   }
 
-  /** Peak Search: marker on, placed on the highest point of the trace */
+  /**
+   * Peak Search: marker on, placed on the highest point of the trace, and it
+   * follows the live peak on every sweep until the marker is turned off or
+   * moved by hand (Phase 30 D11, nats-r5-s05-F3)
+   */
   private handlePeakSearch_(): void {
     const state = this.spectrumAnalyzer.state;
     state.isMarkerOn = true;
     state.isUpdateMarkers = true;
+    state.isPeakTracking = true;
     this.syncLiveReadouts_();
     this.emitStateChange_();
   }
@@ -400,6 +405,9 @@ export class SpectrumAnalyzerAdvancedAdapter {
   private handleMarkerEnabledChange_(e: Event): void {
     const checked = (e.target as HTMLInputElement).checked;
     this.spectrumAnalyzer.state.isMarkerOn = checked;
+    if (!checked) {
+      this.spectrumAnalyzer.state.isPeakTracking = false;
+    }
     this.emitStateChange_();
   }
 
@@ -407,6 +415,8 @@ export class SpectrumAnalyzerAdvancedAdapter {
     const value = parseInt((e.target as HTMLInputElement).value, 10);
     if (!isNaN(value) && value >= 0) {
       this.spectrumAnalyzer.state.markerIndex = value;
+      // A marker moved by hand stops following the peak
+      this.spectrumAnalyzer.state.isPeakTracking = false;
       this.emitStateChange_();
     }
   }

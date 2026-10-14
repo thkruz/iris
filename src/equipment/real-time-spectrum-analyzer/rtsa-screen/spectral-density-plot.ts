@@ -34,6 +34,13 @@ export class SpectralDensityPlot extends RTSAScreen {
   /** Graticule label font: 11 CSS px, drawn at device resolution */
   static readonly LABEL_FONT = '11px Arial';
 
+  /**
+   * Label band under the trace area, CSS px (Phase 30 D21, nats-r4-s04-F4):
+   * the frequency ticks and the bottom amplitude label sit here, so a floor on
+   * the Min Amp line never runs through them
+   */
+  static readonly LABEL_BAND_PX = 16;
+
   // Data processor reference (shared data source)
   private readonly dataProcessor: SpectrumDataProcessor;
 
@@ -275,6 +282,11 @@ export class SpectralDensityPlot extends RTSAScreen {
     return this.plotHeight_;
   }
 
+  /** Height (CSS px) of the trace area: the plot less the label band under it */
+  private get traceHeight_(): number {
+    return Math.max(1, this.plotHeight_ - SpectralDensityPlot.LABEL_BAND_PX);
+  }
+
   /** X (CSS px) of trace point `index` */
   private xOf_(index: number): number {
     return ((index + 0.5) / this.width) * this.plotWidth_;
@@ -367,10 +379,10 @@ export class SpectralDensityPlot extends RTSAScreen {
       const y = Math.max(0, Math.min(1, (amplitude - this.specA.state.minAmplitude) / this.range));
 
       if (isFirst) {
-        ctx.moveTo(this.xOf_(x), this.plotHeight_ * (1 - y));
+        ctx.moveTo(this.xOf_(x), this.traceHeight_ * (1 - y));
         isFirst = false;
       } else {
-        ctx.lineTo(this.xOf_(x), this.plotHeight_ * (1 - y));
+        ctx.lineTo(this.xOf_(x), this.traceHeight_ * (1 - y));
       }
     }
 
@@ -378,6 +390,10 @@ export class SpectralDensityPlot extends RTSAScreen {
   }
 
   private updateTopMarkers() {
+    // A tracking Peak Search marker re-finds the peak on every sweep (Phase 30 D11)
+    if (this.specA.state.isMarkerOn && this.specA.state.isPeakTracking) {
+      this.specA.state.isUpdateMarkers = true;
+    }
     if (this.specA.state.isUpdateMarkers) {
       // Find peaks in the currently selected trace
       this.specA.state.topMarkers = [];
@@ -407,6 +423,17 @@ export class SpectralDensityPlot extends RTSAScreen {
       // Sort by signal strength and take top 10
       peaks.sort((a, b) => b.signal - a.signal);
       const topPeaks = peaks.slice(0, 10);
+      // No peak clears the floor (the spike is gone): the marker still sits
+      // on the highest point of the trace, not on a leftover position
+      if (topPeaks.length === 0) {
+        let best = 0;
+        for (let x = 1; x < this.width; x++) {
+          if (selectedTraceData[x] > selectedTraceData[best]) best = x;
+        }
+        if (Number.isFinite(selectedTraceData[best])) {
+          topPeaks.push({ x: best, signal: selectedTraceData[best] });
+        }
+      }
 
       // Convert to marker format
       topPeaks.forEach((peak) => {
@@ -495,6 +522,10 @@ export class SpectralDensityPlot extends RTSAScreen {
     const inset = 4;
     const padding = 8; // minimum spacing between labels
     const y = this.plotHeight_ - inset;
+    // The bottom amplitude label shares the band at the left edge
+    const minAmplitude = this.specA.state.minAmplitude;
+    const ampLabel = minAmplitude.toFixed(Number.isInteger(minAmplitude) ? 0 : 1);
+    const ampLabelRight = inset + ctx.measureText(ampLabel).width;
 
     // Enough decimals that neighbouring ticks differ: a fixed toFixed(3) GHz
     // printed "1.075 GHz" on every tick of a 2 kHz span (nats-s01-F9)
@@ -530,7 +561,7 @@ export class SpectralDensityPlot extends RTSAScreen {
       let left = x - width / 2;
       if (i === 0) {
         align = 'left';
-        left = inset;
+        left = ampLabelRight + padding;
       } else if (i === numLabels) {
         align = 'right';
         left = this.plotWidth_ - inset - width;
@@ -539,7 +570,7 @@ export class SpectralDensityPlot extends RTSAScreen {
     }
 
     const mustDraw = new Set([numLabels / 2, numLabels]);
-    const drawn: { left: number; right: number }[] = [];
+    const drawn: { left: number; right: number }[] = [{ left: inset, right: ampLabelRight }];
     const overlaps = (t: { left: number; right: number }): boolean => drawn.some((d) => t.left < d.right + padding && t.right > d.left - padding);
     // Fixed ticks first, then the rest left to right where they fit
     for (const i of [numLabels / 2, numLabels, ...ticks.keys()]) {
@@ -573,16 +604,16 @@ export class SpectralDensityPlot extends RTSAScreen {
     const inset = 4;
     const { maxAmplitude, minAmplitude } = this.specA.state;
     for (let i = 0; i <= numLabels; i++) {
-      const lineY = (i / numLabels) * this.plotHeight_;
+      const lineY = (i / numLabels) * this.traceHeight_;
       const power = maxAmplitude + ((minAmplitude - maxAmplitude) * i) / numLabels;
       let y = lineY;
       if (i === 0) {
         ctx.textBaseline = 'top';
         y = inset;
       } else if (i === numLabels) {
+        // In the label band under the trace area, left of the frequency ticks
         ctx.textBaseline = 'bottom';
-        // Above the frequency labels
-        y = this.plotHeight_ - inset - 14;
+        y = this.plotHeight_ - inset;
       } else {
         ctx.textBaseline = 'middle';
       }
@@ -629,13 +660,13 @@ export class SpectralDensityPlot extends RTSAScreen {
     // Vertical lines (10 divisions, both edges)
     for (let i = 0; i <= 10; i++) {
       const x = Math.min(this.plotWidth_ - 1, (i / 10) * this.plotWidth_);
-      ctx.fillRect(x, 0, 1, this.plotHeight_);
+      ctx.fillRect(x, 0, 1, this.traceHeight_);
     }
 
     // Horizontal lines, both edges
     const numLines = isDualScreenMode ? 5 : 10;
     for (let i = 0; i <= numLines; i++) {
-      const y = Math.min(this.plotHeight_ - 1, (i / numLines) * this.plotHeight_);
+      const y = Math.min(this.traceHeight_ - 1, (i / numLines) * this.traceHeight_);
       ctx.fillRect(0, y, this.plotWidth_, 1);
     }
 
@@ -653,9 +684,9 @@ export class SpectralDensityPlot extends RTSAScreen {
       // calculate y position
       const y = (currentAmplitude - this.specA.state.minAmplitude) / this.range;
       if (x === 0) {
-        ctx.moveTo(this.xOf_(x), this.plotHeight_ * (1 - y));
+        ctx.moveTo(this.xOf_(x), this.traceHeight_ * (1 - y));
       } else {
-        ctx.lineTo(this.xOf_(x), this.plotHeight_ * (1 - y));
+        ctx.lineTo(this.xOf_(x), this.traceHeight_ * (1 - y));
       }
     }
 
@@ -684,9 +715,9 @@ export class SpectralDensityPlot extends RTSAScreen {
       const y = (combinedValue - this.specA.state.minAmplitude) / this.range;
 
       if (x === 0) {
-        ctx.moveTo(this.xOf_(x), this.plotHeight_ * (1 - y));
+        ctx.moveTo(this.xOf_(x), this.traceHeight_ * (1 - y));
       } else {
-        ctx.lineTo(this.xOf_(x), this.plotHeight_ * (1 - y));
+        ctx.lineTo(this.xOf_(x), this.traceHeight_ * (1 - y));
       }
     }
 
@@ -697,7 +728,7 @@ export class SpectralDensityPlot extends RTSAScreen {
     const ctx = this.ctx;
     if (markerIndex > 0) {
       const x = this.xOf_(markerIndex);
-      const y = Math.max(40, this.plotHeight_ * markerY - 2);
+      const y = Math.max(40, this.traceHeight_ * markerY - 2);
 
       // Draw diamond marker
       ctx.beginPath();

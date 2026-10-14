@@ -400,6 +400,79 @@ describe('SpectralDensityPlot', () => {
       // topMarkers should be updated
       expect(mockSpecA.state.topMarkers).toBeDefined();
     });
+
+    describe('Peak Search tracking (Phase 30 D11, nats-r5-s05-F3)', () => {
+      const markerSignal = () => {
+        const { topMarkers, markerIndex } = mockSpecA.state;
+        return (topMarkers[markerIndex] ?? topMarkers[0])?.signal;
+      };
+      const sweep = (fill: number, spikes: Record<number, number>) => {
+        mockDataProcessor.combinedData = new Float32Array(DEFAULT_WIDTH).fill(fill);
+        for (const [x, level] of Object.entries(spikes)) {
+          mockDataProcessor.combinedData[Number(x)] = level;
+        }
+        vi.advanceTimersByTime(1000);
+        plot.update();
+        plot.draw();
+      };
+
+      beforeEach(() => {
+        (mockSpecA as unknown as { traceIntervalMs: number }).traceIntervalMs = 100;
+        mockSpecA.state.isMarkerOn = true;
+        mockSpecA.state.isUpdateMarkers = true;
+      });
+
+      it('follows the live peak each sweep, so a notched-out spike is not labelled', () => {
+        mockSpecA.state.isPeakTracking = true;
+        sweep(-82, { 400: -46.8 });
+        expect(markerSignal()).toBeCloseTo(-46.8, 1);
+
+        // The notch removes the spike: the marker moves to what is there now
+        sweep(-82, { 600: -80 });
+        expect(markerSignal()).toBeCloseTo(-80, 1);
+      });
+
+      it('sits on the highest point of a flat trace when no peak clears the floor', () => {
+        mockSpecA.state.isPeakTracking = true;
+        sweep(-82, { 400: -46.8 });
+        sweep(-99, { 650: -98.5 });
+        expect(markerSignal()).toBeCloseTo(-98.5, 1);
+      });
+
+      it('without tracking, a placed marker stays where it was put', () => {
+        mockSpecA.state.isPeakTracking = false;
+        sweep(-82, { 400: -46.8 });
+        sweep(-82, { 600: -80 });
+        expect(markerSignal()).toBeCloseTo(-46.8, 1);
+      });
+    });
+  });
+
+  describe('label band (Phase 30 D21, nats-r4-s04-F4)', () => {
+    it('keeps a floor on the Min Amp line above the band the tick labels sit in', () => {
+      plot = new SpectralDensityPlot(canvas, mockSpecA, mockDataProcessor, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+      vi.advanceTimersByTime(1100);
+      (mockSpecA as unknown as { traceIntervalMs: number }).traceIntervalMs = 100;
+      mockDataProcessor.combinedData = new Float32Array(DEFAULT_WIDTH).fill(mockSpecA.state.minAmplitude);
+      const ctx = canvas.getContext('2d')!;
+      const lineTo = vi.spyOn(ctx, 'lineTo');
+      const fillText = vi.spyOn(ctx, 'fillText');
+
+      plot.update();
+      plot.draw();
+
+      const traceBottom = DEFAULT_HEIGHT - SpectralDensityPlot.LABEL_BAND_PX;
+      const traceYs = lineTo.mock.calls.map(([, y]) => y);
+      expect(traceYs.length).toBeGreaterThan(0);
+      expect(Math.max(...traceYs)).toBeCloseTo(traceBottom, 6);
+
+      // The bottom amplitude label and every frequency tick are drawn in the band
+      const bandTexts = fillText.mock.calls.filter(([, , y]) => y > traceBottom);
+      expect(bandTexts.some(([text]) => text === '-100')).toBe(true);
+      expect(bandTexts.some(([text]) => String(text).endsWith('Hz'))).toBe(true);
+      const labelsOverTrace = fillText.mock.calls.filter(([text, , y]) => (text === '-100' || String(text).endsWith('Hz')) && y <= traceBottom);
+      expect(labelsOverTrace).toEqual([]);
+    });
   });
 
   describe('static methods inherited from RTSAScreen', () => {

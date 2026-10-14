@@ -9,6 +9,7 @@ export const defaultSpectrumAnalyzerState: Partial<RealTimeSpectrumAnalyzerState
   isMinHold: false,
   isMarkerOn: false,
   isUpdateMarkers: false,
+  isPeakTracking: false,
   topMarkers: [],
   markerIndex: 0,
 
@@ -19,7 +20,7 @@ export const defaultSpectrumAnalyzerState: Partial<RealTimeSpectrumAnalyzerState
   centerFrequency: 600e6 as Hertz,
   span: 100e6 as Hertz,
   lastSpan: 100e6 as Hertz,
-  rbw: 1e6 as Hertz,
+  rbw: null, // Auto: coupled to the span unless a station or scenario sets one (Phase 30 D7)
   lockedControl: 'freq',
   hold: false,
   minAmplitude: -100,

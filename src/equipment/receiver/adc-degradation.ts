@@ -101,17 +101,6 @@ export function calculateADCDegradation(compositeLevel_dBm: dBm, carrier?: ADCCa
   const clipPenalty = Math.max(0, esN0Db - toDb(withClip)) as dB;
   const totalPenalty = Math.max(0, esN0Db - toDb(withBoth)) as dB;
 
-  let status: ADCStatus = 'optimal';
-  if (clipPenalty >= PENALTY_SEVERE_DB) {
-    status = 'severe-clipping';
-  } else if (clipPenalty >= PENALTY_WARN_DB || level_dBFS > config.clipThreshold_dBFS) {
-    status = 'clipping';
-  } else if (quantizationPenalty >= PENALTY_SEVERE_DB) {
-    status = 'severe-low';
-  } else if (quantizationPenalty >= PENALTY_WARN_DB) {
-    status = 'low-level';
-  }
-
   return {
     inputLevel_dBFS: level_dBFS,
     totalPenalty_dB: totalPenalty,
@@ -119,6 +108,41 @@ export function calculateADCDegradation(compositeLevel_dBm: dBm, carrier?: ADCCa
     quantizationPenalty_dB: quantizationPenalty,
     quantizationSnr_dB: toDb(snrq) as dB,
     clipSdr_dB: toDb(sdr) as dB,
-    status,
+    status: adcStatusForLevel(level_dBFS, config),
   };
+}
+
+/** The reference carrier the ADC status is graded against: the whole composite at 15 dB Es/N0, 30 Msps */
+const STATUS_REFERENCE_ESN0_DB = 15;
+const STATUS_REFERENCE_SYMBOL_RATE_HZ = 30e6;
+
+/**
+ * ADC status as one function of the composite level (Phase 30 D8,
+ * nats-r5-s07-F1): the same dBFS always reads the same status. The penalties
+ * a reference carrier (the composite at 15 dB Es/N0, 30 Msps) would take at
+ * that level grade it, so the status says where the drive sits against full
+ * scale, not how clean the carrier happens to be. A very clean carrier (a BUC
+ * test loop at 40 dB Es/N0) still shows its real ADC penalties in the penalty
+ * readouts, but -8 dBFS reads OPTIMAL there as on the live downlink.
+ */
+export function adcStatusForLevel(level_dBFS: number, config: ADCConfig = DEFAULT_ADC_CONFIG): ADCStatus {
+  const snr = 10 ** (STATUS_REFERENCE_ESN0_DB / 10);
+  const snrq = quantizationSnrLinear(level_dBFS, STATUS_REFERENCE_SYMBOL_RATE_HZ, config);
+  const sdr = clippingSdrLinear(level_dBFS);
+  const clipPenalty = Math.max(0, STATUS_REFERENCE_ESN0_DB - toDb(1 / (1 / snr + 1 / sdr)));
+  const quantizationPenalty = Math.max(0, STATUS_REFERENCE_ESN0_DB - toDb(1 / (1 / snr + 1 / snrq)));
+
+  if (clipPenalty >= PENALTY_SEVERE_DB) {
+    return 'severe-clipping';
+  }
+  if (clipPenalty >= PENALTY_WARN_DB || level_dBFS > config.clipThreshold_dBFS) {
+    return 'clipping';
+  }
+  if (quantizationPenalty >= PENALTY_SEVERE_DB) {
+    return 'severe-low';
+  }
+  if (quantizationPenalty >= PENALTY_WARN_DB) {
+    return 'low-level';
+  }
+  return 'optimal';
 }

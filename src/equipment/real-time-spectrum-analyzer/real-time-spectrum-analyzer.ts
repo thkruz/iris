@@ -138,6 +138,12 @@ export interface RealTimeSpectrumAnalyzerState {
   isMinHold: boolean;
   isMarkerOn: boolean;
   isUpdateMarkers: boolean;
+  /**
+   * Peak Search tracking (Phase 30 D11, nats-r5-s05-F3): the marker re-finds
+   * the highest point of the trace on every sweep until the marker is turned
+   * off or moved by hand, so it never labels a peak that has gone
+   */
+  isPeakTracking?: boolean;
   topMarkers: MarkerPoint[];
   markerIndex: number;
   refreshRate: number; // in Hz
@@ -506,27 +512,24 @@ export class RealTimeSpectrumAnalyzer extends BaseEquipment {
     this.lastEnbwHz_ = enbw;
 
     const signals: (IfSignal | RfSignal)[] = [];
-    const taps: Array<{ tapPoint: TapPoint; couplingDb: number }> = [];
+    const taps: TapPoint[] = [];
     if (this.state.isUseTapA) {
-      taps.push({ tapPoint: coupler.state.tapPointA, couplingDb: coupler.state.couplingFactorA });
+      taps.push(coupler.state.tapPointA);
     }
     if (this.state.isUseTapB) {
-      taps.push({ tapPoint: coupler.state.tapPointB, couplingDb: coupler.state.couplingFactorB });
+      taps.push(coupler.state.tapPointB);
     }
 
-    // Displayed noise (Phase 19.2): the line noise at each tap (k·T·B in the
-    // RBW's noise bandwidth, with the gain up to the tap) plus the
-    // instrument's own kT0·B·F referred to the line through the coupling
-    // factor, all power-summed. With no tap enabled the instrument sees only
-    // itself.
+    // Displayed noise (Phase 19.2, Phase 30 D7): the line noise at each tap
+    // (k·T·B in the RBW's noise bandwidth, with the gain up to the tap) plus
+    // the instrument's own kT0·B·F, power-summed once. The instrument floor is
+    // NOT referred through the coupling factor: with no gain ahead of the tap
+    // (LNB off) the trace sits at the analyzer's own floor, about -92 dBm at
+    // 1 MHz RBW, scaling 10 log(RBW) (nats-r5-s03-F4)
     const nf = this.state.noiseFigureDb ?? DEFAULT_ANALYZER_NF_DB;
     const instrumentDbm = thermalNoiseDbm(T0_K, enbw) + nf;
-    let totalMw = 0;
     let lineMw = 0;
-    if (taps.length === 0) {
-      totalMw = 10 ** (instrumentDbm / 10);
-    }
-    for (const { tapPoint, couplingDb } of taps) {
+    for (const tapPoint of taps) {
       signals.push(...this.getSignalsAtTapPoint(tapPoint));
 
       const { noiseFloorNoGain } = spm.getNoiseFloorAt(tapPoint, enbw);
@@ -534,11 +537,8 @@ export class RealTimeSpectrumAnalyzer extends BaseEquipment {
       if (Number.isFinite(line)) {
         lineMw += 10 ** (line / 10);
       }
-      // Coupling is a negative dB figure: the instrument floor referred back
-      // to the line sits |coupling| higher
-      totalMw += 10 ** ((instrumentDbm - Math.min(0, couplingDb)) / 10);
     }
-    totalMw += lineMw;
+    const totalMw = 10 ** (instrumentDbm / 10) + lineMw;
 
     // NOTE: signals are deliberately NOT clamped to the RBW. RBW sets the
     // display resolution and noise floor, not a signal's occupied bandwidth —

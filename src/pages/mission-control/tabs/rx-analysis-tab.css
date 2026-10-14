@@ -206,15 +206,12 @@
   justify-content: center;
 }
 
-/* Video Feed Element */
+/* Video Feed: a canvas the adapter draws (colour bars or a dark slate, Phase 30 D14) */
 .video-feed {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  display: none;
-}
-
-.video-monitor.signal-found .video-feed {
   display: block;
 }
 

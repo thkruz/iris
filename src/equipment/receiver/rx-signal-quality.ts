@@ -8,6 +8,7 @@
  * implementation loss, `modcod.ts`), "degraded" is less than 1 dB of margin.
  */
 
+import { LOCK_HYSTERESIS_DB } from './modcod';
 import type { IQSignalInfo } from './receiver';
 
 export type RxSignalQuality =
@@ -53,6 +54,22 @@ export function describeEsN0(info: IQSignalInfo): string {
     return `Es/N0 ${esN0.toFixed(1)} dB`;
   }
   return `Es/N0 ${esN0.toFixed(1)} dB, need ${need.toFixed(1)} dB`;
+}
+
+/**
+ * "Es/N0 5.2 dB, locks at 5.5 dB" for an unlocked modem (Phase 30 D10,
+ * nats-r5-s17-F2): the line it must clear to acquire is the MODCOD's required
+ * Es/N0 plus the 0.5 dB acquisition hysteresis, so an unlocked modem never
+ * reads "need 5.0" while sitting above 5.0. A locked modem keeps the
+ * "need" form (it holds down to required - 0.5 dB).
+ */
+export function describeEsN0ForAcquisition(info: IQSignalInfo): string {
+  const esN0 = info.effectiveEsN0_dB;
+  const need = info.requiredEsN0_dB;
+  if (esN0 === undefined || !Number.isFinite(esN0) || need === undefined || !Number.isFinite(need)) {
+    return describeEsN0(info);
+  }
+  return `Es/N0 ${esN0.toFixed(1)} dB, locks at ${(need + LOCK_HYSTERESIS_DB).toFixed(1)} dB`;
 }
 
 /** Summary of the payload decoder that the modem status must not contradict. */

@@ -298,6 +298,20 @@ describe('SpectrumAnalyzerAdvancedAdapter', () => {
 
       expect(mockSpectrumAnalyzer.state.markerIndex).toBe(5);
     });
+
+    it('stops Peak Search tracking when the marker is turned off or moved by hand (Phase 30 D11)', () => {
+      const markerCheckbox = containerEl.querySelector('#sa-marker-enabled') as HTMLInputElement;
+      mockSpectrumAnalyzer.state.isPeakTracking = true;
+      markerCheckbox.checked = false;
+      markerCheckbox.dispatchEvent(new Event('change'));
+      expect(mockSpectrumAnalyzer.state.isPeakTracking).toBe(false);
+
+      const markerIndexInput = containerEl.querySelector('#sa-marker-index') as HTMLInputElement;
+      mockSpectrumAnalyzer.state.isPeakTracking = true;
+      markerIndexInput.value = '2';
+      markerIndexInput.dispatchEvent(new Event('input'));
+      expect(mockSpectrumAnalyzer.state.isPeakTracking).toBe(false);
+    });
   });
 
   describe('state change handling', () => {

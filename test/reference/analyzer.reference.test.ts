@@ -1,7 +1,7 @@
 /**
  * Spectrum analyzer reference cases (phase 19.2): the displayed noise level
  * follows the RBW's noise bandwidth (also in Auto), the instrument's own noise
- * figure sets its floor through the coupling factor, noise through a log
+ * figure sets its floor (not raised by the coupling factor), noise through a log
  * detector has its textbook statistics, carrier and noise add as powers, and
  * a CW line takes the Gaussian RBW filter's shape.
  *
@@ -101,11 +101,19 @@ describe('analyzer noise floor', () => {
     expectWithinAbs(analyzer.state.noiseFloorNoGain, line, 0.05);
   });
 
-  referenceCase('the coupling factor refers the instrument floor to the line: a -20 dB tap raises it 20 dB', undefined, () => {
+  referenceCase('with no line noise (LNB off) the trace sits at the instrument floor, not raised by the coupler (Phase 30 D7)', undefined, () => {
     const analyzer = fakeAnalyzer({ rbw: 1e3, noiseFigureDb: 22, lineDbmPerHz: -300, couplingDb: -20 });
     const instrument = BOLTZMANN_DBM_PER_K_HZ + 10 * Math.log10(290) + 22 + 10 * Math.log10(1e3 * GAUSSIAN_RBW_ENBW_FACTOR);
 
-    expectWithinAbs(analyzer.state.noiseFloorNoGain, instrument + 20, 0.05);
+    expectWithinAbs(analyzer.state.noiseFloorNoGain, instrument, 0.05);
+  });
+
+  referenceCase('the instrument floor is about -92 dBm at 1 MHz RBW and scales 10 log(RBW) (nats-r5-s03-F4)', undefined, () => {
+    const at1MHz = fakeAnalyzer({ rbw: 1e6, noiseFigureDb: 22, lineDbmPerHz: -300, couplingDb: -20 }).state.noiseFloorNoGain;
+    const at10kHz = fakeAnalyzer({ rbw: 10e3, noiseFigureDb: 22, lineDbmPerHz: -300, couplingDb: -20 }).state.noiseFloorNoGain;
+
+    expectWithinAbs(at1MHz, -91.7, 0.3);
+    expectWithinAbs(at1MHz - at10kHz, 20, 0.05);
   });
 });
 

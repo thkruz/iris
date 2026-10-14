@@ -237,6 +237,12 @@ export class Satellite {
   /** Position update interval (ms) */
   protected static readonly POSITION_UPDATE_INTERVAL_MS = 1000;
 
+  /** Default downlink fade depth when a scenario does not author one: about +/-0.3 dB */
+  static readonly DEFAULT_POWER_VARIATION_RANGE_DB = 0.3 as dBm;
+
+  /** Run time per Perlin noise unit for the downlink fade: tens of seconds per swing */
+  static readonly FADE_TIME_SCALE_MS = 30_000;
+
   /**
    * Slant range from the ground station to the satellite (km).
    * Null for legacy fixed-telemetry satellites, in which case the antenna
@@ -285,7 +291,10 @@ export class Satellite {
       randomDropout: true,
       dropoutProbability: 0.0001,
       powerVariation: true,
-      powerVariationRange: 1.0 as dBm,
+      // Slow GEO C-band scintillation, a few tenths of a dB (Phase 30 D10: the
+      // old +/-1 dB made a link near the lock line flap). A scenario that wants
+      // a larger fade authors powerVariationRange.
+      powerVariationRange: Satellite.DEFAULT_POWER_VARIATION_RANGE_DB,
       interference: false,
       interferencePower: -110 as dBm,
       ...satelliteState.degradationConfig,
@@ -647,9 +656,11 @@ export class Satellite {
     }
 
     // Slow fading on run time (a physical process, not a scheduled one), with a
-    // per-signal phase so carriers do not fade together
-    const phaseS = Rng.hashUniform(noiseSeed) * 1000;
-    const time = SimClock.runMs() / 1000 + phaseS;
+    // per-signal phase so carriers do not fade together. One noise unit per
+    // FADE_TIME_SCALE_MS: tens of seconds, the way GEO scintillation moves, not
+    // the per-second wobble that flapped a near-threshold lock (Phase 30 D10)
+    const phase = Rng.hashUniform(noiseSeed) * 1000;
+    const time = SimClock.runMs() / Satellite.FADE_TIME_SCALE_MS + phase;
 
     // Perlin output is zero-mean within about +/-0.5 on one axis: scale it to
     // +/-1 (Phase 19.2 removed the old `* 2 - 1`, a -1 dB bias on every

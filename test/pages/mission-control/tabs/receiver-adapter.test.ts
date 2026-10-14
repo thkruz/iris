@@ -103,7 +103,7 @@ describe('ReceiverAdapter', () => {
       <span id="modulation-current"></span>
       <span id="fec-current"></span>
       <div id="video-monitor"></div>
-      <img id="video-feed" />
+      <canvas id="video-feed" width="320" height="180"></canvas>
       <input type="checkbox" id="power-switch" />
       <span id="signal-status" class="status-badge"></span>
       <span id="cn-raw-display"></span>
@@ -677,6 +677,35 @@ describe('ReceiverAdapter', () => {
       expect((containerEl.querySelector('#status-bar') as HTMLElement).textContent).toBe('Signal locked - Good margin (Es/N0 15.0 dB, need 5.0 dB)');
     });
 
+    it('quotes the acquire line, not "need", while unlocked (Phase 30 D10, nats-r5-s17-F2)', () => {
+      const statusBar = () => (containerEl.querySelector('#status-bar') as HTMLElement).textContent;
+      mockReceiver.getSignalsInBandwidth.mockReturnValue({
+        hasCarrier: true,
+        hasLock: false,
+        lockState: 'acquiring',
+        cnRatio_dB: 5.2,
+        effectiveCnRatio_dB: 5.2,
+        effectiveEsN0_dB: 5.9,
+        requiredEsN0_dB: 5.03,
+      });
+      (adapter as any).lastStateString = '';
+      (adapter as any).syncDomWithState_();
+      expect(statusBar()).toBe('Acquiring lock (Es/N0 5.9 dB, locks at 5.5 dB)');
+
+      mockReceiver.getSignalsInBandwidth.mockReturnValue({
+        hasCarrier: true,
+        hasLock: false,
+        lockState: 'unlocked',
+        cnRatio_dB: 4.4,
+        effectiveCnRatio_dB: 4.4,
+        effectiveEsN0_dB: 5.2,
+        requiredEsN0_dB: 5.03,
+      });
+      (adapter as any).lastStateString = '';
+      (adapter as any).syncDomWithState_();
+      expect(statusBar()).toBe('Signal no lock - Below threshold (Es/N0 5.2 dB, locks at 5.5 dB)');
+    });
+
     it('should say Format mismatch, not Near threshold, when the labels differ (nats-s04-F4)', () => {
       mockReceiver.getSignalsInBandwidth.mockReturnValue({
         hasCarrier: true,
@@ -824,6 +853,7 @@ describe('ReceiverAdapter', () => {
 
     it('should show signal-found when video feed present', () => {
       mockReceiver.getVisibleSignals.mockReturnValue([{ signalId: '1', power: -50, frequency: 1200, feed: 'video.mp4', isImage: false, isExternal: false }]);
+      mockReceiver.getSignalsInBandwidth.mockReturnValue({ hasCarrier: true, hasLock: true, cnRatio_dB: 12, effectiveCnRatio_dB: 12 });
       (adapter as any).lastStateString = '';
       (adapter as any).syncDomWithState_();
 
@@ -834,6 +864,7 @@ describe('ReceiverAdapter', () => {
     it('should add degraded class when signal is degraded', () => {
       mockReceiver.getVisibleSignals.mockReturnValue([{ signalId: '1', power: -50, frequency: 1200, feed: 'video.mp4', isImage: false }]);
       mockReceiver.isSignalDegraded.mockReturnValue(true);
+      mockReceiver.getSignalsInBandwidth.mockReturnValue({ hasCarrier: true, hasLock: true, cnRatio_dB: 12, effectiveCnRatio_dB: 12 });
       (adapter as any).lastStateString = '';
       (adapter as any).syncDomWithState_();
 
@@ -841,13 +872,31 @@ describe('ReceiverAdapter', () => {
       expect(monitor.classList.contains('signal-degraded')).toBe(true);
     });
 
-    it('should set image src for image feeds', () => {
+    it('draws colour bars on a canvas when locked and decoding, a slate otherwise, never an <img> (Phase 30 D14)', () => {
+      const feed = () => containerEl.querySelector('#video-feed') as HTMLCanvasElement;
       mockReceiver.getVisibleSignals.mockReturnValue([{ signalId: '1', power: -50, frequency: 1200, feed: 'test.jpg', isImage: true, isExternal: false }]);
+      mockReceiver.getSignalsInBandwidth.mockReturnValue({ hasCarrier: true, hasLock: true, cnRatio_dB: 12, effectiveCnRatio_dB: 12 });
       (adapter as any).lastStateString = '';
       (adapter as any).syncDomWithState_();
+      expect(feed().tagName).toBe('CANVAS');
+      expect(feed().dataset.picture).toBe('bars');
+      expect(feed().getAttribute('src')).toBeNull();
 
-      const videoFeed = containerEl.querySelector('#video-feed') as HTMLImageElement;
-      expect(videoFeed.src).toContain('/images/test.jpg');
+      // Carrier there but no lock: no picture, the overlay reads CARRIER PRESENT / NO LOCK
+      mockReceiver.getSignalsInBandwidth.mockReturnValue({ hasCarrier: true, hasLock: false, cnRatio_dB: 2, effectiveCnRatio_dB: 2 });
+      (adapter as any).lastStateString = '';
+      (adapter as any).syncDomWithState_();
+      const monitor = containerEl.querySelector('#video-monitor') as HTMLElement;
+      expect(feed().dataset.picture).toBe('slate');
+      expect(monitor.classList.contains('signal-no-lock')).toBe(true);
+      expect(monitor.classList.contains('signal-found')).toBe(false);
+
+      // No carrier: NO SIGNAL slate
+      mockReceiver.getVisibleSignals.mockReturnValue([]);
+      (adapter as any).lastStateString = '';
+      (adapter as any).syncDomWithState_();
+      expect(feed().dataset.picture).toBe('slate');
+      expect(monitor.classList.contains('no-signal')).toBe(true);
     });
   });
 

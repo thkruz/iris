@@ -1546,6 +1546,39 @@ describe('Receiver class', () => {
       expect(receiver.getSignalsInBandwidth().hasLock).toBe(false);
     });
 
+    it('QPSK 3/4 (Required 5.0 dB) acquires from Es/N0 5.5 and holds down to 4.5 (Phase 30 D10, nats-r4-s14-F2, nats-r5-s17-F2)', () => {
+      const rx = new Receiver('test-root', []);
+      rx.state.modems[0].fec = '3/4' as FECType;
+      const carrier = createMockIfSignal({ fec: '3/4' as FECType });
+      // Noise fixed at -40 dBm in every bandwidth: Es/N0 = carrier + 40
+      rx.connectRfFrontEnd(createMockRfFrontEnd([carrier], { noiseFloorNoGain: -40, totalRxGain: 0 }) as any);
+      const atEsN0 = (esN0: number) => {
+        carrier.power = (-40 + esN0) as dBm;
+      };
+
+      atEsN0(5.4);
+      settle(rx);
+      let info = rx.getSignalsInBandwidth();
+      expect(info.requiredEsN0_dB).toBeCloseTo(5.0, 1);
+      expect(info.hasLock).toBe(false);
+      // Unlocked under the acquire line: below threshold, never "acquiring"
+      expect(info.lockState).toBe('unlocked');
+
+      atEsN0(5.6);
+      settle(rx);
+      expect(rx.getSignalsInBandwidth().hasLock).toBe(true);
+
+      atEsN0(4.6);
+      advanceSimTime(5_000);
+      expect(rx.getSignalsInBandwidth().hasLock).toBe(true);
+
+      atEsN0(4.4);
+      advanceSimTime(100);
+      info = rx.getSignalsInBandwidth();
+      expect(info.hasLock).toBe(false);
+      expect(info.lockState).toBe('unlocked');
+    });
+
     it('reads degraded under 1 dB of margin and good again only from 1.5 dB', () => {
       setMargin(0.8);
       settle(receiver);

@@ -1216,6 +1216,16 @@ describe('BUCModuleCore thermal and current (phase 19.6)', () => {
     expect(bucModule.equilibriumCurrentA()).toBeCloseTo(2.6, 6);
   });
 
+  it('never mutes itself: the S16 over-temperature fault stays driven until the operator mutes (Phase 30 D6, nats-r5-s16-F1)', () => {
+    bucModule.setCoolingFactor(1.3);
+    bucModule.setExcessCurrent(2.3);
+    bucModule.setTemperature(72);
+    bucModule.update();
+    advanceSimTime(300_000, { emitUpdate: true });
+    expect(bucModule.state.isMuted).toBe(false);
+    expect(bucModule.state.currentDraw).toBeGreaterThan(4.5);
+  });
+
   it('a staged temperature is kept and then relaxes toward equilibrium', () => {
     bucModule.setTemperature(72);
     bucModule.update();

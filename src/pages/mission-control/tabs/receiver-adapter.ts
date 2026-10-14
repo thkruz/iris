@@ -4,7 +4,7 @@ import { AlarmStatus } from '@app/equipment/base-equipment';
 import { ValidationError, validateModemBandwidth, validateModemFrequency } from '@app/equipment/modem/modem-constraints';
 import { ADCStatus } from '@app/equipment/receiver/adc-degradation';
 import { IQSignalInfo, Receiver, ReceiverModemState } from '@app/equipment/receiver/receiver';
-import { classifyRxSignal, describeEsN0, describePayloadProblem, RxPayloadStatus, RxSignalQuality } from '@app/equipment/receiver/rx-signal-quality';
+import { classifyRxSignal, describeEsN0, describeEsN0ForAcquisition, describePayloadProblem, RxPayloadStatus, RxSignalQuality } from '@app/equipment/receiver/rx-signal-quality';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { parseLocalizedNumber } from '@app/utils/parse-number';
@@ -530,67 +530,103 @@ export class ReceiverAdapter {
 
   private updateVideoMonitor_(): void {
     const monitor = this.domCache_.get('video-monitor');
-    const videoFeed = this.domCache_.get('video-feed') as HTMLImageElement | HTMLVideoElement;
-
-    if (!monitor || !videoFeed) return;
+    if (!monitor) return;
 
     const activeModem = this.getActiveModem_();
     if (!activeModem) return;
 
-    // Check power state
+    const allStates = ['no-power', 'no-signal', 'signal-found', 'signal-degraded', 'signal-no-video', 'signal-no-lock'];
+    const setState = (...states: string[]) => {
+      monitor.classList.remove(...allStates.filter((c) => !states.includes(c)));
+      monitor.classList.add(...states);
+    };
+
     if (!activeModem.isPowered) {
-      monitor.classList.remove('no-signal', 'signal-found', 'signal-degraded', 'signal-no-video', 'signal-no-lock');
-      monitor.classList.add('no-power');
+      setState('no-power');
+      this.drawVideoMonitor_(false);
       return;
     }
 
-    // Get visible signals to determine state
     const visibleSignals = this.receiver.getVisibleSignals(activeModem);
-    const hasDecodedSignal = visibleSignals.length > 0;
-    const hasVideoFeed = visibleSignals.some((s) => s.feed !== '');
-    const isDegraded = this.receiver.isSignalDegraded(activeModem);
-
-    if (!hasDecodedSignal) {
-      // No signal at all
-      monitor.classList.remove('no-power', 'signal-found', 'signal-degraded', 'signal-no-video', 'signal-no-lock');
-      monitor.classList.add('no-signal');
-    } else if (!hasVideoFeed) {
-      // Signal visible but no video feed available. Only claim "SIGNAL LOCKED"
-      // when the modem actually holds demodulation lock; otherwise the
-      // overlay reads "CARRIER PRESENT / NO LOCK" (signal-no-lock modifier).
-      const hasLock = this.receiver.getSignalsInBandwidth(activeModem)?.hasLock ?? false;
-      monitor.classList.remove('no-power', 'no-signal', 'signal-found', 'signal-degraded');
-      monitor.classList.add('signal-no-video');
-      monitor.classList.toggle('signal-no-lock', !hasLock);
-    } else {
-      // Signal with video feed
-      monitor.classList.remove('no-power', 'no-signal', 'signal-no-video', 'signal-no-lock');
-      monitor.classList.add('signal-found');
-
-      if (isDegraded) {
-        monitor.classList.add('signal-degraded');
-      } else {
-        monitor.classList.remove('signal-degraded');
-      }
-
-      // Set video feed source
-      const signal = visibleSignals.find((s) => s.feed !== '');
-      if (signal) {
-        // Check if it's an image or video
-        if (signal.isImage) {
-          const imgElement = videoFeed as HTMLImageElement;
-          imgElement.src = signal.isExternal ? signal.feed : `/images/${signal.feed}`;
-        } else if (signal.isExternal) {
-          // For external videos, we might need an iframe
-          // For now, just set the src
-          const videoElement = videoFeed as HTMLVideoElement;
-          videoElement.src = signal.feed;
-        } else {
-          const videoElement = videoFeed as HTMLVideoElement;
-          videoElement.src = `/videos/${signal.feed}`;
-        }
-      }
+    if (visibleSignals.length === 0) {
+      setState('no-signal');
+      this.drawVideoMonitor_(false);
+      return;
     }
+
+    // Only claim a picture or "SIGNAL LOCKED" when the modem holds
+    // demodulation lock; otherwise the overlay reads "CARRIER PRESENT / NO LOCK"
+    const hasLock = this.receiver.getSignalsInBandwidth(activeModem)?.hasLock ?? false;
+    const hasVideoFeed = visibleSignals.some((s) => s.feed !== '');
+    // Payload decoding: the frame sync the payload card reads is held
+    const isDecoding = this.getPayloadProblem_() !== 'Frame sync lost';
+
+    if (hasVideoFeed && hasLock && isDecoding) {
+      setState('signal-found');
+      monitor.classList.toggle('signal-degraded', this.receiver.isSignalDegraded(activeModem));
+      this.drawVideoMonitor_(true);
+      return;
+    }
+
+    setState('signal-no-video');
+    monitor.classList.toggle('signal-no-lock', !hasLock);
+    this.drawVideoMonitor_(false);
+  }
+
+  /** SMPTE-style colour bars (top band, then the castellation and PLUGE rows) */
+  private static readonly BAR_COLOURS_ = ['#c0c0c0', '#c0c000', '#00c0c0', '#00c000', '#c000c0', '#c00000', '#0000c0'];
+  private static readonly CASTELLATION_COLOURS_ = ['#0000c0', '#131313', '#c000c0', '#131313', '#00c0c0', '#131313', '#c0c0c0'];
+
+  /**
+   * Video Monitor picture (Phase 30 D14, nats-r5-s07-F3): a synthetic monitor
+   * drawn on the canvas, never an external asset. Colour bars while the
+   * carrier is locked and the payload decodes; otherwise a dark slate under
+   * the overlay text ("NO SIGNAL", "NO POWER", "CARRIER PRESENT / NO LOCK").
+   */
+  private drawVideoMonitor_(isPicture: boolean): void {
+    const canvas = this.domCache_.get('video-feed');
+    if (!(canvas instanceof HTMLCanvasElement)) return;
+
+    const picture = isPicture ? 'bars' : 'slate';
+    if (canvas.dataset.picture === picture) return;
+    canvas.dataset.picture = picture;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const { width, height } = canvas;
+
+    if (!isPicture) {
+      ctx.fillStyle = '#0b0d10';
+      ctx.fillRect(0, 0, width, height);
+      return;
+    }
+
+    const barWidth = width / ReceiverAdapter.BAR_COLOURS_.length;
+    const topHeight = Math.round(height * 0.67);
+    const midHeight = Math.round(height * 0.08);
+    ReceiverAdapter.BAR_COLOURS_.forEach((colour, i) => {
+      ctx.fillStyle = colour;
+      ctx.fillRect(Math.floor(i * barWidth), 0, Math.ceil(barWidth), topHeight);
+    });
+    ReceiverAdapter.CASTELLATION_COLOURS_.forEach((colour, i) => {
+      ctx.fillStyle = colour;
+      ctx.fillRect(Math.floor(i * barWidth), topHeight, Math.ceil(barWidth), midHeight);
+    });
+    // Bottom row: -I, white, +Q, black, then the PLUGE steps
+    const bottomY = topHeight + midHeight;
+    const bottomHeight = height - bottomY;
+    const quarter = (width * 5) / 7 / 4;
+    const bottom = ['#00214c', '#ffffff', '#32006a', '#131313'];
+    bottom.forEach((colour, i) => {
+      ctx.fillStyle = colour;
+      ctx.fillRect(Math.floor(i * quarter), bottomY, Math.ceil(quarter), bottomHeight);
+    });
+    const plugeX = (width * 5) / 7;
+    const plugeWidth = (width - plugeX) / 3;
+    ['#090909', '#131313', '#1d1d1d'].forEach((colour, i) => {
+      ctx.fillStyle = colour;
+      ctx.fillRect(Math.floor(plugeX + i * plugeWidth), bottomY, Math.ceil(plugeWidth), bottomHeight);
+    });
   }
 
   private updatePowerAndSignal_(): void {
@@ -892,6 +928,8 @@ export class ReceiverAdapter {
 
     const effectiveCn = signalInfo.effectiveCnRatio_dB ?? signalInfo.cnRatio_dB;
     const esN0Text = describeEsN0(signalInfo);
+    // Unlocked: quote the acquire line (required + 0.5 dB), not "need" (Phase 30 D10)
+    const acquireText = describeEsN0ForAcquisition(signalInfo);
 
     // One grading for the status bar, the alarm badge and the signal badge
     const quality = classifyRxSignal(signalInfo);
@@ -908,7 +946,7 @@ export class ReceiverAdapter {
       statusBar.textContent = `Signal locked - Degraded margin (${esN0Text})`;
     } else if (quality === 'acquiring') {
       statusBar.className = 'alert alert-info mt-3';
-      statusBar.textContent = `Acquiring lock (${esN0Text})`;
+      statusBar.textContent = `Acquiring lock (${acquireText})`;
     } else if (quality === 'format-mismatch') {
       // The carrier is there; the modem's modulation/FEC labels are wrong
       statusBar.className = 'alert alert-danger mt-3';
@@ -918,7 +956,7 @@ export class ReceiverAdapter {
       statusBar.textContent = `Carrier present, no lock - Bandwidth clipped by the IF filter (C/N: ${effectiveCn.toFixed(1)} dB)`;
     } else {
       statusBar.className = 'alert alert-danger mt-3';
-      statusBar.textContent = `Signal no lock - Below threshold (${esN0Text})`;
+      statusBar.textContent = `Signal no lock - Below threshold (${acquireText})`;
     }
   }
 
@@ -944,6 +982,7 @@ export class ReceiverAdapter {
     }
 
     const esN0Text = describeEsN0(signalInfo);
+    const acquireText = describeEsN0ForAcquisition(signalInfo);
 
     // Same grading as the status bar
     switch (classifyRxSignal(signalInfo)) {
@@ -958,7 +997,7 @@ export class ReceiverAdapter {
         alarms.push({ severity: 'warning', message: `Degraded margin (${esN0Text})` });
         break;
       case 'acquiring':
-        alarms.push({ severity: 'info', message: `Acquiring lock (${esN0Text})` });
+        alarms.push({ severity: 'info', message: `Acquiring lock (${acquireText})` });
         break;
       case 'format-mismatch':
         alarms.push({ severity: 'error', message: 'No lock: format mismatch (modulation/FEC)' });
@@ -967,7 +1006,7 @@ export class ReceiverAdapter {
         alarms.push({ severity: 'error', message: 'No lock: carrier clipped by the IF filter' });
         break;
       default:
-        alarms.push({ severity: 'error', message: `No lock: below threshold (${esN0Text})` });
+        alarms.push({ severity: 'error', message: `No lock: below threshold (${acquireText})` });
         break;
     }
 
