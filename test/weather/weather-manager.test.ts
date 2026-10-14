@@ -1267,6 +1267,29 @@ describe('WeatherManager rain rate (phase 16 E5)', () => {
     expect(WeatherManager.rainRateAt({ ...rainEvent({ type: 'sun-transit' }), isActive: true }, 600)).toBe(0);
   });
 
+  it('places the peak at the transit midpoint, the rain ramp-down and the end of anything else (Phase 29 D10)', () => {
+    expect(WeatherManager.peakSeconds({ ...rainEvent({ type: 'sun-transit', startTime: 100, duration: 300 }), isActive: true })).toBe(250);
+    expect(WeatherManager.peakSeconds({ ...rainEvent(), isActive: true })).toBe(1200 - 180);
+    expect(WeatherManager.peakSeconds({ ...rainEvent({ type: 'ice' }), isActive: true })).toBe(1200);
+  });
+
+  it('reports a sun transit peaked only once the clock passes its midpoint (nats-r4-s17-F1)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.now());
+    mockScenarioSettings.weatherEvents = [rainEvent({ id: 'sun', type: 'sun-transit', startTime: 0, duration: 300 })];
+    const manager = WeatherManager.getInstance();
+
+    setScenarioElapsed(100_000);
+    expect(manager.hasEventPeaked('sun')).toBe(false);
+    expect(manager.getSecondsUntilEventPeaks('sun')).toBeCloseTo(50, 3);
+    expect(manager.hasEventPeaked('sun', 10)).toBe(false);
+
+    setScenarioElapsed(151_000);
+    expect(manager.hasEventPeaked('sun')).toBe(true);
+    expect(manager.hasEventPeaked('sun', 10)).toBe(false);
+    expect(manager.getSecondsUntilEventPeaks('unknown')).toBeNull();
+  });
+
   it('pushes the rate to the affected station only and writes zero when the front has passed', () => {
     vi.useFakeTimers();
     const start = Date.now();

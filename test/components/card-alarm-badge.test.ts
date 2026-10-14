@@ -135,4 +135,20 @@ describe('CardAlarmBadge', () => {
     const lines = ledEl().title.split('\n').sort();
     expect(lines).toEqual(['B', 'C']);
   });
+
+  it('update() with the equipment off and no alarm is grey "Powered off", never green (phase 29 D4, nats-r4-s02-F3)', () => {
+    const badge = new CardAlarmBadge('alarm-badge-off');
+    mount(badge);
+
+    badge.update([], false);
+    expect(ledEl().className).toBe('card-alarm-led off');
+    expect(ledEl().title).toBe('Powered off');
+
+    // A real alarm still shows while off
+    badge.update([{ severity: 'error', message: 'Fault' }], false);
+    expect(ledEl().className).toBe('card-alarm-led error');
+
+    badge.update([], true);
+    expect(ledEl().className).toBe('card-alarm-led success');
+  });
 });

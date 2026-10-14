@@ -135,6 +135,14 @@ describe('DialogManager', () => {
       expect(textElement?.textContent).toContain('This is a test message');
     });
 
+    it('stamps {{stationTime}} with the clock at the moment the dialog opens (nats-r4-s21-F1)', () => {
+      vi.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 1, 14, 10, 35, 50));
+      dialogManager.show('<em>[Regulator coordination desk - SYSTEM notification, {{stationTime}}]</em>', Character.CHARLIE_BROOKS, '/audio/test.mp3');
+
+      expect(document.querySelector('.dialog-text')?.textContent).toContain('SYSTEM notification, 10:35]');
+      vi.mocked(Date.now).mockRestore();
+    });
+
     it('should add visible class after animation frame', () => {
       dialogManager.show('Test', Character.CHARLIE_BROOKS, '/audio/test.mp3');
 

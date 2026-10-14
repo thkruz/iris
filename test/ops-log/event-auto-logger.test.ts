@@ -71,7 +71,58 @@ describe('event formatters (nats-r3-s11-F1, s11-F2)', () => {
       isBeaconLocked: true,
     });
 
-    expect(msg).toBe('Tracking mode: MAINTENANCE, Power ON, Satellite UNLOCKED, Beacon LOCKED');
+    expect(msg).toBe('Tracking mode: MAINTENANCE, Power ON, Antenna LOCKED');
+  });
+
+  it('writes one lock, so the satellite and beacon flags trading places log no contradiction (nats-r4-s10-F1)', () => {
+    const base = { trackingMode: 'program-track' as const, isPowered: true, beaconFrequencyHz: 4165e6 };
+    const first = formatAntennaEvent({ ...base, isLocked: false, isBeaconLocked: true });
+    const second = formatAntennaEvent({ ...base, isLocked: true, isBeaconLocked: false });
+
+    expect(first).toBe('Tracking mode: PROGRAM-TRACK, Power ON, Antenna LOCKED, Beacon freq: 4165.00 MHz');
+    expect(second).toBe(first);
+    expect(formatAntennaEvent({ ...base, isLocked: false, isBeaconLocked: false })).toContain('Antenna UNLOCKED');
+    expect(formatAntennaEvent({ ...base, isLocked: true, isBeaconLocked: true, isAcuAutomationFaulted: true })).toContain('Antenna lock UNKNOWN');
+  });
+
+  it('names step-track on the tracking line, so engaging it logs (nats-r4-s10-F1)', () => {
+    const msg = formatAntennaEvent({ trackingMode: 'program-track', isStepTrackEnabled: true, isPowered: true, isLocked: true, isBeaconLocked: true });
+
+    expect(msg).toBe('Tracking mode: PROGRAM-TRACK + STEP-TRACK, Power ON, Antenna LOCKED');
+  });
+
+  it('marks an automatic modem stop with its reason (nats-r4-s11-F3)', () => {
+    expect(formatTxConfigEvent({ uuid: 'tx', modem: 1, config: modem(), action: 'transmit-off', reason: 'handover' })).toBe('M1: Transmission STOPPED (handover)');
+    expect(formatTxConfigEvent({ uuid: 'tx', modem: 1, config: modem(), reason: 'handover' })).toBeNull();
+  });
+});
+
+describe('EventAutoLogger antenna lines (nats-r4-s10-F1)', () => {
+  beforeEach(() => {
+    EventBus.destroy();
+    OpsLogManager.destroy();
+    EventAutoLogger.destroy();
+    OpsLogManager.initialize();
+    EventAutoLogger.getInstance().initialize();
+  });
+
+  afterEach(() => {
+    EventAutoLogger.destroy();
+    OpsLogManager.destroy();
+    EventBus.destroy();
+  });
+
+  it('logs the start-of-shift lock once, and the step-track switch at once', () => {
+    const state = { trackingMode: 'program-track' as const, isPowered: true, isLocked: false, isBeaconLocked: true, isStepTrackEnabled: false };
+    EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...state } as never);
+    EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...state, isLocked: true, isBeaconLocked: false } as never);
+    EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...state, isLocked: true, isStepTrackEnabled: true } as never);
+
+    expect(
+      OpsLogManager.getInstance()
+        .getEntries()
+        .map((e) => e.message)
+    ).toEqual(['Tracking mode: PROGRAM-TRACK, Power ON, Antenna LOCKED', 'Tracking mode: PROGRAM-TRACK + STEP-TRACK, Power ON, Antenna LOCKED']);
   });
 });
 

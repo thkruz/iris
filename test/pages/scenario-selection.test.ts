@@ -350,6 +350,71 @@ describe('ScenarioSelectionPage', () => {
     });
   });
 
+  describe('Phase 29 D16 completed cards and campaign banner (nats-r4-s24-F2)', () => {
+    const scenario = {
+      id: 'scenario1',
+      number: 1,
+      title: 'Scenario 1',
+      subtitle: 'First Scenario',
+      description: 'Test description',
+      difficulty: 'beginner',
+      duration: '30 min',
+      url: '/campaigns/nats/scenarios/scenario1',
+      imageUrl: 'nats/s1.jpg',
+      equipment: ['Antenna'],
+      isDisabled: false,
+    };
+
+    const renderCard = (opts: { completedAt: boolean; score: boolean; checkpoint: boolean }): HTMLElement => {
+      const page = ScenarioSelectionPage.getInstance() as any;
+      page.isProgressLoading_ = false;
+      page.hasProgressLoaded_ = true;
+      page.completedScenarioIds_ = opts.completedAt ? ['scenario1'] : [];
+      page.currentlyCompletedScenarioIds_ = opts.score ? ['scenario1'] : [];
+      page.scenarioCheckpoints_.clear();
+      if (opts.checkpoint) {
+        page.scenarioCheckpoints_.set('scenario1', true);
+      }
+      const el = document.createElement('div');
+      el.innerHTML = page.renderScenarioCard_(scenario);
+      return el;
+    };
+    const buttons = (el: HTMLElement): string[] => Array.from(el.querySelectorAll('.scenario-checkpoint-actions button')).map((b) => b.textContent!.trim());
+
+    it('offers PLAY AGAIN, then RESTART LEVEL, on a completed scenario with a checkpoint, never CONTINUE', () => {
+      expect(buttons(renderCard({ completedAt: true, score: false, checkpoint: true }))).toEqual(['Play Again', 'Restart Level']);
+      expect(buttons(renderCard({ completedAt: true, score: true, checkpoint: true }))).toEqual(['Play Again', 'Restart Level']);
+    });
+
+    it('offers PLAY AGAIN alone on a completed scenario without a checkpoint', () => {
+      expect(buttons(renderCard({ completedAt: true, score: false, checkpoint: false }))).toEqual(['Play Again']);
+    });
+
+    it('offers CONTINUE only on a checkpoint of a scenario not yet completed', () => {
+      expect(buttons(renderCard({ completedAt: false, score: false, checkpoint: true }))).toEqual(['Continue', 'Restart Level']);
+      expect(buttons(renderCard({ completedAt: false, score: false, checkpoint: false }))).toEqual(['Start']);
+    });
+
+    it('shows a Campaign complete banner at 100 % only', () => {
+      const progressFor = (done: number) => ({
+        getCampaign: vi.fn((id: string) => ({ id, title: 'Test Campaign', subtitle: 'Test', scenarios: [scenario] })),
+        getCampaignProgress: vi.fn(() => ({ completedScenarios: Array.from({ length: done }, (_, i) => `s${i}`), totalScenarios: 2, completionPercentage: done * 50 })),
+      });
+      const getInstance = CampaignManager.getInstance as Mock;
+      const original = getInstance.getMockImplementation();
+
+      getInstance.mockImplementation(() => progressFor(1));
+      ScenarioSelectionPage.getInstance().setCampaign('nats');
+      expect(document.querySelector('.campaign-complete-banner')).toBeNull();
+
+      getInstance.mockImplementation(() => progressFor(2));
+      ScenarioSelectionPage.getInstance().setCampaign('nats');
+      expect(document.querySelector('.campaign-complete-banner')?.textContent).toContain('Campaign complete');
+
+      getInstance.mockImplementation(original!);
+    });
+  });
+
   describe('checkpoint handling', () => {
     it('should render start button when no checkpoint exists', () => {
       const page = ScenarioSelectionPage.getInstance();

@@ -79,7 +79,7 @@ describe('AlarmService', () => {
     vi.clearAllMocks();
   });
 
-  it('registers an UPDATE handler and aggregates alarms by highest severity', () => {
+  it('registers an UPDATE handler and emits every displayable alarm, most severe first (nats-r4-s16-F1)', () => {
     const service = AlarmService.getInstance();
     expect(service).toBeDefined();
 
@@ -124,6 +124,10 @@ describe('AlarmService', () => {
             equipmentType: 'ANT',
             equipmentIndex: 0,
           }),
+          expect.objectContaining({ severity: 'warning', message: 'RF WARN' }),
+          expect.objectContaining({ severity: 'warning', message: 'RX WARN' }),
+          expect.objectContaining({ severity: 'info', message: 'RF INFO' }),
+          expect.objectContaining({ severity: 'info', message: 'TX INFO' }),
         ],
       })
     );
@@ -174,6 +178,66 @@ describe('AlarmService', () => {
         alarms: [],
       })
     );
+  });
+
+  it('keeps an info alarm on the ticker while a warning is up (nats-r4-s17-F3)', () => {
+    AlarmService.getInstance();
+    mockSimulationManager.groundStations = [
+      gs({
+        antennas: [{ getStatusAlarms: vi.fn().mockReturnValue([alarm('warning', 'SUN TRANSIT: ELEVATED SKY NOISE (2.4 dB)')]) }],
+        receivers: [{ getStatusAlarms: vi.fn().mockReturnValue([alarm('info', 'Signal(s) Detected')]) }],
+      }),
+    ];
+
+    updateHandler?.(16);
+
+    const [, data] = mockEventBus.emit.mock.calls.find(([event]) => event === Events.ALARM_STATE_CHANGED) ?? [];
+    expect(data.highestSeverity).toBe('warning');
+    expect(data.alarms.map((a: { message: string }) => a.message)).toEqual(['SUN TRANSIT: ELEVATED SKY NOISE (2.4 dB)', 'Signal(s) Detected']);
+  });
+
+  describe('raise time (nats-r4-s01-F2)', () => {
+    afterEach(() => {
+      AlarmService.destroy();
+    });
+
+    it('stamps the time an alarm was first seen and keeps it while its live number moves', () => {
+      AlarmService.destroy();
+      const rf = { getStatusAlarms: vi.fn((rfCase: number) => (rfCase === 1 ? [alarm('error', 'BUC over-temperature (72.3 °C)')] : [])) };
+      const station = gs({ state: { id: 'VT-01', isOperational: true }, rfFrontEnds: [rf] });
+
+      (Date.now as Mock).mockReturnValue(5_000);
+      expect(AlarmService.getAlarms(station as any)[0].raisedAtMs).toBe(5_000);
+
+      // Rendered a minute later, the temperature has moved: same alarm, same raise time
+      (Date.now as Mock).mockReturnValue(65_000);
+      rf.getStatusAlarms.mockImplementation((rfCase: number) => (rfCase === 1 ? [alarm('error', 'BUC over-temperature (72.0 °C)')] : []));
+      expect(AlarmService.getAlarms(station as any)[0].raisedAtMs).toBe(5_000);
+    });
+
+    it('records the raise on the poll, before any Dashboard render, and stamps a re-raise afresh', () => {
+      AlarmService.destroy();
+      AlarmService.getInstance();
+      const antenna = { getStatusAlarms: vi.fn().mockReturnValue([alarm('warning', 'ACQUIRING LOCK...')]) };
+      const station = gs({ state: { id: 'VT-01', isOperational: true }, antennas: [antenna] });
+      mockSimulationManager.groundStations = [station];
+
+      (Date.now as Mock).mockReturnValue(1_000);
+      updateHandler?.(16);
+      const [, polled] = mockEventBus.emit.mock.calls.find(([event]) => event === Events.ALARM_STATE_CHANGED) ?? [];
+      expect(polled.alarms[0].raisedAtMs).toBe(1_000);
+
+      // The Dashboard opens later and reads the poll's raise time, not its own
+      (Date.now as Mock).mockReturnValue(400_000);
+      expect(AlarmService.getAlarms('VT-01')[0].raisedAtMs).toBe(1_000);
+
+      // Cleared on a poll, raised again later: a new raise time
+      antenna.getStatusAlarms.mockReturnValue([]);
+      (AlarmService as any).instance_.lastPollTime_ = -Infinity;
+      updateHandler?.(16);
+      antenna.getStatusAlarms.mockReturnValue([alarm('warning', 'ACQUIRING LOCK...')]);
+      expect(AlarmService.getAlarms('VT-01')[0].raisedAtMs).toBe(400_000);
+    });
   });
 
   it('unsubscribes from UPDATE when destroyed', () => {

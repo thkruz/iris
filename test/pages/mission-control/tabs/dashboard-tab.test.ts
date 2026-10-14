@@ -4,6 +4,7 @@ import { EventBus } from '../../../../src/events/event-bus';
 import { Events } from '../../../../src/events/events';
 import { OpsLogManager } from '../../../../src/ops-log/ops-log-manager';
 import { DashboardTab } from '../../../../src/pages/mission-control/tabs/dashboard-tab';
+import { AlarmService } from '../../../../src/services/alarm-service';
 import { SimClock } from '../../../../src/simulation/sim-clock';
 
 // Mock dependencies
@@ -73,6 +74,7 @@ describe('DashboardTab', () => {
               warmupTimeRemaining: 0,
               isPowered: true,
             },
+            formatWarmupTime_: vi.fn().mockReturnValue('READY'),
           },
           lnbModule: {
             state: {
@@ -90,14 +92,20 @@ describe('DashboardTab', () => {
             state: {
               isExtRefLocked: true,
               outputPower: 35,
+              isPowered: true,
+              isMuted: false,
             },
+            outputSignals: [{ power: 35 }],
+            hasRfOutput: vi.fn().mockReturnValue(true),
           },
           hpaModule: {
             state: {
               outputPower: 44,
               isOverdriven: false,
               isPowered: true,
+              isHpaEnabled: true,
             },
+            outputSignals: [{ power: 44 }],
           },
           getStatusAlarms: vi.fn().mockReturnValue([]),
         },
@@ -289,6 +297,38 @@ describe('DashboardTab', () => {
     });
   });
 
+  describe('readouts agree with the equipment tabs (phase 29 D4)', () => {
+    const resync = (now: number) => {
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
+      updateHandler();
+    };
+
+    it('GPSDO warm-up reads what the GPS Timing tab reads (nats-r4-s01-F3)', () => {
+      expect(document.querySelector('#gpsdo-warmup')?.textContent).toBe('READY');
+    });
+
+    it('RF Chain TX reads the TX Chain levels, and no level when there is no RF (nats-r4-s08-F4)', () => {
+      expect(document.querySelector('#buc-output')?.textContent).toBe('35.0 dBm');
+      expect(document.querySelector('#hpa-power')?.textContent).toBe('44.0 dBm');
+
+      // A modem dropout: nothing in the BUC passband, the HPA undriven. The
+      // modules hold their no-output floors (-120 / -90 dBm), never shown
+      const rfFe = mockGroundStation.rfFrontEnds[0] as unknown as {
+        bucModule: { state: { outputPower: number }; outputSignals: unknown[]; hasRfOutput: Mock };
+        hpaModule: { state: { outputPower: number }; outputSignals: unknown[] };
+      };
+      rfFe.bucModule.state.outputPower = -120;
+      rfFe.bucModule.outputSignals = [];
+      rfFe.bucModule.hasRfOutput.mockReturnValue(false);
+      rfFe.hpaModule.state.outputPower = -90;
+      rfFe.hpaModule.outputSignals = [];
+      resync(40_000_000);
+      expect(document.querySelector('#buc-output')?.textContent).toBe('-- dBm');
+      expect(document.querySelector('#hpa-power')?.textContent).toBe('-- dBm');
+    });
+  });
+
   describe('alarms (same source as the ticker)', () => {
     const sync = (now: number) => {
       vi.spyOn(Date, 'now').mockReturnValue(now);
@@ -325,6 +365,8 @@ describe('DashboardTab', () => {
 
     it('stamps each alarm on the station clock when first raised, not the wall clock (nats-r3-s08-F2)', () => {
       OpsLogManager.initialize('02:15:00', '2026-02-14');
+      // AlarmService holds the raise times; forget the earlier tests' alarms
+      AlarmService.destroy();
       try {
         (mockGroundStation.receivers[0].getStatusAlarms as Mock).mockReturnValue([{ severity: 'warning', message: 'RX lost lock' }]);
         sync(50_000_000);

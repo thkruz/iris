@@ -2538,6 +2538,18 @@ describe('rain attenuation (phase 16 E5)', () => {
     expect(antenna.getStatusAlarms().some((a) => a.message.includes('RAIN FADE'))).toBe(false);
   });
 
+  it('keys RAIN FADE on the C/N loss, so a heavy C-band cell shows on the ticker (Phase 29, nats S24)', () => {
+    const antenna = new TestableAntennaCore(ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK, { elevation: 29 as Degrees });
+    antenna.updateRainRate(80);
+
+    // Attenuation alone is about 0.3 dB; with the sky-noise rise the C/N loss is about 1 dB
+    expect(antenna.rainAttenuationDb).toBeLessThan(0.5);
+    expect(antenna.rainCnLossDb()).toBeGreaterThan(0.8);
+    const alarm = antenna.getStatusAlarms().find((a) => a.message.includes('RAIN FADE'));
+    expect(alarm?.severity).toBe('info');
+    expect(alarm?.message).toMatch(/^RAIN FADE \(\d\.\d dB\)$/u);
+  });
+
   it('raises the system noise temperature and a graded rain-fade alarm at Ku', () => {
     const antenna = new TestableAntennaCore(ANTENNA_CONFIG_KEYS.KU_BAND_4M_LEO_TRACKER, { elevation: 30 as Degrees });
     const dryTsys = antenna.testSystemTempK(12e9 as Hertz, 30 as Degrees);
@@ -2546,13 +2558,49 @@ describe('rain attenuation (phase 16 E5)', () => {
     const wetTsys = antenna.testSystemTempK(12e9 as Hertz, 30 as Degrees);
     expect(wetTsys).toBeGreaterThan(dryTsys * 1.5);
 
+    // The alarm reads the C/N the rain costs (attenuation + noise rise):
+    // 10 mm/h is about 2.7 dB at Ku (warning), 25 mm/h about 6.6 dB (error)
+    antenna.updateRainRate(10);
     const warning = antenna.getStatusAlarms().find((a) => a.message.includes('RAIN FADE'));
     expect(warning?.severity).toBe('warning');
+
+    antenna.updateRainRate(25);
+    expect(antenna.getStatusAlarms().find((a) => a.message.includes('RAIN FADE'))?.severity).toBe('error');
 
     antenna.updateRainRate(60);
     expect(antenna.getStatusAlarms().find((a) => a.message.includes('RAIN FADE'))?.severity).toBe('error');
 
     antenna.updateRainRate(0);
     expect(antenna.getStatusAlarms().some((a) => a.message.includes('RAIN FADE'))).toBe(false);
+  });
+});
+
+describe('weather alarms keep one label for their life (nats-r4-s17-F3)', () => {
+  const labelOf = (message: string) => message.replace(/ \([^)]*\)$/u, '');
+
+  it('the sun-transit alarm escalates in severity under one label', () => {
+    const antenna = new TestableAntennaCore(ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK, { elevation: 30 as Degrees });
+    const seen: { severity: string; label: string }[] = [];
+    for (const sky of [1.0, 3.0, 7.0, 3.0, 1.9]) {
+      antenna.updateSkyNoiseDegradation(sky);
+      const alarm = antenna.getStatusAlarms().find((a) => a.message.includes('SKY NOISE'));
+      seen.push({ severity: alarm?.severity ?? 'none', label: labelOf(alarm?.message ?? '') });
+    }
+
+    expect(new Set(seen.map((s) => s.label))).toEqual(new Set(['SUN TRANSIT: ELEVATED SKY NOISE']));
+    expect(seen.map((s) => s.severity)).toEqual(['info', 'warning', 'error', 'warning', 'info']);
+
+    antenna.updateSkyNoiseDegradation(0);
+    expect(antenna.getStatusAlarms().some((a) => a.message.includes('SKY NOISE'))).toBe(false);
+  });
+
+  it('ice keeps one label as it builds', () => {
+    const antenna = new TestableAntennaCore(ANTENNA_CONFIG_KEYS.C_BAND_9M_VORTEK, { elevation: 30 as Degrees });
+    const labels = [1, 3, 6].map((ice) => {
+      antenna.updateIceAccumulation(ice);
+      return labelOf(antenna.getStatusAlarms().find((a) => a.message.startsWith('ICE'))?.message ?? '');
+    });
+
+    expect(labels).toEqual(['ICE ON FEED', 'ICE ON FEED', 'ICE ON FEED']);
   });
 });

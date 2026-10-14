@@ -302,7 +302,7 @@ describe('TrafficControlManager', () => {
       manager.setStationReady(12345, 'gs-2', true);
       manager.executeHandover(12345);
 
-      expect(stopTransmittingFor).toHaveBeenCalledWith(12345);
+      expect(stopTransmittingFor).toHaveBeenCalledWith(12345, 'handover');
     });
 
     it('should reset handover state after execution', () => {

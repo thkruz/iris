@@ -58,13 +58,13 @@
               "modulation": "QPSK",
               "fec": "3/4",
               "samples": 5,
-              "peakCnDb": 12.88,
-              "medianCnDb": 12.88,
-              "peakEsN0Db": 13.66,
+              "peakCnDb": 12.8,
+              "medianCnDb": 12.8,
+              "peakEsN0Db": 13.58,
               "requiredEsN0Db": 5.03,
-              "peakLockMarginDb": 8.63,
-              "peakRxIfDbm": -27.82,
-              "noiseIfDbm": -41.02,
+              "peakLockMarginDb": 8.55,
+              "peakRxIfDbm": -27.84,
+              "noiseIfDbm": -40.97,
               "lockedSamples": 5
             },
             {
@@ -80,8 +80,8 @@
               "peakEsN0Db": 43.07,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
-              "peakRxIfDbm": -54.03,
-              "noiseIfDbm": -106.59,
+              "peakRxIfDbm": -53.97,
+              "noiseIfDbm": -106.53,
               "lockedSamples": 0
             }
           ],
@@ -89,15 +89,15 @@
           "transponders": [
             {
               "id": "TP-1",
-              "iboDb": 3,
-              "oboDb": 0.51,
+              "iboDb": 3.22,
+              "oboDb": 0.58,
               "carrierToImDb": null,
               "carriers": [
                 {
                   "signalId": "TIDEMARK-1-Teleport",
-                  "eirpDbw": 26.48,
-                  "cnUpDbHz": 100.15,
-                  "upstreamCn0DbHz": 100.15
+                  "eirpDbw": 26.4,
+                  "cnUpDbHz": 99.93,
+                  "upstreamCn0DbHz": 99.93
                 }
               ]
             }
@@ -129,8 +129,8 @@
               "peakEsN0Db": 16.92,
               "requiredEsN0Db": 5.03,
               "peakLockMarginDb": 11.89,
-              "peakRxIfDbm": -29.44,
-              "noiseIfDbm": -46.23,
+              "peakRxIfDbm": -29.42,
+              "noiseIfDbm": -46.21,
               "lockedSamples": 5
             },
             {
@@ -146,8 +146,8 @@
               "peakEsN0Db": 43.13,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
-              "peakRxIfDbm": -58.45,
-              "noiseIfDbm": -111.79,
+              "peakRxIfDbm": -58.44,
+              "noiseIfDbm": -111.78,
               "lockedSamples": 0
             }
           ],
@@ -196,7 +196,7 @@
           {
             "signalId": "TIDEMARK-1-Teleport",
             "rfMHz": 5943,
-            "eirpDbm": 102.47
+            "eirpDbm": 102.73
           }
         ]
       }

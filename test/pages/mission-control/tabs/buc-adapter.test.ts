@@ -1,8 +1,9 @@
 import { Mock, Mocked, vi } from 'vitest';
+import { CardAlarmBadge } from '../../../../src/components/card-alarm-badge/card-alarm-badge';
 import { BUCModuleCore, BUCState } from '../../../../src/equipment/rf-front-end/buc-module/buc-module-core';
 import { EventBus } from '../../../../src/events/event-bus';
 import { Events } from '../../../../src/events/events';
-import { BUCAdapter } from '../../../../src/pages/mission-control/tabs/buc-adapter';
+import { BUCAdapter, formatBucOutputPower } from '../../../../src/pages/mission-control/tabs/buc-adapter';
 
 // Mock dependencies
 vi.mock('../../../../src/events/event-bus');
@@ -682,6 +683,30 @@ describe('BUCAdapter', () => {
       decBtn.click();
 
       expect(gainInput.value).toBe('0');
+    });
+  });
+
+  describe('phase 29 D4 readouts', () => {
+    it('a muted BUC reads MUTED, never the -177 dBm floor its muted path carries (nats-r4-s11-F1)', () => {
+      mockBucModule.state.isMuted = true;
+      mockBucModule.outputSignals[0].power = -177;
+      adapter.update();
+
+      expect((containerEl.querySelector('#buc-output-power-display') as HTMLElement).textContent).toBe('MUTED');
+      expect(formatBucOutputPower(mockBucModule)).toBe('MUTED');
+    });
+
+    it('nothing in band reads "-- dBm" (a modem dropout, no IF)', () => {
+      mockBucModule.outputSignals = [];
+      expect(formatBucOutputPower(mockBucModule)).toBe('-- dBm');
+    });
+
+    it('greys the header LED while powered off (nats-r4-s02-F3)', () => {
+      const badge = (CardAlarmBadge.create as Mock).mock.results.at(-1)?.value as { update: Mock };
+      mockBucModule.state.isPowered = false;
+      adapter.update();
+
+      expect(badge.update).toHaveBeenLastCalledWith([], false);
     });
   });
 });

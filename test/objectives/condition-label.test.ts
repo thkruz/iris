@@ -8,8 +8,8 @@ describe('conditionLabel (nats-r3-s20-F1)', () => {
   });
 
   it('falls back to the tab for a tab-active row with no description', () => {
-    expect(conditionLabel({ type: 'tab-active', description: '', params: { tab: 'rx-analysis-2' } })).toBe('RX Analysis tab open');
-    expect(conditionLabel({ type: 'tab-active', description: '   ', params: { tab: 'dashboard' } })).toBe('Dashboard tab open');
+    expect(conditionLabel({ type: 'tab-active', description: '', params: { tab: 'rx-analysis-2' } })).toBe('Open the RX Analysis tab');
+    expect(conditionLabel({ type: 'tab-active', description: '   ', params: { tab: 'dashboard' } })).toBe('Open the Dashboard tab');
   });
 
   it('falls back to the condition type for any other row with no description', () => {

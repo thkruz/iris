@@ -125,6 +125,7 @@ describe('ACUControlTab', () => {
           applyChanges: vi.fn(),
           discardChanges: vi.fn(),
           handleTrackingModeChange: vi.fn(),
+          stageTrackingModeChange: vi.fn(),
           handleTargetSatelliteChange: vi.fn(),
           moveToTargetSatellite: vi.fn(),
           stageBeaconFrequencyChange: vi.fn(),
@@ -332,12 +333,12 @@ describe('ACUControlTab', () => {
   });
 
   describe('tracking mode buttons', () => {
-    it('should call handleTrackingModeChange when mode button is clicked', () => {
+    it('stages the clicked mode (STOW/MAINT wait for APPLY, phase 29 D4)', () => {
       const antenna = mockGroundStation.antennas[0];
       const stowBtn = document.querySelector('[data-mode="stow"]') as HTMLButtonElement;
       stowBtn.click();
 
-      expect(antenna.handleTrackingModeChange).toHaveBeenCalledWith('stow');
+      expect(antenna.stageTrackingModeChange).toHaveBeenCalledWith('stow');
     });
 
     it('should clear active target when leaving program-track mode', () => {
@@ -347,7 +348,7 @@ describe('ACUControlTab', () => {
       const manualBtn = document.querySelector('[data-mode="manual"]') as HTMLButtonElement;
       manualBtn.click();
 
-      expect(antenna.handleTrackingModeChange).toHaveBeenCalledWith('manual');
+      expect(antenna.stageTrackingModeChange).toHaveBeenCalledWith('manual');
     });
   });
 
@@ -544,6 +545,56 @@ describe('ACUControlTab', () => {
 
       const freqEl = document.querySelector(`#${PREFIX}rf-metric-freq`);
       expect(freqEl?.textContent).toBe('14.500 GHz');
+    });
+  });
+
+  describe('readouts agree (phase 29 D4)', () => {
+    const resync = (now: number) => {
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+      for (const call of mockEventBus.on.mock.calls.filter((c: unknown[]) => c[0] === Events.UPDATE || c[0] === Events.DRAW)) {
+        (call[1] as () => void)();
+      }
+    };
+
+    it('shows the APPLIED mode and a pending badge for a staged MAINT (nats-r3-s11-F2)', () => {
+      const state = mockGroundStation.antennas[0].state as Record<string, unknown>;
+      try {
+        state.trackingMode = 'program-track';
+        state.stagedTrackingMode = 'maintenance';
+        state.hasStagedChanges = true;
+        resync(100_000);
+        const badge = document.querySelector(`#${PREFIX}staged-mode-badge`) as HTMLElement;
+        expect(badge.textContent).toBe('MAINTENANCE pending APPLY');
+        expect(badge.style.display).toBe('');
+        expect(document.querySelector('[data-mode="program-track"]')?.classList.contains('active')).toBe(true);
+        expect(document.querySelector('[data-mode="maintenance"]')?.classList.contains('active')).toBe(false);
+        expect(document.querySelector('[data-mode="maintenance"]')?.classList.contains('pending')).toBe(true);
+
+        state.stagedTrackingMode = null;
+        resync(200_000);
+        expect(badge.style.display).toBe('none');
+      } finally {
+        state.trackingMode = 'manual';
+        state.stagedTrackingMode = null;
+        state.hasStagedChanges = false;
+      }
+    });
+
+    it('reads no beacon frequency with no target outside MANUAL (nats-r4-s12-F1)', () => {
+      const state = mockGroundStation.antennas[0].state as Record<string, unknown>;
+      try {
+        state.trackingMode = 'stow';
+        state.targetSatelliteId = null;
+        resync(300_000);
+        expect(document.querySelector(`#${PREFIX}rf-metric-freq`)?.textContent).toBe('-- GHz');
+      } finally {
+        state.trackingMode = 'manual';
+      }
+    });
+
+    it('labels the ACU signal count as what it counts: RF carriers in view, not locked carriers (nats-r4-s23-F2)', () => {
+      const label = document.querySelector(`#${PREFIX}signals-count-display`)?.previousElementSibling;
+      expect(label?.textContent).toBe('RF signals in view:');
     });
   });
 

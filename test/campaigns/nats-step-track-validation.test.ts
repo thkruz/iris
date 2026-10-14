@@ -11,6 +11,10 @@
  *   today, and how far above the step-track floor (beacon lock, 6.5 dB in
  *   the 1 kHz tracking bandwidth) that leaves - the number the brief's
  *   trackability row quotes.
+ * - S24 (VT-01, AURORA-7 under the front's rain band, Phase 29 D13): the
+ *   rain costs the step-tracked beacon about a dB and leaves it locked; the
+ *   same rain would unlock the program-tracked beacon, which is why the rain
+ *   is anchored after the step-track step.
  *
  * Each station's chain (antenna, RF front end, receiver) is built from the
  * scenario's own ground-station config and flown at 60 Hz on SimClock.
@@ -45,6 +49,7 @@ vi.mock('@app/simulation/simulation-manager', () => ({
 import type { GroundStationConfig } from '@app/assets/ground-station/ground-station-state';
 import { scenario18Data } from '@app/campaigns/nats/scenario18';
 import { scenario22Data } from '@app/campaigns/nats/scenario22';
+import { scenario24Data } from '@app/campaigns/nats/scenario24';
 import type { AntennaCore } from '@app/equipment/antenna/antenna-core';
 import { createAntenna } from '@app/equipment/antenna/antenna-factory';
 import { Receiver } from '@app/equipment/receiver/receiver';
@@ -205,5 +210,52 @@ describe('C1 step-track lessons (phase 19.4)', () => {
     expect(stBeacon - STEP_TRACK_FLOOR_DB).toBeGreaterThan(1.8);
     expect(stBeacon - STEP_TRACK_FLOOR_DB).toBeLessThan(2.8);
     expect(stCarrier).toBeGreaterThan(8);
+  });
+
+  it('S24: the rain band costs the step-tracked AURORA-7 beacon about a dB and keeps the lock', () => {
+    const sat = (scenario24Data.settings.satellites as Satellite[]).find((s) => s.name === 'AURORA-7')!;
+    const rain = (scenario24Data.settings.weatherEvents ?? []).find((e) => e.id === 'vermont-rain-band')!;
+    expect(rain.startAfterObjectiveId).toBe('pass-go-nogo-quiz');
+    const { antenna, fly } = chain(scenario24Data, 'VT-01', sat);
+
+    fly(120_000);
+    const ptBeacon = antenna.state.beaconCN!;
+    antenna.handleStepTrackToggle(true);
+    // The step-track step: engage, then the beacon held 15 s; the rain anchors to the next step
+    fly(15_000);
+    const dryBeacon = antenna.state.beaconCN!;
+    const skyDry = antenna.state.rfMetrics?.skyTemp_K ?? 0;
+    // WeatherManager's ramp: min(300 s, 15 % of the duration), linear
+    const rampS = Math.min(300, rain.duration * 0.15);
+    let minBeacon = Infinity;
+    let unlockedS = 0;
+    for (let t = 0; t < rampS + 120; t++) {
+      antenna.updateRainRate(rain.rainRateMmPerHour! * Math.min(1, t / rampS));
+      fly(1000);
+      minBeacon = Math.min(minBeacon, antenna.state.beaconCN ?? -Infinity);
+      if (!antenna.state.isBeaconLocked) {
+        unlockedS++;
+      }
+    }
+    const wetBeacon = antenna.state.beaconCN!;
+    const skyWet = antenna.state.rfMetrics?.skyTemp_K ?? 0;
+    const rainAlarm = antenna.getStatusAlarms().find((a) => a.message.startsWith('RAIN FADE'));
+
+    console.info(
+      `S24 VT-01 AURORA-7: program-track ${ptBeacon.toFixed(1)} dB | step-track dry ${dryBeacon.toFixed(1)} dB, sky ${skyDry.toFixed(0)} K | rain ${rain.rainRateMmPerHour} mm/h ${wetBeacon.toFixed(1)} dB (min ${minBeacon.toFixed(1)}), sky ${skyWet.toFixed(0)} K, attenuation ${antenna.rainAttenuationDb.toFixed(2)} dB, rain C/N loss ${antenna.rainCnLossDb().toFixed(2)} dB, alarm ${rainAlarm?.severity} "${rainAlarm?.message}"`
+    );
+
+    // The storm-hold quiz: about a dB of fade, Sky Temp up, still locked
+    expect(dryBeacon - wetBeacon).toBeGreaterThan(0.7);
+    expect(dryBeacon - wetBeacon).toBeLessThan(1.6);
+    expect(skyWet - skyDry).toBeGreaterThan(15);
+    expect(unlockedS).toBe(0);
+    expect(minBeacon).toBeGreaterThan(STEP_TRACK_FLOOR_DB + 0.5);
+    // The ticker: the alarm keys on the C/N loss (attenuation + sky-noise rise), so the
+    // 0.3 dB of C-band attenuation still shows as "RAIN FADE (about 1 dB)", info
+    expect(rainAlarm?.severity).toBe('info');
+    expect(rainAlarm?.message).toMatch(/^RAIN FADE \((0\.[89]|1\.[0-3]) dB\)$/u);
+    // Why the anchor: program-track has under 1 dB over the lock, less than the rain costs
+    expect(ptBeacon - STEP_TRACK_FLOOR_DB).toBeLessThan(dryBeacon - wetBeacon);
   });
 });

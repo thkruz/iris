@@ -345,6 +345,38 @@ describe('GlobalCommandBar', () => {
       expect(overflow?.textContent).toContain('+2 more');
     });
 
+    it('lists every tier, counts them all and names the hidden ones in the tooltip (nats-r4-s16-F1)', () => {
+      const alarmHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ALARM_STATE_CHANGED)?.[1];
+      const alarm = (severity: AggregatedAlarm['severity'], message: string, equipmentIndex = 0): AggregatedAlarm => ({
+        severity,
+        message,
+        assetId: 'VT-01',
+        equipmentType: 'RF',
+        equipmentIndex,
+      });
+
+      alarmHandler?.({
+        alarms: [
+          alarm('error', 'BUC over-temperature (72.3 °C)'),
+          alarm('error', 'BUC high current draw (5.37 A)'),
+          alarm('warning', 'HPA overdrive - IMD degradation'),
+          alarm('warning', 'LNB not locked to reference'),
+          alarm('info', 'Signal(s) Detected'),
+        ],
+        highestSeverity: 'error',
+      });
+
+      expect(document.querySelector('.alarm-stable')).toBeNull();
+      expect(document.querySelector('.alarm-count.error')?.textContent?.trim()).toBe('2');
+      expect(document.querySelector('.alarm-count.warning')?.textContent?.trim()).toBe('2');
+      expect(document.querySelector('.alarm-count.info')?.textContent?.trim()).toBe('1');
+      expect(document.querySelector('.alarm-overflow')?.textContent).toContain('+2 more');
+      const tooltip = (document.querySelector('#alarm-messages') as HTMLElement).title;
+      expect(tooltip.split('\n')).toHaveLength(5);
+      expect(tooltip).toContain('LNB not locked to reference');
+      expect(tooltip).toContain('Signal(s) Detected');
+    });
+
     it('should sort alarms by severity (errors first)', () => {
       const alarmHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ALARM_STATE_CHANGED)?.[1];
 
@@ -840,6 +872,16 @@ describe('GlobalCommandBar', () => {
       expect(GlobalCommandBar.objectiveSkipText({ objectiveId: 'a', deltaMs: 60_000, landsAtMs: landsAtMs + 17_000, label: 'cell' })).toBe('Skip to 10:00:17');
       expect(GlobalCommandBar.objectiveSkipText({ objectiveId: 'a', deltaMs: 7.2 * 60_000, landsAtMs: null, label: 'hold' })).toBe('Skip 8 min');
       expect(GlobalCommandBar.objectiveSkipText({ objectiveId: 'a', deltaMs: 40_000, landsAtMs: null, label: 'hold' })).toBe('Skip 40 s');
+    });
+
+    it('titles an objective skip as one sentence naming the end of the wait (nats-r4-s10-F3)', () => {
+      const landsAtMs = Date.UTC(2026, 1, 17, 10, 0, 0);
+      expect(GlobalCommandBar.objectiveSkipTitle({ objectiveId: 'a', deltaMs: 712_000, landsAtMs, label: 'standby' })).toBe(
+        'Skip to 10:00, the end of the standby. The mission clock is held while you wait, so waiting and skipping score the same.'
+      );
+      expect(GlobalCommandBar.objectiveSkipTitle({ objectiveId: 'a', deltaMs: 7 * 60_000, landsAtMs: null, label: 'the crew maintenance window' })).toBe(
+        'Skip 7 min, the end of the crew maintenance window. The mission clock is held while you wait, so waiting and skipping score the same.'
+      );
     });
   });
 });

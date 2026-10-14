@@ -6,6 +6,7 @@ import { createRFFrontEnd } from '../../../../src/equipment/rf-front-end/rf-fron
 import { EventBus } from '../../../../src/events/event-bus';
 import { Events } from '../../../../src/events/events';
 import { SignalOrigin } from '../../../../src/signal-origin';
+import { FIXED_STEP_MS, SimClock } from '../../../../src/simulation/sim-clock';
 import { dB, dBm, IfSignal } from '../../../../src/types';
 
 describe('AGCModuleCore', () => {
@@ -444,6 +445,59 @@ describe('AGCModuleCore', () => {
       const signals = agcModule.inputSignals;
 
       expect(Array.isArray(signals)).toBe(true);
+    });
+  });
+
+  describe('hang (phase 29 D19, nats-r4-s08-F3)', () => {
+    const carrier = (power: number): IfSignal => ({
+      frequency: 1422e6,
+      bandwidth: 24e6,
+      power: power as dBm,
+      polarization: 'V',
+      origin: SignalOrigin.NOTCH_FILTER,
+      gainInPath: 0,
+    });
+
+    it('holds the gain through a 1 s carrier dropout, then releases if the drop lasts', () => {
+      agcModule.state.isBypassed = false;
+      agcModule.state.targetLevel = -30 as dBm;
+      agcModule.state.maxGain = 30 as dB;
+      agcModule.state.minGain = -30 as dB;
+      let signals = [carrier(-20)];
+      vi.spyOn(agcModule, 'inputSignals', 'get').mockImplementation(() => signals);
+      const run = (ms: number) => {
+        for (let t = 0; t < ms; t += FIXED_STEP_MS) {
+          SimClock.step();
+          agcModule.update();
+        }
+      };
+
+      run(2000);
+      const levelled = agcModule.state.currentGain;
+      expect(levelled).toBeCloseTo(-10, 0);
+
+      // The carrier blinks off for a second: no pumping
+      signals = [];
+      run(1000);
+      expect(Math.abs(agcModule.state.currentGain - levelled)).toBeLessThan(0.1);
+
+      // Back on: still levelled
+      signals = [carrier(-20)];
+      run(500);
+      expect(agcModule.state.currentGain).toBeCloseTo(levelled, 1);
+
+      // A real loss outlasting the hang releases
+      signals = [];
+      run(4000);
+      expect(agcModule.state.currentGain).toBeGreaterThan(levelled + 5);
+    });
+
+    it('attack is never held', () => {
+      agcModule.state.isBypassed = false;
+      agcModule.state.currentGain = 0 as dB;
+      vi.spyOn(agcModule, 'inputSignals', 'get').mockReturnValue([carrier(0)]);
+      agcModule.update();
+      expect(agcModule.state.currentGain).toBeLessThan(0);
     });
   });
 });

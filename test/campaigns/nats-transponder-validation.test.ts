@@ -291,7 +291,9 @@ describe('hub carriers are what the stations radiate (phase 27)', () => {
     chain.frontEnd.bucModule.state.isMuted = false;
     chain.frontEnd.hpaModule.state.isHpaEnabled = true;
     chain.frontEnd.hpaModule.state.isHpaSwitchEnabled = true;
-    chain.fly(30_000);
+    // S6 starts on TIDEMARK-1's look angles (153.1 / 35.1, Phase 29): about 37 deg
+    // of azimuth to AURORA-7 at 0.5 deg/s, so the dish needs ~75 s to arrive
+    chain.fly(90_000);
     expect(relayedIds(chain.sat)).toEqual(['AURORA-7-Uplink']);
     expect(chain.read().cnRatio_dB).toBeGreaterThan(9);
   });

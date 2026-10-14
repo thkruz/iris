@@ -22,7 +22,7 @@
       "lnbLoMHz": 5250,
       "lnbNoiseTempK": 42.98,
       "agcOnNoiseAlone": {
-        "noiseInDbm": -45.31,
+        "noiseInDbm": -45.28,
         "filterMHz": 40,
         "settledGainDb": 10,
         "maxGainDb": 10,

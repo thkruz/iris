@@ -21,14 +21,17 @@ const station = vi.hoisted(() => ({
   trackingMode: 'program-track' as string,
   snr: 12 as number | null,
   hpaEnabled: false,
+  locked: true,
 }));
+
+const analyzer = vi.hoisted(() => ({ state: { span: 100e6, centerFrequency: 1458e6 } }));
 
 const quizzes = vi.hoisted(() => ({
   registered: new Set<string>(),
   complete: new Set<string>(),
 }));
 
-const weather = vi.hoisted(() => ({ ended: new Set<string>(), untilEndS: new Map<string, number>() }));
+const weather = vi.hoisted(() => ({ ended: new Set<string>(), untilEndS: new Map<string, number>(), untilPeakS: new Map<string, number>() }));
 
 vi.mock('../../src/simulation/simulation-manager', () => ({
   SimulationManager: {
@@ -61,12 +64,12 @@ vi.mock('../../src/simulation/simulation-manager', () => ({
               },
             },
           ],
-          spectrumAnalyzers: [],
+          spectrumAnalyzers: [analyzer],
           receivers: [
             {
               state: { activeModem: 1, modems: [{ modemNumber: 1, isPowered: true }] },
               getSnrForModem: () => station.snr,
-              getSignalsInBandwidth: () => ({ hasLock: true }),
+              getSignalsInBandwidth: () => ({ hasLock: station.locked }),
             },
           ],
           transmitters: [],
@@ -96,6 +99,8 @@ vi.mock('../../src/weather/weather-manager', () => ({
     getInstance: () => ({
       hasEventEnded: (id: string) => weather.ended.has(id),
       getSecondsUntilEventEnds: (id: string) => weather.untilEndS.get(id) ?? null,
+      getSecondsUntilEventPeaks: (id: string, past = 0) => (weather.untilPeakS.has(id) ? Math.max(0, weather.untilPeakS.get(id)! + past) : null),
+      hasEventPeaked: (id: string, past = 0) => weather.untilPeakS.has(id) && weather.untilPeakS.get(id)! + past <= 0,
     }),
   },
 }));
@@ -134,10 +139,13 @@ describe('Phase 27 objective semantics', () => {
     station.trackingMode = 'program-track';
     station.snr = 12;
     station.hpaEnabled = false;
+    station.locked = true;
+    weather.untilPeakS.clear();
     quizzes.registered.clear();
     quizzes.complete.clear();
     weather.ended.clear();
     weather.untilEndS.clear();
+    analyzer.state.span = 100e6;
     activeTab = null;
     vi.spyOn(TabbedCanvas, 'getActiveTab').mockImplementation(() => activeTab);
   });
@@ -301,8 +309,13 @@ describe('Phase 27 objective semantics', () => {
 
   describe('B5 hidden tab hint', () => {
     it('names the tab once the hidden row has blocked for the delay', () => {
+      // A non-quiz step: a quiz step's tab row is a D5 gate, shown from the start
+      station.heaterEnabled = true;
       ObjectivesManager.initialize([
-        objective('look', [{ type: 'tab-active', hidden: true, description: 'Dashboard Open', mustMaintain: true, params: { tab: 'dashboard' } }, quiz()]),
+        objective('look', [
+          { type: 'tab-active', hidden: true, description: 'Dashboard Open', mustMaintain: true, params: { tab: 'dashboard' } },
+          { type: 'feed-heater-enabled', description: 'Heater', mustMaintain: false, requiresChange: false },
+        ]),
       ]);
       const manager = ObjectivesManager.getInstance();
 
@@ -315,6 +328,148 @@ describe('Phase 27 objective semantics', () => {
       activeTab = 'dashboard-0';
       tick();
       expect(manager.generateHtmlChecklist()).not.toContain('open the Dashboard tab');
+    });
+  });
+
+  describe('Phase 29 D5 tab gates on quiz steps (nats-r4-s08-F5, s17-F2)', () => {
+    it('shows a hidden gate from the step start as "Open the Dashboard tab"', () => {
+      ObjectivesManager.initialize([
+        objective('baseline', [{ type: 'tab-active', hidden: true, description: 'Dashboard Open', mustMaintain: true, params: { tab: 'dashboard' } }, quiz('Baseline State')]),
+      ]);
+      tick();
+      const html = ObjectivesManager.getInstance().generateHtmlChecklist();
+      expect(html).toContain('Open the Dashboard tab');
+      expect(html).not.toContain('Dashboard Open');
+      expect(html).not.toContain('to continue)');
+    });
+
+    it('latches once the tab is opened, so the step completes when the quiz is answered on another tab', () => {
+      ObjectivesManager.initialize([
+        objective('verify', [{ type: 'tab-active', description: 'Dashboard Tab Open', mustMaintain: true, params: { tab: 'dashboard' } }, quiz('Link Status')]),
+      ]);
+      activeTab = 'dashboard';
+      tick();
+      tick();
+      expect(stateOf('verify').conditionStates[0].isMaintenanceComplete).toBe(true);
+      expect(quizzes.registered.has('verify:1')).toBe(true);
+
+      activeTab = 'rx-analysis';
+      tick();
+      expect(stateOf('verify').conditionStates[0].isMaintenanceComplete).toBe(true);
+      expect(ObjectivesManager.getInstance().isObjectiveCountdownHeld('verify')).toBe(true);
+
+      quizzes.complete.add('verify:1');
+      tick();
+      expect(stateOf('verify').isCompleted).toBe(true);
+    });
+
+    it('keeps holding a gate that opts in with maintainUntilObjectiveComplete', () => {
+      ObjectivesManager.initialize([
+        objective('stay', [
+          { type: 'tab-active', description: 'Stay on Dashboard', maintainUntilObjectiveComplete: true, mustMaintain: true, params: { tab: 'dashboard' } },
+          quiz(),
+        ]),
+      ]);
+      activeTab = 'dashboard';
+      tick();
+      tick();
+      activeTab = 'rx-analysis';
+      quizzes.complete.add('stay:1');
+      tick();
+      expect(stateOf('stay').isCompleted).toBe(false);
+
+      activeTab = 'dashboard';
+      tick();
+      expect(stateOf('stay').isCompleted).toBe(true);
+    });
+
+    it('leaves a non-quiz step tab row holding at completion (B8)', () => {
+      ObjectivesManager.initialize([
+        objective('act', [
+          { type: 'tab-active', description: 'Dashboard', mustMaintain: true, params: { tab: 'dashboard' } },
+          { type: 'feed-heater-enabled', description: 'Heater', mustMaintain: false },
+        ]),
+      ]);
+      activeTab = 'dashboard';
+      tick();
+      activeTab = 'rx-analysis';
+      station.heaterEnabled = true;
+      tick();
+      tick();
+      expect(stateOf('act').isCompleted).toBe(false);
+    });
+  });
+
+  describe('Phase 29 D7 analyzer settings tick on the next frame (nats-r4-s20-F1)', () => {
+    it('ignores an authored observation dwell on an applied span', () => {
+      ObjectivesManager.initialize([
+        objective('sweep', [
+          {
+            type: 'speca-span-set',
+            description: 'Span About 50 MHz',
+            mustMaintain: true,
+            params: { span: 50e6, spanTolerance: 15e6, requiresObservation: true, observationTab: 'rx-analysis', observationDwellSeconds: 5 },
+          },
+          { type: 'feed-heater-enabled', description: 'Heater', mustMaintain: false },
+        ]),
+      ]);
+      activeTab = 'rx-analysis-0';
+      tick();
+      expect(stateOf('sweep').conditionStates[0].isSatisfied).toBe(false);
+
+      analyzer.state.span = 50e6;
+      tick();
+      expect(stateOf('sweep').conditionStates[0].isSatisfied).toBe(true);
+      expect(stateOf('sweep').conditionStates[0].observed).toBe(true);
+    });
+  });
+
+  describe('Phase 29 D10 peak and re-lock (nats-r4-s17-F1)', () => {
+    it('weather-event-peaked waits for the peak, not a threshold on the way up', () => {
+      weather.untilPeakS.set('sun', 90);
+      ObjectivesManager.initialize([
+        objective('peak', [{ type: 'weather-event-peaked', description: 'Transit Peak Passed', mustMaintain: false, params: { weatherEventId: 'sun' } }]),
+      ]);
+      tick();
+      expect(stateOf('peak').isCompleted).toBe(false);
+
+      weather.untilPeakS.set('sun', 0);
+      tick();
+      expect(stateOf('peak').isCompleted).toBe(true);
+    });
+
+    it('receiver-relocked needs the lock to drop first, even when the drop came during an earlier step', () => {
+      ObjectivesManager.initialize([
+        objective('ride', [{ type: 'feed-heater-enabled', description: 'Heater', mustMaintain: false }]),
+        objective('recover', [{ type: 'receiver-relocked', description: 'Receiver Re-Locked', mustMaintain: false, params: { lockLostAfterObjectiveId: 'ride' } }], {
+          prerequisiteObjectiveIds: ['ride'],
+        }),
+      ]);
+      tick();
+      station.locked = false; // the drop, while 'recover' is still locked behind 'ride'
+      tick();
+      station.locked = true;
+      tick();
+      station.heaterEnabled = true;
+      tick();
+      tick();
+      expect(stateOf('recover').isActive).toBe(true);
+      expect(stateOf('recover').isCompleted).toBe(true);
+    });
+
+    it('receiver-relocked does not tick while the lock has never dropped', () => {
+      ObjectivesManager.initialize([objective('recover', [{ type: 'receiver-relocked', description: 'Receiver Re-Locked', mustMaintain: false }])]);
+      tick();
+      tick();
+      expect(stateOf('recover').isCompleted).toBe(false);
+
+      station.locked = false;
+      tick();
+      expect(stateOf('recover').isCompleted).toBe(false);
+
+      station.locked = true;
+      tick();
+      expect(stateOf('recover').isCompleted).toBe(true);
     });
   });
 

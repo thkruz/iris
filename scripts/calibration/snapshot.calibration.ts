@@ -74,6 +74,7 @@ import { createAntenna } from '@app/equipment/antenna/antenna-factory';
 import { Receiver, type ReceiverModemState } from '@app/equipment/receiver/receiver';
 import { TapPoint } from '@app/equipment/rf-front-end/coupler-module/tap-points';
 import { createRFFrontEnd } from '@app/equipment/rf-front-end/rf-front-end-factory';
+import { AGCModuleCore } from '@app/equipment/rf-front-end/agc-module/agc-module-core';
 import { OrbitalSatellite, observerFromLocation } from '@app/equipment/satellite/orbital-satellite';
 import type { Satellite } from '@app/equipment/satellite/satellite';
 import { EventBus } from '@app/events/event-bus';
@@ -86,6 +87,13 @@ import type { Degrees } from 'ootk';
 
 const OUT_DIR = resolve(__dirname, '../../test/calibration');
 const TICK_HZ = 60;
+
+// The ledger records steady states. The AGC's hang (Phase 29, 2 s hold after a
+// sudden drop) runs on SimClock run time, which the flights here do not step
+// (stepping it would also move the authored carrier fading off its HEAD phase),
+// so a hang begun when the dish left one satellite would never release and the
+// next link's IF levels would read the previous link's gain. Fly without it.
+(AGCModuleCore as unknown as { HANG_MS: number }).HANG_MS = 0;
 const LEO_HORIZON_H = 12;
 const LEO_MIN_EL = 5 as Degrees;
 /** Longest a GEO link may take to settle, s (a 9 m pedestal from stow) */

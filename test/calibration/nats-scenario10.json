@@ -66,13 +66,13 @@
               "modulation": "QPSK",
               "fec": "3/4",
               "samples": 5,
-              "peakCnDb": 10.15,
-              "medianCnDb": 10.15,
-              "peakEsN0Db": 10.94,
+              "peakCnDb": 10.11,
+              "medianCnDb": 10.11,
+              "peakEsN0Db": 10.9,
               "requiredEsN0Db": 5.03,
-              "peakLockMarginDb": 5.91,
-              "peakRxIfDbm": -29.02,
-              "noiseIfDbm": -39.37,
+              "peakLockMarginDb": 5.87,
+              "peakRxIfDbm": -29.03,
+              "noiseIfDbm": -39.34,
               "lockedSamples": 5
             },
             {
@@ -88,8 +88,8 @@
               "peakEsN0Db": 28.01,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
-              "peakRxIfDbm": -75.95,
-              "noiseIfDbm": -103.17,
+              "peakRxIfDbm": -75.93,
+              "noiseIfDbm": -103.14,
               "lockedSamples": 0
             }
           ],
@@ -97,15 +97,15 @@
           "transponders": [
             {
               "id": "TP-1",
-              "iboDb": 5.43,
-              "oboDb": 1.6,
+              "iboDb": 5.49,
+              "oboDb": 1.63,
               "carrierToImDb": null,
               "carriers": [
                 {
                   "signalId": "AURORA-7-Uplink",
-                  "eirpDbw": 23.39,
-                  "cnUpDbHz": 97.56,
-                  "upstreamCn0DbHz": 97.56
+                  "eirpDbw": 23.35,
+                  "cnUpDbHz": 97.49,
+                  "upstreamCn0DbHz": 97.49
                 }
               ]
             }
@@ -137,8 +137,8 @@
               "peakEsN0Db": 43.07,
               "requiredEsN0Db": null,
               "peakLockMarginDb": null,
-              "peakRxIfDbm": -47.37,
-              "noiseIfDbm": -103.46,
+              "peakRxIfDbm": -47.36,
+              "noiseIfDbm": -103.43,
               "lockedSamples": 0
             }
           ],
