@@ -553,7 +553,8 @@ export const scenario8Data: ScenarioData = {
       id: 'identify-tracking-problem',
       nice: ['T0081', 'K1032'],
       title: 'Identify Tracking Problem',
-      description: 'The beacon keeps dropping out. Analyze the antenna tracking mode to identify potential issues.',
+      description:
+        'The beacon holds steady on the analyzer, but the RX 1 carrier keeps dropping lock. The antenna is still in program-track on an inclined bird: check the tracking mode on ACU Control before chasing the carrier.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['configure-speca-beacon'],
       timeLimitSeconds: 3 * 60,
@@ -673,7 +674,8 @@ export const scenario8Data: ScenarioData = {
           description: 'Weather Decision',
           params: {
             character: Character.SYSTEM,
-            question: 'Weather service reports freezing rain expected in 2 hours. AURORA-7 link is now stable. What is the appropriate action?',
+            question:
+              'Weather service reports freezing rain expected in 2 hours. Step-track now holds beacon lock, though RX 1 still drops the carrier now and then. What is the appropriate action?',
             options: [
               'Enable feed heater now as a precaution, continue monitoring the link',
               'Stow the antenna now as a precaution, accept the link outage until it passes',
@@ -682,7 +684,7 @@ export const scenario8Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'Enabling the feed heater proactively prevents ice accumulation. The link is stable so there is no need to stow yet, but preparing for weather is good practice. This is not urgent enough to wake Dana at 2 AM.',
+              'Enabling the feed heater proactively prevents ice accumulation. The antenna is holding the beacon and the rain is two hours out, so there is no need to stow yet, and the carrier dropouts are a separate fault to chase next; preparing for weather is still good practice. This is not urgent enough to wake Dana at 2 AM.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -1240,7 +1242,7 @@ export const scenario8Data: ScenarioData = {
       id: 'verify-link-operational',
       nice: ['T0153', 'K0741'],
       title: 'Verify Link Operational',
-      description: 'Confirm the AURORA-7 link is fully operational: Modem 2 carrier up, the receiver holding steady lock on it (no more dropouts), no alarms.',
+      description: 'Confirm the AURORA-7 link is fully operational: Modem 2 carrier up, the receiver holding steady lock on it (no more dropouts), no warning or critical alarms.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['enable-hpa-sequence'],
       timeLimitSeconds: 2 * 60,
@@ -1260,7 +1262,7 @@ export const scenario8Data: ScenarioData = {
             question: 'What indicators confirm the AURORA-7 link is now operational?',
             // nats-r3-s08-F3: the receiver on our own carrier is the end-to-end proof
             options: [
-              'No active alarms on Dashboard',
+              'No warning or critical alarms on Dashboard',
               'Antenna in step-track with beacon lock',
               'HPA enabled and BUC unmuted',
               'Receiver holding steady lock on our own carrier',
@@ -1268,7 +1270,7 @@ export const scenario8Data: ScenarioData = {
             ],
             correctIndex: 4,
             explanation:
-              "A fully operational link shows: no Dashboard alarms (Modem 1's fault alarm cleared when you took it out of service), antenna tracking with beacon lock (step-track for inclined orbit), an active TX chain (HPA enabled, BUC unmuted), and the receiver holding steady lock on Modem 2's carrier relayed back down by AURORA-7, where Modem 1's dropouts kept knocking it off. That last one is the end-to-end proof: our carrier went up, through the satellite and back. All conditions must be met.",
+              "A fully operational link shows: no Dashboard warning or critical alarms (Modem 1's fault alarm cleared when you took it out of service), antenna tracking with beacon lock (step-track for inclined orbit), an active TX chain (HPA enabled, BUC unmuted), and the receiver holding steady lock on Modem 2's carrier relayed back down by AURORA-7, where Modem 1's dropouts kept knocking it off. That last one is the end-to-end proof: our carrier went up, through the satellite and back. All conditions must be met.",
             pointPenalty: 10,
             preserveOptionOrder: true,
           },

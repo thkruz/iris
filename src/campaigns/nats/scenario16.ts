@@ -68,8 +68,9 @@ export const scenario16Data: ScenarioData = {
   subtitle: 'Multi-System Recovery Under Customer Pressure',
   // Billed at what it takes (nats-r3-s15-F1 in S16, Phase 29 D14): ~20 steps,
   // about seven control actions and a 90 s LNB warm-up; r4 played it in under
-  // 10 min. The limit follows the hands-on time (fatal step timers unchanged).
-  duration: '10-15 min',
+  // 10 min and r5 in 5:36, so it is billed 5-10 min (Phase 30 D22); the
+  // 25 min limit stays (fatal step timers unchanged).
+  duration: '5-10 min',
   difficulty: 'advanced',
   missionType: 'Incident Response',
   description: `Two minutes into your shift and the alarm board is lit up. BUC over-temperature, LNB reference unlocked, HPA overdriven - all on VT-01, all at once. The TIDEMARK-1 customer link is degraded and James Okafor (Atlantic Shipping Alliance, SeaLink's anchor customer) is on the line.<br><br>None of these faults are related. You have to triage them in the right order: protect the equipment and the spectrum first, restore customer impact next, then methodically clear each fault.<br><br>Dana is in the admin office. She trusts you with this one.`,
@@ -366,7 +367,8 @@ export const scenario16Data: ScenarioData = {
       id: 'mute-buc-for-cooldown',
       nice: ['S0677', 'T1314'],
       title: 'Mute the BUC for Cooldown',
-      description: 'With the HPA output disabled, mute the BUC so the over-temperature module can begin cooling. Timed: running out fails the shift.',
+      description:
+        'With the HPA output disabled, mute the BUC on TX Chain so the over-temperature module can begin cooling. Nothing on the station mutes it for you. Timed: running out fails the shift.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['disable-hpa-for-safety'],
       timeLimitSeconds: 2 * 60,

@@ -226,7 +226,7 @@ const SCENARIO_4_OBJECTIVES: Scenario4Objective[] = [
     id: 'verify-full-duplex-quiz',
     title: 'Verify Full Duplex Operation',
     type: 'quiz',
-    correctAnswer: 'Receiver locked with good C/N, HPA enabled with backoff, no alarms - both directions up',
+    correctAnswer: 'Receiver locked with good C/N, HPA enabled with backoff, no warning alarms - both directions up',
   },
 ];
 

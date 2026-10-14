@@ -127,7 +127,9 @@ test.describe('nats-eu Scenario 10 Full Completion', () => {
 
   test('[raise-the-eirp] takes the HPA back-off to 4 dB and stays linear', async () => {
     await setHpaBackOff(page, missionControl, 4);
-    await expect(page.locator('#hpa-overdrive-status')).toHaveText('Normal');
+    // The HPA output is still disabled at this step, so OVERDRIVE reads "--" (Phase 30 D5);
+    // the objective's HPA Linear row is what proves the 4 dB point is linear
+    await expect(page.locator('#hpa-overdrive-status')).toHaveText('--');
     await page.waitForTimeout(2500);
     await answerSystemQuiz(page, 'Intermodulation products spill');
     await dismissDialogIfPresent(page);

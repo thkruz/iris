@@ -280,7 +280,7 @@ const SCENARIO_12_OBJECTIVES: Scenario12Objective[] = [
     id: 'final-dashboard-sweep',
     title: 'Final Dashboard Sweep',
     type: 'quiz',
-    correctAnswer: 'No active alarms - all systems nominal, TM-1 traffic on primary',
+    correctAnswer: 'No warning or critical alarms - all systems nominal, TM-1 traffic on primary',
   },
   {
     id: 'log-maintenance-complete-typed',

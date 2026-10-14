@@ -289,7 +289,7 @@ export const scenario22Data: ScenarioData = {
       nice: ['T1429', 'K0773'],
       title: "Measure Today's Beacon",
       description:
-        'On RX Analysis, center the spectrum analyzer on the AURORA-7 beacon at 1085 MHz IF at the 2 kHz span (RBW 3 Hz) preset, the span the reference was logged at, then read its level off the Peak readout (Peak Search) and compare it with the reference in the brief. Measure it now, with nothing of ours on the bird: that is how the log is kept.',
+        'On RX Analysis, center the spectrum analyzer on the AURORA-7 beacon at 1085 MHz IF with Span 0.002 MHz and RBW Auto (3 Hz), the setting the reference was logged at (there is no preset button: if the span has been changed, type 0.002 into Span and set RBW back to Auto), then read its level off the Peak readout (Peak Search) and compare it with the reference in the brief. Measure it now, with nothing of ours on the bird: that is how the log is kept.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['engage-step-track'],
       timeLimitSeconds: 3 * 60,
@@ -314,11 +314,11 @@ export const scenario22Data: ScenarioData = {
         {
           // Phase 29 D12 (nats-r4-s22-F1): the CW Peak depends on span/RBW
           // (-69.3 at 2 kHz, -67.7 at 10 kHz, -66.2 at 1 MHz), so the step
-          // names the preset the reference was logged at. The analyzer starts
+          // names the span the reference was logged at. The analyzer starts
           // at 2 kHz, so this row is a read on RX Analysis (requiresObservation:
           // no fresh change asked), not a setting to make.
           type: 'speca-span-set',
-          description: 'Span 2 kHz (RBW 3 Hz)',
+          description: 'Span 0.002 MHz, RBW Auto (3 Hz)',
           params: { span: 2e3, spanTolerance: 0.5e3, requiresObservation: true, observationTab: 'rx-analysis' },
           mustMaintain: true,
         },
@@ -353,7 +353,7 @@ export const scenario22Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              "About -69 dBm against about -63 dBm is about 6 dB down: today's spot reading agrees with this month's -6.3 dB median. A single reading wanders a few tenths with pointing and noise, which is why the trend is built from medians, and it only compares at the reference's own 2 kHz span: a wider span brings a wider RBW, which adds noise power to the Peak reading (about -67.7 at 10 kHz, -66 at 1 MHz). At the preset it is your own measurement and it matches. It is still about 2.3 dB above the step-track floor (about -8.6), the same margin the ACU shows between its beacon C/N and the 6.5 dB lock.",
+              "About -69 dBm against about -63 dBm is about 6 dB down: today's spot reading agrees with this month's -6.3 dB median. A single reading wanders a few tenths with pointing and noise, which is why the trend is built from medians, and it only compares at the reference's own 2 kHz span: a wider span brings a wider RBW, which adds noise power to the Peak reading (about -67.7 at 10 kHz, -66 at 1 MHz). At that span it is your own measurement and it matches. It is still about 2.3 dB above the step-track floor (about -8.6), the same margin the ACU shows between its beacon C/N and the 6.5 dB lock.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -443,7 +443,7 @@ export const scenario22Data: ScenarioData = {
             options: ['About 14 dB', 'About 6 dB', 'About 2 dB, flickering in and out of lock', 'About 27 dB'],
             correctIndex: 0,
             explanation:
-              'About 14 dB, more than 9 dB above where QPSK 3/4 acquires lock (the modem shows Required Es/N0 5.0 dB; with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N). The transponder is fine: what is fading is the beacon, and with it the ability to track an inclined bird. That is the point the report has to make.',
+              'About 14 dB, more than 9 dB above where QPSK 3/4 acquires lock (the modem shows Required Es/N0 5.0 dB; with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N: Required 5.0 plus a 0.5 dB acquisition margin, less the 0.8 dB Es/N0 offset). The transponder is fine: what is fading is the beacon, and with it the ability to track an inclined bird. That is the point the report has to make.',
             pointPenalty: 5,
           },
           mustMaintain: false,

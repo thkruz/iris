@@ -225,7 +225,7 @@ const SCENARIO_15_OBJECTIVES: Scenario15Objective[] = [
     id: 'log-coordination-event',
     title: 'Log Coordination Event',
     type: 'quiz',
-    correctAnswer: 'RedSky 0937 slot - notice confirmed. TP-1 HPA backoff raised 5 to 10 dB to suppress adjacent IMD. RedSky cleared for 5961 MHz V-pol, SeaLink nominal.',
+    correctAnswer: 'RedSky 0922 slot - notice confirmed. TP-1 HPA backoff raised 5 to 10 dB to suppress adjacent IMD. RedSky cleared for 5961 MHz V-pol, SeaLink nominal.',
   },
 ];
 

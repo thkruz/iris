@@ -863,7 +863,8 @@ export const scenario12Data: ScenarioData = {
               'VT-01 owns TM-1 traffic, customer re-registered manually, packet loss cleared, no new alarms',
             ],
             correctIndex: 0,
-            explanation: 'Clean return: target station owns the traffic, source station released, no service interruption, no alarms. From the customer side, nothing happened.',
+            explanation:
+              'Clean return: target station owns the traffic, source station released, no service interruption, no warning or critical alarms. From the customer side, nothing happened.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -933,7 +934,7 @@ export const scenario12Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Final VT-01 health check after restoration.',
             options: [
-              'No active alarms - all systems nominal, TM-1 traffic on primary',
+              'No warning or critical alarms - all systems nominal, TM-1 traffic on primary',
               'BUC over-temperature - TX chain alarm, TM-1 traffic on primary',
               'LNB reference unlocked - RX chain alarm, TM-1 traffic degraded',
               'HPA overdriven - TX chain alarm, TM-1 traffic still held on ME-02',

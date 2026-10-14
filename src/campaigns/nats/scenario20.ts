@@ -8,7 +8,7 @@ import type { dB, dBm, Hertz, IfFrequency, MHz } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
 import { vermontGroundStation } from './ground-stations';
-import { ses10Satellite, tidemark1Satellite, tidemark2Satellite } from './satellites';
+import { createTidemark1Satellite, ses10Satellite, tidemark2Satellite } from './satellites';
 
 /**
  * NATS Level 20: "Dual Outage"
@@ -206,7 +206,11 @@ export const scenario20Data: ScenarioData = {
         ],
       },
     ],
-    satellites: [tidemark1Satellite, tidemark2Satellite, ses10Satellite],
+    // TIDEMARK-1 fades +/-1 dB here (the roster default is 0.3 dB, Phase 30):
+    // VT-01's clear-sky margin sits at 1.4-2.1 dB, so the wider fade swings it
+    // about 0.8-2.8 dB over tens of seconds and the "Degraded margin" warning
+    // comes and goes, as the brief says.
+    satellites: [createTidemark1Satellite({ powerVariationRange: 1.0 as dBm }), tidemark2Satellite, ses10Satellite],
     weatherEvents: [
       {
         id: 'vermont-winter-storm',
@@ -472,7 +476,7 @@ export const scenario20Data: ScenarioData = {
             options: [
               "VT's fix is one switch that runs unattended; ME's fault is dangerous (spectrum pollution + HPA stress) and needs full attention",
               "VT is the primary station and always comes first; ME's fault is a config value (back-off drift) and can wait for the second pass",
-              "VT comes first alphabetically by station identifier; ME's fault is the same size (one alarm each) and the order was arbitrary",
+              "VT comes first alphabetically by station identifier; ME's fault is no bigger than VT's, so the order was arbitrary",
               "VT's ice is the customer-visible fault; ME's HPA was still passing traffic (carrier locked) and could have waited for Dana",
             ],
             correctIndex: 0,
@@ -898,7 +902,7 @@ export const scenario20Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Which entry records this incident correctly?',
             options: [
-              'Dual degradation 0712: VT-01 icing (heater on ~0715, melted) | ME-02 HPA back-off 1 dB (10 dB restored ~0720); causes independent',
+              'Dual degradation 0712: VT-01 icing (heater on ~0715, melted) | ME-02 HPA back-off 1 dB (10 dB restored ~0720); causes independent; process fix: feed heater on the shift-change checklist',
               'Dual degradation 0712: VT-01 weather event (storm, no action) | ME-02 HPA fault (see separate ticket); both resolved by ~0720',
               'Dual degradation 0712: VT-01 icing (heater on ~0715, melted) | ME-02 HPA back-off 1 dB (10 dB restored ~0720); details on request',
               'Dual degradation 0712: VT-01 icing (storm, heater on) | ME-02 HPA fault (fixed); both stations had problems, both fixed by ~0720',

@@ -6,6 +6,7 @@ import { Character, Emotion } from '@app/modal/character-enum';
 import type { Objective } from '@app/objectives/objective-types';
 import type { ScenarioData } from '@app/ScenarioData';
 import { SignalOrigin } from '@app/signal-origin';
+import { SimClock } from '@app/simulation/sim-clock';
 import type { dB, dBi, dBm, FECType, Hertz, IfFrequency, MHz, ModulationType, RfFrequency } from '@app/types';
 import { getAssetUrl } from '@app/utils/asset-url';
 import type { Degrees } from 'ootk';
@@ -40,10 +41,10 @@ import { c1TransponderPhysics, ses10Satellite, tidemark1Satellite, VERMONT_LOOK_
  * suspended. The bird now swings through a daily +-1.3 deg figure-8. The
  * published ephemeris predates the burn, so program-track points at a
  * station-kept bird: the gap opens from zero at the ~0800 node through the
- * morning (~0.4 deg at 0915, ~0.3 deg/h, the full 1.3 deg around 1400).
+ * morning (~0.4 deg at 0915, opening ~0.6 deg/h in the sim: DriftingEphemerisSatellite).
  * Pointing loss ~12 (gap/HPBW)^2 dB: ~6 dB now (beacon 28 dB, carrier still
  * locked near 7 dB), carrier lock lost near 0.55-0.6 deg, about one beamwidth
- * (within the hour; nats-r4-s18-F1).
+ * (in about twenty minutes; nats-r4-s18-F1, Phase 30 D16).
  * Program-track is bleeding C/N. The operator (covering ME-02) must recognize
  * the signature, transition to step-track, hold the link, and feed the
  * spacecraft team ground-side observations - while staying inside the ground
@@ -61,7 +62,41 @@ import { c1TransponderPhysics, ses10Satellite, tidemark1Satellite, VERMONT_LOOK_
  *     hill-climb (phase 19.4) takes ~40-60 s to bring both back.
  */
 
-const tidemark2DriftingSatellite = new Satellite(
+/** Sky gap between the stale ephemeris and the real bird at the 0915 start, deg (0.32 / 0.26 az/el) */
+const START_GAP_DEG = 0.39;
+/**
+ * How fast the gap opens, deg per hour of scenario time (Phase 30 D16,
+ * nats-r5-s18-F1). At 0.6 deg/h the beacon under program-track loses about
+ * 0.3 dB a minute, about 1.5 dB over the first five minutes, so the bleed the
+ * card promises is on the ACU while the player decides.
+ */
+const GAP_RATE_DEG_PER_H = 0.6;
+/** The gap stops opening here (beacon ~9 dB down), so a slow player still has a beacon to step-track from */
+const MAX_GAP_DEG = 0.5;
+const EPHEMERIS_ERROR_AZ_DEG = 0.32;
+const EPHEMERIS_ERROR_EL_DEG = 0.26;
+
+/**
+ * TIDEMARK-2 with an ephemeris that goes staler as the scenario runs: the
+ * az/el error grows in proportion to the sky gap, on scenario time (paused
+ * with briefs and quizzes, restored with checkpoints).
+ */
+class DriftingEphemerisSatellite extends Satellite {
+  /** Sky gap for a scenario-elapsed time, deg */
+  static gapDegAt(scenarioElapsedMs: number): number {
+    const hours = Math.max(0, scenarioElapsedMs) / 3_600_000;
+
+    return Math.min(MAX_GAP_DEG, START_GAP_DEG + GAP_RATE_DEG_PER_H * hours);
+  }
+
+  override update(): void {
+    const scale = DriftingEphemerisSatellite.gapDegAt(SimClock.scenarioElapsedMs()) / START_GAP_DEG;
+    this.setEphemerisError((EPHEMERIS_ERROR_AZ_DEG * scale) as Degrees, (EPHEMERIS_ERROR_EL_DEG * scale) as Degrees);
+    super.update();
+  }
+}
+
+const tidemark2DriftingSatellite = new DriftingEphemerisSatellite(
   'TIDEMARK-2',
   61526,
   [], // No stand-in: TM-2's hub carrier is ME-02's own uplink (phase 27)
@@ -74,9 +109,10 @@ const tidemark2DriftingSatellite = new Satellite(
     // Stale ephemeris: station-keeping suspended, prediction no longer matches
     // 0.32 / 0.26 deg (0.39 deg on the sky from Maine): program-track loses
     // ~6 dB of beacon and ~5 dB of carrier, under the recovery threshold;
-    // step-track climbs it back (phase 19.4; test/campaigns/nats-step-track-validation.test.ts)
-    ephemerisErrorAz: 0.32 as Degrees,
-    ephemerisErrorEl: 0.26 as Degrees,
+    // step-track climbs it back (phase 19.4; test/campaigns/nats-step-track-validation.test.ts).
+    // These are the 0915 values; DriftingEphemerisSatellite opens them from there.
+    ephemerisErrorAz: EPHEMERIS_ERROR_AZ_DEG as Degrees,
+    ephemerisErrorEl: EPHEMERIS_ERROR_EL_DEG as Degrees,
     lookAnglesFrom: VERMONT_LOOK_ANGLE_SITE,
     orbitType: 'geosynchronous',
     geosyncConfig: {
@@ -133,7 +169,7 @@ export const scenario18Data: ScenarioData = {
   duration: '30-35 min',
   difficulty: 'advanced',
   missionType: 'Anomaly Response',
-  description: `Halifax called at 0850: TIDEMARK-2's north-south station-keeping burn this morning ran long on a stuck thruster valve and left the bird with about 1.3° of inclination. Further burns are suspended while the vehicle team investigates. From Maine's dish the satellite now swings through a daily figure-eight, about ±1.3°, that the published ephemeris (computed before the burn) does not show.<br><br>Program-track follows the ephemeris. The ephemeris is wrong, and the gap opens a little more every hour this morning. You can watch the C/N bleed in real time.<br><br>You have flown an inclined bird before - AURORA-7 taught you everything this needs. The difference is that this time the satellite is the patient, the spacecraft team is the surgeon, and the ground operator's whole job is to keep the monitors attached: hold the lock, feed Halifax your track data, and know exactly where the ground role ends.`,
+  description: `Halifax called at 0850: TIDEMARK-2's north-south station-keeping burn this morning ran long on a stuck thruster valve and left the bird with about 1.3° of inclination. Further burns are suspended while the vehicle team investigates. From Maine's dish the satellite now swings through a daily figure-eight, about ±1.3°, that the published ephemeris (computed before the burn) does not show.<br><br>Program-track follows the ephemeris. The ephemeris is wrong, and the gap is opening fast this morning: the beacon C/N on the ACU sheds a few tenths of a dB a minute. You can watch it bleed in real time.<br><br>You have flown an inclined bird before - AURORA-7 taught you everything this needs. The difference is that this time the satellite is the patient, the spacecraft team is the surgeon, and the ground operator's whole job is to keep the monitors attached: hold the lock, feed Halifax your track data, and know exactly where the ground role ends.`,
   equipment: ['9-meter C-band Antenna (ME-02)', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'Halifax vehicle status feed'],
   timeLimitSeconds: 35 * 60,
   settings: {
@@ -441,16 +477,16 @@ export const scenario18Data: ScenarioData = {
           params: {
             character: Character.SYSTEM,
             question:
-              'The ephemeris predates the burn, so program-track points at a station-kept bird while the real one swings through its daily ±1.3° figure-8. The gap is about 0.4° now (beacon ~6 dB down) and opens about 0.3° an hour; the ACU HPBW is ~0.6°. What does that mean for program-track?',
+              'The ephemeris predates the burn, so program-track points at a station-kept bird while the real one swings through its daily ±1.3° figure-8. The gap is about 0.4° now (beacon ~6 dB down) and opens about 0.6° an hour (the beacon sheds a few tenths of a dB a minute); the ACU HPBW is ~0.6°. What does that mean for program-track?',
             options: [
-              'Borrowed time - within the hour the gap reaches about one beamwidth (~0.55-0.6°) and the carrier drops out of lock; by early afternoon the bird is far outside the beam',
+              'Borrowed time - in about twenty minutes the gap reaches about one beamwidth (~0.55-0.6°) and the carrier drops out of lock; by early afternoon the bird is far outside the beam',
               'Fine for the shift - ±1.3° is the size of the figure-8, not the pointing error, and program-track already follows the figure-8 in the ephemeris',
               'Fine with more gain - a few dB of LNB gain covers the pattern loss, and the strategy holds until Halifax publishes a corrected ephemeris',
               'Self-correcting - program-track refines its ephemeris from the beacon as the gap grows, and converges before Halifax publishes a fix',
             ],
             correctIndex: 0,
             explanation:
-              'Pointing loss grows with the square of the error, about 12 x (gap / beamwidth)² dB. 0.4° costs ~6 dB - what the ACU shows: beacon 28 dB, carrier still locked. At 0.3° an hour the gap reaches about one beamwidth (~0.55-0.6°) within the hour: the loss reaches ~10-12 dB and the carrier falls out of lock. At 1.3° it is tens of dB, off the beam entirely. The ephemeris knows nothing of the burn, so program-track keeps pointing at the old slot while the gap opens. No gain knob recovers pointing loss (the LNB lifts the noise with the signal): track the satellite itself, which is what the beacon is for.',
+              'Pointing loss grows with the square of the error, about 12 x (gap / beamwidth)² dB. 0.4° costs ~6 dB - what the ACU shows: beacon 28 dB, carrier still locked. At 0.6° an hour the gap reaches about one beamwidth (~0.55-0.6°) in about twenty minutes: the loss reaches ~10-12 dB and the carrier falls out of lock. At 1.3° it is tens of dB, off the beam entirely. The ephemeris knows nothing of the burn, so program-track keeps pointing at the old slot while the gap opens. No gain knob recovers pointing loss (the LNB lifts the noise with the signal): track the satellite itself, which is what the beacon is for.',
             pointPenalty: 5,
           },
           mustMaintain: false,

@@ -13,7 +13,7 @@ import { ses10Satellite, tidemark1Satellite, tidemark2Satellite, tidemark3Satell
  * NATS Level 15: "Frequency Coordination"
  *
  * Phase: Qualified Operations (Phase 2, Scenario 7 of 8)
- * Time Pressure: Moderate (RedSky's uplink window opens in 25 minutes)
+ * Time Pressure: Moderate (RedSky's uplink window opens in 10 minutes)
  * Calculation Required: YES - guard-band arithmetic
  * New Mechanic Introduced: External-operator coordination (not present in S1-S14)
  *
@@ -68,12 +68,12 @@ export const scenario15Data: ScenarioData = {
   title: 'Frequency Coordination',
   subtitle: 'Inter-Operator Spectrum Etiquette',
   // Billed at what it takes (nats-r3-s15-F1, Phase 29 D14): 19 steps, one HPA
-  // change, one analyzer retune; r4 played it in under 6 min. The 0930 confirm /
-  // 0937 RedSky deadlines are story. The limit follows the hands-on time.
+  // change, one analyzer retune; r4 played it in under 6 min. The 0920 confirm /
+  // 0922 RedSky deadlines sit inside the 15 min limit (Phase 30 D22).
   duration: '5-10 min',
   difficulty: 'intermediate',
   missionType: 'Spectrum Coordination',
-  description: `A coordination notice from RedSky Teleport hit your inbox at 09:08. Their next scheduled uplink sits just 2 MHz from the edge of the SeaLink carrier currently riding TIDEMARK-3 TP-1. They want acknowledgment that our spectrum won't bleed into their slot when they light up in 25 minutes.<br><br>Standard inter-operator etiquette: verify the guard band, check that our transmit chain isn't producing IMD products that would fall in the neighbor's passband, document, and confirm back. If our skirts are dirty, clean them up before they go on the air.<br><br>This is good neighbor work, not combat.`,
+  description: `A coordination notice from RedSky Teleport hit your inbox at 09:08. Their next scheduled uplink sits just 2 MHz from the edge of the SeaLink carrier currently riding TIDEMARK-3 TP-1. They want acknowledgment that our spectrum won't bleed into their slot when they light up at 09:22, and they need our confirmation by 09:20.<br><br>Standard inter-operator etiquette: verify the guard band, check that our transmit chain isn't producing IMD products that would fall in the neighbor's passband, document, and confirm back. If our skirts are dirty, clean them up before they go on the air.<br><br>This is good neighbor work, not combat.`,
   equipment: ['9-meter C-band Antenna', 'RF Front End (TX active)', 'Spectrum Analyzer', 'TX Modem (carrying SeaLink traffic on TIDEMARK-3)', 'HPA (online)'],
   timeLimitSeconds: 15 * 60,
   settings: {
@@ -161,7 +161,7 @@ export const scenario15Data: ScenarioData = {
     satellites: [tidemark3Satellite, tidemark1Satellite, tidemark2Satellite, ses10Satellite],
     missionBriefUrl: 'https://docs.signalrange.space/campaign-1/scenario-15?content-only=true&dark=true',
     isExtraSatellitesVisible: true,
-    // Brief: Tuesday, 0912 Local (notice received 0908, RedSky live 0937)
+    // Brief: Tuesday, 0912 Local (notice received 0908, confirm by 0920, RedSky live 0922)
     scenarioStartDate: '2026-02-17',
     scenarioStartWallTime: '09:12:00',
   },
@@ -192,7 +192,7 @@ export const scenario15Data: ScenarioData = {
             question: 'Have you reviewed the brief and the RedSky notice?',
             options: ['Brief reviewed. Notice acknowledged. Starting coordination check.'],
             correctIndex: 0,
-            explanation: 'Coordination window opens in 25 minutes. Plenty of time for a clean check.',
+            explanation: 'Coordination window opens in 10 minutes and RedSky wants the confirmation by 0920. Enough time for a clean check if you keep moving.',
             pointPenalty: 0,
           },
           mustMaintain: false,
@@ -516,7 +516,7 @@ export const scenario15Data: ScenarioData = {
       id: 'evaluate-mitigation-options',
       nice: ['S0593', 'K0721'],
       title: 'Choose Mitigation',
-      description: 'Pick the right mitigation. Customer traffic must stay up; RedSky goes live in 25 minutes.',
+      description: 'Pick the right mitigation. Customer traffic must stay up; RedSky goes live at 0922.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['understand-imd-mechanism'],
       timeLimitSeconds: 2 * 60,
@@ -842,10 +842,10 @@ export const scenario15Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Which entry correctly records this event for the next shift?',
             options: [
-              'RedSky 0937 slot - notice confirmed. TP-1 HPA backoff raised 5 to 10 dB to suppress adjacent IMD. RedSky cleared for 5961 MHz V-pol, SeaLink nominal.',
-              'RedSky 0937 slot - notice denied. TP-1 HPA backoff held at 5 dB, guard band judged too tight. RedSky advised to relocate slot, SeaLink nominal.',
-              'RedSky 0937 slot - notice confirmed. TP-1 HPA backoff held at 5 dB, cross-pol isolation judged sufficient. RedSky cleared for 5961 MHz V-pol, SeaLink nominal.',
-              'RedSky 0937 slot - notice confirmed. TP-1 carrier muted for the RedSky window to clear adjacent IMD. RedSky cleared for 5961 MHz V-pol, SeaLink down.',
+              'RedSky 0922 slot - notice confirmed. TP-1 HPA backoff raised 5 to 10 dB to suppress adjacent IMD. RedSky cleared for 5961 MHz V-pol, SeaLink nominal.',
+              'RedSky 0922 slot - notice denied. TP-1 HPA backoff held at 5 dB, guard band judged too tight. RedSky advised to relocate slot, SeaLink nominal.',
+              'RedSky 0922 slot - notice confirmed. TP-1 HPA backoff held at 5 dB, cross-pol isolation judged sufficient. RedSky cleared for 5961 MHz V-pol, SeaLink nominal.',
+              'RedSky 0922 slot - notice confirmed. TP-1 carrier muted for the RedSky window to clear adjacent IMD. RedSky cleared for 5961 MHz V-pol, SeaLink down.',
             ],
             correctIndex: 0,
             explanation: "The log captures what we did, why, and what we cleared. Next shift picks up with full context if RedSky's uplink behaves unexpectedly.",
@@ -866,7 +866,7 @@ export const scenario15Data: ScenarioData = {
         <em>[Text message from Dana at 09:12]</em>
       </p>
       <p>
-        "Coordination notice in your inbox - RedSky Teleport. They're lighting up a V-pol carrier on TM-3 in 25 minutes, 2 MHz off our edge. Verify our spectrum is clean and send the confirmation back. Routine. Don't drop the SeaLink carrier."
+        "Coordination notice in your inbox - RedSky Teleport. They're lighting up a V-pol carrier on TM-3 in 10 minutes, 2 MHz off our edge. Verify our spectrum is clean and send the confirmation back. Routine. Don't drop the SeaLink carrier."
       </p>
       `,
       character: Character.DANA_TORRES,

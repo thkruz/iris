@@ -218,7 +218,7 @@ export const scenario24Data: ScenarioData = {
         // (it would unlock a program-tracked beacon from about 30 mm/h).
         // Attenuation alone is about 0.3 dB; the RAIN FADE alarm reads the C/N
         // the rain costs (attenuation + sky-noise rise), so the ticker shows
-        // "RAIN FADE (1.1 dB)" (info) at the plateau beside Sky Temp and C/N.
+        // "RAIN FADE" (info, depth ~1.1 dB in the detail) at the plateau beside Sky Temp and C/N.
         id: 'vermont-rain-band',
         groundStationId: 'VT-01',
         type: 'rain',

@@ -116,7 +116,7 @@ export const scenario3Data: ScenarioData = {
             referenceLevel: 0,
             centerFrequency: 1e9 as Hertz,
             span: 100e6 as Hertz,
-            rbw: 1e6 as Hertz,
+            rbw: null,
             minAmplitude: -170,
             maxAmplitude: 0,
             scaleDbPerDiv: 17 as dB,
@@ -534,7 +534,7 @@ export const scenario3Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'The AGC levels total power - carrier plus noise - so it cannot improve C/N. As the feed loads with snow and ice, the carrier weakens and the wet feed adds noise of its own; C/N falls while the AGC output stays at -30 dBm and its gain barely moves (about -2.5 dB in clear sky, under +1 dB at loss of lock, against a +10 dB maximum). The modem acquires lock from about 4.7 dB C/N and holds it down to about 3.7 dB; below that we lose lock. Maine is 150 miles away with clear weather, so its link is unaffected.',
+              'The AGC levels total power - carrier plus noise - so it cannot improve C/N. As the feed loads with snow and ice, the carrier weakens and the wet feed adds noise of its own; C/N falls while the AGC output stays at -30 dBm and its gain barely moves (about -2.5 dB in clear sky, under +1 dB at loss of lock, against a +10 dB maximum). The modem acquires lock from about 4.7 dB C/N (Required 5.0 plus a 0.5 dB acquisition margin, less the 0.8 dB Es/N0 offset) and holds it down to about 3.7 dB; below that we lose lock. Maine is 150 miles away with clear weather, so its link is unaffected.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -971,7 +971,7 @@ export const scenario3Data: ScenarioData = {
       nice: ['S0421', 'K0773'],
       title: 'Configure Spectrum Analyzer',
       description:
-        'Set the spectrum analyzer to observe the TIDEMARK-1 beacon: Center frequency 1,074.5 MHz, Span 0.002 MHz (2 kHz; the field is in MHz), Min Amp -100 dBm, Max Amp -30 dBm. The beacon reads around -55 to -45 dBm.',
+        'Set the spectrum analyzer to observe the TIDEMARK-1 beacon: Center frequency 1,074.5 MHz, Span 0.002 MHz (2 kHz; the field is in MHz), Min Amp -100 dBm, Max Amp -30 dBm, RBW Auto (3 Hz at this span; a wide RBW buries the CW line in noise). The beacon reads around -60 to -55 dBm.',
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['verify-lnb-config-quiz'],
       timeLimitSeconds: 3 * 60,
@@ -1258,7 +1258,7 @@ export const scenario3Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'For this QPSK 3/4 carrier the modem shows Required Es/N0 5.0 dB; with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N and holds it down to about 3.7 dB (Required Es/N0 is the DVB-S2 threshold plus 1 dB of modem implementation loss). Right at threshold it still decodes cleanly, but the next 1 dB fade drops it. At 10 dB of C/N there is nearly 6 dB of margin, so weather can take some of it before errors start. Lock without margin is asking for trouble.',
+              'For this QPSK 3/4 carrier the modem shows Required Es/N0 5.0 dB; with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N (Required 5.0 plus a 0.5 dB acquisition margin, less the 0.8 dB Es/N0 offset) and holds it down to about 3.7 dB (Required Es/N0 is the DVB-S2 threshold plus 1 dB of modem implementation loss). Right at threshold it still decodes cleanly, but the next 1 dB fade drops it. At 10 dB of C/N there is nearly 6 dB of margin, so weather can take some of it before errors start. Lock without margin is asking for trouble.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -1939,7 +1939,7 @@ export const scenario3Data: ScenarioData = {
       'navigate-rx-maine-lnb': {
         text: `
         <p>
-          While the antenna settles, let's get the receive chain configured. Power on the LNB and set it to match Vermont - LO 5,250 MHz, gain 65 dB. Check Vermont's LNB panel if you don't believe me.
+          Antenna's settled on the bird, so let's get the receive chain configured. Power on the LNB and set it to match Vermont - LO 5,250 MHz, gain 65 dB. Check Vermont's LNB panel if you don't believe me.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -1962,7 +1962,7 @@ export const scenario3Data: ScenarioData = {
           Exactly. Same LO means same IF. Makes everything downstream identical between sites. Less to think about, fewer mistakes.
         </p>
         <p>
-          Now let's verify we're actually seeing the satellite. Configure the spectrum analyzer - center frequency 1,074.5 MHz, span 0.002 MHz, Min Amp -100 and Max Amp -30 dBm.
+          Now let's verify we're actually seeing the satellite. Configure the spectrum analyzer - center frequency 1,074.5 MHz, span 0.002 MHz, Min Amp -100 and Max Amp -30 dBm, RBW on Auto. At one megahertz of RBW the beacon hides in the noise.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -1976,7 +1976,7 @@ export const scenario3Data: ScenarioData = {
       'configure-speca-maine': {
         text: `
         <p>
-          Good. Now look for the beacon - should be a clean spike at center. That's your proof the antenna is pointed correctly and the receive chain is working.
+          Good. Now look for the beacon - with RBW on Auto it should be a clean spike at center, somewhere around -60 to -55 dBm. That's your proof the antenna is pointed correctly and the receive chain is working.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -2190,7 +2190,7 @@ export const scenario3Data: ScenarioData = {
       'document-handover-event': {
         text: `
         <p>
-          Hey, it's Catherine again. I've got things under control here - good C/N, clean traffic flow, no alarms. You did good work getting us set up.
+          Hey, it's Catherine again. I've got things under control here - good C/N, clean traffic flow, no warnings on the board. You did good work getting us set up.
         </p>
         <p>
           I'll keep an eye on the link and coordinate with you when the storm clears so we can bring Vermont back online. Weather service says the worst should pass in about six hours.

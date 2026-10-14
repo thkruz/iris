@@ -566,7 +566,8 @@ export const scenario6Data: ScenarioData = {
       // S0077: Skill in securing network communications
       nice: ['S0077'],
       title: 'Verify Encryption Understanding',
-      description: "Before we enable transmission, let's verify you understand the encryption configuration. Look at the Encryption card on the TX Chain tab.",
+      description:
+        "Before we enable transmission, let's verify you understand the encryption configuration. Look at the TX ENCRYPTION section of the TX Payload Data card on the TX Chain tab.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['configure-rx-modem'],
       timeLimitSeconds: 3 * 60,
@@ -576,7 +577,7 @@ export const scenario6Data: ScenarioData = {
           type: 'status-check',
           description: 'Encryption Understanding',
           params: {
-            question: 'Looking at the Encryption card, what security configuration is active?',
+            question: 'Looking at the TX ENCRYPTION section of the TX Payload Data card, what security configuration is active?',
             options: [
               'AES-256-GCM with valid key - ready for secure transmission',
               'AES-128-CBC with expired key - renewal needed before transmit',
@@ -585,7 +586,7 @@ export const scenario6Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'The Encryption card shows AES-256-GCM active with a valid key. AES-256 provides strong symmetric encryption, and GCM mode adds authenticated encryption to detect tampering. Always verify encryption status before transmitting.',
+              'The TX ENCRYPTION section of the TX Payload Data card shows AES-256-GCM active with a valid key. AES-256 provides strong symmetric encryption, and GCM mode adds authenticated encryption to detect tampering. Always verify encryption status before transmitting.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -887,7 +888,7 @@ export const scenario6Data: ScenarioData = {
       'configure-rx-modem': {
         text: `
         <p>
-          Receiver's set. No lock yet, and that's expected - the carrier it's waiting for is ours. Before we transmit, check the encryption. TX Chain tab, the Encryption card.
+          Receiver's set. No lock yet, and that's expected - the carrier it's waiting for is ours. Before we transmit, check the encryption. TX Chain tab, the TX ENCRYPTION section of the TX Payload Data card.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,

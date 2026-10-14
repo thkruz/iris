@@ -149,7 +149,7 @@ const SCENARIO_1_OBJECTIVES: Scenario1Objective[] = [
     id: 'verify-alarm-status',
     title: 'Dashboard Alarm Check',
     type: 'quiz',
-    correctAnswer: 'No active alarms - all systems nominal',
+    correctAnswer: 'No warning or critical alarms - one informational row, Signal(s) Detected',
   },
 ];
 

@@ -72,7 +72,7 @@ const SCENARIO_5_OBJECTIVES: Scenario5Objective[] = [
     id: 'verify-receiver-state-quiz',
     title: 'Assess Full Impact',
     type: 'quiz',
-    correctAnswer: 'The ships have much smaller dishes: the interference that leaves our 9 m dish just above threshold pushes them below it',
+    correctAnswer: 'The ships have much smaller dishes: the same C/N loss that leaves our 9 m dish just above threshold pushes them below it',
   },
 
   // ============================================================

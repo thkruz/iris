@@ -464,7 +464,7 @@ export const scenario1Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'C/N at or above 8 dB is a healthy QPSK 3/4 link with adequate margin for reliable data reception (Normal in the brief table; 5-8 dB is Warning). For the lock itself, the modem shows Required Es/N0 5.0 dB; with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N and holds it down to about 3.7 dB. A healthy reading confirms the entire receive chain from antenna to modem is functioning properly.',
+              'C/N at or above 8 dB is a healthy QPSK 3/4 link with adequate margin for reliable data reception (Normal in the brief table; 5-8 dB is Warning). For the lock itself, the modem shows Required Es/N0 5.0 dB; with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N (Required 5.0 plus a 0.5 dB acquisition margin, less the 0.8 dB Es/N0 offset) and holds it down to about 3.7 dB. A healthy reading confirms the entire receive chain from antenna to modem is functioning properly.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -832,7 +832,7 @@ export const scenario1Data: ScenarioData = {
       // dashboard as indicator of system operational status
       nice: ['T0153', 'K0741'],
       title: 'Dashboard Alarm Check',
-      description: 'Confirm no active alarms on the dashboard.',
+      description: 'Confirm the dashboard shows no warning or critical alarms.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['navigate-dashboard'],
       timeLimitSeconds: 3 * 60,
@@ -850,14 +850,14 @@ export const scenario1Data: ScenarioData = {
           params: {
             question: 'What is the current alarm status shown on the dashboard?',
             options: [
-              'No active alarms - all systems nominal',
+              'No warning or critical alarms - one informational row, Signal(s) Detected',
               'Warning alarm - LNB temperature high',
               'Error alarm - GPSDO in holdover mode',
               'Critical alarm - antenna tracking lost',
             ],
             correctIndex: 0,
             explanation:
-              'A clean alarm dashboard with no active alarms confirms all equipment is operating within normal parameters. This is the final confirmation of a healthy ground station.',
+              'No warning or critical alarms, and the one informational row (Signal(s) Detected) only says the receiver sees our carrier. That confirms all equipment is operating within normal parameters. This is the final confirmation of a healthy ground station.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -1172,7 +1172,7 @@ export const scenario1Data: ScenarioData = {
       'verify-alarm-status': {
         text: `
       <p>
-        Clean board. That's what right looks like. Remember it.
+        No warnings, no criticals, just the one info row saying we see our signal. That's what right looks like. Remember it.
       </p>
       <p>
         Alright - GPSDO, LNB, beacon, spectrum analyzer, receiver, HPA, tracking mode, polarization, alarms. That's your health check. Do it at the start of every shift, do it after any anomaly, do it whenever something feels off.

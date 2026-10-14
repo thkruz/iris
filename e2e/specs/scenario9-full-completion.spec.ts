@@ -71,7 +71,7 @@ const SCENARIO_9_OBJECTIVES: Scenario9Objective[] = [
     id: 'vt-dashboard-check',
     title: 'VT-01 Dashboard Sweep',
     type: 'quiz',
-    correctAnswer: 'No active alarms - all systems nominal',
+    correctAnswer: 'No warning or critical alarms - all systems nominal',
   },
   {
     id: 'vt-gpsdo-tab',
@@ -136,7 +136,7 @@ const SCENARIO_9_OBJECTIVES: Scenario9Objective[] = [
     id: 'me-dashboard-check',
     title: 'ME-02 Dashboard Sweep',
     type: 'quiz',
-    correctAnswer: 'No active alarms - station nominal',
+    correctAnswer: 'No warning or critical alarms - station nominal',
   },
   {
     id: 'me-rx-beacon-tab',

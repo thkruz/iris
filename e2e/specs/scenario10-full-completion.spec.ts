@@ -79,7 +79,7 @@ const SCENARIO_10_OBJECTIVES: Scenario10Objective[] = [
     id: 'dashboard-sweep',
     title: 'Pre-Pass Alarm Sweep',
     type: 'quiz',
-    correctAnswer: 'No active alarms - clean board, link up on AURORA-7',
+    correctAnswer: 'No warning or critical alarms - link up on AURORA-7',
   },
   {
     id: 'why-step-track',

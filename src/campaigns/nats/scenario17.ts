@@ -351,7 +351,7 @@ export const scenario17Data: ScenarioData = {
             options: ['About 13 dB', 'About 8 dB', 'About 4 dB', 'About 29 dB'],
             correctIndex: 0,
             explanation:
-              'About 13 dB. QPSK 3/4 needs Required Es/N0 5.0 dB on the modem: with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N and holds it down to about 3.7 dB. A 16 dB noise rise at the peak is more than that margin, which is why the carrier will drop for a couple of minutes - and why the impact record starts from this number.',
+              'About 13 dB. QPSK 3/4 needs Required Es/N0 5.0 dB on the modem: with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N (Required 5.0 plus a 0.5 dB acquisition margin, less the 0.8 dB Es/N0 offset) and holds it down to about 3.7 dB. A 16 dB noise rise at the peak is more than that margin, which is why the carrier will drop for a couple of minutes - and why the impact record starts from this number.',
             pointPenalty: 5,
             documentLine: 'Baseline before transit: RX modem 1 locked, C/N about 13 dB',
           },

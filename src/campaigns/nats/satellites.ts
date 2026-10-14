@@ -1,4 +1,4 @@
-import { Satellite, TransponderConfig } from '@app/equipment/satellite/satellite';
+import { Satellite, type SignalDegradationConfig, TransponderConfig } from '@app/equipment/satellite/satellite';
 import type { TransponderPhysics } from '@app/equipment/satellite/transponder-model';
 import { SignalOrigin } from '@app/signal-origin';
 import type { dBi, dBm, FECType, Hertz, ModulationType, RfFrequency } from '@app/types';
@@ -31,58 +31,68 @@ export function c1TransponderPhysics(satEirpDbw: number): Partial<TransponderPhy
   return { sfdDbwM2: C1_SFD_DBW_M2, gOverTDbK: 0, satEirpDbw, amplifier: 'twta', gainMode: 'fgm' };
 }
 
-export const tidemark1Satellite = new Satellite(
-  'TIDEMARK-1',
-  61525,
-  [], // No authored uplinks: the hub carrier is whatever VT-01 / ME-02 radiates (phase 27)
-  [], // Beacons now defined in transponderConfigs
-  {
-    // 53 W from VT-01 (Phase 28, D4: computed with geoLookAngles, was 161.8 / 34.2)
-    az: 153.1 as Degrees,
-    el: 35.1 as Degrees,
-    // Polarization skew (rotation) is derived from geometry (Phase 29 D8): geoPolarizationSkewDeg
-    frequencyOffset: 2.225e9 as Hertz, // Legacy fallback
-    // Ephemeris error: simulates TLE inaccuracy (~3 dB loss without step-track)
-    ephemerisErrorAz: 0.12 as Degrees,
-    ephemerisErrorEl: 0.08 as Degrees,
-    lookAnglesFrom: VERMONT_LOOK_ANGLE_SITE,
-    transponderConfigs: [
-      {
-        id: 'TP-1',
-        uplinkCenterFrequency: 5943e6 as RfFrequency, // Passband: 5925-5961 MHz
-        physics: c1TransponderPhysics(27),
-        bandwidth: 36e6 as Hertz,
-        frequencyOffset: 2.225e9 as Hertz, // Downlink center: 3718 MHz
-        polarization: 'H',
-        beacon: {
-          frequency: 4175.5e6 as RfFrequency,
-          signalId: 'TIDEMARK-1-Beacon',
-          serverId: 1,
-          noradId: 61525,
-          power: 30 as dBm,
-          bandwidth: 10 as Hertz, // CW: short-term linewidth (oscillator stability + Doppler), far under any RBW
-          modulation: 'CW' as ModulationType,
-          fec: 'null' as FECType,
-          polarization: 'V',
-          feed: '',
-          isDegraded: false,
-          origin: SignalOrigin.TRANSMITTER,
-          noiseFloor: null,
-          gainInPath: 0 as dBi,
-        },
-      } as TransponderConfig,
-      {
-        id: 'TP-2',
-        uplinkCenterFrequency: 5906e6 as RfFrequency, // Passband: 5888-5924 MHz
-        physics: c1TransponderPhysics(27),
-        bandwidth: 36e6 as Hertz,
-        frequencyOffset: 2.225e9 as Hertz, // Downlink center: 3681 MHz
-        polarization: 'H',
-        // No beacon for TP-2
-      } as TransponderConfig,
-    ],
-  }
-);
+/**
+ * TIDEMARK-1 as the roster flies it. A scenario that needs its own fade (S20's
+ * marginal clear-sky link) passes a degradation override and gets a separate
+ * instance; every other scenario shares `tidemark1Satellite`.
+ */
+export function createTidemark1Satellite(degradationConfig?: Partial<SignalDegradationConfig>): Satellite {
+  return new Satellite(
+    'TIDEMARK-1',
+    61525,
+    [], // No authored uplinks: the hub carrier is whatever VT-01 / ME-02 radiates (phase 27)
+    [], // Beacons now defined in transponderConfigs
+    {
+      ...(degradationConfig ? { degradationConfig } : {}),
+      // 53 W from VT-01 (Phase 28, D4: computed with geoLookAngles, was 161.8 / 34.2)
+      az: 153.1 as Degrees,
+      el: 35.1 as Degrees,
+      // Polarization skew (rotation) is derived from geometry (Phase 29 D8): geoPolarizationSkewDeg
+      frequencyOffset: 2.225e9 as Hertz, // Legacy fallback
+      // Ephemeris error: simulates TLE inaccuracy (~3 dB loss without step-track)
+      ephemerisErrorAz: 0.12 as Degrees,
+      ephemerisErrorEl: 0.08 as Degrees,
+      lookAnglesFrom: VERMONT_LOOK_ANGLE_SITE,
+      transponderConfigs: [
+        {
+          id: 'TP-1',
+          uplinkCenterFrequency: 5943e6 as RfFrequency, // Passband: 5925-5961 MHz
+          physics: c1TransponderPhysics(27),
+          bandwidth: 36e6 as Hertz,
+          frequencyOffset: 2.225e9 as Hertz, // Downlink center: 3718 MHz
+          polarization: 'H',
+          beacon: {
+            frequency: 4175.5e6 as RfFrequency,
+            signalId: 'TIDEMARK-1-Beacon',
+            serverId: 1,
+            noradId: 61525,
+            power: 30 as dBm,
+            bandwidth: 10 as Hertz, // CW: short-term linewidth (oscillator stability + Doppler), far under any RBW
+            modulation: 'CW' as ModulationType,
+            fec: 'null' as FECType,
+            polarization: 'V',
+            feed: '',
+            isDegraded: false,
+            origin: SignalOrigin.TRANSMITTER,
+            noiseFloor: null,
+            gainInPath: 0 as dBi,
+          },
+        } as TransponderConfig,
+        {
+          id: 'TP-2',
+          uplinkCenterFrequency: 5906e6 as RfFrequency, // Passband: 5888-5924 MHz
+          physics: c1TransponderPhysics(27),
+          bandwidth: 36e6 as Hertz,
+          frequencyOffset: 2.225e9 as Hertz, // Downlink center: 3681 MHz
+          polarization: 'H',
+          // No beacon for TP-2
+        } as TransponderConfig,
+      ],
+    }
+  );
+}
+
+export const tidemark1Satellite = createTidemark1Satellite();
 
 export const tidemark2Satellite = new Satellite(
   'TIDEMARK-2',

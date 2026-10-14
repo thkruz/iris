@@ -939,7 +939,7 @@ export const scenario4Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'For QPSK with FEC 3/4 the modem shows Required Es/N0 5.0 dB; with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N and holds it down to about 3.7 dB. At threshold it still decodes cleanly, but the next 1 dB fade drops lock. With 10+ dB of C/N there is about 6 dB of margin - the link stays solid even if weather degrades it. Lock without margin is asking for trouble during the first rain fade.',
+              'For QPSK with FEC 3/4 the modem shows Required Es/N0 5.0 dB; with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N (Required 5.0 plus a 0.5 dB acquisition margin, less the 0.8 dB Es/N0 offset) and holds it down to about 3.7 dB. At threshold it still decodes cleanly, but the next 1 dB fade drops lock. With 10+ dB of C/N there is about 6 dB of margin - the link stays solid even if weather degrades it. Lock without margin is asking for trouble during the first rain fade.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -968,14 +968,14 @@ export const scenario4Data: ScenarioData = {
           params: {
             question: 'VT-01 now has both receive and transmit paths active to TIDEMARK-2. What confirms full duplex operation?',
             options: [
-              'Receiver locked with good C/N, HPA enabled with backoff, no alarms - both directions up',
-              'Receiver locked with good C/N, satellite ack received, no alarms - uplink confirmed',
-              'TX indicator green, RX indicator green, no alarms - both chains showing active',
-              'Modem showing "Full Duplex", HPA enabled, no alarms - mode confirms the link',
+              'Receiver locked with good C/N, HPA enabled with backoff, no warning alarms - both directions up',
+              'Receiver locked with good C/N, satellite ack received, no warning alarms - uplink confirmed',
+              'TX indicator green, RX indicator green, no warning alarms - both chains showing active',
+              'Modem showing "Full Duplex", HPA enabled, no warning alarms - mode confirms the link',
             ],
             correctIndex: 0,
             explanation:
-              'Full duplex means simultaneous transmit and receive. We confirm this by: (1) receiver locked with margin - downlink working, (2) HPA enabled with proper backoff - uplink active, (3) no alarms - everything in tolerance. The satellite doesn\'t "acknowledge" uplinks - it\'s a bent-pipe transponder that simply relays what it receives.',
+              'Full duplex means simultaneous transmit and receive. We confirm this by: (1) receiver locked with margin - downlink working, (2) HPA enabled with proper backoff - uplink active, (3) no warning or critical alarms - everything in tolerance. The satellite doesn\'t "acknowledge" uplinks - it\'s a bent-pipe transponder that simply relays what it receives.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -1244,7 +1244,7 @@ export const scenario4Data: ScenarioData = {
       'verify-rx-margin-quiz': {
         text: `
         <p>
-          Exactly. A modem can technically lock at much lower C/N, but the bit error rate would be high. With 10 dB or more, we have comfortable margin - enough headroom to handle rain fade, aging equipment, or any other factor that might degrade the link slightly.
+          Exactly. Right at threshold the modem still decodes, but below about 4 dB it will not hold lock, and there's nothing left for the next fade. With 10 dB or more, we have comfortable margin - enough headroom to handle rain fade, aging equipment, or any other factor that might degrade the link slightly.
         </p>
         <p>
           And that lock is on our own uplink, relayed by TIDEMARK-2. Both directions are up.
@@ -1328,7 +1328,7 @@ export const scenario4Data: ScenarioData = {
       'verify-full-duplex-quiz': {
         text: `
         <p>
-          That's right. Full duplex confirmed by: receiver locked with margin - downlink working. HPA enabled with proper backoff - uplink active. No alarms anywhere - everything in spec.
+          That's right. Full duplex confirmed by: receiver locked with margin - downlink working. HPA enabled with proper backoff - uplink active. No warnings anywhere - everything in spec.
         </p>
         <p>
           TIDEMARK-2 is a bent-pipe transponder - it just relays what it receives. It doesn't send acknowledgments or confirmations. Marcus sees our carrier on the payload side, and our receiver is locked on that same carrier coming back down - that's the round trip. He's just called it from Halifax: full duplex established, switchover complete.

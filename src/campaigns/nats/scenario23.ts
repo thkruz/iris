@@ -124,7 +124,7 @@ export const scenario23Data: ScenarioData = {
       id: 'review-mission-brief',
       nice: ['K0645'],
       title: 'Review the Fault',
-      description: 'Open the brief. The IT ticket NOC-2026-2231 update arrives as a notice after your first diagnosis.',
+      description: 'Open the brief. The IT ticket NOC-2026-2231 update arrives as a notice once you have confirmed the fault on the Dashboard.',
       groundStation: 'VT-01',
       freezesScenarioTimer: true,
       prerequisiteObjectiveIds: [],
@@ -259,7 +259,7 @@ export const scenario23Data: ScenarioData = {
       id: 'no-reboot-quiz',
       nice: ['T1588', 'T0531'],
       title: 'Why Not Reboot It',
-      description: 'IT has not rebooted the controller. Confirm why bypassing beats rebooting right now.',
+      description: 'IT has asked you not to power-cycle the controller (ticket NOC-2026-2231). Confirm why bypassing beats rebooting right now.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['what-automation-did-quiz'],
       timeLimitSeconds: 2 * 60,
@@ -674,7 +674,9 @@ export const scenario23Data: ScenarioData = {
       audioUrl: getAssetUrl('/assets/campaigns/nats/23/intro.mp3'),
     },
     objectives: {
-      'no-reboot-quiz': {
+      // After the first diagnosis, so the IT ask is on screen before "Why Not Reboot It"
+      // (nats-r5-s23-F1, Phase 30 D19); same clip as before, keyed to the earlier step
+      'confirm-fault-dashboard': {
         text: `
         <p>
           <em>[IT ticket NOC-2026-2231 update, {{stationTime}}]</em>

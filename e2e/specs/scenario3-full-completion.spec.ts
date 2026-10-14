@@ -619,6 +619,13 @@ async function configureSpectrumAnalyzer(
     }
   }
 
+  // RBW Auto (Phase 30 D7): the station starts there and only Auto shows the CW beacon;
+  // no checklist row checks it (a set-type row already true at start would never tick)
+  const rbwSelect = page.locator('#sa-rbw');
+  if ((await rbwSelect.count()) > 0) {
+    await rbwSelect.selectOption('auto');
+  }
+
   await page.waitForTimeout(300);
 }
 

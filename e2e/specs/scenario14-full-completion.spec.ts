@@ -233,7 +233,7 @@ const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
     title: 'Log the Hold',
     type: 'quiz',
     correctAnswer:
-      'Heavy rain cell over VT-01, under 1 dB of C/N lost (mostly sky noise). Held TM-1 per SeaLink SLA preference; watched Raw C/N 7 dB, AGC at max, modem unlock - none fired. SeaLink told service held.',
+      'Heavy rain cell over VT-01, about 1 dB of C/N lost (mostly sky noise). Held TM-1 per SeaLink SLA preference; watched Raw C/N 7 dB, AGC at max, modem unlock - none fired. SeaLink told service held.',
   },
 ];
 

@@ -300,14 +300,14 @@ export const scenario5Data: ScenarioData = {
             question:
               "VT-01's own receiver still decodes this carrier cleanly: the Payload Data Integrity card shows BER at about 1e-12 and 0 CRC errors. Yet SeaLink's ships report packet errors. Why?",
             options: [
-              'The ships have much smaller dishes: the interference that leaves our 9 m dish just above threshold pushes them below it',
+              'The ships have much smaller dishes: the same C/N loss that leaves our 9 m dish just above threshold pushes them below it',
               "The errors are in the ships' own equipment: a clean BER at VT-01 proves the satellite link is healthy",
               'The payload card lags the modem by several minutes, so the errors have not reached it yet',
               'The ships listen on a different transponder from the one VT-01 is monitoring',
             ],
             correctIndex: 0,
             explanation:
-              'The interference rides through the transponder to every receiver in the beam, but each receiver adds its own noise. Our 9 m hub dish has a G/T near 30 dB/K; a 1-2 m maritime terminal has 15-20 dB less, so its C/N was always far closer to threshold. This carrier is concatenated-coded - the Payload Data Integrity card shows a Viterbi inner decoder (K=7, rate 3/4) and a Reed-Solomon 223/255 outer code - and that pair has a sharp threshold too: while the Viterbi output errors stay sparse, Reed-Solomon corrects every block and the output is clean; a fraction of a dB lower, the error bursts outrun its correction and packets fail. We are just above that knee (Degraded margin, BER still clean), the ships are below it (packet errors). Watch margin, not BER: by the time the hub shows CRC errors the remotes are down.',
+              'Whatever is pulling the carrier C/N down reaches every receiver in the beam, but each receiver adds its own noise. Our 9 m hub dish has a G/T near 30 dB/K; a 1-2 m maritime terminal has 15-20 dB less, so its C/N was always far closer to threshold. This carrier is concatenated-coded - the Payload Data Integrity card shows a Viterbi inner decoder (K=7, rate 3/4) and a Reed-Solomon 223/255 outer code - and that pair has a sharp threshold too: while the Viterbi output errors stay sparse, Reed-Solomon corrects every block and the output is clean; a fraction of a dB lower, the error bursts outrun its correction and packets fail. We are just above that knee (Degraded margin, BER still clean), the ships are below it (packet errors). Watch margin, not BER: by the time the hub shows CRC errors the remotes are down.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -799,7 +799,7 @@ export const scenario5Data: ScenarioData = {
         Got a trouble ticket from SeaLink - their maritime customer is reporting packet errors and degraded throughput on TIDEMARK-1. This started about two hours ago with no changes on our end.
       </p>
       <p>
-        I checked the basics - antenna is tracking fine, LNB is powered, no alarms on the RF chain. But I haven't had time to dig into the signal quality yet. The spectrum analyzer was last configured for beacon tracking, so you'll need to reconfigure it to see the actual customer signal.
+        I checked the basics - antenna is tracking fine, LNB is powered, nothing faulted on the RF chain. The only warning on the board is a Degraded margin on RX 1, and that's just the customer's complaint showing up on our side. But I haven't had time to dig into the signal quality yet. The spectrum analyzer was last configured for beacon tracking, so you'll need to reconfigure it to see the actual customer signal.
       </p>
       <p>
         This is a priority customer - they're using this link for critical vessel communications in the North Atlantic. The SLA clock is ticking, so let's work efficiently but thoroughly. Read the mission brief to get the full picture, then let me know when you're ready to start troubleshooting.

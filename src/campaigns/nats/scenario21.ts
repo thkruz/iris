@@ -193,8 +193,9 @@ export const scenario21Data: ScenarioData = {
         // carrier and was invisible, nats-s21-F6), and C/I takes Es/N0 down to
         // ~1.5 dB of margin while each burst is on (since 19.3 the jammer also
         // takes its share of the transponder output and adds IM), so
-        // the modem flickers into "Degraded margin" as the carrier and the
-        // jammer fade - the training point is mitigation, not a hard outage.
+        // the jammed margin sits at about 1.1-1.2 dB (Phase 30 fade), just
+        // above the 1.0 dB "Degraded margin" raise line, so the warning rarely
+        // shows - the training point is mitigation, not a hard outage.
         // The notch (1470/8/30) takes most of the jammer out and costs the
         // carrier the energy in that 8 MHz slice. Headless, phase 27
         // (2026-10-07), ME-02 on its own TM-2 carrier: clean 12.9 dB C/N;
