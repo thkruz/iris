@@ -254,6 +254,55 @@ describe('AlarmService', () => {
     expect(next).toBeDefined();
   });
 
+  describe('fixed labels (nats-r5-s05-F1, nats-r5-s14-F2)', () => {
+    type ModemInfo = { hasCarrier: boolean; hasLock: boolean; isLowMargin: boolean; effectiveEsN0_dB: number; requiredEsN0_dB: number };
+    const receiver = (infos: Record<number, ModemInfo>, powered = true) => ({
+      getStatusAlarms: vi.fn().mockReturnValue([alarm('info', 'Signal(s) Detected')]),
+      state: { modems: Object.keys(infos).map((n) => ({ modemNumber: Number(n), isPowered: powered })) },
+      getSignalsInBandwidth: vi.fn((modem: { modemNumber: number }) => infos[modem.modemNumber]),
+    });
+    const locked = (esN0: number, isLowMargin: boolean): ModemInfo => ({ hasCarrier: true, hasLock: true, isLowMargin, effectiveEsN0_dB: esN0, requiredEsN0_dB: 5 });
+
+    it('raises "Degraded margin" for a locked modem inside 1 dB of Required, with the Es/N0 in the detail', () => {
+      const station = gs({ state: { id: 'VT-01', isOperational: true }, receivers: [receiver({ 1: locked(5.6, true) }) as any] });
+      const degraded = AlarmService.getAlarms(station as any).find((a) => a.message === 'Degraded margin');
+      expect(degraded).toEqual(expect.objectContaining({ severity: 'warning', equipmentType: 'RX', equipmentIndex: 0 }));
+      expect(degraded?.detail).toBe('Modem 1: Es/N0 5.6 dB, need 5.0 dB');
+    });
+
+    it('raises nothing for a healthy margin, an unlocked modem or a powered-off modem', () => {
+      const healthy = gs({ receivers: [receiver({ 1: locked(12, false) }) as any] });
+      const unlocked = gs({ receivers: [receiver({ 1: { ...locked(4, false), hasLock: false } }) as any] });
+      const off = gs({ receivers: [receiver({ 1: locked(5.6, true) }, false) as any] });
+      for (const station of [healthy, unlocked, off]) {
+        expect(AlarmService.getAlarms(station as any).map((a) => a.message)).toEqual(['Signal(s) Detected']);
+      }
+    });
+
+    it('keeps one label while the live value moves, so the raise time holds', () => {
+      AlarmService.destroy();
+      const infos = { 1: locked(5.6, true) };
+      const station = gs({ state: { id: 'VT-01', isOperational: true }, receivers: [receiver(infos) as any] });
+      (Date.now as Mock).mockReturnValue(5_000);
+      expect(AlarmService.getAlarms(station as any)[0].raisedAtMs).toBe(5_000);
+      infos[1] = locked(5.3, true);
+      (Date.now as Mock).mockReturnValue(9_000);
+      const [first] = AlarmService.getAlarms(station as any);
+      expect(first.message).toBe('Degraded margin');
+      expect(first.detail).toBe('Modem 1: Es/N0 5.3 dB, need 5.0 dB');
+      expect(first.raisedAtMs).toBe(5_000);
+      AlarmService.destroy();
+    });
+
+    it('labels the rain-fade alarm "RAIN FADE" for its life and moves the depth into the detail', () => {
+      const antenna = { getStatusAlarms: vi.fn().mockReturnValue([alarm('info', 'RAIN FADE (0.5 dB)')]) };
+      const station = gs({ antennas: [antenna] });
+      expect(AlarmService.getAlarms(station as any)[0]).toEqual(expect.objectContaining({ message: 'RAIN FADE', detail: 'fade 0.5 dB' }));
+      antenna.getStatusAlarms.mockReturnValue([alarm('info', 'RAIN FADE (0.7 dB)')]);
+      expect(AlarmService.getAlarms(station as any)[0]).toEqual(expect.objectContaining({ message: 'RAIN FADE', detail: 'fade 0.7 dB' }));
+    });
+  });
+
   describe('getAlarms (per-station, unfiltered)', () => {
     const station = () =>
       gs({

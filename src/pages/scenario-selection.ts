@@ -341,22 +341,16 @@ export class ScenarioSelectionPage extends BasePage {
           </div>
         `;
     } else if (!isDisabledOrLocked) {
-      // Phase 29 D16 (nats-r4-s24-F2): a completed scenario (the card says
-      // Completed) offers PLAY AGAIN first, RESTART LEVEL as the secondary
-      // when a checkpoint is left over, and never CONTINUE
+      // A completed scenario (the card says Completed) offers PLAY AGAIN
+      // only: never CONTINUE (Phase 29 D16, nats-r4-s24-F2) and never RESTART
+      // LEVEL, which implies an unfinished run (nats-r5-s24-F1). Both start
+      // fresh. RESTART LEVEL is for a checkpoint on an uncompleted scenario.
       if (hasEverCompleted || isCurrentlyCompleted) {
         actionButtons = `
           <div class="scenario-checkpoint-actions">
           <button type="button" class="btn-play-again" data-scenario-id="${scenario.id}" data-scenario-url="${scenario.url}">
             Play Again
           </button>
-          ${
-            hasCheckpoint
-              ? `<button type="button" class="btn-start-fresh" data-scenario-id="${scenario.id}">
-            Restart Level
-          </button>`
-              : ''
-          }
           </div>
         `;
       } else if (hasCheckpoint) {

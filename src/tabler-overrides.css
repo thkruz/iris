@@ -2134,6 +2134,13 @@ body.campaign-ccs .app-shell-page::after {
   padding-bottom: 0.25rem;
 }
 
+/* A switch label inside a group is as wide as its text, so a click in the
+   empty space to its right does not toggle the switch (the BUC Mute label
+   spanned 315 px, Phase 30). */
+.metric-group .form-check.form-switch .form-check-label {
+  width: fit-content;
+}
+
 /* Individual metric row within a group */
 .metric-row {
   display: flex;

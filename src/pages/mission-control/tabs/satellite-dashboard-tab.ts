@@ -70,10 +70,6 @@ export class SatelliteDashboardTab extends BaseElement {
                   <span class="fw-bold font-monospace">${this.satellite.noradId}</span>
                 </div>
                 ${this.renderLookAngles_()}
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <span class="text-muted small">Rotation:</span>
-                  <span id="sat-rotation" class="fw-bold font-monospace">${this.satellite.rotation.toFixed(1)}&deg;</span>
-                </div>
                 <hr class="my-2" />
                 <div class="d-flex justify-content-between align-items-center">
                   <span class="text-muted small">Health:</span>
@@ -213,6 +209,10 @@ export class SatelliteDashboardTab extends BaseElement {
           <span class="text-muted small">Elevation:</span>
           <span id="sat-elevation" class="fw-bold font-monospace">${this.satellite.el.toFixed(1)}&deg;</span>
         </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted small">Rotation:</span>
+          <span id="sat-rotation" class="fw-bold font-monospace">${this.satellite.rotation.toFixed(1)}&deg;</span>
+        </div>
       `;
     }
 
@@ -223,13 +223,17 @@ export class SatelliteDashboardTab extends BaseElement {
             <span class="text-muted small">Az / El from ${id}:</span>
             <span id="sat-look-angles-${id}" data-look-station="${id}" class="sat-look-angles fw-bold font-monospace">--</span>
           </div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small">Polarization from ${id}:</span>
+            <span id="sat-polarization-${id}" data-pol-station="${id}" class="sat-polarization fw-bold font-monospace">--</span>
+          </div>
         `
       )
       .join('');
   }
 
   /** Every scenario ground station with an antenna to see the satellite from */
-  private lookAngleStations_(): { id: string; antenna: { viewOf(sat: Satellite): { az: number; el: number } } }[] {
+  private lookAngleStations_(): { id: string; antenna: { viewOf(sat: Satellite): { az: number; el: number; rotation?: number } } }[] {
     const stations = SimulationManager.getInstance().groundStations ?? [];
 
     return stations.flatMap((gs) => {
@@ -244,6 +248,11 @@ export class SatelliteDashboardTab extends BaseElement {
       if (!el) continue;
       const view = antenna.viewOf(this.satellite);
       el.textContent = `${view.az.toFixed(1)}° / ${view.el.toFixed(1)}°`;
+      // The feed skew this station's ACU drives to (geoPolarizationSkewDeg
+      // for a slotted GEO, via the antenna's view): one per station, since
+      // VT-01 and ME-02 need different angles (nats-r5-s03-F2)
+      const polEl = this.dom_?.querySelector<HTMLElement>(`[data-pol-station="${id}"]`);
+      if (polEl) polEl.textContent = typeof view.rotation === 'number' ? `${view.rotation.toFixed(1)}°` : '--';
     }
   }
 

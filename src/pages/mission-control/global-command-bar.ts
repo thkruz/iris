@@ -11,6 +11,7 @@ import { ObjectivesManager } from '@app/objectives/objectives-manager';
 import { LoadoutModal } from '@app/sandbox/loadout-modal';
 import { SandboxLoadoutService } from '@app/sandbox/sandbox-loadout';
 import { ScenarioManager } from '@app/scenario-manager';
+import { AlarmService } from '@app/services/alarm-service';
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
 import { SkipTarget, TimeSkipController } from '@app/simulation/time-skip-controller';
 import { formatAstroClock, formatDtg, formatDurationCompact } from './time-skip-format';
@@ -569,7 +570,7 @@ export class GlobalCommandBar {
 
       this.renderAlarmMessages_(topAlarms, overflowCount);
       // Every name, for the ones "+N more" hides
-      this.messagesEl_.title = alarms.map((a) => `${a.assetId}(${a.equipmentType}${a.equipmentIndex + 1}): ${a.message}`).join('\n');
+      this.messagesEl_.title = alarms.map((a) => GlobalCommandBar.alarmTooltipLine(a)).join('\n');
 
       // Set container background based on severity
       if (severity === 'error') this.alarmBarEl_.classList.add('alarm');
@@ -629,6 +630,15 @@ export class GlobalCommandBar {
   }
 
   /**
+   * One tooltip line: "VT-01(ANT1): RAIN FADE - fade 0.7 dB". The live value
+   * of a fixed-label alarm rides here, not in the ticker label
+   */
+  static alarmTooltipLine(alarm: AggregatedAlarm): string {
+    const detail = AlarmService.detailOf(alarm);
+    return `${alarm.assetId}(${alarm.equipmentType}${alarm.equipmentIndex + 1}): ${alarm.message}${detail ? ` - ${detail}` : ''}`;
+  }
+
+  /**
    * Render alarm messages with overflow indicator
    */
   private renderAlarmMessages_(alarms: AggregatedAlarm[], overflowCount: number): void {
@@ -646,9 +656,12 @@ export class GlobalCommandBar {
     }
 
     // The ticker lists every operational station; the Dashboard and Quick
-    // Stats list the selected one. Say how many of these are elsewhere so the
-    // two counts are not read as a contradiction (s08-F2, s16-F2)
-    const elsewhere = this.selectedStationId_ ? (this.lastAlarms_?.alarms ?? []).filter((a) => a.assetId !== this.selectedStationId_).length : 0;
+    // Stats list the selected one. Say how many other-station alarms the
+    // ticker does not already name, so the two counts are not read as a
+    // contradiction (s08-F2, s16-F2) and a listed row is never counted twice
+    // (nats-r5-s21-F1)
+    const listed = new Set<AggregatedAlarm>(alarms);
+    const elsewhere = this.selectedStationId_ ? (this.lastAlarms_?.alarms ?? []).filter((a) => a.assetId !== this.selectedStationId_ && !listed.has(a)).length : 0;
     if (elsewhere > 0) {
       items.push(`<span class="alarm-overflow alarm-other-stations">(${elsewhere} on other stations)</span>`);
     }

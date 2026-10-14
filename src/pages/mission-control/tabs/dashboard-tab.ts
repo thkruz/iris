@@ -19,6 +19,8 @@ interface AlarmEntry {
   id: string;
   level: 'critical' | 'warning' | 'info';
   message: string;
+  /** Live value behind a fixed label (rain-fade depth, modem Es/N0) */
+  detail?: string;
   timestamp: Date;
 }
 
@@ -412,14 +414,18 @@ export class DashboardTab extends BaseElement {
     return this.groundStation.receivers.reduce((count, rx) => count + (rx.state.availableSignals?.length ?? 0), 0);
   }
 
-  /** Errors and warnings: what the Quick Stats "Alarms" figure counts. Info entries are advisories. */
+  /**
+   * Every listed row, info included: the Quick Stats "Alarms" figure reads the
+   * same number as the ticker badges for this station (nats-r5-s01-F1)
+   */
   private activeAlarmCount_(): number {
-    return this.alarms_.filter((alarm) => alarm.level !== 'info').length;
+    return this.alarms_.length;
   }
 
   private renderAlarmList_(): string {
+    // The placeholder only when the card lists nothing at all, never above a row
     const noAlarms =
-      this.activeAlarmCount_() === 0
+      this.alarms_.length === 0
         ? html`
         <div class="no-alarms">
           <div class="no-alarms-icon">&#x2713;</div>
@@ -433,11 +439,12 @@ export class DashboardTab extends BaseElement {
       this.alarms_
         .map(
           (alarm) => html`
-      <div class="alarm-item">
+      <div class="alarm-item"${alarm.detail ? ` title="${alarm.detail}"` : ''}>
         <span class="alarm-icon ${alarm.level}">
           ${alarm.level === 'critical' ? '&#x26A0;' : alarm.level === 'warning' ? '&#x26A0;' : '&#x2139;'}
         </span>
         <span class="alarm-message">${alarm.message}</span>
+        ${alarm.detail ? html`<span class="alarm-detail">${alarm.detail}</span>` : ''}
         <span class="alarm-time">${this.formatTime_(alarm.timestamp)}</span>
       </div>
     `
@@ -678,20 +685,24 @@ export class DashboardTab extends BaseElement {
     const rfFe = this.groundStation.rfFrontEnds[0];
     if (!rfFe) return;
 
+    // A powered-off LNB has no lock and no noise figure: read it as the LNB
+    // card does ("--", grey), not as an unlocked 290 K unit (nats-r5-s12-F1)
+    const lnbPowered = rfFe.lnbModule?.state.isPowered ?? false;
+
     // LNB Lock
     const lnbLockEl = this.domCache_.get('lnb-lock');
     if (lnbLockEl && rfFe.lnbModule) {
       const led = lnbLockEl.querySelector('.card-alarm-led');
       const text = lnbLockEl.querySelector('.small');
-      const isLocked = rfFe.lnbModule.state.isExtRefLocked;
+      const isLocked = lnbPowered && rfFe.lnbModule.state.isExtRefLocked;
       if (led) led.className = `card-alarm-led ${isLocked ? 'success' : 'off'}`;
-      if (text) text.textContent = isLocked ? 'LOCKED' : 'UNLOCKED';
+      if (text) text.textContent = lnbPowered ? (isLocked ? 'LOCKED' : 'UNLOCKED') : 'OFF';
     }
 
     // LNB Noise Temp
     const noiseEl = this.domCache_.get('lnb-noise');
     if (noiseEl && rfFe.lnbModule) {
-      noiseEl.textContent = `${rfFe.lnbModule.state.noiseTemperature.toFixed(0)} K`;
+      noiseEl.textContent = lnbPowered ? `${rfFe.lnbModule.state.noiseTemperature.toFixed(0)} K` : '--';
     }
 
     // Filter Bandwidth
@@ -768,13 +779,18 @@ export class DashboardTab extends BaseElement {
       activeEl.textContent = `${activeModems}/${totalModems} Modems`;
     }
 
-    // Best SNR
+    // Best SNR: the modem card's Effective C/N (after the ADC penalty), so the
+    // Dashboard and the modem never quote two numbers for one carrier
+    // (Phase 30 D8, nats-r5-s07-F1)
     const snrEl = this.domCache_.get('rx-snr');
     if (snrEl) {
       let bestSnr: number | null = null;
       owned.forEach(({ rx, modem }) => {
-        const snr = rx.getSnrForModem(modem);
-        if (snr !== null && (bestSnr === null || snr > bestSnr)) {
+        if (!modem.isPowered) return;
+        const info = rx.getSignalsInBandwidth(modem);
+        if (!info.hasCarrier) return;
+        const snr = info.effectiveCnRatio_dB ?? info.cnRatio_dB;
+        if (Number.isFinite(snr) && (bestSnr === null || snr > bestSnr)) {
           bestSnr = snr;
         }
       });
@@ -857,6 +873,7 @@ export class DashboardTab extends BaseElement {
         id: `${alarm.equipmentType}-${alarm.equipmentIndex}-${index}`,
         level: ALARM_LEVEL[alarm.severity],
         message: alarm.message,
+        detail: alarm.detail,
         timestamp: new Date(alarm.raisedAtMs ?? nowMs),
       });
     });

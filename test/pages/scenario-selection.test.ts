@@ -381,9 +381,9 @@ describe('ScenarioSelectionPage', () => {
     };
     const buttons = (el: HTMLElement): string[] => Array.from(el.querySelectorAll('.scenario-checkpoint-actions button')).map((b) => b.textContent!.trim());
 
-    it('offers PLAY AGAIN, then RESTART LEVEL, on a completed scenario with a checkpoint, never CONTINUE', () => {
-      expect(buttons(renderCard({ completedAt: true, score: false, checkpoint: true }))).toEqual(['Play Again', 'Restart Level']);
-      expect(buttons(renderCard({ completedAt: true, score: true, checkpoint: true }))).toEqual(['Play Again', 'Restart Level']);
+    it('offers PLAY AGAIN only on a completed scenario, even with a checkpoint left over: no RESTART LEVEL, never CONTINUE (nats-r5-s24-F1)', () => {
+      expect(buttons(renderCard({ completedAt: true, score: false, checkpoint: true }))).toEqual(['Play Again']);
+      expect(buttons(renderCard({ completedAt: true, score: true, checkpoint: true }))).toEqual(['Play Again']);
     });
 
     it('offers PLAY AGAIN alone on a completed scenario without a checkpoint', () => {

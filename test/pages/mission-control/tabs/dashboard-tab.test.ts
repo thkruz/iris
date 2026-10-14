@@ -243,6 +243,18 @@ describe('DashboardTab', () => {
       expect(rxEl?.textContent).toBe('2');
     });
 
+    it("Best SNR is the modem card's Effective C/N, not the raw C/N (Phase 30 D8, nats-r5-s07-F1)", () => {
+      tab.dispose();
+      document.body.innerHTML = '';
+      const rx = mockGroundStation.receivers[0] as unknown as { getSignalsInBandwidth: ReturnType<typeof vi.fn> };
+      rx.getSignalsInBandwidth.mockReturnValue({ hasCarrier: true, hasLock: true, cnRatio_dB: 50.7, effectiveCnRatio_dB: 39.5 });
+      containerEl = document.createElement('div');
+      containerEl.id = 'dashboard-container';
+      document.body.appendChild(containerEl);
+      tab = new DashboardTab(mockGroundStation, 'dashboard-container');
+      expect(document.querySelector('#rx-snr')?.textContent).toBe('39.5 dB');
+    });
+
     it('should update active transmitters count', () => {
       const txEl = document.querySelector('#active-transmitters');
       expect(txEl?.textContent).toBe('1');
@@ -304,6 +316,17 @@ describe('DashboardTab', () => {
       updateHandler();
     };
 
+    it('RF Chain RX reads LNB OFF and Noise Temp -- while the LNB is powered off (nats-r5-s12-F1)', () => {
+      const lnb = (mockGroundStation.rfFrontEnds[0] as any).lnbModule;
+      lnb.state.isPowered = false;
+      lnb.state.isExtRefLocked = false;
+      lnb.state.noiseTemperature = 290;
+      resync(45_000_000);
+      expect(document.querySelector('#lnb-lock .small')?.textContent).toBe('OFF');
+      expect(document.querySelector('#lnb-lock .card-alarm-led')?.className).toContain('off');
+      expect(document.querySelector('#lnb-noise')?.textContent).toBe('--');
+    });
+
     it('GPSDO warm-up reads what the GPS Timing tab reads (nats-r4-s01-F3)', () => {
       expect(document.querySelector('#gpsdo-warmup')?.textContent).toBe('READY');
     });
@@ -336,7 +359,7 @@ describe('DashboardTab', () => {
       updateHandler();
     };
 
-    it('lists every module alarm for the station, most severe first, and counts errors and warnings', () => {
+    it('lists every module alarm for the station, most severe first, and counts every listed row', () => {
       (mockGroundStation.receivers[0].getStatusAlarms as Mock).mockReturnValue([{ severity: 'warning', message: 'RX lost lock' }]);
       (mockGroundStation.antennas[0].getStatusAlarms as Mock).mockReturnValue([
         { severity: 'info', message: 'LOOPBACK ENABLED' },
@@ -349,18 +372,35 @@ describe('DashboardTab', () => {
 
       const messages = [...document.querySelectorAll('#alarm-list .alarm-message')].map((el) => el.textContent);
       expect(messages).toEqual(['Modem 1 Faulted', 'LNB not locked', 'RX lost lock', 'LOOPBACK ENABLED']);
-      expect(document.querySelector('#alarm-count')?.textContent).toBe('3');
+      expect(document.querySelector('#alarm-count')?.textContent).toBe('4');
       expect(document.querySelector('#alarm-list .no-alarms')).toBeNull();
     });
 
-    it('says "No active alarms" when only advisories remain, and lists them', () => {
+    it('lists an advisory without the "No active alarms" placeholder and counts it, as the ticker badge does (nats-r5-s01-F1)', () => {
       (mockGroundStation.antennas[0].getStatusAlarms as Mock).mockReturnValue([{ severity: 'info', message: 'LOOPBACK ENABLED' }]);
 
       sync(40_000_000);
 
-      expect(document.querySelector('#alarm-list .no-alarms')?.textContent).toContain('No active alarms');
+      expect(document.querySelector('#alarm-list .no-alarms')).toBeNull();
       expect(document.querySelector('#alarm-list .alarm-message')?.textContent).toBe('LOOPBACK ENABLED');
+      expect(document.querySelector('#alarm-count')?.textContent).toBe('1');
+    });
+
+    it('says "No active alarms" only when the card lists no rows', () => {
+      sync(41_000_000);
+
+      expect(document.querySelector('#alarm-list .no-alarms')?.textContent).toContain('No active alarms');
+      expect(document.querySelector('#alarm-list .alarm-item')).toBeNull();
       expect(document.querySelector('#alarm-count')?.textContent).toBe('0');
+    });
+
+    it('shows a fixed-label alarm with its live value in the detail (nats-r5-s14-F2)', () => {
+      (mockGroundStation.antennas[0].getStatusAlarms as Mock).mockReturnValue([{ severity: 'info', message: 'RAIN FADE (0.6 dB)' }]);
+
+      sync(42_000_000);
+
+      expect(document.querySelector('#alarm-list .alarm-message')?.textContent).toBe('RAIN FADE');
+      expect(document.querySelector('#alarm-list .alarm-detail')?.textContent).toBe('fade 0.6 dB');
     });
 
     it('stamps each alarm on the station clock when first raised, not the wall clock (nats-r3-s08-F2)', () => {

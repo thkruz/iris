@@ -1,11 +1,21 @@
 import { GroundStation } from '@app/assets/ground-station/ground-station';
 import { AlarmStatus } from '@app/equipment/base-equipment';
+import { describeEsN0 } from '@app/equipment/receiver/rx-signal-quality';
 import { EventBus } from '@app/events/event-bus';
 import { AggregatedAlarm, AlarmStateChangedData, Events } from '@app/events/events';
 import { SimClock } from '@app/simulation/sim-clock';
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
 import { SimulationManager } from '@app/simulation/simulation-manager';
 import { Milliseconds } from 'ootk';
+
+/**
+ * An alarm with a fixed label and a live value beside it: `message` names
+ * the alarm for its whole life, `detail` carries the number that moves
+ * (Dashboard detail text, ticker tooltip)
+ */
+export interface AlarmWithDetail extends AggregatedAlarm {
+  detail?: string;
+}
 
 /**
  * AlarmService - Centralized alarm aggregation service
@@ -49,7 +59,7 @@ export class AlarmService {
   }
 
   private pollAndAggregate_(): void {
-    const alarms: AggregatedAlarm[] = [];
+    const alarms: AlarmWithDetail[] = [];
     const sim = SimulationManager.getInstance();
 
     for (const gs of sim.groundStations) {
@@ -102,7 +112,7 @@ export class AlarmService {
    * as on the ticker.
    * @param station the ground station, or its state.id
    */
-  static getAlarms(station: GroundStation | string): AggregatedAlarm[] {
+  static getAlarms(station: GroundStation | string): AlarmWithDetail[] {
     const gs = typeof station === 'string' ? SimulationManager.getInstance().groundStations.find((g) => g.state.id === station) : station;
     if (!gs) return [];
     const alarms = AlarmService.collectGroundStationAlarms_(gs);
@@ -111,7 +121,7 @@ export class AlarmService {
   }
 
   /** Stable sort: error, warning, info (success last; never collected). */
-  private static sortBySeverity_(alarms: AggregatedAlarm[]): AggregatedAlarm[] {
+  private static sortBySeverity_<T extends AggregatedAlarm>(alarms: T[]): T[] {
     const rank: Record<AggregatedAlarm['severity'], number> = { error: 0, warning: 1, info: 2, success: 3 };
     return alarms
       .map((alarm, index) => ({ alarm, index }))
@@ -119,11 +129,11 @@ export class AlarmService {
       .map(({ alarm }) => alarm);
   }
 
-  private static collectGroundStationAlarms_(gs: GroundStation): AggregatedAlarm[] {
+  private static collectGroundStationAlarms_(gs: GroundStation): AlarmWithDetail[] {
     // Skip non-operational locations
     if (!gs.state.isOperational) return [];
 
-    const alarms: AggregatedAlarm[] = [];
+    const alarms: AlarmWithDetail[] = [];
     const assetId = gs.state.id;
 
     // Antennas
@@ -186,9 +196,57 @@ export class AlarmService {
           });
         }
       }
+      const degraded = AlarmService.degradedMarginAlarm_(rx);
+      if (degraded) {
+        alarms.push({ ...degraded, assetId, equipmentType: 'RX', equipmentIndex: idx });
+      }
     });
 
-    return alarms;
+    return alarms.map(AlarmService.fixLabel_);
+  }
+
+  /**
+   * "Degraded margin" warning for a receiver whose powered modem is locked
+   * with less than 1 dB of Es/N0 over Required (nats-r5-s05-F1). Uses the
+   * lock tracker's own low-margin flag, so it raises below 1.0 dB of margin
+   * and clears at 1.5 dB, the same hysteresis as the modem's status bar. The
+   * label is fixed for its life; the live Es/N0 rides in the detail.
+   */
+  private static degradedMarginAlarm_(rx: GroundStation['receivers'][number]): Pick<AlarmWithDetail, 'severity' | 'message' | 'detail'> | null {
+    const modems = rx.state?.modems ?? [];
+    if (typeof rx.getSignalsInBandwidth !== 'function') return null;
+    const details: string[] = [];
+    for (const modem of modems) {
+      if (!modem.isPowered) continue;
+      const info = rx.getSignalsInBandwidth(modem);
+      if (info.hasCarrier && info.hasLock && info.isLowMargin) {
+        details.push(`Modem ${modem.modemNumber}: ${describeEsN0(info)}`);
+      }
+    }
+    if (details.length === 0) return null;
+    return { severity: 'warning', message: AlarmService.DEGRADED_MARGIN_LABEL, detail: details.join('; ') };
+  }
+
+  /**
+   * Alarms whose label must not move while they are up: an equipment message
+   * "RAIN FADE (0.6 dB)" becomes the label "RAIN FADE" with "fade 0.6 dB" in
+   * the detail, so the ticker and the Dashboard keep one name for it while
+   * the depth refreshes in the tooltip (nats-r5-s14-F2)
+   */
+  private static fixLabel_(alarm: AlarmWithDetail): AlarmWithDetail {
+    const rain = /^RAIN FADE \((.+)\)$/u.exec(alarm.message);
+    if (rain) return { ...alarm, message: AlarmService.RAIN_FADE_LABEL, detail: `fade ${rain[1]}` };
+    return alarm;
+  }
+
+  /** Fixed label of the receiver low-margin warning */
+  static readonly DEGRADED_MARGIN_LABEL = 'Degraded margin';
+  /** Fixed label of the antenna rain-fade alarm */
+  static readonly RAIN_FADE_LABEL = 'RAIN FADE';
+
+  /** The live value behind an alarm's fixed label ("Modem 1: Es/N0 5.6 dB, need 5.0 dB"), if it has one */
+  static detailOf(alarm: AggregatedAlarm): string | undefined {
+    return 'detail' in alarm && typeof alarm.detail === 'string' ? alarm.detail : undefined;
   }
 
   private static isDisplayableAlarm_(alarm: AlarmStatus): boolean {

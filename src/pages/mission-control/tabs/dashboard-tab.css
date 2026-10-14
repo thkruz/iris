@@ -94,6 +94,12 @@
   font-size: 0.8125rem;
 }
 
+.alarm-detail {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  color: var(--mc-text-secondary);
+}
+
 .alarm-time {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.6875rem;

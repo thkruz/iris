@@ -224,6 +224,17 @@ describe('HPAAdapter', () => {
       expect(display.className).toContain('status-badge-warning');
     });
 
+    it('reads POWER and OVERDRIVE as "--" with a grey badge while output is disabled (nats-r5-s09-F1)', () => {
+      mockHpaModule.state.isHpaEnabled = false;
+      mockHpaModule.outputSignals = [];
+      emitHpaChanged();
+
+      expect((containerEl.querySelector('#hpa-power-watts') as HTMLElement).textContent).toBe('-- W');
+      const overdrive = containerEl.querySelector('#hpa-overdrive-status') as HTMLElement;
+      expect(overdrive.textContent).toBe('--');
+      expect(overdrive.className).toContain('status-badge-off');
+    });
+
     it('should show placeholder values when powered off', () => {
       mockHpaModule.state.isPowered = false;
       emitHpaChanged();

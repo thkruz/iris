@@ -710,5 +710,26 @@ describe('SatelliteDashboardTab with Traffic Control', () => {
         (SimulationManager.getInstance as Mock).mockReturnValue({ groundStations: [] });
       }
     });
+
+    it('lists polarization per station next to its Az / El, with no unlabelled Rotation row (nats-r5-s03-F2)', () => {
+      const view = (rotation: number) => ({ viewOf: vi.fn(() => ({ az: 150, el: 35, rotation })) });
+      (SimulationManager.getInstance as Mock).mockReturnValue({
+        groundStations: [
+          { state: { id: 'VT-01', name: 'Vermont' }, antennas: [view(18.79)] },
+          { state: { id: 'ME-02', name: 'Maine' }, antennas: [view(15.96)] },
+        ],
+      });
+      try {
+        tab.dispose();
+        document.body.innerHTML = '<div id="sat-pol"></div>';
+        tab = new SatelliteDashboardTab(mockSatellite, 'sat-pol');
+
+        const rows = [...document.querySelectorAll('.sat-polarization')].map((el) => `${el.previousElementSibling?.textContent} ${el.textContent}`);
+        expect(rows).toEqual(['Polarization from VT-01: 18.8°', 'Polarization from ME-02: 16.0°']);
+        expect(document.querySelector('#sat-rotation')).toBeNull();
+      } finally {
+        (SimulationManager.getInstance as Mock).mockReturnValue({ groundStations: [] });
+      }
+    });
   });
 });

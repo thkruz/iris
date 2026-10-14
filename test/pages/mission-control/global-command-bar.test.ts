@@ -377,6 +377,36 @@ describe('GlobalCommandBar', () => {
       expect(tooltip).toContain('Signal(s) Detected');
     });
 
+    it('counts only unlisted alarms in "(N on other stations)" (nats-r5-s21-F1)', () => {
+      const handler = (name: string) => mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === name)?.[1];
+      const rx = (assetId: string): AggregatedAlarm => ({ severity: 'info', message: 'Signal(s) Detected', assetId, equipmentType: 'RX', equipmentIndex: 0 });
+
+      handler(Events.ASSET_SELECTED)?.({ type: 'ground-station', id: 'ME-02' });
+      handler(Events.ALARM_STATE_CHANGED)?.({ alarms: [rx('VT-01'), rx('ME-02')], highestSeverity: 'info' });
+      expect(document.querySelector('.alarm-other-stations')).toBeNull();
+
+      handler(Events.ALARM_STATE_CHANGED)?.({
+        alarms: [
+          { severity: 'error', message: 'E1', assetId: 'ME-02', equipmentType: 'RF', equipmentIndex: 0 },
+          { severity: 'error', message: 'E2', assetId: 'ME-02', equipmentType: 'RF', equipmentIndex: 0 },
+          { severity: 'error', message: 'E3', assetId: 'ME-02', equipmentType: 'RF', equipmentIndex: 0 },
+          rx('VT-01'),
+        ],
+        highestSeverity: 'error',
+      });
+      expect(document.querySelector('.alarm-other-stations')?.textContent).toBe('(1 on other stations)');
+    });
+
+    it('keeps a fixed alarm label inline and puts its live value in the tooltip (nats-r5-s14-F2)', () => {
+      const handler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ALARM_STATE_CHANGED)?.[1];
+      const rain = { severity: 'info', message: 'RAIN FADE', detail: 'fade 0.7 dB', assetId: 'VT-01', equipmentType: 'ANT', equipmentIndex: 0 };
+      handler?.({ alarms: [rain], highestSeverity: 'info' });
+
+      expect(document.querySelector('.alarm-item')?.textContent).toContain('VT-01(ANT1): RAIN FADE');
+      expect(document.querySelector('.alarm-item')?.textContent).not.toContain('0.7');
+      expect((document.querySelector('#alarm-messages') as HTMLElement).title).toBe('VT-01(ANT1): RAIN FADE - fade 0.7 dB');
+    });
+
     it('should sort alarms by severity (errors first)', () => {
       const alarmHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ALARM_STATE_CHANGED)?.[1];
 

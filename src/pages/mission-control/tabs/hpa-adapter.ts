@@ -134,10 +134,11 @@ export class HPAAdapter {
       temperatureDisplay.textContent = isPowered ? `${state.temperature.toFixed(1)} °C` : '-- °C';
     }
 
-    // Update overdrive status
+    // Update overdrive status: "--" and grey while off or output disabled,
+    // as the other amplifier readouts (nats-r5-s09-F1)
     const overdriveStatus = this.domCache_.get('overdriveStatus');
     if (overdriveStatus) {
-      if (isPowered) {
+      if (isPowered && state.isHpaEnabled) {
         overdriveStatus.textContent = state.isOverdriven ? 'OVERDRIVE' : 'Normal';
         overdriveStatus.className = state.isOverdriven ? 'status-badge status-badge-warning' : 'status-badge status-badge-good';
       } else {
@@ -183,7 +184,9 @@ export class HPAAdapter {
       set('powerWatts', watts >= 1 ? `${watts.toFixed(0)} W` : `${(watts * 1000).toFixed(0)} mW`);
       this.updatePowerMeter_(state.outputPower);
     } else {
-      set('powerWatts', isPowered ? '0 W' : '-- W');
+      // Output disabled reads "--" like OUTPUT and BACK-OFF; enabled with no
+      // drive is a real 0 W (nats-r5-s09-F1)
+      set('powerWatts', isPowered && state.isHpaEnabled ? '0 W' : '-- W');
       this.clearPowerMeter_();
     }
 
@@ -435,6 +438,7 @@ export class HPAAdapter {
     this.lastStateString = stateStr;
 
     const isPowered = state.isPowered ?? this.hpaModule.state.isPowered;
+    const isEnabled = isPowered && (state.isHpaEnabled ?? this.hpaModule.state.isHpaEnabled);
 
     // Follow the applied back-off unless the player has a pending staged edit
     this.syncStagedFromState_(state.backOff);
@@ -467,10 +471,10 @@ export class HPAAdapter {
     // Update overdrive status
     const overdriveStatus = this.domCache_.get('overdriveStatus');
     if (overdriveStatus) {
-      if (isPowered && state.isOverdriven !== undefined) {
+      if (isEnabled && state.isOverdriven !== undefined) {
         overdriveStatus.textContent = state.isOverdriven ? 'OVERDRIVE' : 'Normal';
         overdriveStatus.className = state.isOverdriven ? 'status-badge status-badge-warning' : 'status-badge status-badge-good';
-      } else if (!isPowered) {
+      } else if (!isEnabled) {
         overdriveStatus.textContent = '--';
         overdriveStatus.className = 'status-badge status-badge-off';
       }

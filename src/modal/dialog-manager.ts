@@ -6,6 +6,7 @@ import { CountdownHold } from '@app/objectives/countdown-hold';
 import SoundManager from '@app/sound/sound-manager';
 import { Character, CharacterCompany, CharacterNames, CharacterTitles, Emotion, getCharacterAvatarUrl } from './character-enum';
 import { DialogHistoryManager } from './dialog-history-manager';
+import { type DismissCause, DismissInputGuard } from './dismiss-input-guard';
 import './dialog-manager.css';
 import { fillDialogTokens } from './dialog-tokens';
 
@@ -32,6 +33,8 @@ declare global {
   }
 }
 
+const dismissInputGuard = new DismissInputGuard();
+
 export class DialogManager {
   /**
    * How long a new dialog ignores click/Space/Enter, ms. Dialogs open at
@@ -40,6 +43,16 @@ export class DialogManager {
    * fade-in plus a beat.
    */
   static readonly REVEAL_DELAY_MS = 600;
+
+  /**
+   * After a dismissal, the next keyup and the next pointer release/click within
+   * this window are swallowed, so the key or click that closed the dialog
+   * cannot also operate the control underneath (Phase 30 D6).
+   */
+  static readonly DISMISS_GUARD_MS = 300;
+
+  /** Longest a hold-to-skip press that outlived its dialog keeps its release swallowed */
+  static readonly HELD_RELEASE_GUARD_MS = 10_000;
 
   private static instance: DialogManager;
   private dialogElement: HTMLDivElement | null = null;
@@ -87,6 +100,9 @@ export class DialogManager {
     // leaves the queue), so a notice header never reads in the future
     // (nats-r4-s21-F1); history keeps the stamped text
     const shownText = fillDialogTokens(text);
+
+    // The new overlay covers the page: input meant for the last one lands on it
+    dismissInputGuard.disarm();
 
     // Objective countdowns stop while a dialog is on screen (released when the queue drains)
     CountdownHold.set('dialog', true);
@@ -181,7 +197,7 @@ export class DialogManager {
     if (e.key !== ' ' && e.key !== 'Enter') return;
     e.preventDefault();
     e.stopPropagation();
-    this.hide();
+    this.dismiss_('key');
   }
 
   private attachHoldToSkipListeners(): void {
@@ -204,7 +220,7 @@ export class DialogManager {
       skipIndicator.classList.remove('dialog-skip-visible');
       // A release that didn't finish the hold is a click: close once revealed
       if (wasPressed && this.isRevealed_) {
-        this.hide();
+        this.dismiss_('click');
       }
     };
 
@@ -251,8 +267,8 @@ export class DialogManager {
       }
 
       if (progress >= 1) {
-        // Hold completed - close dialog
-        this.hide();
+        // Hold completed - close dialog; the press is still down
+        this.dismiss_('hold');
       } else {
         this.animationFrameId = requestAnimationFrame(updateProgress);
       }
@@ -288,6 +304,19 @@ export class DialogManager {
     }
   }
 
+  /**
+   * Close the dialog because of the operator's input, and swallow the rest of
+   * that input (the keyup, or the click/release) so it cannot operate the
+   * control under the dialog (Phase 30 D6)
+   */
+  private dismiss_(cause: DismissCause): void {
+    if (!this.dialogElement) {
+      return;
+    }
+    dismissInputGuard.arm(cause, DialogManager.DISMISS_GUARD_MS, DialogManager.HELD_RELEASE_GUARD_MS);
+    this.hide();
+  }
+
   hide(): void {
     if (!this.dialogElement) return;
 
@@ -310,6 +339,12 @@ export class DialogManager {
 
     // Remove event listeners
     const overlay = this.dialogElement;
+
+    // Leave focus on the page body rather than on the fading overlay, so no
+    // key reaches a control until the operator picks one
+    if (document.activeElement instanceof HTMLElement && overlay.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
     const listeners = (overlay as any)._holdListeners;
     if (listeners) {
       overlay.removeEventListener('mousedown', listeners.mousedown);

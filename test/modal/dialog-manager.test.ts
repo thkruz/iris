@@ -382,6 +382,94 @@ describe('DialogManager', () => {
     });
   });
 
+  describe('Dismissal input does not reach the page (Phase 30 D6)', () => {
+    const show = () => {
+      dialogManager.show('Test', Character.CHARLIE_BROOKS, '/audio/test.mp3');
+      vi.advanceTimersByTime(DialogManager.REVEAL_DELAY_MS);
+      return document.querySelector('.dialog-overlay') as HTMLElement;
+    };
+    const toggleUnderneath = () => {
+      const toggle = document.createElement('input');
+      toggle.type = 'checkbox';
+      toggle.id = 'buc-mute';
+      document.body.appendChild(toggle);
+      return toggle;
+    };
+
+    it('swallows the keyup of the Space that closed it and leaves focus on the body', () => {
+      const toggle = toggleUnderneath();
+      const keyupSpy = vi.fn();
+      toggle.addEventListener('keyup', keyupSpy);
+      const overlay = show();
+      expect(document.activeElement).toBe(overlay);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+      expect(document.activeElement).toBe(document.body);
+      const keyup = new KeyboardEvent('keyup', { key: ' ', bubbles: true, cancelable: true });
+      toggle.dispatchEvent(keyup);
+      expect(keyupSpy).not.toHaveBeenCalled();
+      expect(keyup.defaultPrevented).toBe(true);
+      // Only that one keyup: the next one goes through
+      toggle.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true }));
+      expect(keyupSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('swallows the click that follows a click-to-continue, then lets clicks through', () => {
+      const toggle = toggleUnderneath();
+      const overlay = show();
+      overlay.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      overlay.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      expect(dialogManager.currentAudioUrl).toBeNull();
+      toggle.click();
+      expect(toggle.checked).toBe(false);
+      toggle.click();
+      expect(toggle.checked).toBe(true);
+    });
+
+    it('a hold-to-skip press released after the dialog is gone does not operate the control under it', () => {
+      const toggle = toggleUnderneath();
+      const overlay = show();
+      overlay.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      // The hold completes (250 ms with no audio) and the overlay is removed
+      vi.advanceTimersByTime(1000);
+      expect(dialogManager.currentAudioUrl).toBeNull();
+      expect(document.querySelector('.dialog-overlay')).toBeNull();
+      // The operator lets go over the BUC mute toggle
+      const mouseupSpy = vi.fn();
+      toggle.addEventListener('mouseup', mouseupSpy);
+      toggle.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      toggle.click();
+      expect(mouseupSpy).not.toHaveBeenCalled();
+      expect(toggle.checked).toBe(false);
+      // The next deliberate click works
+      toggle.click();
+      expect(toggle.checked).toBe(true);
+    });
+
+    it('a keyboard dismissal never blocks a click, and the click guard expires after its window', () => {
+      const toggle = toggleUnderneath();
+      show();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      toggle.click();
+      expect(toggle.checked).toBe(true);
+
+      vi.advanceTimersByTime(400);
+      const overlay = show();
+      overlay.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      overlay.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      vi.advanceTimersByTime(DialogManager.DISMISS_GUARD_MS + 1);
+      toggle.click();
+      expect(toggle.checked).toBe(false);
+    });
+
+    it('a programmatic hide swallows nothing', () => {
+      const toggle = toggleUnderneath();
+      show();
+      dialogManager.hide();
+      toggle.click();
+      expect(toggle.checked).toBe(true);
+    });
+  });
+
   describe('Auto Close Dialogs Mode', () => {
     it('should immediately hide dialog when AUTO_CLOSE_DIALOGS is true', () => {
       window.AUTO_CLOSE_DIALOGS = true;
