@@ -103,7 +103,11 @@ export const scenario5Data: ScenarioData = {
             // The notch takes it back to ~4.7 dB (the spike's share of
             // the transponder output stays). At 26 dBm (before 19.5) it buried
             // the carrier and the modem lost lock outright (nats-s05-F1).
-            power: 95.0 as dBm,
+            // Phase 29 gate: 95.0 -> 94.85 dBm. The derived TM-1 skew (+18.8,
+            // was an authored 14) cost the carrier ~0.11 dB against the spike
+            // (mean margin 0.44 -> 0.33, under the 0.5 dB re-acquire point, so the
+            // browser modem never locked); 94.85 restores 0.28-0.78 dB, mean 0.45.
+            power: 94.85 as dBm,
             bandwidth: 1e6 as Hertz, // Narrowband spike
             modulation: 'QPSK' as ModulationType,
             fec: '3/4' as FECType,
@@ -118,7 +122,7 @@ export const scenario5Data: ScenarioData = {
         {
           az: 153.1 as Degrees, // 53 W (Phase 28 D4)
           el: 35.1 as Degrees,
-          rotation: 14 as Degrees,
+          // rotation: derived from geometry (Phase 29 D8, geoPolarizationSkewDeg)
           frequencyOffset: 2.225e9 as Hertz, // Legacy fallback
           lookAnglesFrom: VERMONT_LOOK_ANGLE_SITE,
           // The spike and the carrier fade independently; at the default +/-1 dB
@@ -585,16 +589,16 @@ export const scenario5Data: ScenarioData = {
           type: 'status-check',
           description: 'Understand AGC Impact',
           params: {
-            question: 'The AGC card shows the gain cut by a few dB since the spike appeared. Why has our C/N dropped?',
+            question: "The AGC card shows the current GAIN and INPUT, and the spike's power is part of that input. Why has our C/N dropped?",
             options: [
-              "The spike's own power sits inside our passband and takes a share of the transponder's output; the AGC gain cut is only the symptom",
-              'The AGC cut its gain, and turning the gain down lowers the C/N of our wanted carrier',
+              "The spike's own power sits inside our passband and takes a share of the transponder's output; the AGC gain is only a symptom",
+              'The AGC trimmed its gain, and turning the gain down lowers the C/N of our wanted carrier',
               'The spike is overloading the LNB and pushing the front end into compression',
               'The spike sits exactly on the carrier center frequency and corrupts the symbols',
             ],
             correctIndex: 0,
             explanation:
-              "The AGC levels total power: with the spike in the passband its Input rose, so it cut its Gain to hold the Output at -30 dBm. That gain applies to our carrier and the noise alike, so on its own it cannot change C/N - it is the symptom of more total power, not the cause of the loss. The C/N loss has two real causes: the spike's power lands inside our 36 MHz and the demodulator counts it as noise (C/(N+I)), and it shares the transponder's output power, so our carrier comes down weaker than before. The spike is not on our centre - the analyzer puts it at 1,515 MHz, near our lower edge, not 1,532 - and the LNB is nowhere near compression.",
+              "The AGC levels total power: with the spike in the passband its Input is a little higher, so its Gain sits a little lower to hold the Output at -30 dBm (the spike is worth well under a dB of gain: notch it and the Gain comes back by about 0.6 dB). That gain applies to our carrier and the noise alike, so on its own it cannot change C/N - it is the symptom of more total power, not the cause of the loss. The C/N loss has two real causes: the spike's power lands inside our 36 MHz and the demodulator counts it as noise (C/(N+I)), and it shares the transponder's output power, so our carrier comes down weaker than before. The spike is not on our centre - the analyzer puts it at 1,515 MHz, near our lower edge, not 1,532 - and the LNB is nowhere near compression.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -628,7 +632,7 @@ export const scenario5Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              "A notch filter is the surgical solution. It removes the narrow interference spike, plus a sliver of our own carrier's lower edge where the spike sits, while the rest of our 36 MHz signal passes untouched. A narrower bandpass would sacrifice our own bandwidth. Increasing power wouldn't help the C/N ratio and would violate coordination agreements. Contacting the operator is the long-term solution, but we need an immediate fix for the customer.",
+              "A notch filter is the surgical solution. It removes the narrow interference spike, plus a sliver of our own carrier's lower edge where the spike sits, while the rest of our 36 MHz signal passes untouched. A narrower bandpass would sacrifice our own bandwidth. Increasing power wouldn't help the C/N ratio and would violate coordination agreements. Contacting the operator is the long-term fix, and the only one that helps the ships, but waiting does nothing for our own receiver now.",
             pointPenalty: 5,
             preserveOptionOrder: true,
           },
@@ -743,7 +747,7 @@ export const scenario5Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              "The notch removes the spike from our receive chain, so C/N climbs back above the 8 dB service minimum, to about 9-10 dB, and the modem reads good margin again. It does not reach the 14 dB nominal: the spike is still in the transponder, taking its share of the output power and adding intermod, and the notch also takes a sliver of our own carrier's edge. A ground notch is a workaround; the full 14 dB comes back only when the other operator fixes their polarization.",
+              "The notch removes the spike from our receive chain, so C/N climbs back above the 8 dB service minimum, to about 9-10 dB, and the modem reads good margin again. It does not reach the 14 dB nominal: the spike is still in the transponder, taking its share of the output power and adding intermod, and the notch also takes a sliver of our own carrier's edge. A ground notch is a workaround for our receiver only: the ships receive the same downlink, spike included, so they see it until the other operator fixes their polarization, and only then does the full 14 dB come back.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -945,10 +949,10 @@ export const scenario5Data: ScenarioData = {
       'phase-7-understand-impact': {
         text: `
         <p>
-          Exactly. The AGC measures total power in the IF passband and sets its gain to hold the output steady for the demodulator. It can't tell wanted signal from interference - it just sees power. That's why its gain dropped when the spike showed up.
+          Exactly. The AGC measures total power in the IF passband and sets its gain to hold the output steady for the demodulator. It can't tell wanted signal from interference - it just sees power. That's why its gain sits a little lower with the spike in the passband - well under a dB, but it's there.
         </p>
         <p>
-          But gain turns our carrier and the noise up and down together, so the gain cut isn't what hurt us. The spike's own power sits inside our 36 megahertz, and the demodulator counts it as noise. And it's taking a share of the transponder's output, so our carrier comes down a little weaker. The AGC is just telling you there's more power in the passband than there should be.
+          But gain turns our carrier and the noise up and down together, so the gain change isn't what hurt us. The spike's own power sits inside our 36 megahertz, and the demodulator counts it as noise. And it's taking a share of the transponder's output, so our carrier comes down a little weaker. The AGC is just telling you there's more power in the passband than there should be.
         </p>
         <p>
           Now we know the problem. The question is: what's the best way to fix it? We have several options available.
@@ -1003,7 +1007,7 @@ export const scenario5Data: ScenarioData = {
       'phase-9-verify-restoration': {
         text: `
         <p>
-          C/N is back above the 8 dB service minimum - about 9 or 10 dB, good margin on the modem. Not the full 14: the spike's still in the transponder eating its share of power. But it's enough for the ships, and their packet errors should clear up right away.
+          C/N is back above the 8 dB service minimum on our receiver - about 9 or 10 dB, good margin on the modem. Not the full 14: the spike's still in the transponder eating its share of power. And the notch only cleans up our receive chain. The ships get the same downlink, spike included, so they keep seeing it until the source is found and that operator's cross-pol isolation improves.
         </p>
         <p>
           Nice work. You diagnosed a non-obvious interference problem, understood the mechanism behind it, and applied the right mitigation. That's the kind of systematic troubleshooting that separates good operators from great ones.
@@ -1022,10 +1026,10 @@ export const scenario5Data: ScenarioData = {
           Perfect. I'll file a coordination request with the satellite operator to track down the source of the cross-pol interference. With the frequency, bandwidth, and timing information you've gathered, they can identify which uplink is causing the problem and work with that operator to improve their polarization alignment.
         </p>
         <p>
-          Meanwhile, the notch filter gives us a solid workaround. The customer is back online, the SLA is intact, and we have a path to the root cause fix.
+          Meanwhile, the notch keeps our own receiver clean and the hub link inside its margin. The ships get their relief when the source is fixed, so that coordination request is what closes SeaLink's ticket.
         </p>
         <p>
-          This is exactly how professional interference mitigation works - quick restoration of service, followed by proper documentation and coordination to prevent recurrence. Well done.
+          This is exactly how professional interference mitigation works - protect your own link fast, then document and coordinate to remove the source. Well done.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,

@@ -67,14 +67,15 @@ export const scenario15Data: ScenarioData = {
   number: 15,
   title: 'Frequency Coordination',
   subtitle: 'Inter-Operator Spectrum Etiquette',
-  // Billed at what it takes (nats-r3-s15-F1): 19 steps, one HPA change, one
-  // analyzer retune. The 0930 confirm / 0937 RedSky deadlines are story.
-  duration: '10-15 min',
+  // Billed at what it takes (nats-r3-s15-F1, Phase 29 D14): 19 steps, one HPA
+  // change, one analyzer retune; r4 played it in under 6 min. The 0930 confirm /
+  // 0937 RedSky deadlines are story. The limit follows the hands-on time.
+  duration: '5-10 min',
   difficulty: 'intermediate',
   missionType: 'Spectrum Coordination',
   description: `A coordination notice from RedSky Teleport hit your inbox at 09:08. Their next scheduled uplink sits just 2 MHz from the edge of the SeaLink carrier currently riding TIDEMARK-3 TP-1. They want acknowledgment that our spectrum won't bleed into their slot when they light up in 25 minutes.<br><br>Standard inter-operator etiquette: verify the guard band, check that our transmit chain isn't producing IMD products that would fall in the neighbor's passband, document, and confirm back. If our skirts are dirty, clean them up before they go on the air.<br><br>This is good neighbor work, not combat.`,
   equipment: ['9-meter C-band Antenna', 'RF Front End (TX active)', 'Spectrum Analyzer', 'TX Modem (carrying SeaLink traffic on TIDEMARK-3)', 'HPA (online)'],
-  timeLimitSeconds: 30 * 60,
+  timeLimitSeconds: 15 * 60,
   settings: {
     isSync: true,
     groundStations: [
@@ -85,11 +86,10 @@ export const scenario15Data: ScenarioData = {
             ...vermontGroundStation.antennasState[0],
             azimuth: 145.7 as Degrees,
             elevation: 32.7 as Degrees,
-            polarization: 8 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8)
             targetSatelliteId: 61527, // TIDEMARK-3
             targetAzimuth: 145.7 as Degrees,
             targetElevation: 32.7 as Degrees,
-            targetPolarization: 8 as Degrees,
             beaconFrequencyHz: 4172e6 as Hertz, // TIDEMARK-3 beacon (RF)
           } as Partial<AntennaState>,
         ],

@@ -77,13 +77,12 @@ export const scenario8Data: ScenarioData = {
             isPowered: true,
             azimuth: 190 as Degrees,
             elevation: 32 as Degrees,
-            polarization: 0 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8)
             trackingMode: 'program-track',
             isBeaconLocked: false,
             targetSatelliteId: 28899,
             targetAzimuth: 190 as Degrees,
             targetElevation: 32 as Degrees,
-            targetPolarization: 0 as Degrees,
             slewing: false,
             beaconCN: 5.2 as dB, // Marginal due to tracking error
             beaconFrequencyHz: 4165e6 as Hertz, // AURORA-7 beacon (RF)
@@ -297,7 +296,7 @@ export const scenario8Data: ScenarioData = {
           type: 'tab-active',
           description: 'GPS Timing Tab Open',
           params: { tab: 'gps-timing' },
-          maintainUntilObjectiveComplete: true,
+          mustMaintain: true,
         },
         {
           type: 'gpsdo-locked',

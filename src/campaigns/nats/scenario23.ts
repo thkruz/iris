@@ -80,14 +80,13 @@ export const scenario23Data: ScenarioData = {
             isPowered: true,
             azimuth: 153.1 as Degrees,
             elevation: 35.1 as Degrees,
-            polarization: 14 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8, geoPolarizationSkewDeg; +18.8 deg TM-1 at VT-01)
             trackingMode: 'program-track',
             isStepTrackEnabled: false,
             isBeaconLocked: true,
             targetSatelliteId: 61525,
             targetAzimuth: 153.1 as Degrees,
             targetElevation: 35.1 as Degrees,
-            targetPolarization: 14 as Degrees,
             slewing: false,
             beaconCN: 10.4 as dB,
             beaconFrequencyHz: 4175.5e6 as Hertz, // TIDEMARK-1 beacon (RF)
@@ -125,7 +124,7 @@ export const scenario23Data: ScenarioData = {
       id: 'review-mission-brief',
       nice: ['K0645'],
       title: 'Review the Fault',
-      description: 'Open the brief and IT ticket NOC-2026-2231.',
+      description: 'Open the brief. The IT ticket NOC-2026-2231 update arrives as a notice after your first diagnosis.',
       groundStation: 'VT-01',
       freezesScenarioTimer: true,
       prerequisiteObjectiveIds: [],
@@ -678,7 +677,7 @@ export const scenario23Data: ScenarioData = {
       'no-reboot-quiz': {
         text: `
         <p>
-          <em>[IT ticket NOC-2026-2231 update, 14:09]</em>
+          <em>[IT ticket NOC-2026-2231 update, {{stationTime}}]</em>
         </p>
         <p>
           "Do NOT power-cycle the ACU - we need the crash dump and the axis calibration is suspect on restart. Hold on manual, we'll coordinate a recovery window once we've pulled the logs. - IT/NOC"

@@ -51,7 +51,9 @@ import { aurora7Satellite, ses10Satellite, tidemark1Satellite, tidemark2Satellit
  * Sim notes:
  *   - VT-01: TIDEMARK-1, storm inbound (weather event at T+240, heater off so
  *     the operator must enable it proactively - S14 discipline). AURORA-7 also
- *     visible/usable from VT-01 for the pass.
+ *     visible/usable from VT-01 for the pass. Phase 29 D13: the front's rain
+ *     band (80 mm/h) follows the go/no-go and costs the step-tracked AURORA-7
+ *     beacon about 1 dB (Sky Temp 12 -> 35 K); the AGC stays At Max on noise.
  *   - Phase 27: VT-01's TM-1 carrier is keyed at the start (TM-1 service
  *     through the storm). Before the dish leaves TIDEMARK-1 for the AURORA-7
  *     pass the player takes it off the air (HPA output off, then BUC mute):
@@ -101,13 +103,12 @@ export const scenario24Data: ScenarioData = {
             isPowered: true,
             azimuth: 146.96 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
             elevation: 32.42 as Degrees,
-            polarization: -27.6 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8, geoPolarizationSkewDeg; about +22.6 deg TM-2 at ME-02)
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61526,
             targetAzimuth: 146.96 as Degrees,
             targetElevation: 32.42 as Degrees,
-            targetPolarization: -27.6 as Degrees,
             slewing: false,
             beaconCN: 10.2 as dB,
             beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)
@@ -205,6 +206,28 @@ export const scenario24Data: ScenarioData = {
         startTime: 240,
         duration: 2400,
         linkMarginDegradation: 6,
+      },
+      {
+        // Phase 29 D13 (nats-r4-s24-F1): the front's rain band, so the storm
+        // has an RF signature (the snow event above only ices an unheated
+        // feed). Authored like S14: at C-band the wet path mostly adds sky
+        // noise. Headless (2026-10-13, VT-01 on AURORA-7, El 29.2): Sky Temp
+        // 12 -> 35 K, step-tracked beacon 8.8 -> 7.7 dB (about 1.1 dB), lock
+        // held. Program-track sits at 7.0 dB, only 0.5 dB over the 6.5 dB
+        // lock, so the rain is anchored after step-track has held the beacon
+        // (it would unlock a program-tracked beacon from about 30 mm/h).
+        // Attenuation alone is about 0.3 dB; the RAIN FADE alarm reads the C/N
+        // the rain costs (attenuation + sky-noise rise), so the ticker shows
+        // "RAIN FADE (1.1 dB)" (info) at the plateau beside Sky Temp and C/N.
+        id: 'vermont-rain-band',
+        groundStationId: 'VT-01',
+        type: 'rain',
+        severity: 'severe',
+        rainRateMmPerHour: 80,
+        startAfterObjectiveId: 'pass-go-nogo-quiz',
+        startTime: 0,
+        duration: 900, // ramp 135 s in, 135 s out
+        linkMarginDegradation: 1.1,
       },
     ],
     // The BUC heat is a staged cooling fault, not a seeded start value: the
@@ -734,30 +757,41 @@ export const scenario24Data: ScenarioData = {
       id: 'storm-hold-check',
       nice: ['S0671', 'T0153'],
       title: 'Storm Holding',
-      description: 'Confirm Vermont is riding the front - the proactive heater is doing its job.',
+      description: 'Confirm Vermont is riding the front: on ACU Control, watch Ice, Sky Temp and the AURORA-7 beacon C/N as the rain band comes over.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['customer-escalation-quiz'],
       timeLimitSeconds: 3 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
         {
+          // Phase 29 D13 (nats-r4-s24-F1): the rain band (vermont-rain-band)
+          // ramps in over 135 s from the go/no-go; the hold lets the player
+          // see Sky Temp climb and the beacon come down before answering
+          type: 'tab-active',
+          description: 'Watch the beacon on ACU Control (held 60 s)',
+          params: { tab: 'acu-control' },
+          mustMaintain: true,
+          maintainDuration: 60,
+        },
+        {
           type: 'status-check',
           description: 'Storm Posture',
           params: {
             character: Character.SYSTEM,
-            question: 'The front is over Vermont now, with the dish on AURORA-7 for the pass. Because you enabled the heater early, what is the situation?',
+            question: 'The front is over Vermont now, with the dish on AURORA-7 for the pass. Read ACU Control (Ice, Sky Temp, beacon C/N). What is the situation?',
             options: [
-              'The feed stays clear as fast as ice tries to form - no accumulation, the weak beacon keeps every tenth of a dB; monitor the ACU ice reading only',
-              'The feed is icing faster than the heater can clear it - accumulation building, link sagging; an emergency handover to ME-02 is due',
+              'The heater keeps the feed clear (Ice 0.0 dB); the rain costs the beacon about a dB (Sky Temp up), still above the 6.5 dB lock - ride it on the margin',
+              'The feed is icing faster than the heater can clear it - the beacon sag is ice on the feed; an emergency handover to ME-02 is due',
               'The feed is clear and the front is overhead - heater no longer needed, power to save; cycle it off until the ice actually starts',
-              'The feed is clear but the sky is not - rain fade on TM-1, margin dropping; a repoint to a clearer-sky satellite is the next move',
+              'The AGC is at max, the rain-fade SOP threshold - margin is gone; repoint to a clearer-sky satellite before the pass',
             ],
             correctIndex: 0,
             explanation:
-              'The whole point of beating the fixed clock: protection in place before the threat means the threat never becomes an incident - the proactive heater turned a potential outage into a non-event you only have to monitor. This is the heater-before-the-front habit paying its dividend under maximum load.',
+              'Two things are happening and only one is yours to stop. The heater, on before the front, keeps the feed clear: Ice stays at 0.0 dB, so the outage ice would have caused never starts. The rain is real: the wet path radiates into the beam (Sky Temp climbs from about 12 K to about 35 K) and costs the AURORA-7 beacon about a dB, leaving it near 7.7 dB, still above the 6.5 dB lock step-track needs. The AGC sits At Max because TM-1 is off the air and only noise and beacons are in the passband, not because of the rain: act on the margin, not the AGC. Rain over the station is in every satellite path from VT-01, so a repoint buys nothing.',
             pointPenalty: 5,
             documentSection: 'VT-01 / TM-1',
-            documentLine: 'Front over VT-01, heater on: watch the ACU ice reading; feed clear for the AURORA pass and for TM-1 coming back after the window.',
+            documentLine:
+              'Front over VT-01, heater on: Ice 0.0 dB, feed clear. Rain costs the AURORA-7 beacon about 1 dB (Sky Temp up), still above the 6.5 dB lock on step-track: riding it on the margin, not the AGC.',
           },
           mustMaintain: false,
         },

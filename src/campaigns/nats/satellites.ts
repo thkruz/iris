@@ -5,9 +5,11 @@ import type { dBi, dBm, FECType, Hertz, ModulationType, RfFrequency } from '@app
 import type { Degrees } from 'ootk';
 
 /**
- * The station every authored az/el (and rotation) in this campaign is written
- * for: VT-01 (ground-stations.ts). Phase 19.4 derives each satellite's slot
- * from it, so ME-02 sees the real geometric difference (nats-s03-F2).
+ * The station every authored az/el in this campaign is written for: VT-01
+ * (ground-stations.ts). Phase 19.4 derives each satellite's slot from it, so
+ * ME-02 sees the real geometric difference (nats-s03-F2). The polarization
+ * skew is derived per station from that slot (Phase 29 D8,
+ * geoPolarizationSkewDeg); no satellite here authors a `rotation`.
  */
 export const VERMONT_LOOK_ANGLE_SITE = { latitude: 44.5588, longitude: -72.5778, elevationM: 210 };
 
@@ -38,7 +40,7 @@ export const tidemark1Satellite = new Satellite(
     // 53 W from VT-01 (Phase 28, D4: computed with geoLookAngles, was 161.8 / 34.2)
     az: 153.1 as Degrees,
     el: 35.1 as Degrees,
-    rotation: 14 as Degrees,
+    // Polarization skew (rotation) is derived from geometry (Phase 29 D8): geoPolarizationSkewDeg
     frequencyOffset: 2.225e9 as Hertz, // Legacy fallback
     // Ephemeris error: simulates TLE inaccuracy (~3 dB loss without step-track)
     ephemerisErrorAz: 0.12 as Degrees,
@@ -91,7 +93,7 @@ export const tidemark2Satellite = new Satellite(
     // 45 W, south-east of VT-01 (Phase 28, D4: computed with geoLookAngles, was 219.7 / 26.3)
     az: 143.3 as Degrees,
     el: 31.8 as Degrees,
-    rotation: -25 as Degrees,
+    // Polarization skew (rotation) is derived from geometry (Phase 29 D8): geoPolarizationSkewDeg
     frequencyOffset: 2.225e9 as Hertz, // Legacy fallback
     // Ephemeris error: simulates TLE inaccuracy
     ephemerisErrorAz: 0.1 as Degrees,
@@ -162,7 +164,7 @@ export const tidemark3Satellite = new Satellite(
     // 47 W from VT-01 (Phase 28, D4: computed with geoLookAngles, was 140.5 / 37.8)
     az: 145.7 as Degrees,
     el: 32.7 as Degrees,
-    rotation: 8 as Degrees,
+    // Polarization skew (rotation) is derived from geometry (Phase 29 D8): geoPolarizationSkewDeg
     frequencyOffset: 2.225e9 as Hertz,
     // Ephemeris error: smallest of the constellation (newest bird, freshest TLE)
     ephemerisErrorAz: 0.1 as Degrees,
@@ -224,7 +226,7 @@ export const ses10Satellite = new Satellite(
     // 67 W from VT-01 (Phase 28, D4: computed with geoLookAngles, was 151.8 / 34.2, a 52 W slot)
     az: 172.1 as Degrees,
     el: 38.4 as Degrees,
-    rotation: 34 as Degrees,
+    // Polarization skew (rotation) is derived from geometry (Phase 29 D8): geoPolarizationSkewDeg
     frequencyOffset: 2.225e9 as Hertz, // Legacy fallback
     // Ephemeris error: simulates TLE inaccuracy
     ephemerisErrorAz: 0.15 as Degrees,
@@ -297,7 +299,7 @@ export const aurora7Satellite = new Satellite(
   {
     az: 190 as Degrees, // Center position
     el: 32 as Degrees,
-    rotation: 0 as Degrees,
+    // Polarization skew (rotation) is derived from geometry (Phase 29 D8): geoPolarizationSkewDeg
     frequencyOffset: 2.225e9 as Hertz,
     // Ephemeris error: larger for inclined orbit (TLE is harder to predict)
     ephemerisErrorAz: 0.2 as Degrees,

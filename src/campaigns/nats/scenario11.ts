@@ -94,13 +94,12 @@ export const scenario11Data: ScenarioData = {
             isPowered: true,
             azimuth: 157.0 as Degrees, // Maine sees TM-1 (53 W) here, not at Vermont's 153.1 / 35.1 (Phase 28 D4)
             elevation: 35.33 as Degrees,
-            polarization: 11.2 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8)
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61525, // TIDEMARK-1
             targetAzimuth: 157.0 as Degrees,
             targetElevation: 35.33 as Degrees,
-            targetPolarization: 11.2 as Degrees,
             slewing: false,
             beaconCN: 10.4 as dB,
             beaconFrequencyHz: 4175.5e6 as Hertz, // TIDEMARK-1 beacon (RF)
@@ -737,7 +736,9 @@ export const scenario11Data: ScenarioData = {
       id: 'vt-antenna-maintenance-position',
       nice: ['S0421', 'K0770'],
       title: 'Park VT-01 Antenna at Maintenance Position',
-      description: 'On ACU Control press MAINT, then APPLY: MAINT stages the 5° maintenance elevation and the dish only moves on APPLY. Wait for it to park at 5° for the crew.',
+      // nats-r3-s11-F2: MAINT stages, APPLY commits the mode and the move
+      description:
+        'On ACU Control press MAINT, then APPLY: MAINT only stages the 5° maintenance elevation (the card shows "MAINTENANCE pending APPLY" and the dish keeps tracking); APPLY switches the mode and moves the dish. Wait for it to park at 5° for the crew.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['vt-safe-tx-chain'],
       timeLimitSeconds: 3 * 60,
@@ -895,7 +896,14 @@ export const scenario11Data: ScenarioData = {
         emotion: Emotion.NEUTRAL,
         audioUrl: getAssetUrl('/assets/campaigns/nats/11/obj-switch-to-vermont-safing.mp3'),
       },
-      'log-handover-quiz': {
+    },
+    // Clips that describe a step play as it opens. Catherine's report plays as
+    // the confirmation step opens, so the quiz that cites it comes after it (it
+    // used to play on completion, after the quiz had already been answered)
+    objectivesOnStart: {
+      // nats-r3-s02-F1 (D18): "Log it" plays as the log step opens, not after
+      // the entry has been typed and checked
+      'log-handover-entry': {
         text: `
         <p>
           Clean handover. Log it and meet me in the conference room - I want to walk through the gasket replacement procedure with you before they start.
@@ -908,11 +916,6 @@ export const scenario11Data: ScenarioData = {
         emotion: Emotion.CONFIDENT,
         audioUrl: getAssetUrl('/assets/campaigns/nats/11/obj-log-handover-entry.mp3'),
       },
-    },
-    // Catherine's report plays as the confirmation step opens, so the quiz
-    // that cites it comes after it (it used to play on completion, after the
-    // quiz had already been answered)
-    objectivesOnStart: {
       'catherine-confirm-hot': {
         text: `
         <p>

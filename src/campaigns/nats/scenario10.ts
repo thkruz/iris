@@ -82,13 +82,12 @@ export const scenario10Data: ScenarioData = {
             isPowered: true,
             azimuth: 190 as Degrees,
             elevation: 32 as Degrees,
-            polarization: 0 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8)
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 28899, // AURORA-7
             targetAzimuth: 190 as Degrees,
             targetElevation: 32 as Degrees,
-            targetPolarization: 0 as Degrees,
             slewing: false,
             beaconCN: 6.5 as dB, // Marginal under program-track drift
             beaconFrequencyHz: 4165e6 as Hertz, // AURORA-7 beacon (RF)
@@ -610,7 +609,7 @@ export const scenario10Data: ScenarioData = {
         'The station is in pass configuration and the SeaLink window opens at 10:00 on the station clock. Keep the beacon locked on step-track until then: wait it out, or use the skip control in the command bar (Skip to 10:00). The mission timer holds while you wait.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['imd-tradeoff-check'],
-      timeSkip: { label: 'standby until the 10:00 window', availableAfterConditions: true },
+      timeSkip: { label: 'standby', availableAfterConditions: true },
       conditions: [
         {
           type: 'antenna-beacon-locked',
@@ -658,7 +657,7 @@ export const scenario10Data: ScenarioData = {
       prerequisiteObjectiveIds: ['sustain-rx-margin'],
       // Phase 28 D1 (nats-r3-s10-F1): the hold ends at 10:30 on the station
       // clock, so the skip stops at the close instead of overrunning it
-      timeSkip: { label: 'SeaLink pass window to 10:30', availableAfterConditions: true },
+      timeSkip: { label: 'SeaLink pass window', availableAfterConditions: true },
       conditions: [
         {
           type: 'antenna-beacon-locked',
@@ -842,10 +841,11 @@ export const scenario10Data: ScenarioData = {
         emotion: Emotion.HAPPY,
         audioUrl: getAssetUrl('/assets/campaigns/nats/10/obj-sustain-beacon-track.mp3'),
       },
+      // nats-r3-s02-F1 (D18): past tense; it plays after the entry is logged
       'log-customer-pass': {
         text: `
         <p>
-          Marcus says clean. That's a paid pass logged with margin to spare. Get it in the book and take a breath.
+          Marcus says clean. That's a paid pass in the book with margin to spare. Take a breath.
         </p>
         `,
         character: Character.DANA_TORRES,

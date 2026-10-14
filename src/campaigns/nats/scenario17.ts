@@ -58,8 +58,11 @@ import { ses10Satellite, tidemark1Satellite, tidemark2Satellite } from './satell
  *     carrier keeps its power). The 16 dB peak takes the carrier C/N under
  *     the IF noise for ~90 s and under the demod threshold for ~2 min near
  *     the peak; it self-recovers. Uplink is unaffected by design.
- *   - Custom-evaluator conditions read skyNoiseDegradation_dB via the
- *     window.signalRange handle (no imports - avoids manager import cycles).
+ *   - Custom-evaluator conditions (onset >2 dB, cleared <1 dB) read
+ *     skyNoiseDegradation_dB via the window.signalRange handle (no imports -
+ *     avoids manager import cycles). The peak row is 'weather-event-peaked'
+ *     (the transit midpoint) and the relock row 'receiver-relocked' watching
+ *     from onset (Phase 29 D10).
  */
 
 /** Current sky-noise degradation (dB) on VT-01's antenna, 0 if unavailable. */
@@ -339,7 +342,7 @@ export const scenario17Data: ScenarioData = {
         {
           // The baseline-C/N read the audit asked for (s17-F3, Phase 27 Q3):
           // ledger 13.0 dB raw C/N on VT-01's own TIDEMARK-1 carrier
-          // (nats-scenario17.json), 8.7 dB over the lock point
+          // (nats-scenario17.json), about 8.3 dB over the ~4.7 dB lock point (D9)
           type: 'status-check',
           description: 'Baseline C/N Read',
           params: {
@@ -348,7 +351,7 @@ export const scenario17Data: ScenarioData = {
             options: ['About 13 dB', 'About 8 dB', 'About 4 dB', 'About 29 dB'],
             correctIndex: 0,
             explanation:
-              'About 13 dB, with the demodulator locking near 4 dB. A 16 dB noise rise at the peak is more than that margin, which is why the carrier will drop for a couple of minutes - and why the impact record starts from this number.',
+              'About 13 dB. QPSK 3/4 needs Required Es/N0 5.0 dB on the modem: with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N and holds it down to about 3.7 dB. A 16 dB noise rise at the peak is more than that margin, which is why the carrier will drop for a couple of minutes - and why the impact record starts from this number.',
             pointPenalty: 5,
             documentLine: 'Baseline before transit: RX modem 1 locked, C/N about 13 dB',
           },
@@ -446,7 +449,7 @@ export const scenario17Data: ScenarioData = {
       prerequisiteObjectiveIds: ['notify-customer-quiz'],
       timeLimitSeconds: 12 * 60,
       timerStartTrigger: 'on-activate',
-      timeSkip: { label: 'wait for the transit window' },
+      timeSkip: { label: 'pre-transit standby' },
       conditions: [
         {
           type: 'tx-modem-transmitting',
@@ -519,11 +522,13 @@ export const scenario17Data: ScenarioData = {
       timerStartTrigger: 'on-activate',
       conditions: [
         {
-          type: 'custom',
-          description: 'Transit Peak Reached (>6 dB sky noise)',
-          params: {
-            evaluator: () => vt01SkyNoise() > 6,
-          },
+          // Ticks at the transit midpoint (onset + 150 s, 10:35:00 on the
+          // sheet), when the sky noise starts falling. A >6 dB threshold fired
+          // ~90 s before the peak and opened Verify Self-Recovery while the
+          // Sun was still closing on boresight (nats-r4-s17-F1, Phase 29 D10)
+          type: 'weather-event-peaked',
+          description: 'Transit Peak Passed (sky noise falling)',
+          params: { weatherEventId: 'tm1-sun-transit' },
           mustMaintain: false,
         },
         {
@@ -614,9 +619,12 @@ export const scenario17Data: ScenarioData = {
           mustMaintain: false,
         },
         {
-          type: 'receiver-signal-locked',
-          description: 'Receiver Re-Locked',
-          params: { modemNumber: 1 },
+          // Lock lost, then regained (Phase 29 D10). The watch starts at
+          // onset: the r4 drop began before the peak, so a watch from this
+          // step would miss it (nats-r4-s17-F1)
+          type: 'receiver-relocked',
+          description: 'Receiver Re-Locked (after the drop)',
+          params: { modemNumber: 1, lockLostAfterObjectiveId: 'observe-onset' },
           mustMaintain: true,
         },
         {

@@ -459,12 +459,12 @@ export const scenario1Data: ScenarioData = {
             options: [
               '≥ 8 dB - Strong link with good operating margin',
               '5-8 dB - Warning; locked, but the fade margin is thin',
-              '4-5 dB - At the lock threshold; errors likely',
+              '4-5 dB - At the lock threshold (acquires from about 4.7 dB); errors likely',
               '< 4 dB - Below demodulation threshold; no reliable lock',
             ],
             correctIndex: 0,
             explanation:
-              'C/N at or above 8 dB is a healthy QPSK 3/4 link with adequate margin for reliable data reception (Normal in the brief table; 5-8 dB is Warning, and lock needs about 4.2 dB). A healthy reading confirms the entire receive chain from antenna to modem is functioning properly.',
+              'C/N at or above 8 dB is a healthy QPSK 3/4 link with adequate margin for reliable data reception (Normal in the brief table; 5-8 dB is Warning). For the lock itself, the modem shows Required Es/N0 5.0 dB; with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N and holds it down to about 3.7 dB. A healthy reading confirms the entire receive chain from antenna to modem is functioning properly.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -776,14 +776,14 @@ export const scenario1Data: ScenarioData = {
           params: {
             question: 'What is the current polarization angle shown on the ACU, and why is it set to that value?',
             options: [
-              '14° - matched to TIDEMARK-1 satellite polarization',
+              'About +18.8° - matched to TIDEMARK-1 satellite polarization as seen from VT-01',
               '0° - default horizontal polarization for C-band',
               '90° - vertical polarization for the downlink',
               '45° - midpoint setting for circular polarization',
             ],
             correctIndex: 0,
             explanation:
-              "The polarization is set to 14° to match TIDEMARK-1's polarization angle. Proper polarization alignment maximizes signal strength and minimizes cross-pol interference.",
+              "The feed is rotated to about +18.8° to match TIDEMARK-1's polarization as seen from VT-01. A GEO bird's linear polarization looks tilted from any site off its longitude: TIDEMARK-1 at 53 W sits east of VT-01, so the skew is positive. Proper polarization alignment maximizes signal strength and minimizes cross-pol interference.",
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -1142,7 +1142,7 @@ export const scenario1Data: ScenarioData = {
       'verify-polarization': {
         text: `
       <p>
-        14 degrees - matched to TIDEMARK-1. That's a detail people overlook. Wrong polarization costs you dBs, and dBs are money. Or in bad weather, dBs are the difference between link and no link.
+        About 18.8 degrees - matched to TIDEMARK-1 as we see it from here. That's a detail people overlook. Wrong polarization costs you dBs, and dBs are money. Or in bad weather, dBs are the difference between link and no link.
       </p>
       <p>
         One more check, then we're done. The alarm dashboard aggregates everything into one view. Click the Dashboard tab.

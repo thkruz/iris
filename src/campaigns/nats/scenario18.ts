@@ -42,7 +42,8 @@ import { c1TransponderPhysics, ses10Satellite, tidemark1Satellite, VERMONT_LOOK_
  * station-kept bird: the gap opens from zero at the ~0800 node through the
  * morning (~0.4 deg at 0915, ~0.3 deg/h, the full 1.3 deg around 1400).
  * Pointing loss ~12 (gap/HPBW)^2 dB: ~6 dB now (beacon 28 dB, carrier still
- * locked near 7 dB), carrier lock lost near 0.55 deg (within the hour).
+ * locked near 7 dB), carrier lock lost near 0.55-0.6 deg, about one beamwidth
+ * (within the hour; nats-r4-s18-F1).
  * Program-track is bleeding C/N. The operator (covering ME-02) must recognize
  * the signature, transition to step-track, hold the link, and feed the
  * spacecraft team ground-side observations - while staying inside the ground
@@ -68,7 +69,7 @@ const tidemark2DriftingSatellite = new Satellite(
   {
     az: 143.3 as Degrees, // 45 W from VT-01 (Phase 28 D4, was 219.7 / 26.3)
     el: 31.8 as Degrees,
-    rotation: -25 as Degrees,
+    // Polarization skew (rotation) is derived from geometry (Phase 29 D8): geoPolarizationSkewDeg
     frequencyOffset: 2.225e9 as Hertz,
     // Stale ephemeris: station-keeping suspended, prediction no longer matches
     // 0.32 / 0.26 deg (0.39 deg on the sky from Maine): program-track loses
@@ -161,13 +162,12 @@ export const scenario18Data: ScenarioData = {
             isPowered: true,
             azimuth: 146.96 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
             elevation: 32.42 as Degrees,
-            polarization: -27.6 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8)
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61526,
             targetAzimuth: 146.96 as Degrees,
             targetElevation: 32.42 as Degrees,
-            targetPolarization: -27.6 as Degrees,
             slewing: false,
             beaconCN: null, // measured live since 19.2: ~28 dB on the stale ephemeris, ~34 dB under step-track
             beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)
@@ -443,14 +443,14 @@ export const scenario18Data: ScenarioData = {
             question:
               'The ephemeris predates the burn, so program-track points at a station-kept bird while the real one swings through its daily ±1.3° figure-8. The gap is about 0.4° now (beacon ~6 dB down) and opens about 0.3° an hour; the ACU HPBW is ~0.6°. What does that mean for program-track?',
             options: [
-              'Borrowed time - within the hour the gap passes about half a beamwidth and the carrier drops out of lock; by early afternoon the bird is far outside the beam',
+              'Borrowed time - within the hour the gap reaches about one beamwidth (~0.55-0.6°) and the carrier drops out of lock; by early afternoon the bird is far outside the beam',
               'Fine for the shift - ±1.3° is the size of the figure-8, not the pointing error, and program-track already follows the figure-8 in the ephemeris',
               'Fine with more gain - a few dB of LNB gain covers the pattern loss, and the strategy holds until Halifax publishes a corrected ephemeris',
               'Self-correcting - program-track refines its ephemeris from the beacon as the gap grows, and converges before Halifax publishes a fix',
             ],
             correctIndex: 0,
             explanation:
-              'Pointing loss grows with the square of the error, about 12 x (gap / beamwidth)² dB. 0.4° costs ~6 dB - what the ACU shows: beacon 28 dB, carrier still locked. Near 0.55° the loss reaches ~9-10 dB and the carrier falls under lock; at 1.3° it is tens of dB, off the beam entirely. The ephemeris knows nothing of the burn, so program-track keeps pointing at the old slot while the gap opens. No gain knob recovers pointing loss (the LNB lifts the noise with the signal): track the satellite itself, which is what the beacon is for.',
+              'Pointing loss grows with the square of the error, about 12 x (gap / beamwidth)² dB. 0.4° costs ~6 dB - what the ACU shows: beacon 28 dB, carrier still locked. At 0.3° an hour the gap reaches about one beamwidth (~0.55-0.6°) within the hour: the loss reaches ~10-12 dB and the carrier falls out of lock. At 1.3° it is tens of dB, off the beam entirely. The ephemeris knows nothing of the burn, so program-track keeps pointing at the old slot while the gap opens. No gain knob recovers pointing loss (the LNB lifts the noise with the signal): track the satellite itself, which is what the beacon is for.',
             pointPenalty: 5,
           },
           mustMaintain: false,

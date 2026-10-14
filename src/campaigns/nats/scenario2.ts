@@ -695,22 +695,31 @@ export const scenario2Data: ScenarioData = {
       nice: ['K0645'],
       title: 'Hold for the Maintenance Window',
       description:
-        'The crew is on the feed for about 15 minutes. Keep the antenna parked at the maintenance position until Mike calls the work complete: wait it out, or use the skip control in the command bar.',
+        'The crew is on the feed until 09:50 on the station clock. Keep the antenna parked at the maintenance position until Mike calls the work complete: wait it out, or use the skip control in the command bar (Skip to 09:50).',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['verify-maintenance-position-quiz'],
       // No countdown: the wait is the crew's, not the operator's (Q4, r2-s02-F3)
-      // The skip lands at the end of the 15-minute maintainDuration (Phase 28 TimeSkipOffer)
+      // Phase 29 D15 (nats-r4-s02-F1/F2): the crew window ends on the station
+      // clock at 09:50, so the skip reads "Skip to 09:50" (the r4 run parked at
+      // about 09:35). The 5 min hold is only a floor for a player who parks
+      // late: the crew always gets a few minutes on the feed.
       timeSkip: { label: 'crew maintenance window', availableAfterConditions: true },
       conditions: [
         {
           type: 'antenna-position',
-          description: 'Antenna Held at Maintenance Position (15 min crew window)',
+          description: 'Antenna Held at Maintenance Position',
           params: {
             elevation: 5 as Degrees,
             tolerance: 0.5,
           },
           mustMaintain: true,
-          maintainDuration: 15 * 60,
+          maintainDuration: 5 * 60,
+        },
+        {
+          type: 'scenario-time-reached',
+          description: 'Crew Window Ends at 09:50',
+          params: { scenarioTime: '09:50' },
+          mustMaintain: false,
         },
         {
           type: 'status-check',
@@ -1196,7 +1205,7 @@ export const scenario2Data: ScenarioData = {
     intro: {
       text: `
       <p>
-        Maintenance crew needs access to the antenna feed assembly in fifteen minutes. We're taking TIDEMARK-1 offline for the window.
+        Maintenance crew is on site, waiting on us for the antenna feed assembly. Their window runs to 09:50, so we're taking TIDEMARK-1 offline now.
       </p>
       <p>
         We will shut down in sequence: HPA first, then BUC, then stop the modem, then LNB, then stow the antenna. Never skip steps, never reverse order. Read the Mission Brief. Go.
@@ -1429,7 +1438,7 @@ export const scenario2Data: ScenarioData = {
           Antenna's at maintenance position. Crew has the all-clear.
         </p>
         <p>
-          They're replacing a waveguide flange gasket - routine work, takes about fifteen minutes.
+          They're replacing a waveguide flange gasket - routine work. Mike calls it done at 09:50 on the station clock.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,

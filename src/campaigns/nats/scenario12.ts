@@ -88,7 +88,7 @@ export const scenario12Data: ScenarioData = {
             // elevation and leaves the azimuth (phase 19.4)
             azimuth: 153.1 as Degrees,
             elevation: 90 as Degrees,
-            polarization: 0 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8)
             trackingMode: 'stow',
             isBeaconLocked: false,
             targetSatelliteId: null,
@@ -170,13 +170,12 @@ export const scenario12Data: ScenarioData = {
             isPowered: true,
             azimuth: 157.0 as Degrees, // Maine sees TM-1 (53 W) here, not at Vermont's 153.1 / 35.1 (Phase 28 D4)
             elevation: 35.33 as Degrees,
-            polarization: 11.2 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8)
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61525, // TIDEMARK-1
             targetAzimuth: 157.0 as Degrees,
             targetElevation: 35.33 as Degrees,
-            targetPolarization: 11.2 as Degrees,
             slewing: false,
             beaconCN: 10.4 as dB,
             beaconFrequencyHz: 4175.5e6 as Hertz, // TIDEMARK-1 beacon (RF)
@@ -1044,10 +1043,11 @@ export const scenario12Data: ScenarioData = {
         emotion: Emotion.HAPPY,
         audioUrl: getAssetUrl('/assets/campaigns/nats/12/obj-notify-customer.mp3'),
       },
+      // nats-r3-s02-F1 (D18): past tense; it plays after the entry is logged
       'log-maintenance-complete': {
         text: `
         <p>
-          Maintenance cycle closed. You caught the BUC gain leftover - that's the kind of save that doesn't show up on a dashboard. Log it the way you wrote it; I want the next crew that gets these guys to see the pattern.
+          Maintenance cycle closed. You caught the BUC gain leftover - that's the kind of save that doesn't show up on a dashboard. It's in the log now, so the next crew that gets these guys will see the pattern.
         </p>
         <p>
           Good shift.

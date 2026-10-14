@@ -11,7 +11,7 @@ import { tidemark1Satellite, tidemark2Satellite } from './satellites';
  * NATS Level 16: "Cascade Failure"
  *
  * Phase: Qualified Operations (Phase 2 capstone, Scenario 8 of 8)
- * Time Pressure: Moderate-high (35-45 min, customer pressure)
+ * Time Pressure: Moderate-high (25 min limit, customer pressure)
  * Calculation Required: NO - this is multi-fault recovery
  * New UI Elements: None - reuses all Phase 1 mechanics
  *
@@ -66,14 +66,15 @@ export const scenario16Data: ScenarioData = {
   number: 16,
   title: 'Cascade Failure',
   subtitle: 'Multi-System Recovery Under Customer Pressure',
-  // Billed at what it takes (nats-r3-s15-F1 in S16): ~20 steps, about seven
-  // control actions and a 90 s LNB warm-up; the 45 min limit stays
-  duration: '15-20 min',
+  // Billed at what it takes (nats-r3-s15-F1 in S16, Phase 29 D14): ~20 steps,
+  // about seven control actions and a 90 s LNB warm-up; r4 played it in under
+  // 10 min. The limit follows the hands-on time (fatal step timers unchanged).
+  duration: '10-15 min',
   difficulty: 'advanced',
   missionType: 'Incident Response',
   description: `Two minutes into your shift and the alarm board is lit up. BUC over-temperature, LNB reference unlocked, HPA overdriven - all on VT-01, all at once. The TIDEMARK-1 customer link is degraded and James Okafor (Atlantic Shipping Alliance, SeaLink's anchor customer) is on the line.<br><br>None of these faults are related. You have to triage them in the right order: protect the equipment and the spectrum first, restore customer impact next, then methodically clear each fault.<br><br>Dana is in the admin office. She trusts you with this one.`,
   equipment: ['9-meter C-band Antenna', 'RF Front End', 'Spectrum Analyzer', 'RX/TX Modems', 'ME-02: Operational (TIDEMARK-2)'],
-  timeLimitSeconds: 45 * 60, // 45 minutes
+  timeLimitSeconds: 25 * 60, // 25 minutes
   settings: {
     isSync: true,
     groundStations: [
@@ -549,7 +550,7 @@ export const scenario16Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'A sticky reference lock fault clears on power cycle. The 10 MHz reference is available upstream (GPSDO locked); the LNB just needs to re-acquire. Until it does, its LO free-runs (tens of kHz of LO error, poor phase noise) and the customer carrier runs about 3 dB down in Es/N0.',
+              'A sticky reference lock fault clears on power cycle. The 10 MHz reference is available upstream (GPSDO locked); the LNB just needs to re-acquire. Until it does, its LO free-runs (around 100 kHz or more of LO error, poor phase noise) and the customer carrier runs about 3 dB down in Es/N0.',
             pointPenalty: 10,
           },
           mustMaintain: false,

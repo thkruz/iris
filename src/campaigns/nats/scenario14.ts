@@ -73,7 +73,7 @@ export const scenario14Data: ScenarioData = {
   settings: {
     isSync: true,
     groundStations: [
-      // VT-01: tracking TIDEMARK-1, healthy at baseline. Rain begins at +5min.
+      // VT-01: tracking TIDEMARK-1, healthy at baseline. Rain begins 5 s after Monitor Through the Fade opens (about 1320).
       {
         ...vermontGroundStation,
       },
@@ -94,13 +94,12 @@ export const scenario14Data: ScenarioData = {
             isPowered: true,
             azimuth: 146.96 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
             elevation: 32.42 as Degrees,
-            polarization: -27.6 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8)
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61526, // TIDEMARK-2
             targetAzimuth: 146.96 as Degrees,
             targetElevation: 32.42 as Degrees,
-            targetPolarization: -27.6 as Degrees,
             slewing: false,
             beaconCN: 10.2 as dB,
             beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)
@@ -427,15 +426,18 @@ export const scenario14Data: ScenarioData = {
           mustMaintain: true,
         },
         {
+          // The brief's Nominal band: within 1 dB of the ~13 dB baseline
+          // (nats-r4-s14-F1; the old 10 dB floor had no source)
           type: 'receiver-snr-threshold',
-          description: 'RX Modem 1 Raw C/N ≥ 10 dB',
-          params: { modemNumber: 1, minCNRatio: 10, requiresObservation: true, observationTab: 'rx-analysis' },
+          description: 'RX Modem 1 Raw C/N ≥ 12 dB (nominal, within 1 dB of the ~13 dB baseline)',
+          params: { modemNumber: 1, minCNRatio: 12, requiresObservation: true, observationTab: 'rx-analysis' },
           mustMaintain: true,
         },
         {
           // Write the baseline down (Phase 27 Q3): the ledger reads 13.1 dB
           // raw C/N on VT-01's own TIDEMARK-1 carrier before the rain
-          // (nats-scenario14.json), 8.9 dB over the QPSK 3/4 lock point
+          // (nats-scenario14.json), about 8.4 dB over the ~4.7 dB C/N at
+          // which QPSK 3/4 acquires lock (Phase 29 D9)
           type: 'status-check',
           description: 'Baseline Raw C/N Read',
           params: {
@@ -444,7 +446,7 @@ export const scenario14Data: ScenarioData = {
             options: ['About 13 dB', 'About 7 dB', 'About 4 dB', 'About 25 dB'],
             correctIndex: 0,
             explanation:
-              'About 13 dB. That is the baseline the action rule in the brief hangs off: the threshold is RX modem 1 Raw C/N 7 dB, about 6 dB under it and still about 2 dB above where QPSK 3/4 locks (about 4.7 dB). Compare against it when the cell is overhead.',
+              'About 13 dB. That is the baseline the action rule in the brief hangs off: the threshold is RX modem 1 Raw C/N 7 dB, about 6 dB under it and still about 2.3 dB above where QPSK 3/4 acquires lock. The modem shows Required Es/N0 5.0 dB; with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N and holds it down to about 3.7 dB. Compare against the baseline when the cell is overhead.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -477,7 +479,7 @@ export const scenario14Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'Margin = baseline C/N minus demod threshold. With about 8 dB of headroom (Raw C/N near 13 dB against the ~4.7 dB at which QPSK 3/4 locks), 6 dB of it above the 7 dB action threshold, and under 1 dB of expected fade (a heavy cell at C-band costs about 0.7 dB of C/N, mostly sky-noise rise), we are comfortable. Without baseline data, every dip looks scary.',
+              'Margin = baseline C/N minus demod threshold. With about 8 dB of headroom (Raw C/N near 13 dB against the ~4.7 dB C/N at which QPSK 3/4 acquires lock, Required Es/N0 5.0 dB on the modem), 6 dB of it above the 7 dB action threshold, and under 1 dB of expected fade (a heavy cell at C-band costs about 0.7 dB of C/N, mostly sky-noise rise), we are comfortable. Without baseline data, every dip looks scary.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -912,7 +914,7 @@ export const scenario14Data: ScenarioData = {
         <em>[Text message from Dana at 13:18]</em>
       </p>
       <p>
-        "Rain cell in about five minutes. Heavy, twenty minutes through - at C-band that is still under a dB. James Okafor called - their SLA likes margin loss better than handover events, so he wants us to hold if we can. ME-02 is busy on TM-2. Brief's on your terminal."
+        "Rain cell a couple of minutes out. Heavy, twenty minutes through - at C-band that is still under a dB. James Okafor called - their SLA likes margin loss better than handover events, so he wants us to hold if we can. ME-02 is busy on TM-2. Brief's on your terminal."
       </p>
       `,
       character: Character.DANA_TORRES,

@@ -232,7 +232,7 @@ export const scenario7Data: ScenarioData = {
           type: 'tab-active',
           description: 'Dashboard Tab Open',
           params: { tab: 'dashboard' },
-          maintainUntilObjectiveComplete: true,
+          mustMaintain: true,
         },
         {
           type: 'status-check',
@@ -268,7 +268,7 @@ export const scenario7Data: ScenarioData = {
           type: 'tab-active',
           description: 'TX Chain Tab Open',
           params: { tab: 'tx-chain' },
-          maintainUntilObjectiveComplete: true,
+          mustMaintain: true,
         },
         {
           type: 'status-check',
@@ -336,7 +336,7 @@ export const scenario7Data: ScenarioData = {
           type: 'tab-active',
           description: 'Dashboard Tab Open',
           params: { tab: 'dashboard' },
-          maintainUntilObjectiveComplete: true,
+          mustMaintain: true,
         },
         {
           type: 'status-check',
@@ -425,7 +425,7 @@ export const scenario7Data: ScenarioData = {
           type: 'tab-active',
           description: 'RX Analysis Tab Open',
           params: { tab: 'rx-analysis' },
-          maintainUntilObjectiveComplete: true,
+          mustMaintain: true,
         },
         {
           type: 'equipment-powered',
@@ -487,7 +487,7 @@ export const scenario7Data: ScenarioData = {
           type: 'tab-active',
           description: 'RX Analysis Tab Open',
           params: { tab: 'rx-analysis' },
-          maintainUntilObjectiveComplete: true,
+          mustMaintain: true,
         },
         {
           type: 'speca-center-frequency',
@@ -745,7 +745,7 @@ export const scenario7Data: ScenarioData = {
       // T1567: Equipment configuration happens throughout
       nice: ['T1313', 'T1567'],
       title: 'Enable BUC Loopback',
-      description: 'Toggle loopback mode ON to route the TX signal back to the receive chain for testing without transmitting to the satellite.',
+      description: 'Toggle loopback mode ON to feed a coupled sample of the TX signal back into the receive chain for testing without transmitting to the satellite.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['reduce-buc-gain'],
       timeLimitSeconds: 2 * 60,
@@ -755,7 +755,7 @@ export const scenario7Data: ScenarioData = {
           type: 'tab-active',
           description: 'TX Chain Tab Open',
           params: { tab: 'tx-chain' },
-          maintainUntilObjectiveComplete: true,
+          mustMaintain: true,
         },
         {
           type: 'buc-loopback-enabled',
@@ -772,15 +772,17 @@ export const scenario7Data: ScenarioData = {
           description: 'Loopback Mode Understanding',
           params: {
             question: 'What does enabling BUC loopback mode do?',
+            // nats-r4-s07-F2: the loop is a coupled sample (coupler + pad +
+            // 2,225 MHz translator), not a switch; the HPA path stays connected
             options: [
-              'Routes the TX RF signal to the LNB instead of the HPA',
-              'Increases BUC output power for testing',
-              'Disables the BUC for maintenance',
-              'Bypasses the HPA to reduce power consumption and improve performance',
+              'A directional coupler samples the BUC output, a pad drops it about 66 dB and the loop translator shifts it 2,225 MHz down into the LNB; the HPA path stays connected',
+              'A switch routes the whole BUC output to the LNB instead of the HPA, so the HPA path is cut while the loop is on',
+              'The LNB LO is retuned to the BUC LO so the receive chain sees the 5,943 MHz uplink directly',
+              'The BUC output is fed back into the modem RX input at IF, bypassing the LNB and the antenna',
             ],
             correctIndex: 0,
             explanation:
-              'Loopback mode internally routes the BUC output signal back to the receive chain, allowing you to verify the TX modem and BUC are working without actually transmitting RF power through the antenna.',
+              "Loopback taps the BUC output with a directional coupler, pads the sample about 66 dB down and runs it through the loop translator, which shifts it by the satellite's 2,225 MHz translation into the LNB's band. Nothing is switched out of the transmit path: the BUC still drives the HPA input, which is why the HPA stays off until the loop test is done. You verify the modem and BUC without radiating anything through the antenna.",
             pointPenalty: 5,
             character: Character.DANA_TORRES,
           },
@@ -806,7 +808,7 @@ export const scenario7Data: ScenarioData = {
           type: 'tab-active',
           description: 'RX Analysis Tab Open',
           params: { tab: 'rx-analysis' },
-          maintainUntilObjectiveComplete: true,
+          mustMaintain: true,
         },
         {
           // Phase 28 D3 (nats-r3-s08-F1): the loop translator lands the loop
@@ -924,7 +926,7 @@ export const scenario7Data: ScenarioData = {
           type: 'tab-active',
           description: 'TX Chain Tab Open',
           params: { tab: 'tx-chain' },
-          maintainUntilObjectiveComplete: true,
+          mustMaintain: true,
         },
         {
           type: 'tx-crypto-status',

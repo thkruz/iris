@@ -94,7 +94,7 @@ export const scenario3Data: ScenarioData = {
             isPowered: true,
             azimuth: 157.0 as Degrees,
             elevation: 90 as Degrees,
-            polarization: 0 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8, geoPolarizationSkewDeg)
             isTracking: false,
             trackingMode: 'manual',
           } as Partial<AntennaState>,
@@ -189,7 +189,7 @@ export const scenario3Data: ScenarioData = {
         // Q5: wet snow at 2+ in/h in 25-40 mph wind outpaces the feed heater
         // (sized for about 1 in/h; the wind strips its heat). With the heater
         // on, ice still builds toward 10 - 0.4 x 12 = 5.2 dB; lock goes near
-        // 4 dB (12.7 dB clear-sky C/N, 4.2 dB threshold), about 13-15 min
+        // 4 dB (12.7 dB clear-sky C/N; Phase 29 D9: acquires about 4.7, holds to about 3.7), about 13-15 min
         // after the heater comes on. The heater buys time; the handover is
         // still needed.
         heaterMeltDbPerMin: 0.4,
@@ -498,7 +498,7 @@ export const scenario3Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              "Weather degradation is continuous and progressive. As snow and ice load the feed, C/N keeps falling and nothing at the station gives it back: the AGC holds the output level, but it turns the noise up with the carrier. Once C/N crosses the modem's 4.2 dB threshold the carrier drops. There's no graceful degradation - you either have enough margin or you don't. This is why we start the handover process well before the predicted failure point.",
+              "Weather degradation is continuous and progressive. As snow and ice load the feed, C/N keeps falling and nothing at the station gives it back: the AGC holds the output level, but it turns the noise up with the carrier. Once C/N falls below about 3.7 dB, the lowest C/N the modem can hold lock at, the carrier drops. There's no graceful degradation - you either have enough margin or you don't. This is why we start the handover process well before the predicted failure point.",
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -534,7 +534,7 @@ export const scenario3Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'The AGC levels total power - carrier plus noise - so it cannot improve C/N. As the feed loads with snow and ice, the carrier weakens and the wet feed adds noise of its own; C/N falls while the AGC output stays at -30 dBm and its gain barely moves (about -2.5 dB in clear sky, under +1 dB at loss of lock, against a +10 dB maximum). Once C/N drops below the 4.2 dB demodulation threshold we lose lock. Maine is 150 miles away with clear weather, so its link is unaffected.',
+              'The AGC levels total power - carrier plus noise - so it cannot improve C/N. As the feed loads with snow and ice, the carrier weakens and the wet feed adds noise of its own; C/N falls while the AGC output stays at -30 dBm and its gain barely moves (about -2.5 dB in clear sky, under +1 dB at loss of lock, against a +10 dB maximum). The modem acquires lock from about 4.7 dB C/N and holds it down to about 3.7 dB; below that we lose lock. Maine is 150 miles away with clear weather, so its link is unaffected.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -1258,7 +1258,7 @@ export const scenario3Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'This QPSK 3/4 carrier locks once Es/N0 reaches about 5.0 dB - roughly 4.2 dB of C/N in its 36 MHz channel (the DVB-S2 threshold plus 1 dB of modem implementation loss; RX Analysis shows it as Required Es/N0). Right at threshold it still decodes cleanly, but the next 1 dB fade drops it. At 10 dB of C/N there is nearly 6 dB of margin, so weather can take some of it before errors start. Lock without margin is asking for trouble.',
+              'For this QPSK 3/4 carrier the modem shows Required Es/N0 5.0 dB; with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N and holds it down to about 3.7 dB (Required Es/N0 is the DVB-S2 threshold plus 1 dB of modem implementation loss). Right at threshold it still decodes cleanly, but the next 1 dB fade drops it. At 10 dB of C/N there is nearly 6 dB of margin, so weather can take some of it before errors start. Lock without margin is asking for trouble.',
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -1491,14 +1491,14 @@ export const scenario3Data: ScenarioData = {
           params: {
             question: 'How do you confirm the handover was successful?',
             options: [
-              'Traffic indicator shows ME-02 as active, VT-01 TX disabled, no alarms, continuous data flow',
-              'Traffic indicator shows ME-02 as active, VT-01 antenna stowed, no alarms, data paused',
-              'Traffic indicator shows both active, satellite acknowledged, no alarms, data flowing',
-              'Traffic indicator shows VT-01 as active, ME-02 C/N increased, no alarms, data flowing',
+              'Traffic indicator shows ME-02 as active, VT-01 TX disabled, no ME-02 alarms, continuous data flow',
+              'Traffic indicator shows ME-02 as active, VT-01 antenna stowed, no ME-02 alarms, data paused',
+              'Traffic indicator shows both active, satellite acknowledged, no ME-02 alarms, data flowing',
+              'Traffic indicator shows VT-01 as active, ME-02 C/N increased, no ME-02 alarms, data flowing',
             ],
             correctIndex: 0,
             explanation:
-              "A successful handover shows Maine as the active traffic owner, Vermont's transmitter disabled (no dual uplink), no error alarms, and continuous data flow with no packet loss. The customers should experience no interruption - from their perspective, nothing changed.",
+              "A successful handover shows Maine as the active traffic owner, Vermont's transmitter disabled (no dual uplink), no error alarms at Maine (Vermont's ICE ON FEED alarm is the weather you are moving away from), and continuous data flow with no packet loss. The customers should experience no interruption - from their perspective, nothing changed.",
             pointPenalty: 10,
           },
           mustMaintain: false,
@@ -1932,19 +1932,6 @@ export const scenario3Data: ScenarioData = {
         emotion: Emotion.NEUTRAL,
         audioUrl: getAssetUrl('/assets/campaigns/nats/3/obj-configure-maine-antenna.mp3'),
       },
-      'catherine-look-angles': {
-        text: `
-        <p>
-          Hey, it's Catherine. Just got to the station - roads are fine up here, clear skies. I saw the antenna moving when I pulled in.
-        </p>
-        <p>
-          I did a quick sanity check that you weren't inputting the same az/el for ME-02 that you were using at VT-01. We had a new guy mess that up a few months ago - spent twenty minutes troubleshooting before someone noticed he'd copied Vermont's angles. Program-track was the right call.
-        </p>
-        `,
-        character: Character.CATHERINE_VEGA,
-        emotion: Emotion.NEUTRAL,
-        audioUrl: getAssetUrl('/assets/campaigns/nats/3/obj-catherine-look-angles.mp3'),
-      },
 
       // ============================================================
       // MAINE LNB
@@ -2180,7 +2167,7 @@ export const scenario3Data: ScenarioData = {
       'stow-vermont-antenna': {
         text: `
         <p>
-          Antenna's stowing. Good. One last question to make sure you understand why.
+          Antenna's stowed - straight up at 90 degrees. Good. One last question to make sure you understand why.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -2215,6 +2202,23 @@ export const scenario3Data: ScenarioData = {
         character: Character.CATHERINE_VEGA,
         emotion: Emotion.HAPPY,
         audioUrl: getAssetUrl('/assets/campaigns/nats/3/obj-document-handover-event.mp3'),
+      },
+    },
+    objectivesOnStart: {
+      // Phase 29 D18 (nats-r4-s03-F1): Catherine introduces herself and says
+      // she checked the pointing BEFORE her quiz asks why she checked it
+      'catherine-look-angles': {
+        text: `
+        <p>
+          Hey, it's Catherine. Just got to the station - roads are fine up here, clear skies. I saw the antenna moving when I pulled in.
+        </p>
+        <p>
+          I did a quick sanity check that you weren't inputting the same az/el for ME-02 that you were using at VT-01. We had a new guy mess that up a few months ago - spent twenty minutes troubleshooting before someone noticed he'd copied Vermont's angles. Program-track was the right call.
+        </p>
+        `,
+        character: Character.CATHERINE_VEGA,
+        emotion: Emotion.NEUTRAL,
+        audioUrl: getAssetUrl('/assets/campaigns/nats/3/obj-catherine-look-angles.mp3'),
       },
     },
   },

@@ -126,13 +126,12 @@ export const scenario20Data: ScenarioData = {
             isPowered: true,
             azimuth: 146.96 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
             elevation: 32.42 as Degrees,
-            polarization: -27.6 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8, geoPolarizationSkewDeg; about +22.6 deg TM-2 at ME-02)
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61526,
             targetAzimuth: 146.96 as Degrees,
             targetElevation: 32.42 as Degrees,
-            targetPolarization: -27.6 as Degrees,
             slewing: false,
             beaconCN: 10.2 as dB,
             beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)
@@ -639,7 +638,7 @@ export const scenario20Data: ScenarioData = {
         {
           type: 'speca-span-set',
           description: 'Span About 50 MHz',
-          params: { span: 50e6, spanTolerance: 15e6, requiresObservation: true, observationTab: 'rx-analysis', observationDwellSeconds: 5 },
+          params: { span: 50e6, spanTolerance: 15e6, requiresObservation: true, observationTab: 'rx-analysis' },
           mustMaintain: true,
         },
       ],
@@ -739,7 +738,7 @@ export const scenario20Data: ScenarioData = {
         {
           type: 'speca-span-set',
           description: 'Span About 50 MHz',
-          params: { span: 50e6, spanTolerance: 15e6, requiresObservation: true, observationTab: 'rx-analysis', observationDwellSeconds: 5 },
+          params: { span: 50e6, spanTolerance: 15e6, requiresObservation: true, observationTab: 'rx-analysis' },
           mustMaintain: true,
         },
       ],

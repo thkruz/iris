@@ -115,10 +115,9 @@ export const scenario4Data: ScenarioData = {
             ...vermontGroundStation.antennasState![0],
             azimuth: 158.27 as Degrees, // 53 W from Maine (Phase 28 D4)
             elevation: 35.66 as Degrees,
-            polarization: 10.3 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8, geoPolarizationSkewDeg)
             targetAzimuth: 158.27 as Degrees,
             targetElevation: 35.66 as Degrees,
-            targetPolarization: 10.3 as Degrees,
           },
         ],
       },
@@ -449,7 +448,7 @@ export const scenario4Data: ScenarioData = {
       nice: ['K0773', 'S0421', 'T1567'],
       title: 'Configure Spectrum Analyzer for TIDEMARK-2 Beacon',
       description:
-        'Set the spectrum analyzer for the TIDEMARK-2 beacon: Center 1070 MHz, Span 0.01 MHz (10 kHz), Min Amp -100 dBm, Max Amp -20 dBm. Leave RBW on Auto: at a 10 kHz span it settles near 30 Hz, and a narrow RBW pulls the noise floor down under the CW beacon.',
+        'Set the spectrum analyzer for the TIDEMARK-2 beacon: Center 1070 MHz, Span 0.01 MHz (10 kHz), Min Amp -115 dBm, Max Amp -35 dBm. Leave RBW on Auto: at a 10 kHz span it settles near 30 Hz, and a narrow RBW pulls the noise floor down under the CW beacon.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['understand-frequency-calculation'],
       timeLimitSeconds: 3 * 60,
@@ -475,19 +474,23 @@ export const scenario4Data: ScenarioData = {
         },
         {
           type: 'speca-min-amplitude',
-          description: 'Min Amp: -100 dBm',
+          description: 'Min Amp: -115 dBm',
           params: {
-            minAmplitude: -100 as dBm,
-            minAmplitudeTolerance: 5,
+            // Phase 29 (nats-r4-s04-F4): the ~-100 dBm floor sits 15 dB clear of the bottom edge;
+            // tolerance 3 so the shift-start -120 dBm window does not count as set
+            minAmplitude: -115 as dBm,
+            minAmplitudeTolerance: 3,
           },
           mustMaintain: true,
         },
         {
           type: 'speca-max-amplitude',
-          description: 'Max Amp: -20 dBm',
+          description: 'Max Amp: -35 dBm',
           params: {
-            maxAmplitude: -20 as dBm,
-            maxAmplitudeTolerance: 5,
+            // The -43 dBm beacon sits 8 dB under the top; tolerance 3 so the
+            // shift-start -30 dBm window does not count as set
+            maxAmplitude: -35 as dBm,
+            maxAmplitudeTolerance: 3,
           },
           mustMaintain: true,
         },
@@ -503,7 +506,7 @@ export const scenario4Data: ScenarioData = {
       // of beacon signals in satellite link establishment and health monitoring
       nice: ['T0153', 'K1032'],
       title: 'Confirm the TIDEMARK-2 Beacon',
-      description: 'Find the beacon line at 1,070 MHz on the spectrum analyzer and read its level (the Peak readout under the plot, or Peak Search).',
+      description: 'Find the beacon line at 1,070 MHz on the spectrum analyzer and read its level (the Peak readout in the Spectrum Analyzer Controls card, next to Peak Search).',
       groundStation: 'VT-01',
       intent: 'confirm',
       prerequisiteObjectiveIds: ['configure-speca-beacon'],
@@ -929,14 +932,14 @@ export const scenario4Data: ScenarioData = {
           params: {
             question: 'The modem shows "Locked" with C/N above 10 dB. Why do we check the C/N value and not just the lock indicator?',
             options: [
-              'Lock can occur at C/N as low as about 4.2 dB, with no fade margin left - we need margin',
+              'Lock holds at C/N as low as about 3.7 dB, with no fade margin left - we need margin',
               'The lock indicator is unreliable, often showing false positives - we need a second check',
               '10 dB is the hardware minimum, below it the modem will not run - we need it to function',
               'The C/N value sets the data rate, higher is faster - we need to know the throughput',
             ],
             correctIndex: 0,
             explanation:
-              'QPSK with FEC 3/4 locks at Es/N0 5.0 dB - about 4.2 dB of C/N in the 36 MHz channel (RX Analysis shows it as Required Es/N0). At threshold it still decodes cleanly, but the next 1 dB fade drops lock. With 10+ dB of C/N there is about 6 dB of margin - the link stays solid even if weather degrades it. Lock without margin is asking for trouble during the first rain fade.',
+              'For QPSK with FEC 3/4 the modem shows Required Es/N0 5.0 dB; with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N and holds it down to about 3.7 dB. At threshold it still decodes cleanly, but the next 1 dB fade drops lock. With 10+ dB of C/N there is about 6 dB of margin - the link stays solid even if weather degrades it. Lock without margin is asking for trouble during the first rain fade.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -1144,7 +1147,7 @@ export const scenario4Data: ScenarioData = {
           Spectrum analyzer's configured correctly. 1,070 MHz center, narrow span for the CW beacon, and RBW on Auto - at ten kilohertz of span it drops to about thirty hertz, which pulls the noise floor way down under the beacon. The amplitude window's wide open so the line sits on screen.
         </p>
         <p>
-          The antenna should be on target by now. Watch the display - if everything's aligned, the beacon should appear right at center frequency. A clean spike above the noise floor.
+          The antenna's on target, so the beacon is already on screen - a clean spike right at center frequency, well above the noise floor. Read its level off the Peak readout next to Peak Search.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -1202,7 +1205,7 @@ export const scenario4Data: ScenarioData = {
           Receiver frequency and bandwidth are set. 1,458 MHz, 36 MHz bandwidth to match the transponder. The modem will start searching for a carrier at that frequency.
         </p>
         <p>
-          Now set the modulation and FEC to match TIDEMARK-2's signal format - QPSK with rate 3/4 coding. These parameters must match exactly what the satellite is transmitting.
+          Modulation and FEC have to match TIDEMARK-2's signal format too - QPSK with rate 3/4 coding. If you haven't applied them yet, do it now. These parameters must match exactly what the satellite is transmitting.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -1254,7 +1257,7 @@ export const scenario4Data: ScenarioData = {
       'navigate-tx-chain': {
         text: `
         <p>
-          This is the transmit chain. You've got the TX modem at the bottom, BUC in the middle, and HPA at the top. Signal flows from modem to antenna.
+          This is the transmit chain. BUC and HPA across the top, Transmitter Modems below. Signal flows from the modem up through the BUC and HPA to the antenna.
         </p>
         <p>
           Before configuring anything, check the current state. The TX chain should be in a safe configuration right now - we don't want to be transmitting until we're pointed at the right satellite.

@@ -88,13 +88,12 @@ export const scenario9Data: ScenarioData = {
             isPowered: true,
             azimuth: 146.96 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
             elevation: 32.42 as Degrees,
-            polarization: -27.6 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8)
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61526, // TIDEMARK-2
             targetAzimuth: 146.96 as Degrees,
             targetElevation: 32.42 as Degrees,
-            targetPolarization: -27.6 as Degrees,
             slewing: false,
             beaconCN: 10.2 as dB,
             beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)
@@ -355,7 +354,7 @@ export const scenario9Data: ScenarioData = {
             correctIndex: 0,
             // Ledger: VT-01's own TP-1 carrier, 13.1 dB at shift start
             explanation:
-              'About 13 dB: the TP-1 carrier VT-01 uplinks, coming back down through TIDEMARK-1, some 9 dB above the QPSK 3/4 threshold (Es/N0 5.0 dB, about 4.2 dB of C/N on a clean carrier). That is the clear-sky baseline to compare against on the next shift.',
+              'About 13 dB: the TP-1 carrier VT-01 uplinks, coming back down through TIDEMARK-1, some 8 dB above where QPSK 3/4 acquires lock (the modem shows Required Es/N0 5.0 dB; with Es/N0 about 0.8 dB above Raw C/N it acquires lock from about 4.7 dB C/N and holds it down to about 3.7 dB). That is the clear-sky baseline to compare against on the next shift.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -621,18 +620,26 @@ export const scenario9Data: ScenarioData = {
       id: 'me-tx-payload-spot',
       nice: ['T0153', 'K0740'],
       title: 'ME-02 Customer Traffic Indicator',
-      description: 'Verify your understanding of how to spot-check downlink data integrity from the dashboard.',
+      // nats-r4-s09-F1: frame sync / CRC / FEC live on RX Analysis > Payload
+      // Data Integrity; the Dashboard has no such indicators
+      description: 'Spot-check downlink data integrity on RX Analysis: the Payload Data Integrity card shows frame sync, CRC and FEC for the receiver.',
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['me-verify-tracking'],
       timeLimitSeconds: 1 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
         {
+          type: 'tab-active',
+          description: 'RX Analysis Tab Open',
+          params: { tab: 'rx-analysis' },
+          mustMaintain: true,
+        },
+        {
           type: 'status-check',
           description: 'Payload Health Indicators',
           params: {
             character: Character.SYSTEM,
-            question: 'On a routine spot check, which combination of indicators confirms the downlink data path is healthy?',
+            question: 'On the Payload Data Integrity card, which combination of indicators confirms the downlink data path is healthy?',
             options: [
               'Frame sync locked + CRC valid + FEC engaged (Reed-Solomon active, no uncorrectables)',
               'RX power high + AGC mid-range + C/N above threshold (strong carrier, data must follow)',
@@ -987,16 +994,6 @@ export const scenario9Data: ScenarioData = {
         emotion: Emotion.NEUTRAL,
         audioUrl: getAssetUrl('/assets/campaigns/nats/9/obj-switch-to-vermont.mp3'),
       },
-      'return-to-tidemark1': {
-        text: `
-        <p>
-          TM-3 looks clean. Bring VT-01 back to TM-1 and we'll pull customer traffic back. Sister teleport's been notified.
-        </p>
-        `,
-        character: Character.DANA_TORRES,
-        emotion: Emotion.CONFIDENT,
-        audioUrl: getAssetUrl('/assets/campaigns/nats/9/obj-return-to-tidemark1.mp3'),
-      },
       'log-shift-summary': {
         text: `
         <p>
@@ -1009,6 +1006,20 @@ export const scenario9Data: ScenarioData = {
         character: Character.DANA_TORRES,
         emotion: Emotion.HAPPY,
         audioUrl: getAssetUrl('/assets/campaigns/nats/9/obj-log-shift-summary.mp3'),
+      },
+    },
+    // nats-r3-s02-F1 (D18): Dana's "Bring VT-01 back" plays as the return step
+    // opens, not after the retune is already done
+    objectivesOnStart: {
+      'return-to-tidemark1': {
+        text: `
+        <p>
+          TM-3 looks clean. Bring VT-01 back to TM-1 and we'll pull customer traffic back. Sister teleport's been notified.
+        </p>
+        `,
+        character: Character.DANA_TORRES,
+        emotion: Emotion.CONFIDENT,
+        audioUrl: getAssetUrl('/assets/campaigns/nats/9/obj-return-to-tidemark1.mp3'),
       },
     },
   },

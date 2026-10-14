@@ -98,13 +98,12 @@ export const scenario21Data: ScenarioData = {
             isPowered: true,
             azimuth: 146.96 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
             elevation: 32.42 as Degrees,
-            polarization: -27.6 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8, geoPolarizationSkewDeg; about +22.6 deg TM-2 at ME-02)
             trackingMode: 'program-track',
             isBeaconLocked: true,
             targetSatelliteId: 61526,
             targetAzimuth: 146.96 as Degrees,
             targetElevation: 32.42 as Degrees,
-            targetPolarization: -27.6 as Degrees,
             slewing: false,
             beaconCN: 10.2 as dB,
             beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)
@@ -327,9 +326,20 @@ export const scenario21Data: ScenarioData = {
       description: 'Stay on the 40 MHz view and watch a full on/off cycle of the shelf on the top edge of the carrier. Time it (the HUD clock is enough), then interpret it.',
       groundStation: 'ME-02',
       prerequisiteObjectiveIds: ['open-spectrum'],
-      timeLimitSeconds: 2 * 60,
+      // 150 s hold + time to answer (nats-r4-s21-F2: the hold must fit the countdown)
+      timeLimitSeconds: 4 * 60,
       timerStartTrigger: 'on-activate',
       conditions: [
+        {
+          // Phase 29 D11 (nats-r4-s21-F2): the quiz opens only after one full
+          // 150 s on/off cycle (tm2-hostile periodSeconds) could be watched.
+          // A tab gate with a maintainDuration holds; leaving the tab restarts it.
+          type: 'tab-active',
+          description: 'Watch one full on/off cycle on RX Analysis (held 150 s)',
+          params: { tab: 'rx-analysis' },
+          mustMaintain: true,
+          maintainDuration: 150,
+        },
         {
           type: 'status-check',
           description: 'Duty Cycle Read',
@@ -337,14 +347,14 @@ export const scenario21Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'You timed a full cycle of the interferer. What cadence did you measure, and what does it argue?',
             options: [
-              'About 90 s on, 60 s off, repeating - against accident, toward deliberation: a clean minute-scale on/off cadence implies a switch',
-              'About 90 s on, 60 s off, repeating - toward radar: rotating antennas sweep past on a fixed period, and this is a scan rate',
-              "About 90 s on, 60 s off, repeating - toward a failing supply on a neighbor's uplink: a dying regulator cycles as it heats",
-              "No cadence - on and off at random, which says nothing: duty cycle depends on the receiver's AGC, not on the source",
+              'About 90 s on, 60 s off, repeating - a regular minute-scale cadence: toward a switch, not an accident',
+              'About 60 s on, 90 s off, repeating - a regular minute-scale cadence: toward a switch, not an accident',
+              'About 30 s on, 120 s off, repeating - a regular minute-scale cadence: toward a switch, not an accident',
+              'Continuous, no off periods - no cadence at all: toward a steady misaligned uplink, an accident',
             ],
             correctIndex: 0,
             explanation:
-              'Radar duty cycles are seconds, not minutes. Accidental interference is continuous or erratic. A deliberate, minute-scale on/off pattern implies a hand on a switch or an automated transmitter, not weather or a stuck oscillator - one of the strongest behavioral indicators of intent, though it is an indicator, not proof.',
+              'The shelf is up about 90 s and gone about 60 s, every 150 s. Radar duty cycles are seconds, not minutes, and accidental interference is continuous or erratic. A deliberate, minute-scale on/off pattern implies a hand on a switch or an automated transmitter, not weather or a stuck oscillator - one of the strongest behavioral indicators of intent, though it is an indicator, not proof.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -810,7 +820,7 @@ export const scenario21Data: ScenarioData = {
       'verify-data-layer': {
         text: `
         <p>
-          <em>[Regulator coordination desk - SYSTEM notification, 10:41]</em>
+          <em>[Regulator coordination desk - SYSTEM notification, {{stationTime}}]</em>
         </p>
         <p>
           "Interference report channel open for TM-2 TP-1. Submit measured parameters, spectrum captures, and cross-station confirmation. Do not attempt source attribution; geolocation tasking will be handled here. Acknowledge receipt of mitigation guidance: receive-side only, no power escalation."

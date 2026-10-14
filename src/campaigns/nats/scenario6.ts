@@ -84,15 +84,16 @@ export const scenario6Data: ScenarioData = {
             // Antenna in program-track on TIDEMARK-1 (wrong satellite)
             // Student must switch to AURORA-7, then to step-track
             isPowered: true,
-            azimuth: 180 as Degrees,
-            elevation: 45 as Degrees,
-            polarization: 0 as Degrees,
+            // TIDEMARK-1 (53 W) from VT-01 by geoLookAngles, as ground-stations.ts
+            // (was a hand-authored 180 / 45; Phase 29 gate, nats-r4 D1 open item 3)
+            azimuth: 153.1 as Degrees,
+            elevation: 35.1 as Degrees,
+            // polarization: derived from geometry (Phase 29 D8, geoPolarizationSkewDeg)
             trackingMode: 'program-track',
             isBeaconLocked: false,
             targetSatelliteId: 61525, // TIDEMARK-1 (wrong satellite)
-            targetAzimuth: 180 as Degrees,
-            targetElevation: 45 as Degrees,
-            targetPolarization: 0 as Degrees,
+            targetAzimuth: 153.1 as Degrees,
+            targetElevation: 35.1 as Degrees,
             slewing: false,
             beaconCN: 0 as dB,
             beaconFrequencyHz: 4165e6 as Hertz, // Pre-configured by Charlie (AURORA-7 beacon, RF)
@@ -270,7 +271,7 @@ export const scenario6Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              "The ACU shows TIDEMARK-1 as the program-track target, and the dish sits at TIDEMARK-1's look angles (about 153.2 / 35.2). AURORA-7 is our target for this mission - we need to change the program-track target.",
+              "The ACU shows TIDEMARK-1 as the program-track target, and the dish sits at TIDEMARK-1's look angles (about 153.1 / 35.1). AURORA-7 is our target for this mission - we need to change the program-track target.",
             pointPenalty: 5,
           },
           mustMaintain: false,

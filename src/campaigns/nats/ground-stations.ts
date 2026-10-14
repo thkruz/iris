@@ -24,13 +24,12 @@ export const vermontGroundStation = {
       isPowered: true,
       azimuth: 153.1 as Degrees, // Locked on TIDEMARK-1 (53 W, Phase 28 D4)
       elevation: 35.1 as Degrees,
-      polarization: 14 as Degrees,
+      // polarization: derived from geometry (Phase 29 D8, geoPolarizationSkewDeg; +18.8 deg TM-1 at VT-01)
       trackingMode: 'program-track',
       isBeaconLocked: true,
       targetSatelliteId: 61525,
       targetAzimuth: 153.1 as Degrees,
       targetElevation: 35.1 as Degrees,
-      targetPolarization: 14 as Degrees,
       slewing: false,
       beaconCN: 10.5 as dB,
       beaconFrequencyHz: 4175.5e6 as Hertz, // TIDEMARK-1 beacon (RF; the beacon receiver tunes RF)
@@ -434,13 +433,12 @@ export const ME02_TM2_ANTENNA_STATE = {
   isPowered: true,
   azimuth: 148.13 as Degrees, // Maine sees TM-2 (45 W) here, not at Vermont's 143.3 / 31.8 (Phase 28 D4)
   elevation: 32.86 as Degrees,
-  polarization: -28.4 as Degrees,
+  // polarization: derived from geometry (Phase 29 D8, geoPolarizationSkewDeg; about +22 deg TM-2 at ME-02)
   trackingMode: 'program-track',
   isBeaconLocked: true,
   targetSatelliteId: 61526, // TIDEMARK-2
   targetAzimuth: 148.13 as Degrees,
   targetElevation: 32.86 as Degrees,
-  targetPolarization: -28.4 as Degrees,
   slewing: false,
   beaconCN: 10.2 as dB,
   beaconFrequencyHz: 4180e6 as Hertz, // TIDEMARK-2 beacon (RF)
