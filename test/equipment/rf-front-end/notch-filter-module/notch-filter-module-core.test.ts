@@ -341,6 +341,20 @@ describe('NotchFilterModuleCore', () => {
 
       expect(notchFilterModule.state.notches[2].bandwidth).toBe(5);
     });
+
+    it('reports a configure / enable as an Ops Log action, and an unchanged apply as nothing (nats-r5-s05-F2)', () => {
+      const messages: string[] = [];
+      const listener = (data: { message: string }) => messages.push(data.message);
+      EventBus.getInstance().on(Events.EQUIPMENT_ACTION, listener);
+
+      notchFilterModule.handleNotchChange(0, { centerFrequency: 1515 as MHz, bandwidth: 1 as MHz, depth: 40, enabled: true });
+      notchFilterModule.handleNotchChange(0, { centerFrequency: 1515 as MHz, bandwidth: 1 as MHz, depth: 40, enabled: true });
+      notchFilterModule.handleNotchChange(0, { enabled: false });
+      notchFilterModule.handlePowerToggle(false);
+      EventBus.getInstance().off(Events.EQUIPMENT_ACTION, listener);
+
+      expect(messages).toEqual(['Notch 1: 1515.00 MHz, 1.0 MHz, 40 dB, ENABLED', 'Notch 1: 1515.00 MHz, 1.0 MHz, 40 dB, DISABLED', 'Notch filter Power OFF']);
+    });
   });
 
   describe('handlePowerToggle', () => {

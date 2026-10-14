@@ -92,7 +92,7 @@ export abstract class BasePage extends BaseElement {
     // Initialize ops log manager (always, for all scenarios)
     OpsLogManager.initialize(scenario.settings.scenarioStartWallTime, scenario.settings.scenarioStartDate, scenario.settings.previousShiftLogs);
 
-    // Initialize event auto-logger (logs equipment events for beginner/intermediate)
+    // Initialize event auto-logger (logs equipment events at every difficulty)
     EventAutoLogger.getInstance().initialize();
 
     // Initialize objectives manager if scenario has objectives

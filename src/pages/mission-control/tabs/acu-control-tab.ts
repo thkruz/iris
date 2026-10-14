@@ -48,6 +48,25 @@ export class ACUControlTab extends BaseElement {
   private elFineControl_: FineAdjustControl | null = null;
   private polFineControl_: FineAdjustControl | null = null;
 
+  /** Pattern loss within which a satellite counts as inside the beam, dB (about 0.9 of the -3 dB beamwidth off axis) */
+  static readonly IN_BEAM_MAX_LOSS_DB = 10;
+
+  /**
+   * Carriers the dish hears from satellites inside its main beam, locked or
+   * not. Sidelobe pickup (a big dish parked at El 5 still hears GEO carriers
+   * above its detection floor) is not "in view": parked off the satellite
+   * this reads 0, as the Dashboard's Signals count does (nats-r5-s11-F1).
+   */
+  static signalsInBeam(antenna: GroundStation['antennas'][number]): number {
+    const heard = antenna.state.rxSignalsIn;
+    if (heard.length === 0) return 0;
+    const inBeam = new Set<string>();
+    for (const { signal, view } of antenna.rxSignals) {
+      if (antenna.pointingLossDb(view.az, view.el, signal.frequency) <= ACUControlTab.IN_BEAM_MAX_LOSS_DB) inBeam.add(signal.signalId);
+    }
+    return heard.filter((s) => inBeam.has(s.signalId)).length;
+  }
+
   // Beacon display throttling (1 second interval like other adapters)
   private static readonly BEACON_UPDATE_INTERVAL_MS = 1000;
   private lastBeaconSyncTime_: number = 0;
@@ -255,7 +274,7 @@ export class ACUControlTab extends BaseElement {
                     <span id="${p}lock-status-display" class="fw-bold">UNLOCKED</span>
                   </div>
                   <div class="d-flex justify-content-between">
-                    <span class="text-muted" title="RF carriers arriving at the feed from where the dish points, locked or not. The Dashboard's Signals count is locked carriers.">RF signals in view:</span>
+                    <span class="text-muted" title="RF carriers from satellites inside the dish's main beam, locked or not; sidelobe pickup is not counted. The Dashboard's Signals count is locked carriers.">RF signals in view:</span>
                     <span id="${p}signals-count-display" class="fw-bold font-monospace">0</span>
                   </div>
                 </div>
@@ -616,9 +635,12 @@ export class ACUControlTab extends BaseElement {
 
     if (!select || !moveBtn) return;
 
-    // If a target satellite is pre-configured, set the beacon frequency from it
-    if (antenna.state.targetSatelliteId !== null) {
-      antenna.handleTargetSatelliteChange(antenna.state.targetSatelliteId);
+    // If a target satellite is pre-configured, set the beacon frequency from it.
+    // That re-emits the antenna state, but opening a tab is not an operator
+    // action and never logs (nats-r5-s07-F2)
+    const preconfiguredTarget = antenna.state.targetSatelliteId;
+    if (preconfiguredTarget !== null) {
+      EventAutoLogger.getInstance().runWithoutLogging(() => antenna.handleTargetSatelliteChange(preconfiguredTarget));
     }
 
     // Populate satellite dropdown (rebuilt by syncUiWithState_ if the list changes)
@@ -703,13 +725,23 @@ export class ACUControlTab extends BaseElement {
 
     if (!heaterSwitch || !blowerSwitch) return;
 
+    // The heater and blower change no line the antenna state formatter writes,
+    // so each logs its own (nats-r5-s08-F2)
     const heaterHandler = () => {
+      const wasOn = antenna.state.isHeaterEnabled;
       antenna.handleHeaterToggle(heaterSwitch.checked);
+      if (antenna.state.isHeaterEnabled !== wasOn) {
+        EventAutoLogger.getInstance().logAction(`Feed heater ${antenna.state.isHeaterEnabled ? 'ON' : 'OFF'}`, 'ANT', stationTagForAntennaState(antenna.state));
+      }
     };
     this.addHandler_('heater-switch', heaterSwitch, 'change', heaterHandler);
 
     const blowerHandler = () => {
+      const wasOn = antenna.state.isRainBlowerEnabled;
       antenna.handleRainBlowerToggle(blowerSwitch.checked);
+      if (antenna.state.isRainBlowerEnabled !== wasOn) {
+        EventAutoLogger.getInstance().logAction(`Rain blower ${antenna.state.isRainBlowerEnabled ? 'ON' : 'OFF'}`, 'ANT', stationTagForAntennaState(antenna.state));
+      }
     };
     this.addHandler_('blower-switch', blowerSwitch, 'change', blowerHandler);
   }
@@ -789,7 +821,7 @@ export class ACUControlTab extends BaseElement {
 
     // Update signals count
     const signalsDisplay = this.qs_('signals-count-display');
-    if (signalsDisplay) signalsDisplay.textContent = state.rxSignalsIn.length.toString();
+    if (signalsDisplay) signalsDisplay.textContent = ACUControlTab.signalsInBeam(antenna).toString();
 
     // Sync fine adjustment controls with actual position and staged values
     // Red (active) = current position (matches polar plot), Amber (pending) = staged changes

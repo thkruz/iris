@@ -172,8 +172,12 @@ export function formatRxConfigEvent(data: RxConfigChangedData): string | null {
   const modemNum = config.modemNumber;
   const freqMHz = config.frequency.toFixed(2);
   const bwMHz = config.bandwidth.toFixed(1);
+  // The modulation and FEC, as the TX config line carries them (nats-r5-s06-F3)
+  const mod = config.modulation && config.modulation !== 'null' ? config.modulation : '';
+  const fec = config.fec && config.fec !== 'null' ? config.fec : '';
+  const modFec = [mod, fec].filter(Boolean).join(' ');
 
-  return `M${modemNum}: Tuned to ${freqMHz} MHz, BW ${bwMHz} MHz`;
+  return `M${modemNum}: Tuned to ${freqMHz} MHz, BW ${bwMHz} MHz${modFec ? `, ${modFec}` : ''}`;
 }
 
 /**

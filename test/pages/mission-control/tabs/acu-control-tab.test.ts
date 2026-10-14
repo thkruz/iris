@@ -3,6 +3,7 @@ import { GroundStation } from '../../../../src/assets/ground-station/ground-stat
 import { FineAdjustControl } from '../../../../src/components/fine-adjust-control/fine-adjust-control';
 import { EventBus } from '../../../../src/events/event-bus';
 import { Events } from '../../../../src/events/events';
+import { EventAutoLogger } from '../../../../src/ops-log/event-auto-logger';
 import { ACUControlTab } from '../../../../src/pages/mission-control/tabs/acu-control-tab';
 
 // Mock dependencies
@@ -390,6 +391,46 @@ describe('ACUControlTab', () => {
 
       expect(antenna.handleRainBlowerToggle).toHaveBeenCalledWith(true);
     });
+
+    it('logs the feed heater switch, and nothing when the antenna refuses it (nats-r5-s08-F2)', () => {
+      const antenna = mockGroundStation.antennas[0];
+      const logSpy = vi.spyOn(EventAutoLogger.getInstance(), 'logAction').mockImplementation(() => undefined);
+      const heaterSwitch = document.querySelector(`#${PREFIX}heater-switch`) as HTMLInputElement;
+
+      // Refused (antenna unpowered): state unchanged, no line
+      heaterSwitch.checked = true;
+      heaterSwitch.dispatchEvent(new Event('change'));
+      expect(logSpy).not.toHaveBeenCalled();
+
+      (antenna.handleHeaterToggle as Mock).mockImplementation((on: boolean) => {
+        antenna.state.isHeaterEnabled = on;
+      });
+      heaterSwitch.dispatchEvent(new Event('change'));
+      expect(logSpy).toHaveBeenCalledWith('Feed heater ON', 'ANT', undefined);
+
+      antenna.state.isHeaterEnabled = false;
+      logSpy.mockRestore();
+    });
+  });
+
+  describe('tab open (nats-r5-s07-F2)', () => {
+    it('re-applies a configured target with logging off', () => {
+      tab.dispose();
+      document.body.innerHTML = '';
+      const antenna = mockGroundStation.antennas[0];
+      antenna.state.targetSatelliteId = 12345;
+      const silentSpy = vi.spyOn(EventAutoLogger.getInstance(), 'runWithoutLogging');
+
+      containerEl = document.createElement('div');
+      containerEl.id = 'acu-control-container';
+      document.body.appendChild(containerEl);
+      tab = new ACUControlTab(mockGroundStation, 'acu-control-container');
+
+      expect(silentSpy).toHaveBeenCalledTimes(1);
+      expect(antenna.handleTargetSatelliteChange).toHaveBeenCalledWith(12345);
+      antenna.state.targetSatelliteId = null;
+      silentSpy.mockRestore();
+    });
   });
 
   describe('satellite dropdown interactions', () => {
@@ -595,6 +636,19 @@ describe('ACUControlTab', () => {
     it('labels the ACU signal count as what it counts: RF carriers in view, not locked carriers (nats-r4-s23-F2)', () => {
       const label = document.querySelector(`#${PREFIX}signals-count-display`)?.previousElementSibling;
       expect(label?.textContent).toBe('RF signals in view:');
+    });
+
+    it('counts only carriers from satellites inside the main beam; parked off the satellite it reads 0 (nats-r5-s11-F1)', () => {
+      const signal = (signalId: string) => ({ signalId, frequency: 3.7e9 });
+      const heard = [signal('a'), signal('b')];
+      const antenna = {
+        state: { rxSignalsIn: heard },
+        rxSignals: heard.map((s, i) => ({ signal: s, view: { az: 150 + i * 30, el: 35 } })),
+        pointingLossDb: vi.fn((az: number) => (az === 150 ? 0.4 : 25)),
+      };
+      expect(ACUControlTab.signalsInBeam(antenna as any)).toBe(1);
+      antenna.pointingLossDb.mockReturnValue(30);
+      expect(ACUControlTab.signalsInBeam(antenna as any)).toBe(0);
     });
   });
 

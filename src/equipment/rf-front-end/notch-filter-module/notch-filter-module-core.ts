@@ -173,7 +173,25 @@ export abstract class NotchFilterModuleCore extends RFFrontEndModule<NotchFilter
    */
   public handleNotchChange(index: number, config: Partial<NotchConfig>): void {
     if (index < 0 || index > 2) return;
-    this.state.notches[index] = { ...this.state.notches[index], ...config };
+    const previous = this.state.notches[index];
+    const next = { ...previous, ...config };
+    this.state.notches[index] = next;
+    // No state event reports a notch, so the change logs itself (nats-r5-s05-F2)
+    const changed =
+      next.centerFrequency !== previous.centerFrequency || next.bandwidth !== previous.bandwidth || next.depth !== previous.depth || next.enabled !== previous.enabled;
+    if (changed) {
+      this.logOperatorAction_(NotchFilterModuleCore.formatNotchLine(index, next));
+    }
+  }
+
+  /**
+   * Ops Log line for one notch: "Notch 1: 1515.00 MHz, 1.0 MHz, 40 dB, ENABLED"
+   * @param index notch index (0-2)
+   * @param notch its configuration
+   */
+  static formatNotchLine(index: number, notch: NotchConfig): string {
+    const bandwidth = notch.bandwidth >= 1 ? notch.bandwidth.toFixed(1) : notch.bandwidth.toFixed(2);
+    return `Notch ${index + 1}: ${notch.centerFrequency.toFixed(2)} MHz, ${bandwidth} MHz, ${RFFrontEndModule.formatLevel_(notch.depth, 'dB')}, ${notch.enabled ? 'ENABLED' : 'DISABLED'}`;
   }
 
   /**
@@ -181,7 +199,11 @@ export abstract class NotchFilterModuleCore extends RFFrontEndModule<NotchFilter
    * @param isPowered Optional explicit power state, otherwise toggles
    */
   public handlePowerToggle(isPowered?: boolean): void {
+    const wasPowered = this.state.isPowered;
     this.state.isPowered = isPowered ?? !this.state.isPowered;
+    if (this.state.isPowered !== wasPowered) {
+      this.logOperatorAction_(this.state.isPowered ? 'Notch filter Power ON' : 'Notch filter Power OFF');
+    }
   }
 
   /**

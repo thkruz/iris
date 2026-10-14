@@ -3,12 +3,14 @@ import type { TransmitterModem } from '../../src/equipment/transmitter/transmitt
 import { EventBus } from '../../src/events/event-bus';
 import { Events } from '../../src/events/events';
 import { EventAutoLogger } from '../../src/ops-log/event-auto-logger';
-import { formatAntennaEvent, formatTxActiveModemEvent, formatTxConfigEvent } from '../../src/ops-log/event-formatters';
+import { formatAntennaEvent, formatRxConfigEvent, formatTxActiveModemEvent, formatTxConfigEvent } from '../../src/ops-log/event-formatters';
 import { OpsLogManager } from '../../src/ops-log/ops-log-manager';
+import { SimClock } from '../../src/simulation/sim-clock';
 
+// Advanced: the log runs at every difficulty (nats-r5-s16-F2)
 vi.mock('../../src/scenario-manager', () => ({
   ScenarioManager: {
-    getInstance: () => ({ data: { difficulty: 'beginner' } }),
+    getInstance: () => ({ data: { difficulty: 'advanced' } }),
   },
 }));
 
@@ -198,5 +200,114 @@ describe('EventAutoLogger station tags (nats-r3-s11-F1)', () => {
 
     expect(lastEntry().message).toBe('HPA disabled (handover)');
     expect(lastEntry().source).toBe('VT-01 RF FE');
+  });
+});
+
+describe('Phase 30 Ops Log (nats-r5 D1, D2, D3)', () => {
+  beforeEach(() => {
+    EventBus.destroy();
+    OpsLogManager.destroy();
+    EventAutoLogger.destroy();
+    OpsLogManager.initialize();
+    EventAutoLogger.getInstance().initialize();
+  });
+
+  afterEach(() => {
+    EventAutoLogger.destroy();
+    OpsLogManager.destroy();
+    EventBus.destroy();
+  });
+
+  const messages = () =>
+    OpsLogManager.getInstance()
+      .getEntries()
+      .map((e) => e.message);
+
+  const programTrack = { trackingMode: 'program-track' as const, isPowered: true, isLocked: false, isBeaconLocked: false, isStepTrackEnabled: false, beaconFrequencyHz: 4175.5e6 };
+
+  it('logs at advanced difficulty (nats-r5-s16-F2)', () => {
+    EventAutoLogger.getInstance().logAction('HPA disabled', 'RF FE');
+
+    expect(messages()).toEqual(['HPA disabled']);
+  });
+
+  it('writes one line per mode command, completed by the target beacon (nats-r5-s02-F1)', () => {
+    const bus = EventBus.getInstance();
+    // PROGRAM: no target yet, so no beacon frequency
+    bus.emit(Events.ANTENNA_STATE_CHANGED, { ...programTrack, targetSatelliteId: null } as never);
+    // Move to Target: the target, then the slew, each emit the state
+    bus.emit(Events.ANTENNA_STATE_CHANGED, { ...programTrack, targetSatelliteId: 7 } as never);
+    EventAutoLogger.getInstance().logAction('PROGRAM: slewing to TIDEMARK-1', 'ANT');
+    bus.emit(Events.ANTENNA_STATE_CHANGED, { ...programTrack, targetSatelliteId: 7 } as never);
+
+    expect(messages()).toEqual(['Tracking mode: PROGRAM-TRACK, Power ON, Antenna UNLOCKED, Beacon freq: 4175.50 MHz', 'PROGRAM: slewing to TIDEMARK-1']);
+  });
+
+  it('does not write the start-of-shift state again when the logger is rebuilt (nats-r5-s10-F1)', () => {
+    const locked = { ...programTrack, isLocked: true, targetSatelliteId: 7 };
+    EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, locked as never);
+    EventAutoLogger.destroy();
+    EventAutoLogger.getInstance().initialize();
+    EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, locked as never);
+
+    expect(messages()).toEqual(['Tracking mode: PROGRAM-TRACK, Power ON, Antenna LOCKED, Beacon freq: 4175.50 MHz']);
+  });
+
+  it('logs a new beacon frequency on the same mode', () => {
+    const manual = { ...programTrack, trackingMode: 'manual' as const, targetSatelliteId: null };
+    EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, manual as never);
+    EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...manual, beaconFrequencyHz: 4165e6 } as never);
+
+    expect(messages()).toEqual([
+      'Tracking mode: MANUAL, Power ON, Antenna UNLOCKED, Beacon freq: 4175.50 MHz',
+      'Tracking mode: MANUAL, Power ON, Antenna UNLOCKED, Beacon freq: 4165.00 MHz',
+    ]);
+  });
+
+  it('logs nothing emitted inside runWithoutLogging (a tab open, nats-r5-s07-F2)', () => {
+    EventAutoLogger.getInstance().runWithoutLogging(() => {
+      EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...programTrack, isLocked: true, targetSatelliteId: 7 } as never);
+    });
+    expect(messages()).toEqual([]);
+
+    // A real mode change afterwards still logs
+    EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...programTrack, isStepTrackEnabled: true, isLocked: true, targetSatelliteId: 7 } as never);
+    expect(messages()).toEqual(['Tracking mode: PROGRAM-TRACK + STEP-TRACK, Power ON, Antenna LOCKED, Beacon freq: 4175.50 MHz']);
+  });
+
+  it('writes the RX modulation and FEC like the TX line (nats-r5-s06-F3)', () => {
+    const config = { antenna_id: 1, modemNumber: 1, frequency: 1422, bandwidth: 24, modulation: 'QPSK', fec: '3/4', isPowered: true };
+
+    expect(formatRxConfigEvent({ uuid: 'rx', modem: 1, config } as never)).toBe('M1: Tuned to 1422.00 MHz, BW 24.0 MHz, QPSK 3/4');
+  });
+
+  describe('alarm lines (nats-r5-s17-F1)', () => {
+    const sun = { severity: 'warning' as const, message: 'SUN TRANSIT: ELEVATED SKY NOISE (3.1 dB)', assetId: 'VT-01', equipmentType: 'ANT', equipmentIndex: 0 };
+    const signal = { severity: 'info' as const, message: 'Signal(s) Detected', assetId: 'VT-01', equipmentType: 'RX', equipmentIndex: 0 };
+    const emitAlarms = (alarms: unknown[]) => EventBus.getInstance().emit(Events.ALARM_STATE_CHANGED, { alarms, highestSeverity: 'warning' } as never);
+
+    it('logs a raise and a clear once each, stamped as SYSTEM lines with the ticker source, and skips info', () => {
+      emitAlarms([sun, signal]);
+      emitAlarms([{ ...sun, message: 'SUN TRANSIT: ELEVATED SKY NOISE (4.0 dB)' }, signal]);
+      emitAlarms([]);
+
+      const entries = OpsLogManager.getInstance().getEntries();
+      expect(entries.map((e) => e.message)).toEqual(['ALARM raised: SUN TRANSIT: ELEVATED SKY NOISE (3.1 dB)', 'ALARM cleared: SUN TRANSIT: ELEVATED SKY NOISE (3.1 dB)']);
+      expect(entries.map((e) => e.source)).toEqual(['VT-01(ANT1)', 'VT-01(ANT1)']);
+      expect(entries.map((e) => e.category)).toEqual(['system', 'system']);
+    });
+
+    it('logs a flapping alarm once per 30 s', () => {
+      emitAlarms([sun]);
+      emitAlarms([]);
+      SimClock.advanceRun(5_000);
+      emitAlarms([sun]);
+      emitAlarms([]);
+      expect(messages()).toHaveLength(2);
+
+      SimClock.advanceRun(30_000);
+      emitAlarms([sun]);
+      expect(messages()).toHaveLength(3);
+    });
   });
 });
