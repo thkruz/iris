@@ -271,7 +271,7 @@ export class BUCAdapter {
 
     // Update alarm badge
     const alarms = this.getAlarmsFromModule_();
-    this.alarmBadge_.update(alarms, this.bucModule.state.isPowered);
+    this.alarmBadge_.update(alarms, this.bucModule.state.isPowered, this.bucModule.state.isMuted ? 'Output muted' : undefined);
   }
 
   private setupDomCache_(): void {
@@ -667,7 +667,7 @@ export class BUCAdapter {
 
     // Update alarm badge - immediate feedback
     const alarms = this.getAlarmsFromModule_();
-    this.alarmBadge_.update(alarms, this.bucModule.state.isPowered);
+    this.alarmBadge_.update(alarms, this.bucModule.state.isPowered, this.bucModule.state.isMuted ? 'Output muted' : undefined);
   }
 
   /**

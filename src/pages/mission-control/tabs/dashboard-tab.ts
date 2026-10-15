@@ -723,14 +723,15 @@ export class DashboardTab extends BaseElement {
     const rfFe = this.groundStation.rfFrontEnds[0];
     if (!rfFe) return;
 
-    // BUC Lock
+    // BUC Lock: a powered-off BUC reads OFF (grey), as the LNB does (phase 31 D6)
     const bucLockEl = this.domCache_.get('buc-lock');
     if (bucLockEl && rfFe.bucModule) {
       const led = bucLockEl.querySelector('.card-alarm-led');
       const text = bucLockEl.querySelector('.small');
-      const isLocked = rfFe.bucModule.state.isExtRefLocked;
+      const bucPowered = rfFe.bucModule.state.isPowered;
+      const isLocked = bucPowered && rfFe.bucModule.state.isExtRefLocked;
       if (led) led.className = `card-alarm-led ${isLocked ? 'success' : 'off'}`;
-      if (text) text.textContent = isLocked ? 'LOCKED' : 'UNLOCKED';
+      if (text) text.textContent = bucPowered ? (isLocked ? 'LOCKED' : 'UNLOCKED') : 'OFF';
     }
 
     // BUC Output
@@ -752,6 +753,10 @@ export class DashboardTab extends BaseElement {
       const isPowered = rfFe.hpaModule.state.isPowered;
       if (!isPowered) {
         hpaStatusEl.textContent = 'OFF';
+        hpaStatusEl.className = 'status-badge status-badge-gray';
+      } else if (!rfFe.hpaModule.state.isHpaEnabled) {
+        // Powered but output disabled: not radiating, so not "OK" (phase 31 D6)
+        hpaStatusEl.textContent = 'DISABLED';
         hpaStatusEl.className = 'status-badge status-badge-gray';
       } else if (isOverdriven) {
         hpaStatusEl.textContent = 'OVERDRIVE';

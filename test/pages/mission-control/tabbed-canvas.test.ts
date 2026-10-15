@@ -86,9 +86,12 @@ vi.mock('../../../src/pages/mission-control/tabs/ground-track-tab', () => ({
   }),
 }));
 vi.mock('../../../src/pages/mission-control/tabs/mission-overview-tab', () => ({
-  MissionOverviewTab: vi.fn(function () {
-    return createMockTab();
-  }),
+  MissionOverviewTab: Object.assign(
+    vi.fn(function () {
+      return createMockTab();
+    }),
+    { rememberStation: vi.fn(), resetRememberedStation: vi.fn() }
+  ),
 }));
 vi.mock('../../../src/pages/mission-control/tabs/rx-analysis-tab', () => ({
   RxAnalysisTab: vi.fn(function () {
@@ -203,6 +206,16 @@ describe('TabbedCanvas', () => {
   });
 
   describe('ground station selection', () => {
+    it('remembers the selected station for the Overview and forgets it on teardown (phase 31 D16)', () => {
+      const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
+
+      assetSelectedHandler?.({ type: 'ground-station', id: 'GS-001' });
+      expect(MissionOverviewTab.rememberStation).toHaveBeenCalledWith('GS-001');
+
+      tabbedCanvas.destroy();
+      expect(MissionOverviewTab.resetRememberedStation).toHaveBeenCalled();
+    });
+
     it('should render ground station tabs when GS selected', () => {
       const assetSelectedHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ASSET_SELECTED)?.[1];
 

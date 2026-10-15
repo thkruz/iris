@@ -52,10 +52,21 @@ export class CardAlarmBadge {
    * @param alarms Array of current alarm statuses
    * @param isPowered False when the equipment is off: with no alarm to show the
    *   LED is grey ("Powered off"), never the green "System Normal" (phase 29 D4)
+   * @param idleStatus Set when the equipment is powered but deliberately not
+   *   radiating (HPA output disabled, BUC muted): with no alarm to show the LED
+   *   is grey with this text as its tooltip instead of the green "System Normal"
+   *   (phase 31 D6). Real alarms still take precedence.
    */
-  update(alarms: AlarmStatus[], isPowered = true): void {
-    const severity = this.getHighestSeverity_(alarms, isPowered);
-    const messages = this.getAlarmMessages_(alarms) || (isPowered ? '' : 'Powered off');
+  update(alarms: AlarmStatus[], isPowered = true, idleStatus?: string): void {
+    const isIdle = isPowered && !!idleStatus;
+    const severity = this.getHighestSeverity_(alarms, isPowered && !isIdle);
+    let quietText = '';
+    if (!isPowered) {
+      quietText = 'Powered off';
+    } else if (isIdle) {
+      quietText = idleStatus ?? '';
+    }
+    const messages = this.getAlarmMessages_(alarms) || quietText;
 
     // Update LED class
     const newClass = `card-alarm-led ${severity}`;
@@ -74,12 +85,12 @@ export class CardAlarmBadge {
    * Get highest severity from alarms
    * Priority: error > warning > info > success
    */
-  private getHighestSeverity_(alarms: AlarmStatus[], isPowered: boolean): string {
+  private getHighestSeverity_(alarms: AlarmStatus[], isNormalWhenQuiet: boolean): string {
     // Filter out 'off' and 'success' for determining if there are actual alarms
     const activeAlarms = alarms.filter((a) => a.severity !== 'off' && a.severity !== 'success');
 
     if (activeAlarms.length === 0) {
-      return isPowered ? 'success' : 'off';
+      return isNormalWhenQuiet ? 'success' : 'off';
     }
 
     if (activeAlarms.some((a) => a.severity === 'error')) {

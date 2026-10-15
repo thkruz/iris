@@ -706,7 +706,15 @@ describe('BUCAdapter', () => {
       mockBucModule.state.isPowered = false;
       adapter.update();
 
-      expect(badge.update).toHaveBeenLastCalledWith([], false);
+      expect(badge.update).toHaveBeenLastCalledWith([], false, undefined);
+    });
+
+    it('passes "Output muted" as the header LED idle status while muted (phase 31 D6, r6-s12-F1)', () => {
+      const badge = (CardAlarmBadge.create as Mock).mock.results.at(-1)?.value as { update: Mock };
+      mockBucModule.state.isMuted = true;
+      adapter.update();
+
+      expect(badge.update).toHaveBeenLastCalledWith(expect.any(Array), true, 'Output muted');
     });
   });
 });

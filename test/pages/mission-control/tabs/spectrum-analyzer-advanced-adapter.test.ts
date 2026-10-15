@@ -6,6 +6,10 @@ import { SpectrumAnalyzerAdvancedAdapter } from '../../../../src/pages/mission-c
 
 // Mock dependencies
 vi.mock('../../../../src/events/event-bus');
+const { logAction } = vi.hoisted(() => ({ logAction: vi.fn() }));
+vi.mock('../../../../src/ops-log/event-auto-logger', () => ({
+  EventAutoLogger: { getInstance: () => ({ logAction }) },
+}));
 
 describe('SpectrumAnalyzerAdvancedAdapter', () => {
   let mockSpectrumAnalyzer: Mocked<RealTimeSpectrumAnalyzer>;
@@ -375,5 +379,126 @@ describe('SpectrumAnalyzerAdvancedAdapter formatting (phase 27)', () => {
     expect(SpectrumAnalyzerAdvancedAdapter.formatHz(3)).toBe('3 Hz');
     expect(SpectrumAnalyzerAdvancedAdapter.formatHz(30e3)).toBe('30 kHz');
     expect(SpectrumAnalyzerAdvancedAdapter.formatHz(1e6)).toBe('1 MHz');
+  });
+});
+
+describe('SpectrumAnalyzerAdvancedAdapter Ops Log lines and peak readout (phase 31 D13, D15)', () => {
+  let analyzer: RealTimeSpectrumAnalyzer;
+  let containerEl: HTMLElement;
+  let adapter: SpectrumAnalyzerAdvancedAdapter;
+  const w = globalThis as unknown as { signalRange?: unknown };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    logAction.mockClear();
+    (EventBus.getInstance as Mock).mockReturnValue({ on: vi.fn(), off: vi.fn(), emit: vi.fn() });
+
+    analyzer = {
+      state: {
+        uuid: 'sa-1',
+        centerFrequency: 1490e6,
+        span: 75e6,
+        rbw: null,
+        referenceLevel: -20,
+        scaleDbPerDiv: 10,
+        refreshRate: 10,
+        isPaused: false,
+        minAmplitude: -100,
+        maxAmplitude: -30,
+        screenMode: 'both',
+        selectedTrace: 1,
+        traces: [
+          { isVisible: true, isUpdating: true, mode: 'clearwrite' },
+          { isVisible: false, isUpdating: false, mode: 'clearwrite' },
+          { isVisible: false, isUpdating: false, mode: 'clearwrite' },
+        ],
+        isMarkerOn: false,
+        markerIndex: 0,
+        topMarkers: [],
+      },
+      effectiveRbwHz: 3,
+      changeCenterFreq: vi.fn(),
+      changeBandwidth: vi.fn(),
+      updateScreenVisibility: vi.fn(),
+      peakSearch: vi.fn(() => ({ frequencyHz: 1085.000001e6, levelDbm: -69.2 })),
+      spectrumDataProcessor: { combinedData: new Float32Array(100) },
+    } as unknown as RealTimeSpectrumAnalyzer;
+
+    w.signalRange = { simulationManager: { groundStations: [{ state: { id: 'VT-01' }, spectrumAnalyzers: [analyzer] }] } };
+
+    containerEl = document.createElement('div');
+    const inputs = ['sa-center-freq', 'sa-span', 'sa-ref-level', 'sa-min-amp', 'sa-max-amp', 'sa-marker-index'].map((id) => `<input type="number" id="${id}" />`);
+    const checks = ['sa-trace-visible', 'sa-trace-updating', 'sa-marker-enabled'].map((id) => `<input type="checkbox" id="${id}" />`);
+    const buttons = ['sa-mode-spectral', 'sa-mode-waterfall', 'sa-mode-both', 'sa-auto-tune', 'sa-pause', 'sa-peak-search', 'sa-trace-1', 'sa-trace-2', 'sa-trace-3'].map(
+      (id) => `<button id="${id}"></button>`
+    );
+    containerEl.innerHTML = `
+      ${inputs.join('')}${checks.join('')}${buttons.join('')}
+      <select id="sa-rbw"><option value="auto">Auto</option><option value="0.1">100 kHz</option></select>
+      <select id="sa-scale"><option value="10">10</option></select>
+      <select id="sa-refresh"><option value="10">10</option></select>
+      <select id="sa-trace-mode"><option value="clearwrite">CW</option></select>
+      <div id="sa-engineering-controls"></div>
+      <span id="sa-peak-readout"></span>
+      <span id="sa-marker-info"></span>
+    `;
+    document.body.appendChild(containerEl);
+    adapter = new SpectrumAnalyzerAdvancedAdapter(analyzer, containerEl);
+  });
+
+  afterEach(() => {
+    adapter.dispose();
+    document.body.innerHTML = '';
+    delete w.signalRange;
+    vi.useRealTimers();
+  });
+
+  it('formats the settings line with Auto RBW and its value, or a manual RBW', () => {
+    expect(SpectrumAnalyzerAdvancedAdapter.formatConfigLine(analyzer)).toBe('SPEC A: 1490.000 MHz, span 75.000 MHz, RBW Auto (3 Hz), -100/-30 dBm');
+    analyzer.state.rbw = 100e3 as Hertz;
+    expect(SpectrumAnalyzerAdvancedAdapter.formatConfigLine(analyzer)).toBe('SPEC A: 1490.000 MHz, span 75.000 MHz, RBW 100 kHz, -100/-30 dBm');
+  });
+
+  it('a retune across several fields writes one line, 1 s after the last commit, tagged with the station', () => {
+    const centre = containerEl.querySelector('#sa-center-freq') as HTMLInputElement;
+    const span = containerEl.querySelector('#sa-span') as HTMLInputElement;
+    centre.dispatchEvent(new Event('input'));
+    vi.advanceTimersByTime(2000);
+    expect(logAction).not.toHaveBeenCalled(); // typing alone writes nothing
+
+    centre.dispatchEvent(new Event('change'));
+    vi.advanceTimersByTime(500);
+    span.dispatchEvent(new Event('change'));
+    vi.advanceTimersByTime(999);
+    expect(logAction).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(logAction).toHaveBeenCalledTimes(1);
+    expect(logAction).toHaveBeenCalledWith('SPEC A: 1490.000 MHz, span 75.000 MHz, RBW Auto (3 Hz), -100/-30 dBm', 'SPEC A', 'VT-01');
+
+    // The same settings committed again write nothing new
+    span.dispatchEvent(new Event('change'));
+    vi.advanceTimersByTime(1000);
+    expect(logAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('Peak Search writes its result at once', () => {
+    (containerEl.querySelector('#sa-peak-search') as HTMLButtonElement).click();
+    expect(logAction).toHaveBeenCalledWith('SPEC A: Peak Search 1085.000001 MHz @ -69.2 dBm', 'SPEC A', 'VT-01');
+  });
+
+  it('while the Peak Search marker tracks, the peak readout is the marker', () => {
+    const state = analyzer.state;
+    state.isMarkerOn = true;
+    state.isPeakTracking = true;
+    // Marker at point 49 of 100 across 1452.5..1527.5 MHz: 1452.5 + 49.5 * 0.75 = 1489.625 MHz
+    state.topMarkers = [{ x: 49, y: 0.5, signal: -61.3 }];
+    state.markerIndex = 0;
+    (adapter as unknown as { syncLiveReadouts_: () => void }).syncLiveReadouts_();
+    expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1489.625 MHz @ -61.3 dBm');
+
+    // Not tracking: the readout is Peak Search's own result
+    state.isPeakTracking = false;
+    (adapter as unknown as { syncLiveReadouts_: () => void }).syncLiveReadouts_();
+    expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1085.000001 MHz @ -69.2 dBm');
   });
 });

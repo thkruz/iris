@@ -235,6 +235,18 @@ describe('HPAAdapter', () => {
       expect(overdrive.className).toContain('status-badge-off');
     });
 
+    it('passes "Output disabled" as the header LED idle status while output is disabled (phase 31 D6, r6-s09-F1)', async () => {
+      const { CardAlarmBadge } = await import('../../../../src/components/card-alarm-badge/card-alarm-badge');
+      const badge = (CardAlarmBadge.create as Mock).mock.results.at(-1)?.value as { update: Mock };
+      mockHpaModule.state.isHpaEnabled = false;
+      emitHpaChanged();
+      expect(badge.update).toHaveBeenLastCalledWith(expect.any(Array), true, 'Output disabled');
+
+      mockHpaModule.state.isHpaEnabled = true;
+      emitHpaChanged();
+      expect(badge.update).toHaveBeenLastCalledWith(expect.any(Array), true, undefined);
+    });
+
     it('should show placeholder values when powered off', () => {
       mockHpaModule.state.isPowered = false;
       emitHpaChanged();

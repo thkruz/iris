@@ -85,6 +85,10 @@ vi.mock('../../../src/ops-log/ops-log-modal', () => ({
     })),
   },
 }));
+vi.mock('../../../src/modal/save-progress-toast', () => {
+  const toast = { showError: vi.fn(), showSuccess: vi.fn(), showSaving: vi.fn(), hide: vi.fn() };
+  return { SaveProgressToast: { getInstance: vi.fn(() => toast) } };
+});
 vi.mock('../../../src/engine/utils/query-selector', () => ({
   qs: vi.fn((selector: string, parent?: Element) => {
     const root = parent || global.document;
@@ -94,6 +98,7 @@ vi.mock('../../../src/engine/utils/query-selector', () => ({
 
 import { DialogHistoryBox } from '../../../src/modal/dialog-history-box';
 import { DraggableHtmlBox } from '../../../src/modal/draggable-html-box';
+import { SaveProgressToast } from '../../../src/modal/save-progress-toast';
 import { ObjectivesManager } from '../../../src/objectives';
 import { OpsLogModal } from '../../../src/ops-log/ops-log-modal';
 import { ScenarioManager } from '../../../src/scenario-manager';
@@ -427,6 +432,50 @@ describe('AssetTreeSidebar with mission brief', () => {
   it('should add sidebar-locked class when scenario is locked', () => {
     const sidebarEl = document.querySelector('.asset-tree-sidebar');
     expect(sidebarEl?.classList.contains('sidebar-locked')).toBe(true);
+  });
+
+  describe('lock hint (phase 31 D7, r6-s01-F2)', () => {
+    const lockText = 'Locked until you acknowledge the Mission Brief';
+
+    it('marks stations, satellites and Mission Overview lockable, never the record panels', () => {
+      const lockable = Array.from(document.querySelectorAll('.sidebar-lockable'));
+      expect(lockable.map((el) => el.getAttribute('data-asset-type'))).toEqual(['mission-overview', 'ground-station', 'ground-station', 'satellite']);
+      for (const cls of ['working-doc-icon', 'campaign-record-icon', 'dialog-icon', 'ops-log-icon', 'mission-brief-icon', 'checklist-icon']) {
+        expect(document.querySelector(`.${cls}`)?.classList.contains('sidebar-lockable')).toBe(false);
+      }
+    });
+
+    it('swaps the tooltip to the lock text while locked and restores the name on unlock', () => {
+      const gs = document.querySelector('[data-asset-id="GS-001"]') as HTMLElement;
+      const overview = document.querySelector('.mission-overview-item') as HTMLElement;
+      expect(gs.dataset.tooltip).toBe(lockText);
+      expect(gs.title).toBe(lockText);
+      expect(overview.dataset.tooltip).toBe(lockText);
+      expect((document.querySelector('.ops-log-icon') as HTMLElement).dataset.tooltip).toBe('Operations Log');
+
+      const unlockHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.SCENARIO_UNLOCKED)?.[1];
+      unlockHandler?.();
+
+      expect(document.querySelector('.asset-tree-sidebar')?.classList.contains('sidebar-locked')).toBe(false);
+      expect(gs.dataset.tooltip).toBe('Miami Station');
+      expect(gs.hasAttribute('title')).toBe(false);
+      expect(overview.dataset.tooltip).toBe('Mission Overview');
+    });
+
+    it('a click on a locked station shows the lock toast instead of selecting it', () => {
+      const gs = document.querySelector('[data-asset-id="GS-001"]') as HTMLElement;
+      gs.click();
+
+      expect(SaveProgressToast.getInstance().showError).toHaveBeenCalledWith(lockText, 3000);
+      expect(mockEventBus.emit).not.toHaveBeenCalledWith(Events.ASSET_SELECTED, expect.anything());
+      expect(gs.classList.contains('active')).toBe(false);
+    });
+
+    it('keeps the lock tooltips after a refresh re-renders the tree', () => {
+      sidebar.refresh();
+      const gs = document.querySelector('[data-asset-id="GS-001"]') as HTMLElement;
+      expect(gs.dataset.tooltip).toBe(lockText);
+    });
   });
 
   it('should open mission brief box when Mission Brief clicked', () => {

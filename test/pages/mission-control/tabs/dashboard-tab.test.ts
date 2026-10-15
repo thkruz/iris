@@ -327,6 +327,45 @@ describe('DashboardTab', () => {
       expect(document.querySelector('#lnb-noise')?.textContent).toBe('--');
     });
 
+    it('RF Chain TX reads BUC Lock OFF while the BUC is powered off (phase 31 D6, r6-s12-F1)', () => {
+      const buc = (mockGroundStation.rfFrontEnds[0] as any).bucModule;
+      buc.state.isPowered = false;
+      buc.state.isExtRefLocked = true;
+      resync(46_000_000);
+      expect(document.querySelector('#buc-lock .small')?.textContent).toBe('OFF');
+      expect(document.querySelector('#buc-lock .card-alarm-led')?.className).toContain('off');
+
+      buc.state.isPowered = true;
+      resync(47_000_000);
+      expect(document.querySelector('#buc-lock .small')?.textContent).toBe('LOCKED');
+    });
+
+    it('RF Chain TX reads HPA Status OFF / DISABLED / OVERDRIVE / OK (phase 31 D6, r6-s09-F1)', () => {
+      const hpa = (mockGroundStation.rfFrontEnds[0] as any).hpaModule;
+      const status = () => document.querySelector('#hpa-status');
+
+      hpa.state.isPowered = false;
+      resync(48_000_000);
+      expect(status()?.textContent).toBe('OFF');
+
+      hpa.state.isPowered = true;
+      hpa.state.isHpaEnabled = false;
+      hpa.state.isOverdriven = true;
+      resync(49_000_000);
+      expect(status()?.textContent).toBe('DISABLED');
+      expect(status()?.className).toContain('status-badge-gray');
+
+      hpa.state.isHpaEnabled = true;
+      resync(50_000_000);
+      expect(status()?.textContent).toBe('OVERDRIVE');
+      expect(status()?.className).toContain('status-badge-red');
+
+      hpa.state.isOverdriven = false;
+      resync(51_000_000);
+      expect(status()?.textContent).toBe('OK');
+      expect(status()?.className).toContain('status-badge-green');
+    });
+
     it('GPSDO warm-up reads what the GPS Timing tab reads (nats-r4-s01-F3)', () => {
       expect(document.querySelector('#gpsdo-warmup')?.textContent).toBe('READY');
     });

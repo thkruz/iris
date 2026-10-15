@@ -2,7 +2,7 @@ import { CardAlarmBadge } from '@app/components/card-alarm-badge/card-alarm-badg
 import { qs } from '@app/engine/utils/query-selector';
 import { AlarmStatus } from '@app/equipment/base-equipment';
 import { ValidationError, validateModemBandwidth, validateModemFrequency } from '@app/equipment/modem/modem-constraints';
-import { ADCStatus } from '@app/equipment/receiver/adc-degradation';
+import { ADCDegradationResult, ADCStatus } from '@app/equipment/receiver/adc-degradation';
 import { IQSignalInfo, Receiver, ReceiverModemState } from '@app/equipment/receiver/receiver';
 import { classifyRxSignal, describeEsN0, describeEsN0ForAcquisition, describePayloadProblem, RxPayloadStatus, RxSignalQuality } from '@app/equipment/receiver/rx-signal-quality';
 import { EventBus } from '@app/events/event-bus';
@@ -173,9 +173,24 @@ export class ReceiverAdapter {
     this.cacheElement_('clip-penalty-display');
     this.cacheElement_('quant-penalty-display');
     this.cacheElement_('total-penalty-display');
+    this.createAdcCeilingLine_();
 
     // Status bar
     this.cacheElement_('status-bar');
+  }
+
+  /**
+   * The neutral "ADC SNR ceiling" line (phase 31 D10, r5-s07-F1), added just
+   * above the penalty breakdown. It is created here so the RX Analysis markup
+   * needs no change; it shows only while the ADC status is OPTIMAL.
+   */
+  private createAdcCeilingLine_(): void {
+    const section = this.domCache_.get('degradation-section');
+    if (!section?.parentElement) return;
+    if (!this.containerEl.querySelector('#adc-ceiling-display')) {
+      section.insertAdjacentHTML('beforebegin', '<div id="adc-ceiling-display" class="small text-muted mb-1 d-none"></div>');
+    }
+    this.cacheElement_('adc-ceiling-display');
   }
 
   /**
@@ -766,10 +781,28 @@ export class ReceiverAdapter {
       }
     }
 
-    // Show/hide degradation breakdown - only when we have a matching signal with penalties
+    // Show/hide degradation breakdown - only when the drive is off its sweet
+    // spot. At OPTIMAL a very clean carrier (a loopback at ~50 dB Es/N0) still
+    // loses a little to the ADC's own SNR; that is the converter's ceiling, not
+    // a fault, so it reads as one neutral line instead of red penalties
+    // (phase 31 D10, r5-s07-F1). Effective C/N stays as computed.
+    const isOptimal = !!showAdcValues && adcDeg.status === 'optimal';
+    const ceilingLine = this.domCache_.get('adc-ceiling-display');
+    if (ceilingLine) {
+      const rawCn = signalInfo.cnRatio_dB;
+      const effectiveCn = signalInfo.effectiveCnRatio_dB ?? rawCn;
+      const ceiling_dB = isOptimal ? ReceiverAdapter.adcSnrCeilingDb(adcDeg) : Number.NaN;
+      if (isOptimal && rawCn - effectiveCn > 0.1 && Number.isFinite(ceiling_dB)) {
+        ceilingLine.textContent = `ADC SNR ceiling: ~${ceiling_dB.toFixed(0)} dB`;
+        ceilingLine.classList.remove('d-none');
+      } else {
+        ceilingLine.classList.add('d-none');
+      }
+    }
+
     const degradationSection = this.domCache_.get('degradation-section');
     if (degradationSection) {
-      if (showAdcValues && adcDeg.totalPenalty_dB > 0.1) {
+      if (showAdcValues && !isOptimal && adcDeg.totalPenalty_dB > 0.1) {
         degradationSection.classList.remove('d-none');
         this.updatePenaltyDisplay_('clip-penalty-display', adcDeg.clipPenalty_dB);
         this.updatePenaltyDisplay_('quant-penalty-display', adcDeg.quantizationPenalty_dB);
@@ -816,11 +849,12 @@ export class ReceiverAdapter {
       adcStatusEl.className = 'status-badge status-badge-none';
     }
 
-    // Hide degradation section
+    // Hide degradation section and the ADC ceiling line
     const degradationSection = this.domCache_.get('degradation-section');
     if (degradationSection) {
       degradationSection.classList.add('d-none');
     }
+    this.domCache_.get('adc-ceiling-display')?.classList.add('d-none');
   }
 
   /** Badge class and text for each signal grade */
@@ -838,6 +872,16 @@ export class ReceiverAdapter {
     const el = this.domCache_.get(elementId);
     if (!el) return;
     el.textContent = value !== undefined && Number.isFinite(value) && value > -100 ? `${value.toFixed(1)} ${unit}` : `-- ${unit}`;
+  }
+
+  /**
+   * The ADC's own SNR in the carrier's band: quantization noise and clipping
+   * distortion together (the same terms calculateADCDegradation adds to the
+   * carrier's noise), dB
+   */
+  static adcSnrCeilingDb(adcDeg: Pick<ADCDegradationResult, 'quantizationSnr_dB' | 'clipSdr_dB'>): number {
+    const inverse = 10 ** (-adcDeg.quantizationSnr_dB / 10) + 10 ** (-adcDeg.clipSdr_dB / 10);
+    return inverse > 0 ? -10 * Math.log10(inverse) : Number.POSITIVE_INFINITY;
   }
 
   private updatePenaltyDisplay_(elementId: string, penalty: number): void {

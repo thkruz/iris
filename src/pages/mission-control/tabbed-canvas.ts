@@ -152,6 +152,11 @@ export class TabbedCanvas extends BaseElement {
    * Handle asset selection from the asset tree
    */
   private handleAssetSelected_(type: 'ground-station' | 'satellite', id: string): void {
+    // The Overview's look-angle card follows the last station picked (phase 31 D16)
+    if (type === 'ground-station') {
+      MissionOverviewTab.rememberStation(id);
+    }
+
     // Clean up old tabs when switching assets
     if (this.selectedAssetId_ !== id) {
       this.tabInstances_.forEach((tab) => tab.dispose());
@@ -1000,6 +1005,7 @@ export class TabbedCanvas extends BaseElement {
     this.tabInstances_.forEach((tab) => tab.dispose());
     this.tabInstances_.clear();
     this.lastTabByAsset_.clear();
+    MissionOverviewTab.resetRememberedStation();
 
     // A destroyed canvas must stop answering getActiveTab() for the
     // ObjectivesManager. Guarded so a replacement instance survives.

@@ -473,7 +473,8 @@ export class RealTimeSpectrumAnalyzer extends BaseEquipment {
 
   /**
    * The highest point of the live trace (Peak Search): frequency (Hz) and
-   * level (dBm), or null before the first trace.
+   * level (dBm), or null before the first trace. A flat top reads at the
+   * centre of its equal run, the rule the in-plot markers use (phase 31 D15).
    */
   peakSearch(): { frequencyHz: number; levelDbm: number } | null {
     const data = this.dataProcessor?.combinedData;
@@ -486,6 +487,13 @@ export class RealTimeSpectrumAnalyzer extends BaseEquipment {
         best = x;
       }
     }
+    // The centre of an equal run (SpectralDensityPlot.plateauCentre's rule,
+    // inlined so this method does not depend on the plot module)
+    let end = best;
+    while (end + 1 < data.length && data[end + 1] === data[best]) {
+      end++;
+    }
+    best += Math.floor((end - best) / 2);
     const level = data[best];
     if (!Number.isFinite(level)) {
       return null;

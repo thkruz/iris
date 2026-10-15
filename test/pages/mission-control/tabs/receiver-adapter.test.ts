@@ -1,8 +1,10 @@
 import { Mock, Mocked, vi } from 'vitest';
+import { calculateADCDegradation } from '../../../../src/equipment/receiver/adc-degradation';
 import { Receiver, ReceiverModemState } from '../../../../src/equipment/receiver/receiver';
 import { EventBus } from '../../../../src/events/event-bus';
 import { Events } from '../../../../src/events/events';
 import { ReceiverAdapter } from '../../../../src/pages/mission-control/tabs/receiver-adapter';
+import type { dB, dBm } from '../../../../src/types';
 
 // Mock dependencies
 vi.mock('../../../../src/events/event-bus');
@@ -603,6 +605,57 @@ describe('ReceiverAdapter', () => {
 
       const clipPenalty = containerEl.querySelector('#clip-penalty-display') as HTMLElement;
       expect(clipPenalty.textContent).toBe('2.0 dB');
+      expect((containerEl.querySelector('#adc-ceiling-display') as HTMLElement).classList.contains('d-none')).toBe(true);
+    });
+
+    describe('OPTIMAL drive on a very clean carrier (phase 31 D10, r5-s07-F1)', () => {
+      // A loopback carrier at ~50 dB Es/N0 at -8 dBFS: the real ADC degradation
+      const clean = calculateADCDegradation(-30 as dBm, { power_dBm: -30, esN0_dB: 50, symbolRate_Hz: 30e6 });
+
+      it('the fixture really is OPTIMAL with a penalty above 0.1 dB', () => {
+        expect(clean.status).toBe('optimal');
+        expect(clean.totalPenalty_dB).toBeGreaterThan(0.1);
+      });
+
+      it('hides the red penalty rows and shows one neutral ceiling line', () => {
+        mockReceiver.getSignalsInBandwidth.mockReturnValue({
+          hasCarrier: true,
+          hasLock: true,
+          cnRatio_dB: 50,
+          effectiveCnRatio_dB: 50 - clean.totalPenalty_dB,
+          adcDegradation: clean,
+        });
+        (adapter as any).lastStateString = '';
+        (adapter as any).syncDomWithState_();
+
+        expect((containerEl.querySelector('#degradation-section') as HTMLElement).classList.contains('d-none')).toBe(true);
+        const line = containerEl.querySelector('#adc-ceiling-display') as HTMLElement;
+        expect(line.classList.contains('d-none')).toBe(false);
+        expect(line.textContent).toBe(`ADC SNR ceiling: ~${ReceiverAdapter.adcSnrCeilingDb(clean).toFixed(0)} dB`);
+        expect(line.className).not.toContain('text-danger');
+        // Effective C/N stays capped
+        expect((containerEl.querySelector('#cn-effective-display') as HTMLElement).textContent).toBe(`${(50 - clean.totalPenalty_dB).toFixed(1)} dB`);
+      });
+
+      it('shows no ceiling line when the carrier loses nothing to the ADC', () => {
+        mockReceiver.getSignalsInBandwidth.mockReturnValue({
+          hasCarrier: true,
+          hasLock: true,
+          cnRatio_dB: 15,
+          effectiveCnRatio_dB: 15,
+          adcDegradation: clean,
+        });
+        (adapter as any).lastStateString = '';
+        (adapter as any).syncDomWithState_();
+
+        expect((containerEl.querySelector('#adc-ceiling-display') as HTMLElement).classList.contains('d-none')).toBe(true);
+        expect((containerEl.querySelector('#degradation-section') as HTMLElement).classList.contains('d-none')).toBe(true);
+      });
+
+      it('computes the ceiling from the quantization and clipping terms', () => {
+        expect(ReceiverAdapter.adcSnrCeilingDb({ quantizationSnr_dB: 43 as dB, clipSdr_dB: Number.POSITIVE_INFINITY as dB })).toBeCloseTo(43, 6);
+        expect(ReceiverAdapter.adcSnrCeilingDb({ quantizationSnr_dB: 40 as dB, clipSdr_dB: 40 as dB })).toBeCloseTo(40 - 10 * Math.log10(2), 6);
+      });
     });
   });
 

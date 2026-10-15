@@ -151,4 +151,26 @@ describe('CardAlarmBadge', () => {
     badge.update([], true);
     expect(ledEl().className).toBe('card-alarm-led success');
   });
+
+  it('update() powered with an idle status and no alarm is grey with that tooltip (phase 31 D6, r6-s09-F1)', () => {
+    const badge = new CardAlarmBadge('alarm-badge-idle');
+    mount(badge);
+
+    badge.update([], true, 'Output disabled');
+    expect(ledEl().className).toBe('card-alarm-led off');
+    expect(ledEl().title).toBe('Output disabled');
+
+    // A real alarm still wins over the idle status
+    badge.update([{ severity: 'warning', message: 'Hot' }], true, 'Output muted');
+    expect(ledEl().className).toBe('card-alarm-led warning');
+    expect(ledEl().title).toBe('Hot');
+
+    // Unpowered reads "Powered off" whatever the idle status
+    badge.update([], false, 'Output muted');
+    expect(ledEl().title).toBe('Powered off');
+
+    badge.update([], true, undefined);
+    expect(ledEl().className).toBe('card-alarm-led success');
+    expect(ledEl().title).toBe('System Normal');
+  });
 });

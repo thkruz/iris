@@ -1,9 +1,11 @@
+import type { GroundStation } from '@app/assets/ground-station/ground-station';
 import { qs } from '@app/engine/utils/query-selector';
 import { EngineeringModeService } from '@app/engineering-mode/engineering-mode-service';
 import type { TraceMode } from '@app/equipment/real-time-spectrum-analyzer/analyzer-control/ac-trace-btn/ac-trace-btn';
 import { RealTimeSpectrumAnalyzer, RealTimeSpectrumAnalyzerState } from '@app/equipment/real-time-spectrum-analyzer/real-time-spectrum-analyzer';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
+import { EventAutoLogger } from '@app/ops-log/event-auto-logger';
 import type { dB, Hertz } from '@app/types';
 import { parseLocalizedNumber } from '@app/utils/parse-number';
 
@@ -33,6 +35,14 @@ export class SpectrumAnalyzerAdvancedAdapter {
   private lastLiveSyncMs_: number = 0;
   /** Live readouts (peak, RBW in use) refresh at most this often, ms */
   private static readonly LIVE_READOUT_INTERVAL_MS = 500;
+  /** A retune across several fields writes one Ops Log line after this quiet time, ms (phase 31 D13) */
+  static readonly CONFIG_LOG_DEBOUNCE_MS = 1000;
+  /** Pending config-line timer per analyzer: survives an adapter rebuilt mid-debounce */
+  private static readonly configLogTimers_ = new Map<RealTimeSpectrumAnalyzer, ReturnType<typeof setTimeout>>();
+  /** Last config line written per analyzer, so a no-op commit writes nothing */
+  private static readonly lastConfigLine_ = new WeakMap<RealTimeSpectrumAnalyzer, string>();
+  /** Committed-change ('change' event) listeners that schedule the config line */
+  private readonly commitLogListeners_: [HTMLElement, EventListener][] = [];
 
   constructor(spectrumAnalyzer: RealTimeSpectrumAnalyzer, containerEl: HTMLElement) {
     this.spectrumAnalyzer = spectrumAnalyzer;
@@ -174,6 +184,16 @@ export class SpectrumAnalyzerAdvancedAdapter {
     // Marker controls
     this.addChangeHandler_('sa-marker-enabled', this.handleMarkerEnabledChange_.bind(this));
     this.addInputHandler_('sa-marker-index', this.handleMarkerIndexChange_.bind(this));
+
+    // A committed retune (Enter, blur, select) writes one Ops Log line (phase 31 D13)
+    for (const id of ['sa-center-freq', 'sa-span', 'sa-rbw', 'sa-ref-level', 'sa-min-amp', 'sa-max-amp']) {
+      const el = this.domCache_.get(id);
+      if (el) {
+        const listener: EventListener = () => this.scheduleConfigLog_();
+        el.addEventListener('change', listener);
+        this.commitLogListeners_.push([el, listener]);
+      }
+    }
   }
 
   private addInputHandler_(id: string, handler: (e: Event) => void): void {
@@ -226,7 +246,9 @@ export class SpectrumAnalyzerAdvancedAdapter {
 
     const peakReadout = this.domCache_.get('sa-peak-readout');
     if (peakReadout) {
-      const peak = analyzer.peakSearch?.();
+      // While the Peak Search marker tracks, the readout is the marker, so the
+      // two never disagree (phase 31 D15, r6-s07-F1)
+      const peak = this.trackedMarkerPeak_() ?? analyzer.peakSearch?.();
       peakReadout.textContent = peak ? `Peak: ${SpectrumAnalyzerAdvancedAdapter.formatMHz(peak.frequencyHz)} MHz @ ${peak.levelDbm.toFixed(1)} dBm` : 'Peak: --- MHz @ --- dBm';
     }
 
@@ -361,6 +383,7 @@ export class SpectrumAnalyzerAdvancedAdapter {
     state.isPeakTracking = true;
     this.syncLiveReadouts_();
     this.emitStateChange_();
+    this.logPeakSearch_();
   }
 
   private handlePauseToggle_(): void {
@@ -603,21 +626,85 @@ export class SpectrumAnalyzerAdvancedAdapter {
   }
 
   private updateMarkerInfo_(): void {
-    const state = this.spectrumAnalyzer.state;
     const markerInfo = this.domCache_.get('sa-marker-info');
     if (!markerInfo) {
       return;
     }
 
+    const marker = this.activeMarker_();
+    markerInfo.textContent = marker ? `Mkr: ${SpectrumAnalyzerAdvancedAdapter.formatMHz(marker.frequencyHz)} MHz @ ${marker.levelDbm.toFixed(1)} dBm` : 'Mkr: --- MHz @ --- dBm';
+  }
+
+  /** The marker on screen as frequency (Hz) and level (dBm), or null when off or not placed */
+  private activeMarker_(): { frequencyHz: number; levelDbm: number } | null {
+    const state = this.spectrumAnalyzer.state;
     const marker = state.isMarkerOn && state.topMarkers?.length > 0 ? (state.topMarkers[state.markerIndex] ?? state.topMarkers[0]) : null;
     const points = this.spectrumAnalyzer.spectrumDataProcessor?.combinedData?.length ?? 0;
-    if (marker && points > 0) {
-      // A marker's x is its trace point: back to frequency across the span
-      const freqHz = state.centerFrequency - state.span / 2 + ((marker.x + 0.5) / points) * state.span;
-      markerInfo.textContent = `Mkr: ${SpectrumAnalyzerAdvancedAdapter.formatMHz(freqHz)} MHz @ ${marker.signal.toFixed(1)} dBm`;
-    } else {
-      markerInfo.textContent = 'Mkr: --- MHz @ --- dBm';
+    if (!marker || points <= 0) {
+      return null;
     }
+    // A marker's x is its trace point: back to frequency across the span
+    return { frequencyHz: state.centerFrequency - state.span / 2 + ((marker.x + 0.5) / points) * state.span, levelDbm: marker.signal };
+  }
+
+  /** The Peak Search marker while it tracks the live peak, else null */
+  private trackedMarkerPeak_(): { frequencyHz: number; levelDbm: number } | null {
+    return this.spectrumAnalyzer.state.isPeakTracking ? this.activeMarker_() : null;
+  }
+
+  // ============ Ops Log (phase 31 D13, r6-s15-F2) ============
+
+  /** Ground station that owns this analyzer, for the Ops Log tag */
+  private stationId_(): string | undefined {
+    const w = globalThis as unknown as { signalRange?: { simulationManager?: { groundStations?: GroundStation[] } } };
+    const stations = w.signalRange?.simulationManager?.groundStations ?? [];
+
+    return stations.find((gs) => (gs.spectrumAnalyzers ?? []).includes(this.spectrumAnalyzer))?.state?.id;
+  }
+
+  /** Write the settings line once the operator has stopped retuning for CONFIG_LOG_DEBOUNCE_MS */
+  private scheduleConfigLog_(): void {
+    const analyzer = this.spectrumAnalyzer;
+    const timers = SpectrumAnalyzerAdvancedAdapter.configLogTimers_;
+    const pending = timers.get(analyzer);
+    if (pending !== undefined) {
+      clearTimeout(pending);
+    }
+    const stationId = this.stationId_();
+    timers.set(
+      analyzer,
+      setTimeout(() => {
+        timers.delete(analyzer);
+        const line = SpectrumAnalyzerAdvancedAdapter.formatConfigLine(analyzer);
+        if (SpectrumAnalyzerAdvancedAdapter.lastConfigLine_.get(analyzer) === line) {
+          return;
+        }
+        SpectrumAnalyzerAdvancedAdapter.lastConfigLine_.set(analyzer, line);
+        EventAutoLogger.getInstance().logAction(line, 'SPEC A', stationId);
+      }, SpectrumAnalyzerAdvancedAdapter.CONFIG_LOG_DEBOUNCE_MS)
+    );
+  }
+
+  /** `SPEC A: 1490.000 MHz, span 75.000 MHz, RBW Auto (3 Hz), -100/-30 dBm` */
+  static formatConfigLine(analyzer: RealTimeSpectrumAnalyzer): string {
+    const state = analyzer.state;
+    let rbw: string;
+    if (state.rbw === null || state.rbw === undefined) {
+      const inUse = analyzer.effectiveRbwHz;
+      rbw = typeof inUse === 'number' && Number.isFinite(inUse) ? `RBW Auto (${SpectrumAnalyzerAdvancedAdapter.formatHz(inUse)})` : 'RBW Auto';
+    } else {
+      rbw = `RBW ${SpectrumAnalyzerAdvancedAdapter.formatHz(state.rbw)}`;
+    }
+    const amp = (v: number): string => (Number.isInteger(v) ? v.toString() : v.toFixed(1));
+
+    return `SPEC A: ${(state.centerFrequency / 1e6).toFixed(3)} MHz, span ${(state.span / 1e6).toFixed(3)} MHz, ${rbw}, ${amp(state.minAmplitude)}/${amp(state.maxAmplitude)} dBm`;
+  }
+
+  /** `SPEC A: Peak Search 1085.000001 MHz @ -69.2 dBm` */
+  private logPeakSearch_(): void {
+    const peak = this.spectrumAnalyzer.peakSearch?.();
+    const line = peak ? `SPEC A: Peak Search ${(peak.frequencyHz / 1e6).toFixed(6)} MHz @ ${peak.levelDbm.toFixed(1)} dBm` : 'SPEC A: Peak Search';
+    EventAutoLogger.getInstance().logAction(line, 'SPEC A', this.stationId_());
   }
 
   // ============ Cleanup ============
@@ -640,6 +727,10 @@ export class SpectrumAnalyzerAdvancedAdapter {
     });
 
     this.boundHandlers.clear();
+    for (const [el, listener] of this.commitLogListeners_) {
+      el.removeEventListener('change', listener);
+    }
+    this.commitLogListeners_.length = 0;
     this.domCache_.clear();
   }
 }

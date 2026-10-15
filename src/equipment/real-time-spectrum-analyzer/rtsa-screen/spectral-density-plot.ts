@@ -33,6 +33,12 @@ export class SpectralDensityPlot extends RTSAScreen {
 
   /** Graticule label font: 11 CSS px, drawn at device resolution */
   static readonly LABEL_FONT = '11px Arial';
+  /** Pixel size of LABEL_FONT, the height of an amplitude label's box */
+  static readonly LABEL_FONT_PX = 11;
+  /** Padding around an amplitude label's box */
+  static readonly LABEL_BOX_PAD_PX = 1;
+  /** Opacity of the dark box behind an amplitude label */
+  static readonly LABEL_BOX_ALPHA = 0.7;
 
   /**
    * Label band under the trace area, CSS px (Phase 30 D21, nats-r4-s04-F4):
@@ -40,6 +46,21 @@ export class SpectralDensityPlot extends RTSAScreen {
    * the Min Amp line never runs through them
    */
   static readonly LABEL_BAND_PX = 16;
+
+  /**
+   * The centre of the run of equal values that starts at `start` (phase 31
+   * D15, r6-s07-F1): a flat-top carrier's peak is the middle of its top, not
+   * its leftmost bin. Peak Search (`RealTimeSpectrumAnalyzer.peakSearch`) and
+   * the in-plot markers share this rule so the readout and the marker agree.
+   */
+  static plateauCentre(data: ArrayLike<number>, start: number): number {
+    let end = start;
+    while (end + 1 < data.length && data[end + 1] === data[start]) {
+      end++;
+    }
+
+    return start + Math.floor((end - start) / 2);
+  }
 
   // Data processor reference (shared data source)
   private readonly dataProcessor: SpectrumDataProcessor;
@@ -327,7 +348,7 @@ export class SpectralDensityPlot extends RTSAScreen {
       this.cachedMaxAmplitude = this.specA.state.maxAmplitude;
     }
 
-    // Restore cached grid+labels (device pixels; putImageData ignores the transform)
+    // Restore cached grid + frequency labels (device pixels; putImageData ignores the transform)
     if (this.cachedGridImageData) {
       this.ctx.putImageData(this.cachedGridImageData, 0, 0);
     }
@@ -355,6 +376,10 @@ export class SpectralDensityPlot extends RTSAScreen {
     if (SimulationManager.getInstance().isDeveloperMode) {
       this.drawSignals();
     }
+
+    // Amplitude labels go over the traces, each on its own dark box, so a
+    // trace never strokes through a number (phase 31 D8, r6-s01-F3)
+    this.drawPowerLabels(this.ctx, isDualScreenMode);
 
     this.updateTopMarkers();
 
@@ -409,15 +434,23 @@ export class SpectralDensityPlot extends RTSAScreen {
       // Find local maxima (peaks) in the selected trace
       const peaks: { x: number; signal: number }[] = [];
 
+      // A flat top (a run of equal points) is one peak at its centre
       for (let x = 1; x < this.width - 1; x++) {
         const current = selectedTraceData[x];
-        const prev = selectedTraceData[x - 1];
-        const next = selectedTraceData[x + 1];
+        if (!(current > selectedTraceData[x - 1])) {
+          continue;
+        }
+        let end = x;
+        while (end + 1 < this.width && selectedTraceData[end + 1] === current) {
+          end++;
+        }
+        const next = selectedTraceData[end + 1];
 
         // Check if this is a local maximum
-        if (current > prev && current > next && current > this.specA.noiseFloorAndGain + 3) {
-          peaks.push({ x, signal: current });
+        if (end + 1 < this.width && current > next && current > this.specA.noiseFloorAndGain + 3) {
+          peaks.push({ x: x + Math.floor((end - x) / 2), signal: current });
         }
+        x = end;
       }
 
       // Sort by signal strength and take top 10
@@ -430,6 +463,7 @@ export class SpectralDensityPlot extends RTSAScreen {
         for (let x = 1; x < this.width; x++) {
           if (selectedTraceData[x] > selectedTraceData[best]) best = x;
         }
+        best = SpectralDensityPlot.plateauCentre(selectedTraceData.subarray(0, this.width), best);
         if (Number.isFinite(selectedTraceData[best])) {
           topPeaks.push({ x: best, signal: selectedTraceData[best] });
         }
@@ -591,15 +625,19 @@ export class SpectralDensityPlot extends RTSAScreen {
     ctx.restore();
   }
 
+  /**
+   * Amplitude (dBm) labels, drawn after the traces each on a small translucent
+   * dark box so the trace never overdraws a number (phase 31 D8). Every
+   * graticule line is labelled, top (Max Amp) to bottom (Min Amp); the top
+   * label sits inside the plot and the bottom one in the label band under the
+   * trace area (Phase 30 D21), left of the frequency ticks.
+   */
   private drawPowerLabels(ctx: CanvasRenderingContext2D, isDualScreenMode: boolean): void {
     ctx.save();
-    ctx.fillStyle = '#fff';
+    ctx.globalAlpha = 1;
     ctx.textAlign = 'left';
     ctx.font = SpectralDensityPlot.LABEL_FONT;
 
-    // Absolute dBm, the same scale as the Min/Max Amp fields and the trace.
-    // Every graticule line is labelled, top (Max Amp) to bottom (Min Amp);
-    // the end labels sit inside the plot.
     const numLabels = isDualScreenMode ? 5 : 10;
     const inset = 4;
     const { maxAmplitude, minAmplitude } = this.specA.state;
@@ -607,26 +645,44 @@ export class SpectralDensityPlot extends RTSAScreen {
       const lineY = (i / numLabels) * this.traceHeight_;
       const power = maxAmplitude + ((minAmplitude - maxAmplitude) * i) / numLabels;
       let y = lineY;
+      let baseline: CanvasTextBaseline = 'middle';
       if (i === 0) {
-        ctx.textBaseline = 'top';
+        baseline = 'top';
         y = inset;
       } else if (i === numLabels) {
-        // In the label band under the trace area, left of the frequency ticks
-        ctx.textBaseline = 'bottom';
+        baseline = 'bottom';
         y = this.plotHeight_ - inset;
-      } else {
-        ctx.textBaseline = 'middle';
       }
       const decimals = Number.isInteger(power) ? 0 : 1;
-      ctx.fillText(power.toFixed(decimals), inset, y);
+      this.drawBoxedLabel_(ctx, power.toFixed(decimals), inset, y, baseline);
     }
-    ctx.textBaseline = 'top';
-    ctx.fillText('dBm', inset + 34, inset);
+    this.drawBoxedLabel_(ctx, 'dBm', inset + 34, inset, 'top');
     ctx.restore();
   }
 
+  /** One label on a translucent dark box sized to the text (1 px padding) */
+  private drawBoxedLabel_(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, baseline: CanvasTextBaseline): void {
+    const pad = SpectralDensityPlot.LABEL_BOX_PAD_PX;
+    const height = SpectralDensityPlot.LABEL_FONT_PX;
+    const width = ctx.measureText(text).width;
+    let top = y - height / 2;
+    if (baseline === 'top') {
+      top = y;
+    } else if (baseline === 'bottom') {
+      top = y - height;
+    }
+    ctx.globalAlpha = SpectralDensityPlot.LABEL_BOX_ALPHA;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x - pad, top - pad, width + 2 * pad, height + 2 * pad);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#fff';
+    ctx.textBaseline = baseline;
+    ctx.fillText(text, x, y);
+  }
+
   /**
-   * Generates cached ImageData containing grid overlay and labels
+   * Generates cached ImageData containing the grid overlay and frequency labels
+   * (the amplitude labels are drawn over the traces each frame, phase 31 D8).
    * This is only regenerated when frequency or power range changes
    */
   private generateGridImageData(isDualScreenMode: boolean): ImageData {
@@ -636,9 +692,8 @@ export class SpectralDensityPlot extends RTSAScreen {
     // Draw grid overlay
     this.drawGridOverlay(this.ctx, isDualScreenMode);
 
-    // Draw labels
+    // Draw frequency labels
     this.drawFrequencyLabels(this.ctx, isDualScreenMode);
-    this.drawPowerLabels(this.ctx, isDualScreenMode);
 
     // Capture the whole bitmap (device pixels)
     return this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);

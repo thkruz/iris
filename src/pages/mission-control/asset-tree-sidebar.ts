@@ -21,6 +21,7 @@ import { HintManager } from '@app/modal/hint-manager';
 import { HintModal } from '@app/modal/hint-modal';
 import { PendingQuizIndicator } from '@app/modal/pending-quiz-indicator';
 import { QuizManager } from '@app/modal/quiz-manager';
+import { SaveProgressToast } from '@app/modal/save-progress-toast';
 import { ObjectivesManager } from '@app/objectives';
 import { CountdownHold } from '@app/objectives/countdown-hold';
 import { OpsLogModal } from '@app/ops-log/ops-log-modal';
@@ -39,6 +40,13 @@ import './asset-tree-sidebar.css';
  */
 export class AssetTreeSidebar extends BaseElement {
   static readonly containerId = 'asset-tree-sidebar-container';
+
+  /**
+   * Tooltip and toast text for a locked sidebar item (phase 31 D7). Stations,
+   * satellites and Mission Overview wait for the brief; the record panels
+   * (Working Doc, Campaign Record, Dialog History, Ops Log) never lock.
+   */
+  static readonly LOCKED_TEXT = 'Locked until you acknowledge the Mission Brief';
 
   private selectedAssetId_: string | null = null;
   private groundStations_: GroundStation[] = [];
@@ -94,6 +102,7 @@ export class AssetTreeSidebar extends BaseElement {
 
       if (!alreadyUnlocked) {
         this.dom_.classList.add('sidebar-locked');
+        this.syncLockTooltips_();
       }
 
       // If objectives aren't loaded yet, listen for DOM_READY which fires after
@@ -120,6 +129,33 @@ export class AssetTreeSidebar extends BaseElement {
    */
   private unlockSidebar_(): void {
     this.dom_.classList.remove('sidebar-locked');
+    this.syncLockTooltips_();
+  }
+
+  /** True while the brief objective still holds the stations, satellites and overview */
+  private isLocked_(): boolean {
+    return this.dom_.classList.contains('sidebar-locked');
+  }
+
+  /**
+   * Swap each lockable item's tooltip between its name and the lock text. The
+   * custom data-tooltip only shows on a collapsed sidebar, so a locked item
+   * also carries a native title for the expanded one.
+   */
+  private syncLockTooltips_(): void {
+    const isLocked = this.isLocked_();
+    this.dom_.querySelectorAll<HTMLElement>('.sidebar-lockable').forEach((item) => {
+      const name = item.dataset.itemName ?? '';
+      if (isLocked) {
+        item.dataset.tooltip = AssetTreeSidebar.LOCKED_TEXT;
+        item.title = AssetTreeSidebar.LOCKED_TEXT;
+        item.setAttribute('aria-disabled', 'true');
+      } else {
+        item.dataset.tooltip = name;
+        item.removeAttribute('title');
+        item.removeAttribute('aria-disabled');
+      }
+    });
   }
 
   protected addEventListeners_(): void {
@@ -372,8 +408,9 @@ export class AssetTreeSidebar extends BaseElement {
     // every existing selector and E2E locator valid.
     const treeHtml = html`
       <div class="list-group list-group-flush mb-3 asset-group-overview">
-        <a class="list-group-item list-group-item-action d-flex align-items-center mission-overview-item ${isMissionOverviewSelected ? 'active' : ''}"
+        <a class="list-group-item list-group-item-action d-flex align-items-center mission-overview-item sidebar-lockable ${isMissionOverviewSelected ? 'active' : ''}"
            data-asset-type="mission-overview"
+           data-item-name="Mission Overview"
            data-tooltip="Mission Overview">
           <span class="item-icon">
             <img src="${dashboardPng}" alt="Mission Overview"/>
@@ -450,6 +487,7 @@ export class AssetTreeSidebar extends BaseElement {
 
     treeContainer.innerHTML = treeHtml;
     this.addTreeEventListeners_();
+    this.syncLockTooltips_();
   }
 
   /**
@@ -459,9 +497,10 @@ export class AssetTreeSidebar extends BaseElement {
     const isSelected = this.selectedAssetId_ === gs.state.id;
 
     return html`
-      <a class="list-group-item list-group-item-action d-flex align-items-center ${isSelected ? 'active' : ''}"
+      <a class="list-group-item list-group-item-action d-flex align-items-center sidebar-lockable ${isSelected ? 'active' : ''}"
          data-asset-type="ground-station"
          data-asset-id="${gs.state.id}"
+         data-item-name="${gs.state.name}"
          data-tooltip="${gs.state.name}">
          <span class="item-icon">
           <img src="${antennaPng}" alt="Antenna"/>
@@ -482,9 +521,10 @@ export class AssetTreeSidebar extends BaseElement {
     const satName = `${sat.name}`;
 
     return html`
-      <a class="list-group-item list-group-item-action d-flex align-items-center ${isSelected ? 'active' : ''}"
+      <a class="list-group-item list-group-item-action d-flex align-items-center sidebar-lockable ${isSelected ? 'active' : ''}"
          data-asset-type="satellite"
          data-asset-id="${satId}"
+         data-item-name="${satName}"
          data-tooltip="${satName}">
          <span class="item-icon">
           <img src="${satellitePng}" alt="Satellite"/>
@@ -504,6 +544,14 @@ export class AssetTreeSidebar extends BaseElement {
     assetItems.forEach((item) => {
       item.addEventListener('click', (e) => {
         e.preventDefault();
+
+        // A locked item keeps its pointer events so the hover explains the
+        // lock; the click says it again instead of opening (phase 31 D7)
+        if (this.isLocked_() && item.classList.contains('sidebar-lockable')) {
+          SaveProgressToast.getInstance().showError(AssetTreeSidebar.LOCKED_TEXT, 3000);
+          return;
+        }
+
         const type = item.getAttribute('data-asset-type') as 'ground-station' | 'satellite' | 'mission-overview';
 
         // Handle Mission Overview selection

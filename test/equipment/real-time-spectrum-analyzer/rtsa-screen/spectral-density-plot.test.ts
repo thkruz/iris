@@ -439,6 +439,16 @@ describe('SpectralDensityPlot', () => {
         expect(markerSignal()).toBeCloseTo(-98.5, 1);
       });
 
+      it('marks a flat-top carrier at the centre of its top, the bin Peak Search reads (phase 31 D15)', () => {
+        mockSpecA.state.isPeakTracking = true;
+        sweep(-82, { 300: -50, 301: -50, 302: -50, 303: -50, 304: -50 });
+        const { topMarkers, markerIndex } = mockSpecA.state;
+        const marker = topMarkers[markerIndex] ?? topMarkers[0];
+        expect(marker.signal).toBeCloseTo(-50, 1);
+        expect(marker.x).toBe(302);
+        expect(SpectralDensityPlot.plateauCentre(mockDataProcessor.combinedData, 300)).toBe(302);
+      });
+
       it('without tracking, a placed marker stays where it was put', () => {
         mockSpecA.state.isPeakTracking = false;
         sweep(-82, { 400: -46.8 });
@@ -472,6 +482,51 @@ describe('SpectralDensityPlot', () => {
       expect(bandTexts.some(([text]) => String(text).endsWith('Hz'))).toBe(true);
       const labelsOverTrace = fillText.mock.calls.filter(([text, , y]) => (text === '-100' || String(text).endsWith('Hz')) && y <= traceBottom);
       expect(labelsOverTrace).toEqual([]);
+    });
+  });
+
+  describe('amplitude labels over the trace (phase 31 D8, r6-s01-F3)', () => {
+    it('draws every amplitude label after the traces, each on its own box', () => {
+      plot = new SpectralDensityPlot(canvas, mockSpecA, mockDataProcessor, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+      vi.advanceTimersByTime(1100);
+      (mockSpecA as unknown as { traceIntervalMs: number }).traceIntervalMs = 100;
+      const ctx = canvas.getContext('2d')!;
+      const stroke = vi.spyOn(ctx, 'stroke');
+      const fillText = vi.spyOn(ctx, 'fillText');
+      const fillRect = vi.spyOn(ctx, 'fillRect');
+
+      plot.update();
+      plot.draw();
+
+      const lastStroke = Math.max(...stroke.mock.invocationCallOrder);
+      expect(stroke.mock.calls.length).toBeGreaterThan(0);
+      const amplitudeTexts = ['0', '-10', '-50', '-90', '-100', 'dBm'];
+      for (const text of amplitudeTexts) {
+        const idx = fillText.mock.calls.findIndex(([t]) => t === text);
+        expect(idx, text).toBeGreaterThanOrEqual(0);
+        const order = fillText.mock.invocationCallOrder[idx];
+        expect(order, text).toBeGreaterThan(lastStroke);
+        // The box for this label is the fillRect drawn just before it
+        const boxOrders = fillRect.mock.invocationCallOrder.filter((o) => o < order && o > lastStroke);
+        expect(boxOrders.length, text).toBeGreaterThan(0);
+      }
+    });
+
+    it('keeps the amplitude labels out of the cached grid image', () => {
+      plot = new SpectralDensityPlot(canvas, mockSpecA, mockDataProcessor, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+      vi.advanceTimersByTime(1100);
+      const ctx = canvas.getContext('2d')!;
+      const fillText = vi.spyOn(ctx, 'fillText');
+      const getImageData = vi.spyOn(ctx, 'getImageData');
+
+      plot.draw();
+
+      const cacheOrder = getImageData.mock.invocationCallOrder[0];
+      expect(cacheOrder).toBeDefined();
+      const beforeCache = fillText.mock.calls.filter((_, i) => fillText.mock.invocationCallOrder[i] < cacheOrder).map(([t]) => String(t));
+      expect(beforeCache.some((t) => t.endsWith('Hz'))).toBe(true);
+      expect(beforeCache).not.toContain('-100');
+      expect(beforeCache).not.toContain('dBm');
     });
   });
 

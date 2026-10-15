@@ -25,6 +25,12 @@ export class MissionOverviewTab extends BaseElement {
   private viewStationId_: string | null = null;
   private lastLookSyncMs_ = 0;
   private static readonly LOOK_SYNC_INTERVAL_MS = 1000;
+  /**
+   * The ground station last selected anywhere (sidebar or overview card). The
+   * tab is rebuilt each time the Overview is shown, so the choice lives here,
+   * not on the instance (phase 31 D16, r6-s18-F1). Cleared on scenario teardown.
+   */
+  private static lastSelectedStationId_: string | null = null;
   private readonly boundUpdate_: () => void;
   private readonly boundAssetSelected_: (asset: { type: 'ground-station' | 'satellite'; id: string }) => void;
 
@@ -32,7 +38,8 @@ export class MissionOverviewTab extends BaseElement {
     super();
     this.groundStations_ = SimulationManager.getInstance().groundStations;
     this.satellites_ = SimulationManager.getInstance().satellites;
-    this.viewStationId_ = this.groundStations_[0]?.state.id ?? null;
+    const remembered = MissionOverviewTab.lastSelectedStationId_;
+    this.viewStationId_ = this.groundStations_.some((gs) => gs.state.id === remembered) ? remembered : (this.groundStations_[0]?.state.id ?? null);
     this.init_(containerId, 'replace');
     this.dom_ = qs('.mission-overview-tab');
     this.addEventListenersLate_();
@@ -46,8 +53,19 @@ export class MissionOverviewTab extends BaseElement {
     this.syncLookAngles_();
   }
 
+  /** Remember the selected ground station for the next Overview (phase 31 D16) */
+  static rememberStation(stationId: string): void {
+    MissionOverviewTab.lastSelectedStationId_ = stationId;
+  }
+
+  /** Forget the remembered station (scenario teardown) */
+  static resetRememberedStation(): void {
+    MissionOverviewTab.lastSelectedStationId_ = null;
+  }
+
   private onAssetSelected_(asset: { type: 'ground-station' | 'satellite'; id: string }): void {
     if (asset.type === 'ground-station' && this.groundStations_.some((gs) => gs.state.id === asset.id)) {
+      MissionOverviewTab.rememberStation(asset.id);
       this.viewStationId_ = asset.id;
       this.syncLookAngles_();
     }

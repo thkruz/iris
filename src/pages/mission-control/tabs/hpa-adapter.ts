@@ -149,7 +149,7 @@ export class HPAAdapter {
 
     // Update alarm badge
     const alarms = this.getAlarmsFromModule_();
-    this.alarmBadge_.update(alarms, this.hpaModule.state.isPowered);
+    this.alarmBadge_.update(alarms, this.hpaModule.state.isPowered, this.hpaModule.state.isHpaEnabled ? undefined : 'Output disabled');
   }
 
   /** True while the HPA is putting RF out (powered, enabled, driven) */
@@ -482,7 +482,7 @@ export class HPAAdapter {
 
     // Update alarm badge - immediate feedback
     const alarms = this.getAlarmsFromModule_();
-    this.alarmBadge_.update(alarms, this.hpaModule.state.isPowered);
+    this.alarmBadge_.update(alarms, this.hpaModule.state.isPowered, this.hpaModule.state.isHpaEnabled ? undefined : 'Output disabled');
   }
 
   /**

@@ -301,13 +301,15 @@
 }
 
 /* === Sidebar Locked State === */
-/* When scenario is locked (awaiting mission brief acknowledgment), disable all items except mission brief and checklist */
-.asset-tree-sidebar.sidebar-locked .list-group-item-action:not(.mission-brief-icon):not(.checklist-icon) {
+/* When the scenario is locked (awaiting mission brief acknowledgment), dim the
+   stations, satellites and Mission Overview. They keep pointer events so the
+   hover tooltip and the click toast can say why (phase 31 D7); the record
+   panels (Working Doc, Campaign Record, Dialog History, Ops Log) never lock. */
+.asset-tree-sidebar.sidebar-locked .list-group-item-action.sidebar-lockable {
   opacity: 0.4;
-  pointer-events: none;
   cursor: not-allowed;
 }
 
-.asset-tree-sidebar.sidebar-locked .list-group-item-action:not(.mission-brief-icon):not(.checklist-icon) .item-status {
+.asset-tree-sidebar.sidebar-locked .list-group-item-action.sidebar-lockable .item-status {
   opacity: 0.3;
 }

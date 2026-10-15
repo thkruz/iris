@@ -790,3 +790,28 @@ describe('RealTimeSpectrumAnalyzer', () => {
     });
   });
 });
+
+describe('RealTimeSpectrumAnalyzer.peakSearch plateau rule (phase 31 D15, r6-s07-F1)', () => {
+  const search = (data: number[]) =>
+    RealTimeSpectrumAnalyzer.prototype.peakSearch.call({
+      dataProcessor: { combinedData: new Float32Array(data) },
+      state: { centerFrequency: 1000e6, span: 10e6 },
+    } as unknown as RealTimeSpectrumAnalyzer);
+
+  it('reads a flat top at the centre of its equal run, not its leftmost bin', () => {
+    // 10 points over 10 MHz from 995 MHz: bins 3..7 equal; centre is bin 5
+    const peak = search([-90, -90, -80, -60, -60, -60, -60, -60, -80, -90]);
+    expect(peak?.levelDbm).toBe(-60);
+    expect(peak?.frequencyHz).toBeCloseTo(995e6 + 5.5e6, 0);
+  });
+
+  it('an even run takes the left-of-centre bin, the rule the in-plot marker uses', () => {
+    const peak = search([-90, -60, -60, -60, -60, -90, -90, -90, -90, -90]);
+    expect(peak?.frequencyHz).toBeCloseTo(995e6 + 2.5e6, 0);
+  });
+
+  it('a single highest bin is unchanged', () => {
+    const peak = search([-90, -90, -90, -90, -90, -90, -90, -50, -90, -90]);
+    expect(peak?.frequencyHz).toBeCloseTo(995e6 + 7.5e6, 0);
+  });
+});

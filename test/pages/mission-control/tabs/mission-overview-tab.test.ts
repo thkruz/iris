@@ -28,7 +28,7 @@ vi.mock('../../../../src/simulation/simulation-manager', () => ({
             location: { latitude: 51.5074, longitude: -0.1278, elevation: 50 },
             isOperational: false,
           },
-          antennas: [{}],
+          antennas: [{ viewOf: (sat: { az: number; el: number }) => ({ az: sat.az + 5, el: sat.el - 3 }) }],
           rfFrontEnds: [{}],
           transmitters: [],
           receivers: [{ state: { modems: [{}, {}, {}, {}] } }],
@@ -161,6 +161,36 @@ describe('MissionOverviewTab', () => {
       tab.dispose();
       expect(mockEventBus.off).toHaveBeenCalledWith(Events.UPDATE, expect.any(Function));
       tab = new MissionOverviewTab('mission-overview-container');
+    });
+
+    it('a rebuilt Overview keeps the last selected station, and teardown forgets it (phase 31 D16, r6-s18-F1)', () => {
+      const from = () => document.querySelector('[data-asset-id="sat-12345"] .sat-look-from')?.textContent;
+      const assetSelected = mockEventBus.on.mock.calls.filter((call: unknown[]) => call[0] === Events.ASSET_SELECTED).at(-1)?.[1];
+      assetSelected({ type: 'ground-station', id: 'GS-002' });
+      expect(from()).toBe('Look angles from GS-002');
+
+      // The Overview is rebuilt each time it is shown
+      tab.dispose();
+      tab = new MissionOverviewTab('mission-overview-container');
+      expect(from()).toBe('Look angles from GS-002');
+
+      // Selected from the sidebar while the Overview was not up
+      MissionOverviewTab.rememberStation('GS-001');
+      tab.dispose();
+      tab = new MissionOverviewTab('mission-overview-container');
+      expect(from()).toBe('Look angles from GS-001');
+
+      // A station not in this scenario, or a teardown, falls back to the first
+      MissionOverviewTab.rememberStation('ME-99');
+      tab.dispose();
+      tab = new MissionOverviewTab('mission-overview-container');
+      expect(from()).toBe('Look angles from GS-001');
+
+      MissionOverviewTab.rememberStation('GS-002');
+      MissionOverviewTab.resetRememberedStation();
+      tab.dispose();
+      tab = new MissionOverviewTab('mission-overview-container');
+      expect(from()).toBe('Look angles from GS-001');
     });
   });
 
