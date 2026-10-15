@@ -2013,7 +2013,7 @@ export const scenario3Data: ScenarioData = {
       'configure-maine-rx-modem': {
         text: `
         <p>
-          Modem's configured. Now watch for lock - the modem needs to acquire the carrier and sync to the data stream.
+          Modem's configured. It locks within a few seconds once the carrier is there - watch the LOCK badge come up.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,

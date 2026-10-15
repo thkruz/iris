@@ -110,7 +110,7 @@ const SCENARIO_5_OBJECTIVES: Scenario5Objective[] = [
     id: 'phase-5-characterize-interference',
     title: 'Characterize the Interference',
     type: 'quiz',
-    correctAnswer: 'Much narrower - a spike only a few MHz wide within our wideband signal',
+    correctAnswer: 'Much narrower - a spike about 1 MHz wide within our wideband signal',
   },
   {
     id: 'measure-interference-frequency',

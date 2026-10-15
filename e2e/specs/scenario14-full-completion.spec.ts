@@ -87,7 +87,7 @@ const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
     id: 'pre-storm-dashboard',
     title: 'Pre-Storm Dashboard Sweep',
     type: 'quiz',
-    correctAnswer: 'No active alarms, link healthy - clean baseline to fade from',
+    correctAnswer: 'No warning or critical alarms - one informational row, Signal(s) Detected - clean baseline to fade from',
   },
   {
     id: 'enable-feed-heater-tab',

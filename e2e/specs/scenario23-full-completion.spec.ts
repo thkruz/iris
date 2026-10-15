@@ -113,7 +113,7 @@ const SCENARIO_23_OBJECTIVES: Scenario23Objective[] = [
     title: 'Prove the Carrier',
     // Phase 27 Q3: the lock / C/N rows latch, then the read quiz
     type: 'quiz',
-    correctAnswer: 'Locked, C/N about 15 dB - the same healthy link the automation left behind',
+    correctAnswer: 'Locked, C/N about 14 dB - the same healthy link the automation left behind',
   },
   {
     id: 'instruments-not-feel-quiz',
@@ -128,7 +128,7 @@ const SCENARIO_23_OBJECTIVES: Scenario23Objective[] = [
     title: 'Hold Under Manual Control',
     // The quiz follows the 30 s carrier hold on RX Analysis
     type: 'quiz',
-    correctAnswer: 'Nothing worth a correction: beacon steady on the analyzer, modem locked at about 15 dB throughout',
+    correctAnswer: 'Nothing worth a correction: beacon steady on the analyzer, modem locked at about 14 dB throughout',
     quizWaitMs: 75000,
   },
   {

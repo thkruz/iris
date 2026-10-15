@@ -800,7 +800,7 @@ export const scenario16Data: ScenarioData = {
               'No faults cleared - BUC still hot, LNB still unlocked, HPA still overdriven - link down, escalate to Dana',
             ],
             correctIndex: 0,
-            explanation: 'Clean board. All three independent faults addressed in priority order. Ready to brief the customer.',
+            explanation: 'No warning or critical alarms left. All three independent faults addressed in priority order. Ready to brief the customer.',
             pointPenalty: 5,
           },
           mustMaintain: false,

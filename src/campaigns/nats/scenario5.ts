@@ -468,14 +468,14 @@ export const scenario5Data: ScenarioData = {
           params: {
             question: 'How does the interference bandwidth compare to our main signal?',
             options: [
-              'Much narrower - a spike only a few MHz wide within our wideband signal',
+              'Much narrower - a spike about 1 MHz wide within our wideband signal',
               'Same width - the interference matches our signal bandwidth',
               'Much wider - the interference spans beyond our signal',
               'Variable - the interference bandwidth keeps changing',
             ],
             correctIndex: 0,
             explanation:
-              'The interference is a narrowband spike - only a few MHz wide compared to our wideband signal. This is important because it means we can surgically remove it with a notch filter without affecting most of our signal.',
+              'The interference is a narrowband spike - about 1 MHz wide compared to our wideband signal. This is important because it means we can surgically remove it with a notch filter without affecting most of our signal.',
             pointPenalty: 5,
           },
           mustMaintain: false,

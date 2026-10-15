@@ -297,13 +297,14 @@ export const scenario14Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'What is VT-01 reporting before the front arrives?',
             options: [
-              'No active alarms, link healthy - clean baseline to fade from',
+              'No warning or critical alarms - one informational row, Signal(s) Detected - clean baseline to fade from',
               'BUC over-temperature alarm - hold transmit until it cools',
               'Antenna tracking error - beacon lock lost before the front arrived',
               'GPSDO in holdover - reference alarm, timing at risk',
             ],
             correctIndex: 0,
-            explanation: 'Clean baseline. Note the C/N now so you know what "nominal" looks like when the rain starts pulling it down.',
+            explanation:
+              'Clean baseline: no warning or critical alarms, and the one informational row (Signal(s) Detected) just says the receiver sees carriers. Note the C/N now so you know what "nominal" looks like when the rain starts pulling it down.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -479,7 +480,7 @@ export const scenario14Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'Margin = baseline C/N minus demod threshold. With about 8 dB of headroom (Raw C/N near 13 dB against the ~4.7 dB C/N at which QPSK 3/4 acquires lock (Required 5.0 plus a 0.5 dB acquisition margin, less the 0.8 dB Es/N0 offset)), 6 dB of it above the 7 dB action threshold, and about 1 dB of expected fade (a heavy cell at C-band costs about 1 dB of C/N, mostly sky-noise rise), we are comfortable. Without baseline data, every dip looks scary.',
+              'Margin = baseline C/N minus demod threshold. QPSK 3/4 acquires lock at about 4.7 dB C/N (Required 5.0 plus a 0.5 dB acquisition margin, less the 0.8 dB Es/N0 offset). With Raw C/N near 13 dB that is about 8 dB of headroom, 6 dB of it above the 7 dB action threshold, and about 1 dB of expected fade (a heavy cell at C-band costs about 1 dB of C/N, mostly sky-noise rise), we are comfortable. Without baseline data, every dip looks scary.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -497,7 +498,7 @@ export const scenario14Data: ScenarioData = {
       nice: ['T0153', 'S0675'],
       title: 'Monitor Through the Fade',
       description:
-        "Stay on RX Analysis as the front arrives (within seconds of this step opening) and watch RX modem 1's Raw C/N for 20 s. At C-band the dip is about 1 dB, not much more than the readout's normal wander; the RAIN FADE alarm shows once the fade passes 0.5 dB, about 2 minutes into the cell, and the ACU Environmental card shows Precipitation ACTIVE while the cell is overhead.",
+        "Stay on RX Analysis as the front arrives (within seconds of this step opening) and watch RX modem 1's Raw C/N for 20 s. At C-band the dip is about 1 dB, not much more than the readout's normal wander; the modem loses that 1 dB because our own uplink is rained on too, while the RAIN FADE alarm detail reads the downlink loss alone, about 0.7 dB at the peak. The alarm shows once the fade passes 0.5 dB, about 2 minutes into the cell, and the ACU Environmental card shows Precipitation ACTIVE while the cell is overhead.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['baseline-margin-quiz'],
       timeLimitSeconds: 6 * 60,
@@ -581,7 +582,7 @@ export const scenario14Data: ScenarioData = {
           description: 'AGC Headroom Interpretation',
           params: {
             character: Character.SYSTEM,
-            question: 'Through the cell the AGC gain moves by about 1 dB and stays far below its maximum. What does that say about the decision to hold?',
+            question: 'Through the cell the AGC gain moves by a few tenths of a dB and stays far below its maximum. What does that say about the decision to hold?',
             options: [
               'Plenty of headroom remaining - link is comfortable, hold is justified',
               'Headroom is already spent - any non-zero AGC value means hand over now',
@@ -590,7 +591,7 @@ export const scenario14Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'The rain moves the input level by about 1 dB and the AGC gain follows it by about 1 dB, a small slice of its range: the cushion is barely touched. The handover trigger is not AGC active - it is AGC near max with continued fade, or modem unlock. We are nowhere near either.',
+              'The rain moves the total passband power by only a few tenths of a dB, so the AGC gain follows by a few tenths, a small slice of its range: the cushion is barely touched. The handover trigger is not AGC active - it is AGC near max with continued fade, or modem unlock. We are nowhere near either.',
             pointPenalty: 5,
           },
           mustMaintain: false,

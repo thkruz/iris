@@ -103,7 +103,7 @@ export const scenario23Data: ScenarioData = {
             referenceLevel: -85 as dBm,
             centerFrequency: 1532e6 as Hertz, // TM-1 carrier IF
             span: 50e6 as Hertz,
-            rbw: 100e3 as Hertz,
+            rbw: null, // Auto, like every other analyzer at shift start (Phase 31 D9)
             minAmplitude: -100 as dBm,
             maxAmplitude: -40 as dBm,
           },
@@ -443,14 +443,14 @@ export const scenario23Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'What does RX modem 1 show on the TM-1 carrier with the dish under manual control?',
             options: [
-              'Locked, C/N about 15 dB - the same healthy link the automation left behind',
+              'Locked, C/N about 14 dB - the same healthy link the automation left behind',
               'Locked, C/N about 5 dB - the dish has drifted toward the edge of the beam since the processor died',
               'Unlocked, C/N below 0 dB - the dish is off the satellite and the beacon on the analyzer is a sidelobe',
               'Locked, C/N about 30 dB - manual mode bypasses the LNB, so the reading is higher than normal',
             ],
             correctIndex: 0,
             explanation:
-              'About 15 dB and locked, with the beacon where the sheet says: two readings from the RF chain, which never failed. The ACU lock light comes from the dead processor; this does not.',
+              'About 14 dB and locked, with the beacon where the sheet says: two readings from the RF chain, which never failed. The ACU lock light comes from the dead processor; this does not.',
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -537,7 +537,7 @@ export const scenario23Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Over the 30 s you watched, what did the beacon on the analyzer and RX modem 1 do?',
             options: [
-              'Nothing worth a correction: beacon steady on the analyzer, modem locked at about 15 dB throughout',
+              'Nothing worth a correction: beacon steady on the analyzer, modem locked at about 14 dB throughout',
               'The beacon walked steadily down the screen and the C/N fell a dB every few seconds - a nudge is due',
               'The modem dropped lock twice and relocked - normal for manual mode, so no action is needed',
               'The beacon vanished and the C/N held - the analyzer lost the beacon but the link is fine',

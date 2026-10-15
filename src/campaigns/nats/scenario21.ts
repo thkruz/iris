@@ -123,7 +123,7 @@ export const scenario21Data: ScenarioData = {
             // interferer (nats-s21-F2; a pre-set view latched with no input)
             centerFrequency: 1070e6 as Hertz,
             span: 2e6 as Hertz,
-            rbw: 100e3 as Hertz,
+            rbw: null, // Auto, like every other analyzer at shift start (Phase 31 D9)
             minAmplitude: -100 as dBm,
             maxAmplitude: -40 as dBm,
             scaleDbPerDiv: 10 as dB,

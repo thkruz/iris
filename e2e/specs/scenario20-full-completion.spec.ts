@@ -197,7 +197,7 @@ const SCENARIO_20_OBJECTIVES: Scenario20Objective[] = [
     title: 'Log the Dual Recovery',
     type: 'quiz',
     correctAnswer:
-      'Dual degradation 0712: VT-01 icing (heater on ~0715, melted) | ME-02 HPA back-off 1 dB (10 dB restored ~0720); causes independent; process fix: feed heater on the shift-change checklist',
+      'Dual degradation 0712: VT-01 icing (heater on, melted) | ME-02 HPA back-off 1 dB (10 dB restored); causes independent; process fix: feed heater on the shift-change checklist',
   },
 ];
 

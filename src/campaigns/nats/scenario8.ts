@@ -128,7 +128,7 @@ export const scenario8Data: ScenarioData = {
             ...vermontGroundStation.spectrumAnalyzers[0],
             centerFrequency: 1000e6 as Hertz, // Not configured - player must set
             span: 100e6 as Hertz,
-            rbw: 1e6 as Hertz,
+            rbw: null, // Auto, like every other analyzer at shift start (Phase 31 D9)
             referenceLevel: -50 as dBm,
             // A wideband view: the beacon step asks for its own -120/-60 window
             minAmplitude: -110 as dBm,
@@ -478,7 +478,8 @@ export const scenario8Data: ScenarioData = {
       id: 'configure-speca-beacon',
       nice: ['S0421', 'K0773'],
       title: 'Configure Spectrum Analyzer for Beacon',
-      description: 'Set up the spectrum analyzer to observe the AURORA-7 beacon: Center 1085 MHz, Span 10 kHz (0.01 MHz), Min Amplitude -120 dBm, Max Amplitude -60 dBm, RBW Auto.',
+      description:
+        'Set up the spectrum analyzer to observe the AURORA-7 beacon: Center 1085 MHz, Span 10 kHz (0.01 MHz), Min Amplitude -120 dBm, Max Amplitude -60 dBm, RBW left on Auto.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['calculate-aurora7-beacon-if'],
       timeLimitSeconds: 3 * 60,
@@ -533,14 +534,8 @@ export const scenario8Data: ScenarioData = {
           },
           maintainUntilObjectiveComplete: true,
         },
-        {
-          type: 'speca-rbw-set',
-          description: 'RBW Configured to Auto',
-          params: {
-            rbw: null,
-          },
-          maintainUntilObjectiveComplete: true,
-        },
+        // No RBW row: the analyzer starts on Auto since Phase 31 D9, so the
+        // row would tick before the player acts (nats-objective-intent lint)
       ],
       conditionLogic: 'AND',
       points: 10,
@@ -858,11 +853,16 @@ export const scenario8Data: ScenarioData = {
       id: 'switch-to-modem-2',
       nice: ['S0421', 'T1567'],
       title: 'Switch to Backup Modem',
-      description: 'Select Modem 2 as the active transmitter to replace the faulted Modem 1.',
+      description:
+        "Take the faulted Modem 1 out of service: on its TX Chain tab, power it off (its fault alarm clears). Then open the Modem 2 tab: the spare is already powered and standing by. Don't start Modem 2 transmitting yet: it is still unconfigured, and it goes up through the loopback test first.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['check-tx-chain-status'],
-      timeLimitSeconds: 1 * 60,
+      timeLimitSeconds: 2 * 60,
       timerStartTrigger: 'on-activate',
+      // Phase 31 D14: selecting a modem tab is only a view, so the step grades
+      // the real switch (Modem 1 off, Modem 2 on). Transmitting on Modem 2 is
+      // graded by test-modem2-loopback, after the configure and loopback steps,
+      // so no unconfigured carrier goes out through the HPA.
       conditions: [
         {
           type: 'tab-active',
@@ -871,8 +871,17 @@ export const scenario8Data: ScenarioData = {
           mustMaintain: true,
         },
         {
+          type: 'equipment-not-powered',
+          description: 'Modem 1 Powered Off (Out of Service)',
+          params: { equipment: 'transmitter', modemNumber: 1 },
+          mustMaintain: true,
+        },
+        {
+          // Modem 2 starts powered (the spare stands by), so its power is not
+          // a row: the change the player makes is Modem 1 off. The tab row
+          // puts the Modem 2 controls in front for the configure step.
           type: 'tx-active-modem',
-          description: 'Modem 2 Selected',
+          description: 'Modem 2 Tab Selected',
           params: { modemNumber: 2 },
           mustMaintain: true,
         },
@@ -972,7 +981,7 @@ export const scenario8Data: ScenarioData = {
       nice: ['T1313', 'S0582'],
       title: 'Prepare BUC for Loopback Test',
       description:
-        "Before transmitting on a new modem, take the faulted Modem 1 out of service (power it off: its fault alarm clears), disable the HPA output, set the BUC gain to 15 dB and enable BUC loopback for safe testing. The BUC stays unmuted so the loop carries the signal. The loop couples the BUC output into the LNB about 66 dB down; at tonight's 65 dB LNB gain the LNB compresses at about -55 dBm in, so the standard 23 dB (-7 dBm drive, +16 dBm out, -50 dBm in) would overload it. 15 dB puts -58 dBm in, 3 dB under.",
+        "Before transmitting on a new modem, keep the faulted Modem 1 out of service (powered off), disable the HPA output, set the BUC gain to 15 dB and enable BUC loopback for safe testing. The BUC stays unmuted so the loop carries the signal. The loop couples the BUC output into the LNB about 66 dB down; at tonight's 65 dB LNB gain the LNB compresses at about -55 dBm in, so the standard 23 dB (-7 dBm drive, +16 dBm out, -50 dBm in) would overload it. 15 dB puts -58 dBm in, 3 dB under.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['configure-tx-modem'],
       timeLimitSeconds: 2 * 60,

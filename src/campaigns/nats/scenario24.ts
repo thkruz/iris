@@ -53,7 +53,7 @@ import { aurora7Satellite, ses10Satellite, tidemark1Satellite, tidemark2Satellit
  *     the operator must enable it proactively - S14 discipline). AURORA-7 also
  *     visible/usable from VT-01 for the pass. Phase 29 D13: the front's rain
  *     band (80 mm/h) follows the go/no-go and costs the step-tracked AURORA-7
- *     beacon about 1 dB (Sky Temp 12 -> 35 K); the AGC stays At Max on noise.
+ *     beacon about 1 dB (Sky Temp 12 -> 32 K); the AGC stays At Max on noise.
  *   - Phase 27: VT-01's TM-1 carrier is keyed at the start (TM-1 service
  *     through the storm). Before the dish leaves TIDEMARK-1 for the AURORA-7
  *     pass the player takes it off the air (HPA output off, then BUC mute):
@@ -212,7 +212,7 @@ export const scenario24Data: ScenarioData = {
         // has an RF signature (the snow event above only ices an unheated
         // feed). Authored like S14: at C-band the wet path mostly adds sky
         // noise. Headless (2026-10-13, VT-01 on AURORA-7, El 29.2): Sky Temp
-        // 12 -> 35 K, step-tracked beacon 8.8 -> 7.7 dB (about 1.1 dB), lock
+        // 12 -> 32 K, step-tracked beacon 9.0 -> 8.0 dB (about 1 dB), lock
         // held. Program-track sits at 7.0 dB, only 0.5 dB over the 6.5 dB
         // lock, so the rain is anchored after step-track has held the beacon
         // (it would unlock a program-tracked beacon from about 30 mm/h).
@@ -787,7 +787,7 @@ export const scenario24Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'Two things are happening and only one is yours to stop. The heater, on before the front, keeps the feed clear: Ice stays at 0.0 dB, so the outage ice would have caused never starts. The rain is real: the wet path radiates into the beam (Sky Temp climbs from about 12 K to about 35 K) and costs the AURORA-7 beacon about a dB, leaving it near 7.7 dB, still above the 6.5 dB lock step-track needs. The AGC sits At Max because TM-1 is off the air and only noise and beacons are in the passband, not because of the rain: act on the margin, not the AGC. Rain over the station is in every satellite path from VT-01, so a repoint buys nothing.',
+              'Two things are happening and only one is yours to stop. The heater, on before the front, keeps the feed clear: Ice stays at 0.0 dB, so the outage ice would have caused never starts. The rain is real: the wet path radiates into the beam (Sky Temp climbs from about 12 K to about 32 K) and costs the AURORA-7 beacon about a dB, leaving it near 8 dB, still above the 6.5 dB lock step-track needs. The AGC sits At Max because TM-1 is off the air and only noise and beacons are in the passband, not because of the rain: act on the margin, not the AGC. Rain over the station is in every satellite path from VT-01, so a repoint buys nothing.',
             pointPenalty: 5,
             documentSection: 'VT-01 / TM-1',
             documentLine:
