@@ -14,6 +14,7 @@
 import { html } from '@app/engine/utils/development/formatter';
 import { EventBus } from '@app/events/event-bus';
 import { Events, TimeSkipEndedData, TimeSkipProgressData, TimeSkipStartedData } from '@app/events/events';
+import { glyph } from './glyphs';
 import { formatDuration, formatUtcClock, formatUtcDate } from './time-skip-format';
 import './time-skip.css';
 
@@ -52,7 +53,7 @@ export class TimeSkipOverlay {
       <div id="${TimeSkipOverlay.ELEMENT_ID}" class="time-skip-overlay">
         <div class="time-skip-overlay-card">
           <div class="time-skip-overlay-label">
-            <i class="fa-solid fa-forward"></i> Advancing scenario clock
+            ${glyph('forward')} Advancing scenario clock
           </div>
           <div class="time-skip-overlay-clock" id="time-skip-overlay-clock">--:--:--Z</div>
           <div class="time-skip-overlay-date" id="time-skip-overlay-date"></div>

@@ -14,6 +14,7 @@ import { ScenarioManager } from '@app/scenario-manager';
 import { AlarmService } from '@app/services/alarm-service';
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
 import { SkipTarget, TimeSkipController } from '@app/simulation/time-skip-controller';
+import { glyph, severityGlyph } from './glyphs';
 import { formatAstroClock, formatDtg, formatDurationCompact } from './time-skip-format';
 import { TimeSkipModal } from './time-skip-modal';
 import { TimeSkipOverlay } from './time-skip-overlay';
@@ -136,7 +137,7 @@ export class GlobalCommandBar {
     const fallback: CampaignHeaderIdentity = {
       name: 'ORBITAL',
       nameAccent: 'OPS',
-      icon: 'fa-solid fa-earth-americas',
+      icon: 'globe',
     };
 
     try {
@@ -202,7 +203,7 @@ export class GlobalCommandBar {
 
       <!-- Left: Branding & Clock -->
       <div class="command-bar-left">
-        <i class="${this.headerIdentity_.icon} text-blue-500 text-xl mr-3"></i>
+        ${glyph(this.headerIdentity_.icon, 'text-blue-500 text-xl mr-3')}
         <div>
           ${this.gsbDomain_ ? html`<div class="astro-gsb-domain">${this.gsbDomain_}</div>` : ''}
           <div class="font-bold tracking-wide text-white">${this.headerIdentity_.name}<span class="text-blue-500">${this.headerIdentity_.nameAccent}</span></div>
@@ -225,7 +226,7 @@ export class GlobalCommandBar {
               this.isTimeSkipEnabled_
                 ? html`
               <button id="time-skip-control" class="time-skip-btn" type="button" disabled>
-                <i class="fa-solid fa-forward"></i>
+                ${glyph('forward')}
                 <span id="time-skip-control-label">Skip</span>
               </button>
             `
@@ -235,7 +236,7 @@ export class GlobalCommandBar {
               this.isObjectiveSkipEnabled_
                 ? html`
               <button id="objective-skip-control" class="time-skip-btn" type="button" style="display: none;">
-                <i class="fa-solid fa-forward"></i>
+                ${glyph('forward')}
                 <span id="objective-skip-control-label">Skip</span>
               </button>
             `
@@ -245,7 +246,7 @@ export class GlobalCommandBar {
               this.isSandbox_
                 ? html`
               <button id="loadout-control" class="loadout-btn" type="button" title="${t7e('loadout.buttonTitle')}">
-                <i class="fa-solid fa-satellite-dish"></i>
+                ${glyph('dish')}
                 <span>${t7e('loadout.button')}</span>
               </button>
             `
@@ -258,7 +259,7 @@ export class GlobalCommandBar {
           <div id="alarm-counts" class="alarm-counts"></div>
           <div id="alarm-messages" class="alarm-messages">
             <span class="alarm-stable text-green-400">
-              <i class="fa-solid fa-circle-check mr-1"></i> SYSTEM STABLE
+              ${severityGlyph('ok', 'me-1')} SYSTEM STABLE
             </span>
           </div>
         </div>
@@ -558,7 +559,7 @@ export class GlobalCommandBar {
       // System stable
       this.messagesEl_.innerHTML = `
         <span class="alarm-stable text-green-400">
-          <i class="fa-solid fa-circle-check mr-1"></i> SYSTEM STABLE
+          ${severityGlyph('ok', 'me-1')} SYSTEM STABLE
         </span>
       `;
       this.alarmBarEl_.classList.add('healthy');
@@ -596,7 +597,7 @@ export class GlobalCommandBar {
     if (counts.error > 0 || alwaysVisible) {
       badges.push(`
         <span class="alarm-count error ${counts.error === 0 ? 'zero' : ''}" title="${counts.error} Error${counts.error > 1 ? 's' : ''}">
-          <i class="fa-solid fa-circle-exclamation"></i> ${counts.error}
+          ${severityGlyph('error')} ${counts.error}
         </span>
       `);
     }
@@ -604,7 +605,7 @@ export class GlobalCommandBar {
     if (counts.warning > 0 || alwaysVisible) {
       badges.push(`
         <span class="alarm-count warning ${counts.warning === 0 ? 'zero' : ''}" title="${counts.warning} Warning${counts.warning > 1 ? 's' : ''}">
-          <i class="fa-solid fa-triangle-exclamation"></i> ${counts.warning}
+          ${severityGlyph('warning')} ${counts.warning}
         </span>
       `);
     }
@@ -612,7 +613,7 @@ export class GlobalCommandBar {
     if (counts.info > 0 || alwaysVisible) {
       badges.push(`
         <span class="alarm-count info ${counts.info === 0 ? 'zero' : ''}" title="${counts.info} Info">
-          <i class="fa-solid fa-circle-info"></i> ${counts.info}
+          ${severityGlyph('info')} ${counts.info}
         </span>
       `);
     }
@@ -646,9 +647,9 @@ export class GlobalCommandBar {
 
     const items = alarms.map((alarm, index) => {
       const color = this.getColorClass_(alarm.severity);
-      const icon = this.getIcon_(alarm.severity);
+      const icon = severityGlyph(alarm.severity, 'me-1');
       const separator = index > 0 ? '<span class="alarm-separator">•</span>' : '';
-      return `${separator}<span class="alarm-item ${color}"><i class="${icon} mr-1"></i>${alarm.assetId}(${alarm.equipmentType}${alarm.equipmentIndex + 1}): ${alarm.message}</span>`;
+      return `${separator}<span class="alarm-item ${color}">${icon}${alarm.assetId}(${alarm.equipmentType}${alarm.equipmentIndex + 1}): ${alarm.message}</span>`;
     });
 
     if (overflowCount > 0) {
@@ -679,19 +680,6 @@ export class GlobalCommandBar {
         return 'text-blue-400';
       default:
         return 'text-green-400';
-    }
-  }
-
-  private getIcon_(severity: string): string {
-    switch (severity) {
-      case 'error':
-        return 'fa-solid fa-circle-exclamation';
-      case 'warning':
-        return 'fa-solid fa-triangle-exclamation';
-      case 'info':
-        return 'fa-solid fa-circle-info';
-      default:
-        return 'fa-solid fa-circle-check';
     }
   }
 

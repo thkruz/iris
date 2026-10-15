@@ -128,6 +128,7 @@ describe('GlobalCommandBar', () => {
       const stableMessage = document.querySelector('.alarm-stable');
       expect(stableMessage).not.toBeNull();
       expect(stableMessage?.textContent).toContain('SYSTEM STABLE');
+      expect(stableMessage?.querySelector('[data-glyph="ok"] svg')).not.toBeNull();
     });
 
     it('should render objective timer display', () => {
@@ -318,6 +319,29 @@ describe('GlobalCommandBar', () => {
 
       const alarmItems = document.querySelectorAll('.alarm-item');
       expect(alarmItems.length).toBe(3);
+    });
+
+    it('draws inline severity glyphs, not Font Awesome classes the app never loads (Phase 32 D21)', () => {
+      const alarmHandler = mockEventBus.on.mock.calls.find((call: [string, Function]) => call[0] === Events.ALARM_STATE_CHANGED)?.[1];
+      const base = { assetId: 'GS-001', equipmentType: 'antenna', equipmentIndex: 0, timestamp: Date.now() };
+
+      alarmHandler?.({
+        alarms: [
+          { ...base, alarmId: 'e', severity: 'error' as const, message: 'Lock lost' },
+          { ...base, alarmId: 'w', severity: 'warning' as const, message: 'Low Eb/No' },
+        ],
+        highestSeverity: 'error',
+      });
+
+      const bar = document.querySelector('#global-command-bar-container');
+      expect(bar?.querySelector('[class*="fa-"]')).toBeNull();
+      expect(document.querySelector('.alarm-count.error [data-glyph="error"] svg')).not.toBeNull();
+      expect(document.querySelector('.alarm-count.warning [data-glyph="warning"] svg')).not.toBeNull();
+      const items = document.querySelectorAll('.alarm-item');
+      expect(items[0].classList.contains('text-red-400')).toBe(true);
+      expect(items[0].querySelector('[data-glyph="error"]')?.getAttribute('aria-hidden')).toBe('true');
+      expect(items[1].classList.contains('text-yellow-400')).toBe(true);
+      expect(items[1].querySelector('[data-glyph="warning"]')).not.toBeNull();
     });
 
     it('should show overflow indicator when more than 3 alarms', () => {

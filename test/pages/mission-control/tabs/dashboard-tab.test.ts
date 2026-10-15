@@ -542,10 +542,9 @@ describe('DashboardTab', () => {
 
       const icons = [...document.querySelectorAll('#alarm-list .alarm-icon')];
       expect(icons[0].className).toContain('critical');
-      expect(icons[0].querySelector('.alarm-glyph-error')).not.toBeNull();
-      expect(icons[0].textContent?.trim()).toBe('!');
+      expect(icons[0].querySelector('.alarm-glyph-error[data-glyph="error"] svg')).not.toBeNull();
       expect(icons[1].className).toContain('warning');
-      expect(icons[1].querySelector('.alarm-glyph-warning')?.textContent).toBe('\u26A0');
+      expect(icons[1].querySelector('.alarm-glyph-warning[data-glyph="warning"] svg')).not.toBeNull();
       expect(icons[1].querySelector('.alarm-glyph-error')).toBeNull();
     });
 

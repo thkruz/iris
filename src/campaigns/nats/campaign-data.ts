@@ -64,7 +64,7 @@ export const natsCampaignData: CampaignData = {
   headerIdentity: {
     name: 'ORBITAL',
     nameAccent: 'OPS',
-    icon: 'fa-solid fa-earth-americas',
+    icon: 'globe',
   },
   chromeVariant: 'standard',
   releaseStage: 'stable',
@@ -113,7 +113,7 @@ export const hamSdrCampaignData: CampaignData = {
   headerIdentity: {
     name: 'BACKYARD',
     nameAccent: 'SDR',
-    icon: 'fa-solid fa-satellite-dish',
+    icon: 'dish',
   },
   chromeVariant: 'sdr',
   // S1-S8 are shipped but the engine seams behind them (terrestrial emitters,
@@ -146,7 +146,7 @@ export const ccsCampaignData: CampaignData = {
   headerIdentity: {
     name: 'COUNTER',
     nameAccent: 'COMMS',
-    icon: 'fa-solid fa-tower-broadcast',
+    icon: 'tower',
   },
   chromeVariant: 'astro',
   // Sandbox, Failover, and the spacecraft half (First Shift, State of Health, Ranging Pass).
@@ -171,7 +171,7 @@ export const geolocationCampaignData: CampaignData = {
   headerIdentity: {
     name: 'SIGNAL',
     nameAccent: 'HUNTER',
-    icon: 'fa-solid fa-crosshairs',
+    icon: 'crosshairs',
   },
   chromeVariant: 'astro',
   // Sandbox plus the four-scenario arc: First Fix, Two Carriers, Cold Trail, Prove It.

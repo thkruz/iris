@@ -49,7 +49,7 @@ export const natsEuCampaignData: CampaignData = {
   headerIdentity: {
     name: 'ATLANTIC',
     nameAccent: 'OPS',
-    icon: 'fa-solid fa-earth-europe',
+    icon: 'globe',
   },
   // Same chrome as Campaign 1 on purpose: two facilities of one operator.
   chromeVariant: 'standard',

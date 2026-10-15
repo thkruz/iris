@@ -11,6 +11,7 @@ import { EventBus } from '@app/events/event-bus';
 import { AggregatedAlarm, Events } from '@app/events/events';
 import { AlarmService, AlarmWithDetail } from '@app/services/alarm-service';
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
+import { severityGlyph } from '../glyphs';
 import { STATION_STATUS_BADGE, stationStatusLabel } from '../station-status-label';
 import { formatBucOutputPower } from './buc-adapter';
 import './dashboard-tab.css';
@@ -35,14 +36,13 @@ const ALARM_LEVEL: Record<AggregatedAlarm['severity'], AlarmEntry['level']> = {
 /**
  * Active Alarms row glyphs, the ticker's shapes (Phase 32 D14, nats-r7-s24-F1):
  * an error is an exclamation in a filled circle, a warning the triangle, so a
- * lock loss never reads like the warnings under it. Drawn with Tabler
- * utilities and text, not Font Awesome classes: the app loads no icon font.
+ * lock loss never reads like the warnings under it. The shared inline glyphs
+ * (D21): the app loads no icon font.
  */
 const ALARM_ICON: Record<AlarmEntry['level'], string> = {
-  critical:
-    '<span class="alarm-glyph-error d-inline-flex align-items-center justify-content-center rounded-circle fw-bold" style="width: 14px; height: 14px; background: currentColor; font-size: 10px; line-height: 1;"><span style="color: #000;">!</span></span>',
-  warning: '<span class="alarm-glyph-warning">&#x26A0;</span>',
-  info: '<span class="alarm-glyph-info">&#x2139;</span>',
+  critical: severityGlyph('error', 'alarm-glyph-error'),
+  warning: severityGlyph('warning', 'alarm-glyph-warning'),
+  info: severityGlyph('info', 'alarm-glyph-info'),
 };
 
 /**
