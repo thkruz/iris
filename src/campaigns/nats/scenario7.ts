@@ -798,7 +798,7 @@ export const scenario7Data: ScenarioData = {
       nice: ['T1313'],
       title: 'Verify Loopback Signal',
       description:
-        "Find the loop carrier on the spectrum analyzer. The test loop translator shifts the 5943 MHz uplink down by the satellite's 2225 MHz translation, to 3718 MHz, so the normal LNB LO (5250 MHz) puts it at 1532 MHz IF: where our own downlink will sit. Leave the LNB alone and set Center 1532 MHz, Span 50 MHz, Min Amp -100 dBm, Max Amp -20 dBm, RBW Auto. The AGC levels the loop carrier like any other, so it reads around -55 dBm per RBW.",
+        "Find the loop carrier on the spectrum analyzer. The test loop translator shifts the 5943 MHz uplink down by the satellite's 2225 MHz translation, to 3718 MHz, so the normal LNB LO (5250 MHz) puts it at 1532 MHz IF: where our own downlink will sit. Leave the LNB alone and set Center 1532 MHz, Span 50 MHz, Min Amp -100 dBm, Max Amp -20 dBm, RBW Auto. The AGC levels the loop carrier like any other, so it reads around -55 dBm per RBW. On RX Analysis a carrier this clean reads Effective C/N well under Raw C/N: the grey ceiling line (about 40 dB) is the converter's own limit, not a fault.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['enable-loopback'],
       timeLimitSeconds: 5 * 60,

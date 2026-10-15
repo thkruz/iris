@@ -871,6 +871,66 @@ describe('ACUControlTab', () => {
     });
   });
 
+  describe('heater and Environmental LEDs (Phase 32 D14, nats-r7-s20-F1)', () => {
+    const sync = (now: number) => {
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+      updateHandler();
+    };
+    const setPrecip = (on: boolean) => {
+      WeatherManager.getInstance.mockReturnValue({ isPrecipitationActive: vi.fn(() => on) });
+    };
+
+    it('lights the heater LED green while on, titled Heater ON / OFF', () => {
+      const antenna = mockGroundStation.antennas[0];
+      const led = () => document.querySelector(`#${PREFIX}heater-led`) as HTMLElement;
+      antenna.state.isHeaterEnabled = true;
+      sync(3000);
+      expect(led().className).toBe('card-alarm-led success');
+      expect(led().title).toBe('Heater ON');
+
+      antenna.state.isHeaterEnabled = false;
+      sync(5000);
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('Heater OFF');
+    });
+
+    it('turns the Environmental header amber with ice at the ICE ON FEED warning level, titled with the depth', () => {
+      setPrecip(false);
+      const antenna = mockGroundStation.antennas[0];
+      const led = () => document.querySelector(`#${PREFIX}env-led`) as HTMLElement;
+
+      antenna.state.iceAccumulation_dB = 3.1;
+      sync(3000);
+      expect(led().className).toBe('card-alarm-led warning');
+      expect(led().title).toBe('Ice on feed 3.1 dB');
+
+      antenna.state.iceAccumulation_dB = 6;
+      sync(5000);
+      expect(led().className).toBe('card-alarm-led error');
+
+      // Melted below the warning level, no precipitation: clear, whatever the heater does
+      antenna.state.iceAccumulation_dB = 0.3;
+      antenna.state.isHeaterEnabled = true;
+      sync(7000);
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('Clear - ice 0.3 dB, no precipitation');
+    });
+
+    it('turns the Environmental header amber while precipitation is active', () => {
+      setPrecip(true);
+      try {
+        mockGroundStation.antennas[0].state.iceAccumulation_dB = 0;
+        sync(3000);
+        const led = document.querySelector(`#${PREFIX}env-led`) as HTMLElement;
+        expect(led.className).toBe('card-alarm-led warning');
+        expect(led.title).toBe('Precipitation active - ice 0.0 dB');
+      } finally {
+        setPrecip(false);
+      }
+    });
+  });
+
   describe('precipitation status', () => {
     it('should update precipitation status from weather manager', () => {
       WeatherManager.getInstance.mockReturnValue({

@@ -9,8 +9,9 @@ import { qs } from '@app/engine/utils/query-selector';
 import { antennaLockLabel, trackingModeLabel } from '@app/equipment/antenna/tracking-mode-label';
 import { EventBus } from '@app/events/event-bus';
 import { AggregatedAlarm, Events } from '@app/events/events';
-import { AlarmService } from '@app/services/alarm-service';
+import { AlarmService, AlarmWithDetail } from '@app/services/alarm-service';
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
+import { STATION_STATUS_BADGE, stationStatusLabel } from '../station-status-label';
 import { formatBucOutputPower } from './buc-adapter';
 import './dashboard-tab.css';
 import { formatHpaOutputPower } from './hpa-adapter';
@@ -32,6 +33,19 @@ const ALARM_LEVEL: Record<AggregatedAlarm['severity'], AlarmEntry['level']> = {
 };
 
 /**
+ * Active Alarms row glyphs, the ticker's shapes (Phase 32 D14, nats-r7-s24-F1):
+ * an error is an exclamation in a filled circle, a warning the triangle, so a
+ * lock loss never reads like the warnings under it. Drawn with Tabler
+ * utilities and text, not Font Awesome classes: the app loads no icon font.
+ */
+const ALARM_ICON: Record<AlarmEntry['level'], string> = {
+  critical:
+    '<span class="alarm-glyph-error d-inline-flex align-items-center justify-content-center rounded-circle fw-bold" style="width: 14px; height: 14px; background: currentColor; font-size: 10px; line-height: 1;"><span style="color: #000;">!</span></span>',
+  warning: '<span class="alarm-glyph-warning">&#x26A0;</span>',
+  info: '<span class="alarm-glyph-info">&#x2139;</span>',
+};
+
+/**
  * DashboardTab - Ground station overview and status display
  *
  * Displays:
@@ -46,6 +60,8 @@ export class DashboardTab extends BaseElement {
   private readonly groundStation: GroundStation;
   private readonly domCache_: Map<string, HTMLElement> = new Map();
   private readonly alarms_: AlarmEntry[] = [];
+  /** This station's AlarmService alarms from the last sync, most severe first */
+  private stationAlarms_: AlarmWithDetail[] = [];
   private updateHandler_: (() => void) | null = null;
   private lastSyncTime_: number = 0;
 
@@ -68,6 +84,7 @@ export class DashboardTab extends BaseElement {
   protected get html_(): string {
     const gs = this.groundStation;
     const loc = gs.state.location;
+    const status = stationStatusLabel(gs);
 
     return html`
       <div class="dashboard-tab">
@@ -102,9 +119,7 @@ export class DashboardTab extends BaseElement {
                 <hr class="my-2" />
                 <div class="d-flex justify-content-between align-items-center">
                   <span class="text-muted small">Status:</span>
-                  <span id="station-status" class="status-badge ${gs.state.isOperational ? 'status-badge-green' : 'status-badge-red'}">
-                    ${gs.state.isOperational ? 'OPERATIONAL' : 'OFFLINE'}
-                  </span>
+                  <span id="station-status" class="status-badge ${STATION_STATUS_BADGE[status]}">${status}</span>
                 </div>
               </div>
             </div>
@@ -246,8 +261,9 @@ export class DashboardTab extends BaseElement {
           <!-- RF Chain RX Summary Card -->
           <div class="col-lg-3">
             <div class="card h-100 summary-card clickable-card" data-target-tab="rx-analysis">
-              <div class="card-header">
-                <h3 class="card-title">RF Chain RX</h3>
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0">RF Chain RX</h3>
+                <span id="rx-chain-fault-led" class="card-alarm-led off"></span>
               </div>
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -276,8 +292,9 @@ export class DashboardTab extends BaseElement {
           <!-- RF Chain TX Summary Card -->
           <div class="col-lg-3">
             <div class="card h-100 summary-card clickable-card" data-target-tab="tx-chain">
-              <div class="card-header">
-                <h3 class="card-title">RF Chain TX</h3>
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0">RF Chain TX</h3>
+                <span id="tx-chain-fault-led" class="card-alarm-led off"></span>
               </div>
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -440,9 +457,7 @@ export class DashboardTab extends BaseElement {
         .map(
           (alarm) => html`
       <div class="alarm-item"${alarm.detail ? ` title="${alarm.detail}"` : ''}>
-        <span class="alarm-icon ${alarm.level}">
-          ${alarm.level === 'critical' ? '&#x26A0;' : alarm.level === 'warning' ? '&#x26A0;' : '&#x2139;'}
-        </span>
+        <span class="alarm-icon ${alarm.level}">${ALARM_ICON[alarm.level]}</span>
         <span class="alarm-message">${alarm.message}</span>
         ${alarm.detail ? html`<span class="alarm-detail">${alarm.detail}</span>` : ''}
         <span class="alarm-time">${this.formatTime_(alarm.timestamp)}</span>
@@ -483,11 +498,13 @@ export class DashboardTab extends BaseElement {
       'gpsdo-status',
       'gpsdo-warmup',
       // RF Chain RX summary
+      'rx-chain-fault-led',
       'lnb-lock',
       'lnb-noise',
       'filter-bw',
       'lnb-power',
       // RF Chain TX summary
+      'tx-chain-fault-led',
       'buc-lock',
       'buc-output',
       'hpa-power',
@@ -535,8 +552,9 @@ export class DashboardTab extends BaseElement {
 
     const statusEl = this.domCache_.get('station-status');
     if (statusEl) {
-      statusEl.textContent = gs.state.isOperational ? 'OPERATIONAL' : 'OFFLINE';
-      statusEl.className = `status-badge ${gs.state.isOperational ? 'status-badge-green' : 'status-badge-red'}`;
+      const status = stationStatusLabel(gs);
+      statusEl.textContent = status;
+      statusEl.className = `status-badge ${STATION_STATUS_BADGE[status]}`;
     }
 
     const rxEl = this.domCache_.get('active-receivers');
@@ -717,6 +735,39 @@ export class DashboardTab extends BaseElement {
     if (powerEl && rfFe.lnbModule) {
       powerEl.className = `card-alarm-led ${rfFe.lnbModule.state.isPowered ? 'success' : 'off'}`;
     }
+
+    // Header fault LED: the LNB alarms' worst severity (Phase 32 D14)
+    this.syncChainFaultLed_('rx-chain-fault-led', ['LNB'], lnbPowered, 'LNB off');
+  }
+
+  /**
+   * A chain card's header fault LED (Phase 32 D14, nats-r7-s13-F1), built like
+   * the antenna's: the worst AlarmService severity among this station's RF
+   * alarms from the named modules - red for an error, amber for a warning,
+   * green for none, grey while the modules are all unpowered - titled with the
+   * top alarm's label, the same severity the ticker and the module card show.
+   */
+  private syncChainFaultLed_(id: string, modulePrefixes: string[], isPowered: boolean, offTitle: string): void {
+    const led = this.domCache_.get(id);
+    if (!led) return;
+
+    const top = this.stationAlarms_.find(
+      (alarm) => alarm.equipmentType === 'RF' && (alarm.severity === 'error' || alarm.severity === 'warning') && modulePrefixes.some((prefix) => alarm.message.startsWith(prefix))
+    );
+    let ledState: string;
+    let title: string;
+    if (!isPowered) {
+      ledState = 'off';
+      title = offTitle;
+    } else if (top) {
+      ledState = top.severity;
+      title = top.message;
+    } else {
+      ledState = 'success';
+      title = 'No alarms';
+    }
+    led.className = `card-alarm-led ${ledState}`;
+    led.title = title;
   }
 
   private syncTxChainSummary_(): void {
@@ -759,13 +810,18 @@ export class DashboardTab extends BaseElement {
         hpaStatusEl.textContent = 'DISABLED';
         hpaStatusEl.className = 'status-badge status-badge-gray';
       } else if (isOverdriven) {
+        // Amber: "HPA overdrive - IMD degradation" is a warning (Phase 32 D14)
         hpaStatusEl.textContent = 'OVERDRIVE';
-        hpaStatusEl.className = 'status-badge status-badge-red';
+        hpaStatusEl.className = 'status-badge status-badge-amber';
       } else {
         hpaStatusEl.textContent = 'OK';
         hpaStatusEl.className = 'status-badge status-badge-green';
       }
     }
+
+    // Header fault LED: the BUC + HPA alarms' worst severity (Phase 32 D14)
+    const txPowered = (rfFe.bucModule?.state.isPowered ?? false) || (rfFe.hpaModule?.state.isPowered ?? false);
+    this.syncChainFaultLed_('tx-chain-fault-led', ['BUC', 'HPA'], txPowered, 'BUC and HPA off');
   }
 
   private syncReceiversSummary_(): void {
@@ -872,6 +928,7 @@ export class DashboardTab extends BaseElement {
     // rendered it (nats-r4-s01-F2)
     const nowMs = getSimulatedNowMs();
     const alarms = AlarmService.getAlarms(this.groundStation);
+    this.stationAlarms_ = alarms;
     this.alarms_.length = 0;
     alarms.forEach((alarm, index) => {
       this.alarms_.push({

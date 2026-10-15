@@ -731,7 +731,7 @@ export class RxAnalysisTab extends BaseElement {
                         </div>
                       </div>
 
-                      <!-- ADC SNR ceiling (phase 31 D10): shown instead of the penalty rows while the ADC is OPTIMAL -->
+                      <!-- Converter ceiling (phase 31 D10, Phase 32 D17): shown instead of the penalty rows while the ADC is OPTIMAL -->
                       <div id="adc-ceiling-display" class="small text-muted mb-1 d-none"></div>
                       <!-- Degradation Breakdown (shown when applicable) -->
                       <div id="degradation-section" class="d-none">

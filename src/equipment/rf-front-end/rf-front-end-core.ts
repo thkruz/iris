@@ -349,22 +349,10 @@ export abstract class RFFrontEndCore extends BaseEquipment {
       );
     }
 
-    // Convert module alarm strings to AlarmStatus objects
-    // Classify severity based on alarm content
+    // Convert module alarm strings to AlarmStatus objects, one classifier for
+    // the ticker, the Dashboard and the module cards (Phase 32 D14)
     for (const alarm of moduleAlarms) {
-      let severity: AlarmStatus['severity'] = 'warning';
-
-      // A reference acquisition in progress is a transient, not a fault (phase 27)
-      if (alarm.toLowerCase().includes('acquiring')) {
-        severity = 'info';
-      }
-
-      // Upgrade to error for critical conditions
-      if (alarm.toLowerCase().includes('over-temperature') || alarm.toLowerCase().includes('high current') || alarm.toLowerCase().includes('not operational')) {
-        severity = 'error';
-      }
-
-      alarms.push({ severity, message: alarm });
+      alarms.push({ severity: classifyRfAlarmSeverity(alarm), message: alarm });
     }
 
     // If no alarms, system is normal (success state will be handled by base class default)
@@ -494,4 +482,22 @@ export abstract class RFFrontEndCore extends BaseEquipment {
     console.log('Total RX Gain:', totalGain.toFixed(2), 'dB');
     console.groupEnd();
   }
+}
+
+/**
+ * Severity of an RF front-end module alarm string, the one rule the ticker,
+ * the Dashboard and the BUC / HPA / LNB card LEDs share (Phase 32 D14,
+ * nats-r7-s13-F1): a reference acquisition is info (a transient, phase 27),
+ * over-temperature, high current and not-operational are errors, everything
+ * else ("BUC cooling fault", "HPA overdrive") is a warning.
+ */
+export function classifyRfAlarmSeverity(message: string): AlarmStatus['severity'] {
+  const lower = message.toLowerCase();
+  if (lower.includes('over-temperature') || lower.includes('high current') || lower.includes('not operational')) {
+    return 'error';
+  }
+  if (lower.includes('acquiring')) {
+    return 'info';
+  }
+  return 'warning';
 }

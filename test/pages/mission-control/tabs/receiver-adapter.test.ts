@@ -4,7 +4,7 @@ import { Receiver, ReceiverModemState } from '../../../../src/equipment/receiver
 import { EventBus } from '../../../../src/events/event-bus';
 import { Events } from '../../../../src/events/events';
 import { ReceiverAdapter } from '../../../../src/pages/mission-control/tabs/receiver-adapter';
-import type { dB, dBm } from '../../../../src/types';
+import type { dBm } from '../../../../src/types';
 
 // Mock dependencies
 vi.mock('../../../../src/events/event-bus');
@@ -618,12 +618,13 @@ describe('ReceiverAdapter', () => {
         expect(clean.totalPenalty_dB).toBeGreaterThan(0.1);
       });
 
-      it('hides the red penalty rows and shows one neutral ceiling line', () => {
+      it('hides the red penalty rows and shows one neutral ceiling line that closes Raw (+) ceiling = Effective (Phase 32 D17, nats-r7-s07-F1)', () => {
+        // The S7 loop test: Raw 50.7, Effective 39.5 at OPTIMAL drive
         mockReceiver.getSignalsInBandwidth.mockReturnValue({
           hasCarrier: true,
           hasLock: true,
-          cnRatio_dB: 50,
-          effectiveCnRatio_dB: 50 - clean.totalPenalty_dB,
+          cnRatio_dB: 50.7,
+          effectiveCnRatio_dB: 39.5,
           adcDegradation: clean,
         });
         (adapter as any).lastStateString = '';
@@ -632,10 +633,26 @@ describe('ReceiverAdapter', () => {
         expect((containerEl.querySelector('#degradation-section') as HTMLElement).classList.contains('d-none')).toBe(true);
         const line = containerEl.querySelector('#adc-ceiling-display') as HTMLElement;
         expect(line.classList.contains('d-none')).toBe(false);
-        expect(line.textContent).toBe(`ADC SNR ceiling: ~${ReceiverAdapter.adcSnrCeilingDb(clean).toFixed(0)} dB`);
+        expect(line.textContent).toBe('Converter ceiling: ~40 dB');
         expect(line.className).not.toContain('text-danger');
-        // Effective C/N stays capped
-        expect((containerEl.querySelector('#cn-effective-display') as HTMLElement).textContent).toBe(`${(50 - clean.totalPenalty_dB).toFixed(1)} dB`);
+        // Effective C/N stays as computed
+        expect((containerEl.querySelector('#cn-effective-display') as HTMLElement).textContent).toBe('39.5 dB');
+      });
+
+      it('rounds the ceiling to 0.5 dB', () => {
+        // Raw 50, ceiling 41.5 -> Effective 40.97
+        const effective = -10 * Math.log10(10 ** -5 + 10 ** -4.15);
+        mockReceiver.getSignalsInBandwidth.mockReturnValue({ hasCarrier: true, hasLock: true, cnRatio_dB: 50, effectiveCnRatio_dB: effective, adcDegradation: clean });
+        (adapter as any).lastStateString = '';
+        (adapter as any).syncDomWithState_();
+        expect((containerEl.querySelector('#adc-ceiling-display') as HTMLElement).textContent).toBe('Converter ceiling: ~41.5 dB');
+      });
+
+      it('hides the line when Effective is within 0.3 dB of Raw', () => {
+        mockReceiver.getSignalsInBandwidth.mockReturnValue({ hasCarrier: true, hasLock: true, cnRatio_dB: 30, effectiveCnRatio_dB: 29.8, adcDegradation: clean });
+        (adapter as any).lastStateString = '';
+        (adapter as any).syncDomWithState_();
+        expect((containerEl.querySelector('#adc-ceiling-display') as HTMLElement).classList.contains('d-none')).toBe(true);
       });
 
       it('shows no ceiling line when the carrier loses nothing to the ADC', () => {
@@ -653,9 +670,12 @@ describe('ReceiverAdapter', () => {
         expect((containerEl.querySelector('#degradation-section') as HTMLElement).classList.contains('d-none')).toBe(true);
       });
 
-      it('computes the ceiling from the quantization and clipping terms', () => {
-        expect(ReceiverAdapter.adcSnrCeilingDb({ quantizationSnr_dB: 43 as dB, clipSdr_dB: Number.POSITIVE_INFINITY as dB })).toBeCloseTo(43, 6);
-        expect(ReceiverAdapter.adcSnrCeilingDb({ quantizationSnr_dB: 40 as dB, clipSdr_dB: 40 as dB })).toBeCloseTo(40 - 10 * Math.log10(2), 6);
+      it('computes the ceiling that power-adds with Raw to Effective', () => {
+        const ceiling = ReceiverAdapter.converterCeilingDb(50.7, 39.5);
+        expect(ceiling).toBeCloseTo(39.84, 2);
+        // Raw (+) ceiling closes back to Effective
+        expect(-10 * Math.log10(10 ** (-50.7 / 10) + 10 ** (-ceiling / 10))).toBeCloseTo(39.5, 6);
+        expect(ReceiverAdapter.converterCeilingDb(30, 30)).toBeNaN();
       });
     });
   });

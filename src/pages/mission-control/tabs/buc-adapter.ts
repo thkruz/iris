@@ -2,6 +2,7 @@ import { CardAlarmBadge } from '@app/components/card-alarm-badge/card-alarm-badg
 import { qs } from '@app/engine/utils/query-selector';
 import { AlarmStatus } from '@app/equipment/base-equipment';
 import { BUCModuleCore, BUCState } from '@app/equipment/rf-front-end/buc-module/buc-module-core';
+import { classifyRfAlarmSeverity } from '@app/equipment/rf-front-end/rf-front-end-core';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { EventAutoLogger } from '@app/ops-log/event-auto-logger';
@@ -676,26 +677,9 @@ export class BUCAdapter {
   private getAlarmsFromModule_(): AlarmStatus[] {
     const alarmStrings = this.bucModule.getAlarms();
     return alarmStrings.map((message) => ({
-      severity: this.classifySeverity_(message),
+      severity: classifyRfAlarmSeverity(message),
       message,
     }));
-  }
-
-  /**
-   * Classify alarm message severity based on content
-   */
-  private classifySeverity_(message: string): AlarmStatus['severity'] {
-    const lowerMsg = message.toLowerCase();
-    if (lowerMsg.includes('acquiring')) {
-      return 'info'; // reference pull-in, a transient (phase 27)
-    }
-    if (lowerMsg.includes('error') || lowerMsg.includes('fault') || lowerMsg.includes('fail')) {
-      return 'error';
-    }
-    if (lowerMsg.includes('not locked') || lowerMsg.includes('saturation') || lowerMsg.includes('approaching')) {
-      return 'warning';
-    }
-    return 'warning'; // Default to warning for any alarm
   }
 
   dispose(): void {

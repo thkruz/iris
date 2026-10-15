@@ -238,6 +238,54 @@ describe('DashboardTab', () => {
       expect(statusEl?.classList.contains('status-badge-green')).toBe(true);
     });
 
+    describe('station status (Phase 32 D16, nats-r7-s11-F1)', () => {
+      const resync = (now: number) => {
+        vi.spyOn(Date, 'now').mockReturnValue(now);
+        const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
+        updateHandler();
+      };
+      const status = () => document.querySelector('#station-status');
+
+      it('reads MAINTENANCE (amber) while the antenna is parked at maintenance', () => {
+        (mockGroundStation.antennas[0].state as { trackingMode: string }).trackingMode = 'maintenance';
+        resync(70_000_000);
+        expect(status()?.textContent).toBe('MAINTENANCE');
+        expect(status()?.className).toContain('status-badge-amber');
+      });
+
+      it('reads STOWED (grey) while the antenna is stowed', () => {
+        (mockGroundStation.antennas[0].state as { trackingMode: string }).trackingMode = 'stow';
+        resync(71_000_000);
+        expect(status()?.textContent).toBe('STOWED');
+        expect(status()?.className).toContain('status-badge-gray');
+      });
+
+      it('reads DEGRADED with an error alarm up, and MAINTENANCE still wins over it', () => {
+        (mockGroundStation.transmitters[0].getStatusAlarms as Mock).mockReturnValue([{ severity: 'error', message: 'Modem 1 Faulted' }]);
+        resync(72_000_000);
+        expect(status()?.textContent).toBe('DEGRADED');
+        expect(status()?.className).toContain('status-badge-amber');
+
+        (mockGroundStation.antennas[0].state as { trackingMode: string }).trackingMode = 'maintenance';
+        resync(73_000_000);
+        expect(status()?.textContent).toBe('MAINTENANCE');
+      });
+
+      it('a warning alone leaves the station OPERATIONAL', () => {
+        (mockGroundStation.receivers[0].getStatusAlarms as Mock).mockReturnValue([{ severity: 'warning', message: 'RX lost lock' }]);
+        resync(74_000_000);
+        expect(status()?.textContent).toBe('OPERATIONAL');
+      });
+
+      it('reads OFFLINE (red) when the station is not operational', () => {
+        (mockGroundStation.state as { isOperational: boolean }).isOperational = false;
+        (mockGroundStation.antennas[0].state as { trackingMode: string }).trackingMode = 'maintenance';
+        resync(75_000_000);
+        expect(status()?.textContent).toBe('OFFLINE');
+        expect(status()?.className).toContain('status-badge-red');
+      });
+    });
+
     it('should update active receivers count', () => {
       const rxEl = document.querySelector('#active-receivers');
       expect(rxEl?.textContent).toBe('2');
@@ -358,12 +406,71 @@ describe('DashboardTab', () => {
       hpa.state.isHpaEnabled = true;
       resync(50_000_000);
       expect(status()?.textContent).toBe('OVERDRIVE');
-      expect(status()?.className).toContain('status-badge-red');
+      // Amber: the overdrive alarm is a warning (Phase 32 D14)
+      expect(status()?.className).toContain('status-badge-amber');
 
       hpa.state.isOverdriven = false;
       resync(51_000_000);
       expect(status()?.textContent).toBe('OK');
       expect(status()?.className).toContain('status-badge-green');
+    });
+
+    it('RF Chain TX header LED follows the BUC + HPA alarm severity, titled with the top alarm (Phase 32 D14, nats-r7-s13-F1)', () => {
+      const led = () => document.querySelector('#tx-chain-fault-led') as HTMLElement;
+      const rfFe = mockGroundStation.rfFrontEnds[0] as any;
+      expect(led().className).toBe('card-alarm-led success');
+      expect(led().title).toBe('No alarms');
+
+      // The warning-level cooling fault is amber, not red
+      rfFe.getStatusAlarms.mockImplementation((rfCase: number) => (rfCase === 1 ? [{ severity: 'warning', message: 'BUC cooling fault - fan/heatsink degraded' }] : []));
+      resync(52_000_000);
+      expect(led().className).toBe('card-alarm-led warning');
+      expect(led().title).toBe('BUC cooling fault - fan/heatsink degraded');
+
+      // An error outranks it; the title is the label without its value
+      rfFe.getStatusAlarms.mockImplementation((rfCase: number) =>
+        rfCase === 1
+          ? [
+              { severity: 'warning', message: 'BUC cooling fault - fan/heatsink degraded' },
+              { severity: 'error', message: 'HPA over-temperature (95 °C)' },
+            ]
+          : []
+      );
+      resync(53_000_000);
+      expect(led().className).toBe('card-alarm-led error');
+      expect(led().title).toBe('HPA over-temperature');
+
+      // An LNB alarm is not the TX chain's; info is not a fault
+      rfFe.getStatusAlarms.mockImplementation((rfCase: number) =>
+        rfCase === 1 ? [{ severity: 'info', message: 'BUC acquiring 10 MHz reference' }] : [{ severity: 'warning', message: 'LNB noise temperature high' }]
+      );
+      resync(54_000_000);
+      expect(led().className).toBe('card-alarm-led success');
+
+      // Grey only with both BUC and HPA off
+      rfFe.bucModule.state.isPowered = false;
+      resync(55_000_000);
+      expect(led().className).toBe('card-alarm-led success');
+      rfFe.hpaModule.state.isPowered = false;
+      resync(56_000_000);
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('BUC and HPA off');
+    });
+
+    it('RF Chain RX header LED follows the LNB alarms, grey with the LNB off (Phase 32 D14)', () => {
+      const led = () => document.querySelector('#rx-chain-fault-led') as HTMLElement;
+      const rfFe = mockGroundStation.rfFrontEnds[0] as any;
+      expect(led().className).toBe('card-alarm-led success');
+
+      rfFe.getStatusAlarms.mockImplementation((rfCase: number) => (rfCase === 2 ? [{ severity: 'warning', message: 'LNB noise temperature high' }] : []));
+      resync(57_000_000);
+      expect(led().className).toBe('card-alarm-led warning');
+      expect(led().title).toBe('LNB noise temperature high');
+
+      rfFe.lnbModule.state.isPowered = false;
+      resync(58_000_000);
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('LNB off');
     });
 
     it('GPSDO warm-up reads what the GPS Timing tab reads (nats-r4-s01-F3)', () => {
@@ -423,6 +530,23 @@ describe('DashboardTab', () => {
       expect(document.querySelector('#alarm-list .no-alarms')).toBeNull();
       expect(document.querySelector('#alarm-list .alarm-message')?.textContent).toBe('LOOPBACK ENABLED');
       expect(document.querySelector('#alarm-count')?.textContent).toBe('1');
+    });
+
+    it('marks an error row with the circle glyph and a warning row with the triangle, as the ticker does (Phase 32 D14, nats-r7-s24-F1)', () => {
+      (mockGroundStation.receivers[0].getStatusAlarms as Mock).mockReturnValue([
+        { severity: 'error', message: 'Carrier lock lost' },
+        { severity: 'warning', message: 'AGC on noise only' },
+      ]);
+
+      sync(43_000_000);
+
+      const icons = [...document.querySelectorAll('#alarm-list .alarm-icon')];
+      expect(icons[0].className).toContain('critical');
+      expect(icons[0].querySelector('.alarm-glyph-error')).not.toBeNull();
+      expect(icons[0].textContent?.trim()).toBe('!');
+      expect(icons[1].className).toContain('warning');
+      expect(icons[1].querySelector('.alarm-glyph-warning')?.textContent).toBe('\u26A0');
+      expect(icons[1].querySelector('.alarm-glyph-error')).toBeNull();
     });
 
     it('says "No active alarms" only when the card lists no rows', () => {

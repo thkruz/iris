@@ -2,7 +2,7 @@ import { CardAlarmBadge } from '@app/components/card-alarm-badge/card-alarm-badg
 import { qs } from '@app/engine/utils/query-selector';
 import { AlarmStatus } from '@app/equipment/base-equipment';
 import { ValidationError, validateModemBandwidth, validateModemFrequency } from '@app/equipment/modem/modem-constraints';
-import { ADCDegradationResult, ADCStatus } from '@app/equipment/receiver/adc-degradation';
+import { ADCStatus } from '@app/equipment/receiver/adc-degradation';
 import { IQSignalInfo, Receiver, ReceiverModemState } from '@app/equipment/receiver/receiver';
 import { classifyRxSignal, describeEsN0, describeEsN0ForAcquisition, describePayloadProblem, RxPayloadStatus, RxSignalQuality } from '@app/equipment/receiver/rx-signal-quality';
 import { EventBus } from '@app/events/event-bus';
@@ -769,17 +769,19 @@ export class ReceiverAdapter {
 
     // Show/hide degradation breakdown - only when the drive is off its sweet
     // spot. At OPTIMAL a very clean carrier (a loopback at ~50 dB Es/N0) still
-    // loses a little to the ADC's own SNR; that is the converter's ceiling, not
-    // a fault, so it reads as one neutral line instead of red penalties
-    // (phase 31 D10, r5-s07-F1). Effective C/N stays as computed.
+    // loses a little to the converter; that is its ceiling, not a fault, so it
+    // reads as one neutral line instead of red penalties (phase 31 D10,
+    // r5-s07-F1). The line quotes the ceiling that closes Raw (+) ceiling =
+    // Effective on screen (Phase 32 D17, nats-r7-s07-F1). Effective C/N stays
+    // as computed.
     const isOptimal = !!showAdcValues && adcDeg.status === 'optimal';
     const ceilingLine = this.domCache_.get('adc-ceiling-display');
     if (ceilingLine) {
       const rawCn = signalInfo.cnRatio_dB;
       const effectiveCn = signalInfo.effectiveCnRatio_dB ?? rawCn;
-      const ceiling_dB = isOptimal ? ReceiverAdapter.adcSnrCeilingDb(adcDeg) : Number.NaN;
-      if (isOptimal && rawCn - effectiveCn > 0.1 && Number.isFinite(ceiling_dB)) {
-        ceilingLine.textContent = `ADC SNR ceiling: ~${ceiling_dB.toFixed(0)} dB`;
+      const ceiling_dB = isOptimal && rawCn - effectiveCn > ReceiverAdapter.CEILING_LINE_MIN_DROP_DB ? ReceiverAdapter.converterCeilingDb(rawCn, effectiveCn) : Number.NaN;
+      if (Number.isFinite(ceiling_dB)) {
+        ceilingLine.textContent = `Converter ceiling: ~${ReceiverAdapter.formatHalfDb_(ceiling_dB)} dB`;
         ceilingLine.classList.remove('d-none');
       } else {
         ceilingLine.classList.add('d-none');
@@ -860,14 +862,26 @@ export class ReceiverAdapter {
     el.textContent = value !== undefined && Number.isFinite(value) && value > -100 ? `${value.toFixed(1)} ${unit}` : `-- ${unit}`;
   }
 
+  /** The ceiling line shows only when Effective C/N sits this far under Raw, dB */
+  static readonly CEILING_LINE_MIN_DROP_DB = 0.3;
+
   /**
-   * The ADC's own SNR in the carrier's band: quantization noise and clipping
-   * distortion together (the same terms calculateADCDegradation adds to the
-   * carrier's noise), dB
+   * The converter's ceiling as the screen implies it (Phase 32 D17,
+   * nats-r7-s07-F1): the one SNR that, power-added to the Raw C/N, gives the
+   * Effective C/N, N = -10 log10(10^(-Eff/10) - 10^(-Raw/10)). It folds in
+   * every term between the two readouts (ADC quantisation on the C/N footing
+   * and LO phase noise), so the line, Raw and Effective always add up. NaN
+   * when Effective is not below Raw.
    */
-  static adcSnrCeilingDb(adcDeg: Pick<ADCDegradationResult, 'quantizationSnr_dB' | 'clipSdr_dB'>): number {
-    const inverse = 10 ** (-adcDeg.quantizationSnr_dB / 10) + 10 ** (-adcDeg.clipSdr_dB / 10);
-    return inverse > 0 ? -10 * Math.log10(inverse) : Number.POSITIVE_INFINITY;
+  static converterCeilingDb(rawCn_dB: number, effectiveCn_dB: number): number {
+    const inverse = 10 ** (-effectiveCn_dB / 10) - 10 ** (-rawCn_dB / 10);
+    return inverse > 0 ? -10 * Math.log10(inverse) : Number.NaN;
+  }
+
+  /** `40` or `39.5`: rounded to the nearest 0.5 dB */
+  private static formatHalfDb_(value_dB: number): string {
+    const rounded = Math.round(value_dB * 2) / 2;
+    return Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1);
   }
 
   private updatePenaltyDisplay_(elementId: string, penalty: number): void {

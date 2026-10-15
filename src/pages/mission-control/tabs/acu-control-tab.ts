@@ -67,6 +67,10 @@ export class ACUControlTab extends BaseElement {
     return heard.filter((s) => inBeam.has(s.signalId)).length;
   }
 
+  /** ICE ON FEED warning / error levels, dB (AntennaCore.getStatusAlarms) */
+  private static readonly ICE_ON_FEED_WARNING_DB = 2;
+  private static readonly ICE_ON_FEED_ERROR_DB = 5;
+
   // Beacon display throttling (1 second interval like other adapters)
   private static readonly BEACON_UPDATE_INTERVAL_MS = 1000;
   private lastBeaconSyncTime_: number = 0;
@@ -340,8 +344,9 @@ export class ACUControlTab extends BaseElement {
         <!-- Environmental Controls Card -->
         <div class="col-xl-3">
           <div class="card h-100">
-            <div class="card-header">
-              <h3 class="card-title">Environmental</h3>
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h3 class="card-title mb-0">Environmental</h3>
+              <span id="${p}env-led" class="card-alarm-led off" title="Clear - no ice, no precipitation"></span>
             </div>
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-center mb-3">
@@ -350,7 +355,7 @@ export class ACUControlTab extends BaseElement {
                   <div class="text-muted small">Prevents ice, keeps the feed dry</div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                  <span id="${p}heater-led" class="card-alarm-led off"></span>
+                  <span id="${p}heater-led" class="card-alarm-led off" title="Heater OFF"></span>
                   <div class="form-check form-switch mb-0">
                     <input class="form-check-input" type="checkbox" id="${p}heater-switch">
                   </div>
@@ -892,7 +897,11 @@ export class ACUControlTab extends BaseElement {
     const blowerSwitch = this.qs_<HTMLInputElement>('blower-switch');
 
     if (heaterLed) {
-      heaterLed.className = `card-alarm-led ${state.isHeaterEnabled ? 'warning' : 'off'}`;
+      // Green while it runs, like the blower: on is the healthy state in a
+      // storm, and amber belongs to the Environmental header (Phase 32 D14,
+      // nats-r7-s20-F1)
+      heaterLed.className = `card-alarm-led ${state.isHeaterEnabled ? 'success' : 'off'}`;
+      heaterLed.title = state.isHeaterEnabled ? 'Heater ON' : 'Heater OFF';
     }
     if (blowerLed) {
       blowerLed.className = `card-alarm-led ${state.isRainBlowerEnabled ? 'success' : 'off'}`;
@@ -1146,6 +1155,36 @@ export class ACUControlTab extends BaseElement {
       const textNode = precipStatus.childNodes[precipStatus.childNodes.length - 1];
       if (textNode) textNode.textContent = isPrecip ? 'ACTIVE' : 'CLEAR';
     }
+
+    this.syncEnvironmentalLed_(antenna);
+  }
+
+  /**
+   * Environmental card header LED (Phase 32 D14, nats-r7-s20-F1): the ICE ON
+   * FEED alarm's colour while ice is at its warning level or above (red at its
+   * error level), amber while precipitation is active, grey otherwise; the
+   * title carries the ice depth either way.
+   */
+  private syncEnvironmentalLed_(antenna: (typeof this.groundStation.antennas)[0]): void {
+    const led = this.qs_('env-led');
+    if (!led) return;
+
+    const ice = antenna.state.iceAccumulation_dB;
+    const isPrecip = WeatherManager.getInstance().isPrecipitationActive(this.groundStation.state.id);
+    let ledState = 'off';
+    let title = `Clear - ice ${ice.toFixed(1)} dB, no precipitation`;
+    if (ice >= ACUControlTab.ICE_ON_FEED_ERROR_DB) {
+      ledState = 'error';
+      title = `Ice on feed ${ice.toFixed(1)} dB`;
+    } else if (ice >= ACUControlTab.ICE_ON_FEED_WARNING_DB) {
+      ledState = 'warning';
+      title = `Ice on feed ${ice.toFixed(1)} dB`;
+    } else if (isPrecip) {
+      ledState = 'warning';
+      title = `Precipitation active - ice ${ice.toFixed(1)} dB`;
+    }
+    led.className = `card-alarm-led ${ledState}`;
+    led.title = title;
   }
 
   public activate(): void {

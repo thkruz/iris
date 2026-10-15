@@ -8,6 +8,7 @@ import { Satellite } from '@app/equipment/satellite/satellite';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { SimulationManager } from '@app/simulation/simulation-manager';
+import { STATION_STATUS_BADGE, stationStatusLabel } from '../station-status-label';
 import './mission-overview-tab.css';
 
 /**
@@ -78,6 +79,23 @@ export class MissionOverviewTab extends BaseElement {
     }
     this.lastLookSyncMs_ = now;
     this.syncLookAngles_();
+    this.syncStationStatus_();
+  }
+
+  /** Each station card's status badge, live (Phase 32 D16, nats-r7-s11-F1) */
+  private syncStationStatus_(): void {
+    if (!this.dom_) {
+      return;
+    }
+    for (const gs of this.groundStations_) {
+      const badge = this.dom_.querySelector(`[data-asset-id="${gs.state.id}"] .station-status-badge`);
+      if (!badge) {
+        continue;
+      }
+      const status = stationStatusLabel(gs);
+      badge.textContent = status;
+      badge.className = `status-badge station-status-badge ${STATION_STATUS_BADGE[status]}`;
+    }
   }
 
   /**
@@ -149,7 +167,7 @@ export class MissionOverviewTab extends BaseElement {
 
   private renderGroundStationCard_(gs: GroundStation): string {
     const loc = gs.state.location;
-    const isOperational = gs.state.isOperational;
+    const status = stationStatusLabel(gs);
 
     return html`
       <div class="col-lg-4 col-md-6">
@@ -163,9 +181,7 @@ export class MissionOverviewTab extends BaseElement {
                 <h4 class="card-title mb-0">${gs.state.name}</h4>
                 <span class="text-muted small">${gs.state.id}</span>
               </div>
-              <span class="status-badge ${isOperational ? 'status-badge-green' : 'status-badge-red'}">
-                ${isOperational ? 'OPERATIONAL' : 'OFFLINE'}
-              </span>
+              <span class="status-badge station-status-badge ${STATION_STATUS_BADGE[status]}">${status}</span>
             </div>
             <hr class="my-2" />
             <div class="row g-2">

@@ -2,6 +2,7 @@ import { CardAlarmBadge } from '@app/components/card-alarm-badge/card-alarm-badg
 import { qs } from '@app/engine/utils/query-selector';
 import { AlarmStatus } from '@app/equipment/base-equipment';
 import { HPAModuleCore, HPAState } from '@app/equipment/rf-front-end/hpa-module/hpa-module-core';
+import { classifyRfAlarmSeverity } from '@app/equipment/rf-front-end/rf-front-end-core';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { EventAutoLogger } from '@app/ops-log/event-auto-logger';
@@ -523,23 +524,9 @@ export class HPAAdapter {
   private getAlarmsFromModule_(): AlarmStatus[] {
     const alarmStrings = this.hpaModule.getAlarms();
     return alarmStrings.map((message) => ({
-      severity: this.classifySeverity_(message),
+      severity: classifyRfAlarmSeverity(message),
       message,
     }));
-  }
-
-  /**
-   * Classify alarm message severity based on content
-   */
-  private classifySeverity_(message: string): AlarmStatus['severity'] {
-    const lowerMsg = message.toLowerCase();
-    if (lowerMsg.includes('overdrive') || lowerMsg.includes('over-temperature')) {
-      return 'error';
-    }
-    if (lowerMsg.includes('warning') || lowerMsg.includes('enabled without')) {
-      return 'warning';
-    }
-    return 'warning'; // Default to warning for any alarm
   }
 
   dispose(): void {

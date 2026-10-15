@@ -3,6 +3,9 @@ import { EventBus } from '../../../../src/events/event-bus';
 import { Events } from '../../../../src/events/events';
 import { MissionOverviewTab } from '../../../../src/pages/mission-control/tabs/mission-overview-tab';
 
+// GS-001's antenna mode, shared with the mocked SimulationManager below
+const { mockAntennaState } = vi.hoisted(() => ({ mockAntennaState: { trackingMode: 'program-track' } }));
+
 // Mock dependencies
 vi.mock('../../../../src/events/event-bus');
 vi.mock('../../../../src/simulation/simulation-manager', () => ({
@@ -16,10 +19,16 @@ vi.mock('../../../../src/simulation/simulation-manager', () => ({
             location: { latitude: 38.897, longitude: -77.037, elevation: 100 },
             isOperational: true,
           },
-          antennas: [{ viewOf: (sat: { az: number; el: number }) => ({ az: sat.az + 2, el: sat.el - 1 }) }],
-          rfFrontEnds: [{}],
-          transmitters: [{ state: { modems: [{}, {}, {}, {}] } }],
-          receivers: [{ state: { modems: [{}, {}, {}, {}] } }],
+          antennas: [
+            {
+              state: mockAntennaState,
+              viewOf: (sat: { az: number; el: number }) => ({ az: sat.az + 2, el: sat.el - 1 }),
+              getStatusAlarms: () => [],
+            },
+          ],
+          rfFrontEnds: [{ getStatusAlarms: () => [] }],
+          transmitters: [{ state: { modems: [{}, {}, {}, {}] }, getStatusAlarms: () => [] }],
+          receivers: [{ state: { modems: [{}, {}, {}, {}] }, getStatusAlarms: () => [] }],
         },
         {
           state: {
@@ -134,6 +143,31 @@ describe('MissionOverviewTab', () => {
       const html = document.body.innerHTML;
       expect(html).toContain('OPERATIONAL');
       expect(html).toContain('OFFLINE');
+    });
+
+    it('reads MAINTENANCE / STOWED from the antenna mode, live (Phase 32 D16, nats-r7-s11-F1)', () => {
+      const badge = () => document.querySelector('[data-asset-id="GS-001"] .station-status-badge');
+      const resync = (now: number) => {
+        vi.spyOn(Date, 'now').mockReturnValue(now);
+        const update = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
+        update();
+      };
+      expect(badge()?.textContent).toBe('OPERATIONAL');
+      try {
+        mockAntennaState.trackingMode = 'maintenance';
+        resync(80_000_000);
+        expect(badge()?.textContent).toBe('MAINTENANCE');
+        expect(badge()?.className).toContain('status-badge-amber');
+
+        mockAntennaState.trackingMode = 'stow';
+        resync(81_000_000);
+        expect(badge()?.textContent).toBe('STOWED');
+        expect(badge()?.className).toContain('status-badge-gray');
+      } finally {
+        mockAntennaState.trackingMode = 'program-track';
+      }
+      // The offline station stays OFFLINE whatever its antenna does
+      expect(document.querySelector('[data-asset-id="GS-002"] .station-status-badge')?.textContent).toBe('OFFLINE');
     });
 
     it('should display equipment counts', () => {

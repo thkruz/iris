@@ -517,15 +517,17 @@ describe('HPAAdapter', () => {
       expect(mockHpaModule.getAlarms).toHaveBeenCalled();
     });
 
-    it('should classify fault alarms as error', () => {
-      mockHpaModule.getAlarms.mockReturnValue(['Hardware Fault']);
+    it('classifies with the ticker: overdrive is a warning, over-temperature an error (Phase 32 D14)', () => {
+      mockHpaModule.getAlarms.mockReturnValue(['HPA overdrive - IMD degradation', 'HPA over-temperature (95°C)']);
 
       const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
 
       vi.spyOn(Date, 'now').mockReturnValue(2000);
       updateHandler();
 
-      expect(mockHpaModule.getAlarms).toHaveBeenCalled();
+      const badgeUpdate = (adapter as any).alarmBadge_.update as Mock;
+      const alarms = badgeUpdate.mock.calls.at(-1)?.[0] as { severity: string; message: string }[];
+      expect(alarms.map((a) => a.severity)).toEqual(['warning', 'error']);
     });
   });
 
