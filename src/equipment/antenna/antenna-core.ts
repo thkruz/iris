@@ -20,6 +20,7 @@ import { AntennaConfig } from './antenna-configs';
 import { type AntennaConfigId, AntennaRegistry } from './antenna-registry';
 import { usableBeaconCn } from './beacon-cn';
 import { StepTrackController } from './step-track-controller';
+import { isAntennaRepositioning } from './tracking-mode-label';
 
 /** A satellite's geometry and downlink as seen from one antenna's station. */
 export interface SatelliteView {
@@ -275,6 +276,14 @@ export abstract class AntennaCore extends BaseEquipment {
   /** Commanded targets last update, to feed the target's own rate forward */
   private lastTargetAz_: number | null = null;
   private lastTargetEl_: number | null = null;
+  /**
+   * A commanded move (a new target position, not a tracker following its
+   * bird) is under way and its arrival not yet reported (nats-r6-s11-F1)
+   */
+  private slewArrivalPending_ = false;
+
+  /** Pointing error under which a moving program track counts as on target, deg */
+  private static readonly ON_TARGET_DEG = 0.01;
 
   /**
    * Program-track reads LOCKED while the beam costs the satellite less than
@@ -475,6 +484,7 @@ export abstract class AntennaCore extends BaseEquipment {
     // meant a moving bird could never read LOCKED (phase 16).
     if (automationAvailable && this.state.trackingMode === 'program-track' && this.state.targetSatelliteId !== null) {
       this.checkProgramTrackLock_();
+      this.checkProgramTrackArrival_();
     }
 
     // Update beacon metrics for all modes
@@ -525,6 +535,7 @@ export abstract class AntennaCore extends BaseEquipment {
     // (tests and direct callers); cap a stalled tab at a few seconds.
     const frameDt = dtMs !== undefined && Number.isFinite(dtMs) && dtMs > 0 ? Math.min(dtMs, 5000) / 1000 : 1 / 60;
     let budget = 0;
+    const isClockSkip = this.skipSlewFramesLeft_ > 0;
     if (this.skipSlewFramesLeft_ > 0) {
       budget = this.skipSlewBudgetMs_ / 1000; // the skip's worth of tracking, spent now
       this.skipSlewFramesLeft_ -= 1;
@@ -537,6 +548,9 @@ export abstract class AntennaCore extends BaseEquipment {
     // satellite, a mode change) is not a rate
     const targetAzRate = this.targetRate_(this.lastTargetAz_, this.state.targetAzimuth, frameDt, maxRate);
     const targetElRate = this.targetRate_(this.lastTargetEl_, this.state.targetElevation, frameDt, maxRate);
+    if (this.isCommandedStep_(frameDt, maxRate, isClockSkip)) {
+      this.slewArrivalPending_ = true;
+    }
     this.lastTargetAz_ = this.state.targetAzimuth;
     this.lastTargetEl_ = this.state.targetElevation;
 
@@ -573,7 +587,69 @@ export abstract class AntennaCore extends BaseEquipment {
       isMoving = true;
     }
 
+    const wasSlewing = this.state.isSlewing;
     this.state.isSlewing = isMoving;
+    if (!isMoving) {
+      if (wasSlewing) {
+        this.reportSlewArrival_();
+      }
+      // A command that needed no move (already there) has no arrival
+      this.slewArrivalPending_ = false;
+    }
+  }
+
+  /**
+   * The commanded target stepped this frame: an operator or mode command (a
+   * new position, STOW, MAINT, Move to Target), not a tracker following its
+   * bird. Outside program-track the target only moves on command; in
+   * program-track only a jump faster than the pedestal could follow counts,
+   * and never during a clock skip (the bird itself jumped).
+   */
+  private isCommandedStep_(frameDt: number, maxRate: number, isClockSkip: boolean): boolean {
+    if (this.lastTargetAz_ === null || this.lastTargetEl_ === null) {
+      return false;
+    }
+    const step = Math.max(Math.abs(this.state.targetAzimuth - this.lastTargetAz_), Math.abs(this.state.targetElevation - this.lastTargetEl_));
+    if (step <= AntennaCore.ON_TARGET_DEG) {
+      return false;
+    }
+    if (this.state.trackingMode !== 'program-track') {
+      return true;
+    }
+
+    return !isClockSkip && step / frameDt > maxRate * 3;
+  }
+
+  /**
+   * A program track that pulled in and now follows a moving bird never stops
+   * slewing (a LEO pass): it has arrived once it holds lock on the target.
+   */
+  private checkProgramTrackArrival_(): void {
+    if (!this.slewArrivalPending_ || !this.state.isSlewing || this.state.trackingMode !== 'program-track' || !this.state.isLocked) {
+      return;
+    }
+    const error = Math.max(Math.abs(this.state.targetAzimuth - this.state.azimuth), Math.abs(this.state.targetElevation - this.state.elevation));
+    if (error <= AntennaCore.ON_TARGET_DEG) {
+      this.reportSlewArrival_();
+    }
+  }
+
+  /** Report a commanded move's arrival once (Ops Log arrival line, nats-r6-s11-F1) */
+  private reportSlewArrival_(): void {
+    if (!this.slewArrivalPending_) {
+      return;
+    }
+    this.slewArrivalPending_ = false;
+    const targetSatelliteId = this.state.trackingMode === 'program-track' ? this.state.targetSatelliteId : null;
+    const targetSatelliteName = targetSatelliteId === null ? null : (SimulationManager.getInstance().getSatByNoradId(targetSatelliteId)?.name ?? `NORAD ${targetSatelliteId}`);
+    this.emit(Events.ANTENNA_SLEW_COMPLETE, {
+      state: this.state,
+      mode: this.state.trackingMode,
+      azimuth: this.state.azimuth as number,
+      elevation: this.state.elevation as number,
+      targetSatelliteId,
+      targetSatelliteName,
+    });
   }
 
   /** Rate of a commanded target between updates, deg/s; 0 for a jump the pedestal could not follow anyway */
@@ -1170,7 +1246,13 @@ export abstract class AntennaCore extends BaseEquipment {
       // Step-track manages its own lock state with different thresholds
       if (!this.state.isStepTrackEnabled) {
         const wasLocked = this.state.isBeaconLocked;
-        if (!wasLocked && this.smoothedBeaconCN_ >= this.beaconLockAcquireCN_) {
+        if (this.isRepositioning) {
+          // Moving off the bird on purpose (STOW, MAINT, a manual move, a
+          // program track pulling in): the tracking receiver does not
+          // re-acquire mid-slew, so a STOW that starts on the satellite does
+          // not read LOCKED (nats-r6-s03-F1, r6-s11-F1)
+          this.state.isBeaconLocked = false;
+        } else if (!wasLocked && this.smoothedBeaconCN_ >= this.beaconLockAcquireCN_) {
           this.state.isBeaconLocked = true;
         } else if (wasLocked && this.smoothedBeaconCN_ < this.beaconLockAcquireCN_) {
           this.state.isBeaconLocked = false;
@@ -1779,11 +1861,7 @@ export abstract class AntennaCore extends BaseEquipment {
    * holds its lock is not repositioning even though it moves (a LEO pass).
    */
   get isRepositioning(): boolean {
-    if (this.state.trackingMode === 'stow') {
-      return true;
-    }
-
-    return this.state.isSlewing && !(this.state.trackingMode === 'program-track' && this.state.isLocked);
+    return isAntennaRepositioning(this.state);
   }
 
   attachStationLocation(latitude: number, longitude: number, elevationM = 0): void {
@@ -1917,7 +1995,9 @@ export abstract class AntennaCore extends BaseEquipment {
 
     // Warning conditions
     if (this.state.isAutoTrackEnabled && !this.state.isLocked && !this.state.isBeaconLocked) {
-      alarms.push({ severity: 'warning', message: 'ACQUIRING LOCK...' });
+      // A step of every mode command, not a fault: info, so the ticker shows
+      // it and the Ops Log writes nothing (nats-r6-s24-F1)
+      alarms.push({ severity: 'info', message: 'ACQUIRING LOCK...' });
     }
 
     if (!this.state.rxSignalsIn && !this.state.isLocked && !this.state.isAutoTrackEnabled && !this.state.isLoopback) {

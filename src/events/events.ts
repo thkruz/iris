@@ -45,6 +45,22 @@ export interface AntennaErrorData {
   message: string;
 }
 
+/**
+ * A commanded antenna move has arrived (nats-r6-s11-F1): the pedestal stopped
+ * slewing, or a program track pulled in and holds lock on its moving bird
+ */
+export interface AntennaSlewCompleteData {
+  /** The antenna's state at arrival (identifies the station) */
+  state: AntennaState;
+  mode: AntennaState['trackingMode'];
+  /** Pedestal position at arrival, degrees */
+  azimuth: number;
+  elevation: number;
+  /** Program-track target, null in any other mode */
+  targetSatelliteId: number | null;
+  targetSatelliteName: string | null;
+}
+
 // TX Event specific interfaces
 /** What a TX_CONFIG_CHANGED event reports, for the Ops Log (absent: a state refresh) */
 export type TxModemAction = 'config' | 'transmit-on' | 'transmit-off' | 'power-on' | 'boot-complete' | 'power-off' | 'loopback-on' | 'loopback-off' | 'fault-reset';
@@ -449,6 +465,7 @@ export interface TimeSkipEndedData {
 export enum Events {
   // Antenna events
   ANTENNA_STATE_CHANGED = 'antenna:state:changed',
+  ANTENNA_SLEW_COMPLETE = 'antenna:slew:complete',
 
   // Ground Station events
   GROUND_STATION_STATE_CHANGED = 'ground-station:state:changed',
@@ -587,6 +604,7 @@ export enum Events {
 
 export interface EventMap {
   [Events.ANTENNA_STATE_CHANGED]: [Partial<AntennaState>];
+  [Events.ANTENNA_SLEW_COMPLETE]: [AntennaSlewCompleteData];
 
   [Events.GROUND_STATION_STATE_CHANGED]: [Partial<GroundStationState>];
   [Events.ASSET_SELECTED]: [{ type: 'ground-station' | 'satellite'; id: string }];

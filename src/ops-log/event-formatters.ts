@@ -19,7 +19,7 @@ import type { NotchFilterState } from '@app/equipment/rf-front-end/notch-filter-
 import type { OMTState, PolarizationType } from '@app/equipment/rf-front-end/omt-module/omt-module';
 import type { RFFrontEndState } from '@app/equipment/rf-front-end/rf-front-end-core';
 import type { TransmitterModem } from '@app/equipment/transmitter/transmitter';
-import type { RxActiveModemChangedData, RxConfigChangedData, TxActiveModemChangedData, TxConfigChangedData, TxTransmitChangedData } from '@app/events/events';
+import type { AntennaSlewCompleteData, RxConfigChangedData, TxConfigChangedData, TxTransmitChangedData } from '@app/events/events';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Antenna Formatters
@@ -70,6 +70,8 @@ export function formatAntennaEvent(data: Partial<AntennaState>): string | null {
       isLocked: data.isLocked ?? false,
       isBeaconLocked: data.isBeaconLocked ?? false,
       isAcuAutomationFaulted: data.isAcuAutomationFaulted,
+      trackingMode: data.trackingMode,
+      isSlewing: data.isSlewing,
     });
     parts.push(lock === 'UNKNOWN' ? 'Antenna lock UNKNOWN' : `Antenna ${lock}`);
   }
@@ -93,6 +95,31 @@ export function formatAntennaEvent(data: Partial<AntennaState>): string | null {
   }
 
   return parts.length > 0 ? parts.join(', ') : null;
+}
+
+/** Azimuth as the ACU prints it, 0-360 */
+function formatAz_(azimuth: number): string {
+  return (((azimuth % 360) + 360) % 360).toFixed(1);
+}
+
+/**
+ * The arrival line of a commanded antenna move (nats-r6-s11-F1):
+ * "PROGRAM: on target TIDEMARK-1 (Az 188.4, El 29.3)", "STOW: parked (El 90.0)",
+ * "MAINTENANCE: parked (El 5.0)", "MANUAL: at Az 153.1, El 35.1"
+ */
+export function formatAntennaArrival(data: AntennaSlewCompleteData): string {
+  const az = formatAz_(data.azimuth);
+  const el = data.elevation.toFixed(1);
+  switch (data.mode) {
+    case 'program-track':
+      return data.targetSatelliteName ? `PROGRAM: on target ${data.targetSatelliteName} (Az ${az}, El ${el})` : `PROGRAM: at Az ${az}, El ${el}`;
+    case 'stow':
+      return `STOW: parked (El ${el})`;
+    case 'maintenance':
+      return `MAINTENANCE: parked (El ${el})`;
+    default:
+      return `MANUAL: at Az ${az}, El ${el}`;
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -145,14 +172,6 @@ function formatTxAction_(action: TxConfigChangedData['action'], modemNum: number
 }
 
 /**
- * Format transmitter modem selection change
- */
-export function formatTxActiveModemEvent(data: TxActiveModemChangedData): string | null {
-  // activeModem is the modem number (1-4), not an index
-  return `Switched to Modem ${data.activeModem}`;
-}
-
-/**
  * Format transmission start/stop
  */
 export function formatTxTransmitEvent(data: TxTransmitChangedData): string | null {
@@ -178,14 +197,6 @@ export function formatRxConfigEvent(data: RxConfigChangedData): string | null {
   const modFec = [mod, fec].filter(Boolean).join(' ');
 
   return `M${modemNum}: Tuned to ${freqMHz} MHz, BW ${bwMHz} MHz${modFec ? `, ${modFec}` : ''}`;
-}
-
-/**
- * Format receiver modem selection change
- */
-export function formatRxActiveModemEvent(data: RxActiveModemChangedData): string | null {
-  // activeModem is the modem number (1-4), not an index
-  return `Switched to Modem ${data.activeModem}`;
 }
 
 // ════════════════════════════════════════════════════════════════════════════

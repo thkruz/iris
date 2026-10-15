@@ -21,16 +21,16 @@ import { EventBus } from '@app/events/event-bus';
 import {
   AggregatedAlarm,
   AlarmStateChangedData,
+  AntennaSlewCompleteData,
   EquipmentActionData,
   Events,
-  RxActiveModemChangedData,
   RxConfigChangedData,
-  TxActiveModemChangedData,
   TxConfigChangedData,
   TxTransmitChangedData,
 } from '@app/events/events';
 import {
   formatAgcEvent,
+  formatAntennaArrival,
   formatAntennaEvent,
   formatBucEvent,
   formatCouplerEvent,
@@ -41,9 +41,7 @@ import {
   formatNotchFilterEvent,
   formatOmtEvent,
   formatRfFePowerEvent,
-  formatRxActiveModemEvent,
   formatRxConfigEvent,
-  formatTxActiveModemEvent,
   formatTxConfigEvent,
   formatTxTransmitEvent,
 } from './event-formatters';
@@ -57,17 +55,42 @@ const BEACON_SUFFIX_RE = /, Beacon freq: [\d.]+ MHz$/u;
 /** An antenna mode/state line, as formatAntennaEvent writes it */
 const ANTENNA_STATE_LINE_PREFIX = 'Tracking mode:';
 
-/**
- * Alarm states that are a step of normal operation, not a fault: every mode
- * command passes through acquisition, so logging it would double each one
- */
-const UNLOGGED_ALARMS: ReadonlySet<string> = new Set(['ACQUIRING LOCK...']);
+/** The lock word of an antenna line (", Antenna LOCKED"); UNKNOWN (an ACU fault) is kept */
+const LOCK_WORD_RE = /, Antenna (?:LOCKED|UNLOCKED)(?=,|$)/u;
 
-/** Split an antenna line into its text without the beacon tail, and the tail */
+/**
+ * Split an antenna line into its identity (the text without the beacon tail
+ * and without the lock word) and the beacon tail. A lock flip alone is not a
+ * new line: weather ticks and syncs re-emit the state as the lock settles
+ * (nats-r6-s03-F1, r6-s11-F1)
+ */
 function splitBeaconSuffix_(message: string): { base: string; beacon: string | null } {
   const match = BEACON_SUFFIX_RE.exec(message);
-  if (!match) return { base: message, beacon: null };
-  return { base: message.slice(0, match.index), beacon: match[0] };
+  const base = match ? message.slice(0, match.index) : message;
+  return { base: base.replace(LOCK_WORD_RE, ''), beacon: match ? match[0] : null };
+}
+
+/** Severity rank for escalation: only a rise writes a line */
+const SEVERITY_RANK: Readonly<Record<string, number>> = { info: 0, warning: 1, error: 2 };
+const WARNING_RANK = 1;
+
+/** An alarm as the log writes it: "<label> (<detail>)", or the label alone */
+function alarmText_(label: string, detail: string | undefined): string {
+  return `${label}${detail ? ` (${detail})` : ''}`;
+}
+
+/** The live value AlarmService splits out of an alarm's label, if any */
+function alarmDetail_(alarm: AggregatedAlarm): string | undefined {
+  const detail = (alarm as AggregatedAlarm & { detail?: unknown }).detail;
+  return typeof detail === 'string' && detail.length > 0 ? detail : undefined;
+}
+
+/** One alarm as the logger last saw it */
+interface SeenAlarm {
+  label: string;
+  source: string;
+  severity: number;
+  detail: string | undefined;
 }
 
 /**
@@ -92,17 +115,18 @@ export class EventAutoLogger {
   /** Per-alarm quiet time after a raise is logged, so a flapping alarm logs once */
   private static readonly ALARM_RELOG_MS = 30_000;
   /** Alarms whose raise is in the log and whose clear is not yet, by alarmKey_ */
-  private readonly loggedAlarms_: Map<string, { label: string; source: string }> = new Map();
+  private readonly loggedAlarms_: Set<string> = new Set();
+  /** Every active alarm (info included) as last seen, by alarmKey_: severity and live detail */
+  private readonly seenAlarms_: Map<string, SeenAlarm> = new Map();
   /** Run time each alarm's raise was last logged, by alarmKey_ */
   private readonly alarmRaiseLoggedMs_: Map<string, number> = new Map();
 
   // Bound handlers for cleanup
   private readonly boundAntennaHandler_: (data: Partial<AntennaState>) => void;
+  private readonly boundSlewCompleteHandler_: (data: AntennaSlewCompleteData) => void;
   private readonly boundTxConfigHandler_: (data: TxConfigChangedData) => void;
-  private readonly boundTxModemHandler_: (data: TxActiveModemChangedData) => void;
   private readonly boundTxTransmitHandler_: (data: TxTransmitChangedData) => void;
   private readonly boundRxConfigHandler_: (data: RxConfigChangedData) => void;
-  private readonly boundRxModemHandler_: (data: RxActiveModemChangedData) => void;
   private readonly boundRfPowerHandler_: (data: Partial<RFFrontEndState>) => void;
   private readonly boundBucHandler_: (data: Partial<BUCState>) => void;
   private readonly boundHpaHandler_: (data: Partial<HPAState>) => void;
@@ -121,11 +145,10 @@ export class EventAutoLogger {
 
     // Bind all handlers
     this.boundAntennaHandler_ = this.handleAntennaEvent_.bind(this);
+    this.boundSlewCompleteHandler_ = this.handleSlewComplete_.bind(this);
     this.boundTxConfigHandler_ = this.handleTxConfigEvent_.bind(this);
-    this.boundTxModemHandler_ = this.handleTxModemEvent_.bind(this);
     this.boundTxTransmitHandler_ = this.handleTxTransmitEvent_.bind(this);
     this.boundRxConfigHandler_ = this.handleRxConfigEvent_.bind(this);
-    this.boundRxModemHandler_ = this.handleRxModemEvent_.bind(this);
     this.boundRfPowerHandler_ = this.handleRfPowerEvent_.bind(this);
     this.boundBucHandler_ = this.handleBucEvent_.bind(this);
     this.boundHpaHandler_ = this.handleHpaEvent_.bind(this);
@@ -175,11 +198,10 @@ export class EventAutoLogger {
 
   private subscribeToEvents_(): void {
     this.eventBus_.on(Events.ANTENNA_STATE_CHANGED, this.boundAntennaHandler_);
+    this.eventBus_.on(Events.ANTENNA_SLEW_COMPLETE, this.boundSlewCompleteHandler_);
     this.eventBus_.on(Events.TX_CONFIG_CHANGED, this.boundTxConfigHandler_);
-    this.eventBus_.on(Events.TX_ACTIVE_MODEM_CHANGED, this.boundTxModemHandler_);
     this.eventBus_.on(Events.TX_TRANSMIT_CHANGED, this.boundTxTransmitHandler_);
     this.eventBus_.on(Events.RX_CONFIG_CHANGED, this.boundRxConfigHandler_);
-    this.eventBus_.on(Events.RX_ACTIVE_MODEM_CHANGED, this.boundRxModemHandler_);
     this.eventBus_.on(Events.RF_FE_POWER_CHANGED, this.boundRfPowerHandler_);
     this.eventBus_.on(Events.RF_FE_BUC_CHANGED, this.boundBucHandler_);
     this.eventBus_.on(Events.RF_FE_HPA_CHANGED, this.boundHpaHandler_);
@@ -263,8 +285,9 @@ export class EventAutoLogger {
 
     // Compare against the station's last antenna line in the log itself, not
     // only this logger's memory, so a rebuilt logger does not write the
-    // start-of-shift state again (nats-r5-s10-F1). The beacon tail is not part
-    // of the identity: a mode command emits once without it and once with the
+    // start-of-shift state again (nats-r5-s10-F1). Only mode, power and beacon
+    // make the identity: a lock flip writes nothing (nats-r6-s03-F1, s11-F1),
+    // and a mode command emits once without the beacon tail and once with the
     // target's, and the second completes the first line (nats-r5-s02-F1)
     const previous = this.lastAntennaLine_(source);
     if (previous) {
@@ -273,8 +296,10 @@ export class EventAutoLogger {
       if (prev.base === next.base) {
         if (next.beacon === null || next.beacon === prev.beacon) return;
         if (prev.beacon === null) {
-          if (this.isEnabled_) OpsLogManager.getInstance().amend(previous, message);
-          this.lastLoggedMessage_.set(`${Events.ANTENNA_STATE_CHANGED}|${station}`, message);
+          // Keep the line's lock word as written; add only the beacon
+          const amended = `${previous.message}${next.beacon}`;
+          if (this.isEnabled_) OpsLogManager.getInstance().amend(previous, amended);
+          this.lastLoggedMessage_.set(`${Events.ANTENNA_STATE_CHANGED}|${station}`, amended);
           return;
         }
         // A new beacon frequency on the same mode (MANUAL entry, new target) is a change: log it
@@ -283,6 +308,17 @@ export class EventAutoLogger {
 
     if (this.shouldSkip_(Events.ANTENNA_STATE_CHANGED, message, modeChanged, station)) return;
     this.log_(message, source);
+  }
+
+  /**
+   * One arrival line per commanded move, e.g. "STOW: parked (El 90.0)"
+   * (nats-r6-s11-F1): the command-time line says where the dish is going,
+   * this one that it got there
+   */
+  private handleSlewComplete_(data: AntennaSlewCompleteData): void {
+    if (this.suppressDepth_ > 0) return;
+    const station = stationTagForAntennaState(data.state);
+    this.log_(formatAntennaArrival(data), stationSource('ANT', station));
   }
 
   /** The newest antenna state line of this source in the log (not the previous shift's) */
@@ -306,14 +342,6 @@ export class EventAutoLogger {
     this.log_(message, stationSource('TX', station));
   }
 
-  private handleTxModemEvent_(data: TxActiveModemChangedData): void {
-    const message = formatTxActiveModemEvent(data);
-    const station = stationTagForModemUuid(data.uuid);
-    // Skip throttle for intentional user action, but still dedupe
-    if (this.shouldSkip_(Events.TX_ACTIVE_MODEM_CHANGED, message, true, station)) return;
-    this.log_(message, stationSource('TX', station));
-  }
-
   private handleTxTransmitEvent_(data: TxTransmitChangedData): void {
     const message = formatTxTransmitEvent(data);
     const station = stationTagForModemUuid(data.uuid);
@@ -329,17 +357,10 @@ export class EventAutoLogger {
     this.log_(message, stationSource('RX', station));
   }
 
-  private handleRxModemEvent_(data: RxActiveModemChangedData): void {
-    const message = formatRxActiveModemEvent(data);
-    const station = stationTagForModemUuid(data.uuid);
-    // Skip throttle for intentional user action, but still dedupe
-    if (this.shouldSkip_(Events.RX_ACTIVE_MODEM_CHANGED, message, true, station)) return;
-    this.log_(message, stationSource('RX', station));
-  }
-
   private handleRfPowerEvent_(data: Partial<RFFrontEndState>): void {
     const message = formatRfFePowerEvent(data);
-    const station = stationTagForRfState(data.lnb);
+    // The whole front-end state carries its uuid; the LNB state is the older match
+    const station = stationTagForRfState(data.uuid ? data : data.lnb);
     // Skip throttle for important state change, but still dedupe
     if (this.shouldSkip_(Events.RF_FE_POWER_CHANGED, message, true, station)) return;
     this.log_(message, stationSource('RF FE', station));
@@ -428,31 +449,58 @@ export class EventAutoLogger {
    * follows the modem's carrier and would log every lock loss and relock.
    * An alarm that clears and comes back within ALARM_RELOG_MS of its last
    * logged raise writes nothing until it has been quiet that long.
+   *
+   * The text is the live label and detail ("BUC high current draw (4.52 A)"):
+   * the raise carries the value at the raise, the clear the last value seen
+   * before it cleared, and a severity rise (info to warning, warning to
+   * error) writes an "escalated" line; a fall writes nothing (nats-r6-s16-F1).
    */
   private handleAlarmState_(data: AlarmStateChangedData): void {
     const now = SimClock.runMs();
-    const current = new Map<string, AggregatedAlarm>();
+    const current = new Map<string, SeenAlarm>();
     for (const alarm of data.alarms) {
-      if (alarm.severity !== 'warning' && alarm.severity !== 'error') continue;
-      if (UNLOGGED_ALARMS.has(alarm.message)) continue;
-      current.set(EventAutoLogger.alarmKey_(alarm), alarm);
+      const severity = SEVERITY_RANK[alarm.severity];
+      if (severity === undefined) continue;
+      const key = EventAutoLogger.alarmKey_(alarm);
+      const seen = current.get(key);
+      // The same alarm twice in one poll: keep the more severe
+      if (seen && seen.severity >= severity) continue;
+      current.set(key, {
+        label: alarm.message,
+        source: `${alarm.assetId}(${alarm.equipmentType}${alarm.equipmentIndex + 1})`,
+        severity,
+        detail: alarmDetail_(alarm),
+      });
     }
 
     for (const [key, alarm] of current) {
+      const previous = this.seenAlarms_.get(key);
+      this.seenAlarms_.set(key, alarm);
+      if (alarm.severity < WARNING_RANK) continue;
+      const text = alarmText_(alarm.label, alarm.detail);
+
+      // A rise writes even inside the flap window: an error is news
+      if (previous && alarm.severity > previous.severity) {
+        this.loggedAlarms_.add(key);
+        this.alarmRaiseLoggedMs_.set(key, now);
+        this.log_(`ALARM escalated: ${text}`, alarm.source, 'system');
+        continue;
+      }
+
       if (this.loggedAlarms_.has(key)) continue;
       const lastRaise = this.alarmRaiseLoggedMs_.get(key);
       // Run time restarts each scenario, so a later stamp is from an earlier run
       if (lastRaise !== undefined && now >= lastRaise && now - lastRaise < EventAutoLogger.ALARM_RELOG_MS) continue;
-      const logged = { label: alarm.message, source: `${alarm.assetId}(${alarm.equipmentType}${alarm.equipmentIndex + 1})` };
       this.alarmRaiseLoggedMs_.set(key, now);
-      this.loggedAlarms_.set(key, logged);
-      this.log_(`ALARM raised: ${logged.label}`, logged.source, 'system');
+      this.loggedAlarms_.add(key);
+      this.log_(`ALARM raised: ${text}`, alarm.source, 'system');
     }
 
-    for (const [key, logged] of [...this.loggedAlarms_]) {
+    for (const [key, last] of [...this.seenAlarms_]) {
       if (current.has(key)) continue;
-      this.loggedAlarms_.delete(key);
-      this.log_(`ALARM cleared: ${logged.label}`, logged.source, 'system');
+      this.seenAlarms_.delete(key);
+      if (!this.loggedAlarms_.delete(key)) continue;
+      this.log_(`ALARM cleared: ${alarmText_(last.label, last.detail)}`, last.source, 'system');
     }
   }
 
@@ -472,11 +520,10 @@ export class EventAutoLogger {
     if (!this.isEnabled_) return;
 
     this.eventBus_.off(Events.ANTENNA_STATE_CHANGED, this.boundAntennaHandler_);
+    this.eventBus_.off(Events.ANTENNA_SLEW_COMPLETE, this.boundSlewCompleteHandler_);
     this.eventBus_.off(Events.TX_CONFIG_CHANGED, this.boundTxConfigHandler_);
-    this.eventBus_.off(Events.TX_ACTIVE_MODEM_CHANGED, this.boundTxModemHandler_);
     this.eventBus_.off(Events.TX_TRANSMIT_CHANGED, this.boundTxTransmitHandler_);
     this.eventBus_.off(Events.RX_CONFIG_CHANGED, this.boundRxConfigHandler_);
-    this.eventBus_.off(Events.RX_ACTIVE_MODEM_CHANGED, this.boundRxModemHandler_);
     this.eventBus_.off(Events.RF_FE_POWER_CHANGED, this.boundRfPowerHandler_);
     this.eventBus_.off(Events.RF_FE_BUC_CHANGED, this.boundBucHandler_);
     this.eventBus_.off(Events.RF_FE_HPA_CHANGED, this.boundHpaHandler_);
@@ -495,6 +542,7 @@ export class EventAutoLogger {
     this.lastLoggedMessage_.clear();
     this.lastAntennaModeKey_.clear();
     this.loggedAlarms_.clear();
+    this.seenAlarms_.clear();
     this.alarmRaiseLoggedMs_.clear();
   }
 

@@ -1363,7 +1363,7 @@ describe('AntennaCore', () => {
   });
 
   describe('status alarms extended', () => {
-    it('should show ACQUIRING LOCK when auto-track enabled but not locked', () => {
+    it('should show ACQUIRING LOCK as info when auto-track enabled but not locked (nats-r6-s24-F1)', () => {
       antenna.state.isPowered = true;
       antenna.state.isOperational = true;
       antenna.state.isAutoTrackEnabled = true;
@@ -1371,7 +1371,7 @@ describe('AntennaCore', () => {
       antenna.state.isBeaconLocked = false;
 
       const alarms = antenna.getStatusAlarms();
-      expect(alarms.some((a) => a.message.includes('ACQUIRING LOCK'))).toBe(true);
+      expect(alarms.find((a) => a.message.includes('ACQUIRING LOCK'))?.severity).toBe('info');
     });
 
     it('should show AUTO TRACK FAILED when switch up but not enabled', () => {

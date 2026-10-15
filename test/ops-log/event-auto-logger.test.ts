@@ -3,7 +3,7 @@ import type { TransmitterModem } from '../../src/equipment/transmitter/transmitt
 import { EventBus } from '../../src/events/event-bus';
 import { Events } from '../../src/events/events';
 import { EventAutoLogger } from '../../src/ops-log/event-auto-logger';
-import { formatAntennaEvent, formatRxConfigEvent, formatTxActiveModemEvent, formatTxConfigEvent } from '../../src/ops-log/event-formatters';
+import { formatAntennaArrival, formatAntennaEvent, formatRxConfigEvent, formatTxConfigEvent } from '../../src/ops-log/event-formatters';
 import { OpsLogManager } from '../../src/ops-log/ops-log-manager';
 import { SimClock } from '../../src/simulation/sim-clock';
 
@@ -46,10 +46,6 @@ describe('event formatters (nats-r3-s11-F1, s11-F2)', () => {
     expect(formatTxConfigEvent({ uuid: 'tx', modem: 1, config: modem() })).toBeNull();
   });
 
-  it('numbers the selected modem by its modem number, not number + 1', () => {
-    expect(formatTxActiveModemEvent({ uuid: 'tx', activeModem: 2 })).toBe('Switched to Modem 2');
-  });
-
   it('logs a staged MAINT as staged, without the momentarily cleared lock flags', () => {
     const msg = formatAntennaEvent({
       trackingMode: 'maintenance',
@@ -85,6 +81,26 @@ describe('event formatters (nats-r3-s11-F1, s11-F2)', () => {
     expect(second).toBe(first);
     expect(formatAntennaEvent({ ...base, isLocked: false, isBeaconLocked: false })).toContain('Antenna UNLOCKED');
     expect(formatAntennaEvent({ ...base, isLocked: true, isBeaconLocked: true, isAcuAutomationFaulted: true })).toContain('Antenna lock UNKNOWN');
+  });
+
+  it('reads UNLOCKED while the dish repositions, whatever the beacon last saw (nats-r6-s03-F1)', () => {
+    const base = { isPowered: true, isLocked: false, isBeaconLocked: true };
+
+    expect(formatAntennaEvent({ ...base, trackingMode: 'stow' })).toBe('Tracking mode: STOW, Power ON, Antenna UNLOCKED');
+    expect(formatAntennaEvent({ ...base, trackingMode: 'maintenance', isSlewing: true })).toBe('Tracking mode: MAINTENANCE, Power ON, Antenna UNLOCKED');
+    // A locked program track is on its bird even while it moves (a LEO pass)
+    expect(formatAntennaEvent({ ...base, trackingMode: 'program-track', isLocked: true, isSlewing: true })).toBe('Tracking mode: PROGRAM-TRACK, Power ON, Antenna LOCKED');
+  });
+
+  it('formats the arrival line of each mode (nats-r6-s11-F1)', () => {
+    const at = { state: {} as never, azimuth: 188.44, elevation: 29.31, targetSatelliteId: null, targetSatelliteName: null };
+
+    expect(formatAntennaArrival({ ...at, mode: 'program-track', targetSatelliteId: 7, targetSatelliteName: 'TIDEMARK-1' })).toBe(
+      'PROGRAM: on target TIDEMARK-1 (Az 188.4, El 29.3)'
+    );
+    expect(formatAntennaArrival({ ...at, mode: 'stow', elevation: 90 })).toBe('STOW: parked (El 90.0)');
+    expect(formatAntennaArrival({ ...at, mode: 'maintenance', elevation: 5 })).toBe('MAINTENANCE: parked (El 5.0)');
+    expect(formatAntennaArrival({ ...at, mode: 'manual', azimuth: -206.9, elevation: 35.1 })).toBe('MANUAL: at Az 153.1, El 35.1');
   });
 
   it('names step-track on the tracking line, so engaging it logs (nats-r4-s10-F1)', () => {
@@ -187,12 +203,56 @@ describe('EventAutoLogger station tags (nats-r3-s11-F1)', () => {
     expect(sources).toEqual(['VT-01 TX', 'ME-02 TX']);
   });
 
-  it('leaves a single-station scenario untagged', () => {
+  it('tags a single-station scenario too (nats-r6-s15-F1)', () => {
     setStations([station('VT-01', vtModem)]);
 
     EventBus.getInstance().emit(Events.TX_CONFIG_CHANGED, { uuid: 'VT-01-tx', modem: 1, config: vtModem, action: 'config' });
 
-    expect(lastEntry().source).toBe('TX');
+    expect(lastEntry().source).toBe('VT-01 TX');
+  });
+
+  it('tags an RF FE line whose state object a sync replaced (nats-r6-s15-F1)', () => {
+    const rf = (uuid: string) => ({ state: { uuid }, bucModule: { state: {} }, lnbModule: { state: {} } });
+    setStations([
+      { ...station('VT-01', vtModem), rfFrontEnds: [rf('rf-vt')] },
+      { ...station('ME-02', meModem), rfFrontEnds: [rf('rf-me')] },
+    ]);
+
+    // A whole front-end state matches by its uuid
+    EventBus.getInstance().emit(Events.RF_FE_POWER_CHANGED, { uuid: 'rf-me', lnb: { isPowered: false } } as never);
+    expect(lastEntry().source).toBe('ME-02 RF FE');
+
+    // A single station owns every RF event, whatever object it carries
+    setStations([{ ...station('VT-01', vtModem), rfFrontEnds: [rf('rf-vt')] }]);
+    EventBus.getInstance().emit(Events.RF_FE_BUC_CHANGED, { isMuted: true } as never);
+    expect(lastEntry().message).toBe('BUC output MUTED');
+    expect(lastEntry().source).toBe('VT-01 RF FE');
+  });
+
+  it('writes nothing for a TX or RX modem tab selection, a view (nats-r6-s08-F1)', () => {
+    setStations([station('VT-01', vtModem)]);
+
+    EventBus.getInstance().emit(Events.TX_ACTIVE_MODEM_CHANGED, { uuid: 'VT-01-tx', activeModem: 2 });
+    EventBus.getInstance().emit(Events.RX_ACTIVE_MODEM_CHANGED, { uuid: 'VT-01-rx', activeModem: 2 });
+
+    expect(OpsLogManager.getInstance().getEntries()).toEqual([]);
+  });
+
+  it('writes one arrival line per commanded move, station-tagged (nats-r6-s11-F1)', () => {
+    const antennaState = { uuid: 'ant-vt' };
+    setStations([{ ...station('VT-01', vtModem), antennas: [{ state: antennaState }] }]);
+
+    EventBus.getInstance().emit(Events.ANTENNA_SLEW_COMPLETE, {
+      state: antennaState as never,
+      mode: 'stow',
+      azimuth: 153.1,
+      elevation: 90,
+      targetSatelliteId: null,
+      targetSatelliteName: null,
+    });
+
+    expect(lastEntry().message).toBe('STOW: parked (El 90.0)');
+    expect(lastEntry().source).toBe('VT-01 ANT');
   });
 
   it('logAction writes an automatic action like a manual one, station-tagged', () => {
@@ -253,6 +313,29 @@ describe('Phase 30 Ops Log (nats-r5 D1, D2, D3)', () => {
     expect(messages()).toEqual(['Tracking mode: PROGRAM-TRACK, Power ON, Antenna LOCKED, Beacon freq: 4175.50 MHz']);
   });
 
+  it('writes no line when only the lock word flips: mode, power and beacon do (nats-r6-s03-F1, s11-F1)', () => {
+    const bus = EventBus.getInstance();
+    const maint = { ...programTrack, trackingMode: 'maintenance' as const, targetSatelliteId: null };
+    bus.emit(Events.ANTENNA_STATE_CHANGED, { ...maint, isBeaconLocked: true } as never);
+    SimClock.advanceRun(5_000);
+    // Weather ticks and syncs re-emit as the beacon comes and goes
+    bus.emit(Events.ANTENNA_STATE_CHANGED, { ...maint, isBeaconLocked: false } as never);
+    SimClock.advanceRun(5_000);
+    bus.emit(Events.ANTENNA_STATE_CHANGED, { ...maint, isBeaconLocked: true } as never);
+    SimClock.advanceRun(5_000);
+    bus.emit(Events.ANTENNA_STATE_CHANGED, { ...maint, isBeaconLocked: true, isPowered: false } as never);
+
+    expect(messages()).toEqual(['Tracking mode: MAINTENANCE, Power ON, Antenna LOCKED', 'Tracking mode: MAINTENANCE, Power OFF, Antenna LOCKED']);
+  });
+
+  it('completes a line with a beacon that arrives after a lock flip, keeping its lock word', () => {
+    const bus = EventBus.getInstance();
+    bus.emit(Events.ANTENNA_STATE_CHANGED, { ...programTrack, targetSatelliteId: null } as never);
+    bus.emit(Events.ANTENNA_STATE_CHANGED, { ...programTrack, isLocked: true, targetSatelliteId: 7 } as never);
+
+    expect(messages()).toEqual(['Tracking mode: PROGRAM-TRACK, Power ON, Antenna UNLOCKED, Beacon freq: 4175.50 MHz']);
+  });
+
   it('logs a new beacon frequency on the same mode', () => {
     const manual = { ...programTrack, trackingMode: 'manual' as const, targetSatelliteId: null };
     EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, manual as never);
@@ -292,9 +375,40 @@ describe('Phase 30 Ops Log (nats-r5 D1, D2, D3)', () => {
       emitAlarms([]);
 
       const entries = OpsLogManager.getInstance().getEntries();
-      expect(entries.map((e) => e.message)).toEqual(['ALARM raised: SUN TRANSIT: ELEVATED SKY NOISE (3.1 dB)', 'ALARM cleared: SUN TRANSIT: ELEVATED SKY NOISE (3.1 dB)']);
+      // A label still carrying its value: the clear writes the last one seen
+      expect(entries.map((e) => e.message)).toEqual(['ALARM raised: SUN TRANSIT: ELEVATED SKY NOISE (3.1 dB)', 'ALARM cleared: SUN TRANSIT: ELEVATED SKY NOISE (4.0 dB)']);
       expect(entries.map((e) => e.source)).toEqual(['VT-01(ANT1)', 'VT-01(ANT1)']);
       expect(entries.map((e) => e.category)).toEqual(['system', 'system']);
+    });
+
+    it('writes the live detail at the raise and the last seen detail at the clear (nats-r6-s16-F1)', () => {
+      const buc = { severity: 'warning' as const, message: 'BUC high current draw', detail: '4.52 A', assetId: 'VT-01', equipmentType: 'RF', equipmentIndex: 0 };
+      emitAlarms([buc]);
+      emitAlarms([{ ...buc, detail: '4.61 A' }]);
+      emitAlarms([{ ...buc, detail: '4.31 A' }]);
+      emitAlarms([]);
+
+      expect(messages()).toEqual(['ALARM raised: BUC high current draw (4.52 A)', 'ALARM cleared: BUC high current draw (4.31 A)']);
+    });
+
+    it('writes a severity rise as escalated and a fall as nothing (nats-r6-s16-F1)', () => {
+      const sunAlarm = { severity: 'warning' as const, message: 'SUN TRANSIT', detail: '3.1 dB', assetId: 'VT-01', equipmentType: 'ANT', equipmentIndex: 0 };
+      emitAlarms([sunAlarm]);
+      emitAlarms([{ ...sunAlarm, severity: 'error', detail: '6.2 dB' }]);
+      emitAlarms([{ ...sunAlarm, detail: '2.0 dB' }]);
+      emitAlarms([{ ...sunAlarm, severity: 'info', detail: '0.4 dB' }]);
+      emitAlarms([]);
+
+      expect(messages()).toEqual(['ALARM raised: SUN TRANSIT (3.1 dB)', 'ALARM escalated: SUN TRANSIT (6.2 dB)', 'ALARM cleared: SUN TRANSIT (0.4 dB)']);
+    });
+
+    it('writes an info alarm rising to a warning as escalated, and an info-only alarm never', () => {
+      const rain = { severity: 'info' as const, message: 'RAIN FADE', detail: 'fade 0.3 dB', assetId: 'VT-01', equipmentType: 'ANT', equipmentIndex: 0 };
+      emitAlarms([rain, signal]);
+      emitAlarms([{ ...rain, severity: 'warning', detail: 'fade 1.2 dB' }, signal]);
+      emitAlarms([signal]);
+
+      expect(messages()).toEqual(['ALARM escalated: RAIN FADE (fade 1.2 dB)', 'ALARM cleared: RAIN FADE (fade 1.2 dB)']);
     });
 
     it('logs a flapping alarm once per 30 s', () => {
