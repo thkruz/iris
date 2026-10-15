@@ -162,6 +162,37 @@ describe('EventAutoLogger antenna lines (nats-r4-s10-F1)', () => {
       (globalThis as unknown as { signalRange?: unknown }).signalRange = undefined;
     }
   });
+
+  it('writes a Move to Target to a new bird as one UNLOCKED line from the running baseline (Phase 32 D2, nats-r7-s04-F1)', () => {
+    const antennaState = {
+      uuid: 'ant-vt',
+      trackingMode: 'program-track' as const,
+      isPowered: true,
+      isLocked: true,
+      isBeaconLocked: true,
+      isStepTrackEnabled: false,
+      targetSatelliteId: 7,
+      beaconFrequencyHz: 4175.5e6,
+    };
+    (globalThis as unknown as { signalRange?: unknown }).signalRange = {
+      simulationManager: { groundStations: [{ state: { id: 'VT-01' }, antennas: [{ state: antennaState }], rfFrontEnds: [], receivers: [], transmitters: [] }] },
+    };
+    try {
+      EventBus.getInstance().emit(Events.UPDATE, 16 as never);
+      // The target change (new beacon, repositioning) then the Move to Target emission
+      const moving = { ...antennaState, targetSatelliteId: 8, beaconFrequencyHz: 4180e6, isSlewing: true, isLocked: false, isBeaconLocked: false };
+      EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, moving as never);
+      EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, moving as never);
+
+      expect(
+        OpsLogManager.getInstance()
+          .getEntries()
+          .map((e) => e.message)
+      ).toEqual(['Tracking mode: PROGRAM-TRACK, Power ON, Antenna UNLOCKED, Beacon freq: 4180.00 MHz']);
+    } finally {
+      (globalThis as unknown as { signalRange?: unknown }).signalRange = undefined;
+    }
+  });
 });
 
 describe('EventAutoLogger station tags (nats-r3-s11-F1)', () => {
