@@ -120,6 +120,15 @@ const tidemark2DriftingSatellite = new DriftingEphemerisSatellite(
       maxAz: 144.6 as Degrees,
       minEl: 30.5 as Degrees,
       maxEl: 33.1 as Degrees,
+      // One figure-8 a day (Phase 32 D19, nats-r7-s18-F1): at 24 h the
+      // +/-1.3 deg swing peaks at ~0.34 deg/h in elevation, so the bird
+      // starts on its nominal slot (143.3 / 31.8 from VT-01, 147.0 / 32.4 from
+      // ME-02, the brief's numbers) and moves a few hundredths of a degree in
+      // the scenario. The legacy rate (0.1 deg per 30 s, a 41-minute 8) made
+      // the look angles climb ~7 deg/h. What bleeds the link is the ephemeris
+      // gap above (GAP_RATE_DEG_PER_H), not the figure-8.
+      initialPhase: 0,
+      periodHours: 24,
     },
     transponderConfigs: [
       {

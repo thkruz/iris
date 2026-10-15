@@ -197,6 +197,33 @@ describe('C1 step-track lessons (phase 19.4)', () => {
     expect(antenna.state.isLocked).toBe(true);
   });
 
+  it('S18: TIDEMARK-2 starts on the brief nominal slot and its daily figure-8 moves it only hundredths of a degree in the scenario (Phase 32 D19)', () => {
+    const sat = (scenario18Data.settings.satellites as Satellite[]).find((s) => s.noradId === 61526)!;
+    const { antenna, fly } = chain(scenario18Data, 'ME-02', sat);
+
+    fly(1_000);
+    const start = antenna.viewOf(sat);
+    const ptStart = { az: antenna.state.azimuth, el: antenna.state.elevation };
+    fly(360_000);
+    const end = antenna.viewOf(sat);
+    const ptEnd = { az: antenna.state.azimuth, el: antenna.state.elevation };
+
+    console.info(
+      `S18 ME-02 TM-2 over 6 min: bird ${(start.az as number).toFixed(3)}/${(start.el as number).toFixed(3)} -> ${(end.az as number).toFixed(3)}/${(end.el as number).toFixed(3)} | program-track ${ptStart.az.toFixed(3)}/${ptStart.el.toFixed(3)} -> ${ptEnd.az.toFixed(3)}/${ptEnd.el.toFixed(3)}`
+    );
+
+    // b18 "Nominal slot position (from ME-02) Az 147.0, El 32.4": the bird is on it at 0915
+    expect(start.az as number).toBeCloseTo(147.0, 1);
+    expect(start.el as number).toBeCloseTo(32.4, 1);
+    // 24 h figure-8: ~0.34 deg/h in elevation, ~0.7 deg/h in azimuth at the node, so 6 min is a few hundredths
+    // (the legacy 41-minute 8 moved it ~0.7 deg in elevation in the same 6 min, nats-r7-s18-F1)
+    expect(Math.abs((end.el as number) - (start.el as number))).toBeLessThan(0.05);
+    expect(Math.abs((end.az as number) - (start.az as number))).toBeLessThan(0.1);
+    // Program-track sits on the stale prediction, a few tenths from the slot, and moves by the gap growth only
+    expect(Math.hypot(ptStart.az - 147.0, ptStart.el - 32.4)).toBeLessThan(0.6);
+    expect(Math.hypot(ptEnd.az - ptStart.az, ptEnd.el - ptStart.el)).toBeLessThan(0.15);
+  });
+
   it('S22: AURORA-7 under step-track sits a measurable margin above the step-track floor', () => {
     const sat = (scenario22Data.settings.satellites as Satellite[]).find((s) => s.name === 'AURORA-7')!;
     // VT-01 starts off the air with its chain staged for AURORA-7 (TP-1 6053

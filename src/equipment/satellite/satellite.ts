@@ -117,6 +117,16 @@ export interface GeosyncOrbitConfig {
   maxEl: Degrees;
   /** Initial phase offset (radians, 0-2*PI) - where satellite starts in pattern */
   initialPhase?: number;
+  /**
+   * Opt-in period of the figure-8, hours of scenario time (Phase 32 D19,
+   * nats-r7-s18-F1). A real inclined GEO bird traces its figure-8 once a
+   * sidereal day: 24 h on a +/-1.3 deg swing peaks at about 0.34 deg/h in
+   * elevation. Set, the phase is `initialPhase` at scenario start and runs on
+   * scenario time (paused with briefs, restored with checkpoints). Omitted:
+   * the legacy training rate, a peak of 0.1 deg per 30 s whatever the size of
+   * the swing (AURORA-7's step-track lessons are built on it).
+   */
+  periodHours?: number;
 }
 
 export interface SatelliteState {
@@ -226,6 +236,10 @@ export class Satellite {
     centerEl: number;
     azAmplitude: number;
     elAmplitude: number;
+    /** Phase at scenario start, radians */
+    initialPhase: number;
+    /** Figure-8 period in ms of scenario time; null = the legacy training rate */
+    periodMs: number | null;
   } | null = null;
 
   /** Current phase in the figure-8 pattern (radians, 0 to 2*PI) */
@@ -314,6 +328,8 @@ export class Satellite {
         centerEl: (config.minEl + config.maxEl) / 2,
         azAmplitude: (config.maxAz - config.minAz) / 2,
         elAmplitude: (config.maxEl - config.minEl) / 2,
+        initialPhase: config.initialPhase ?? 0,
+        periodMs: config.periodHours !== undefined && config.periodHours > 0 ? config.periodHours * 3_600_000 : null,
       };
       this.phase_ = config.initialPhase ?? 0;
       // Set initial position based on phase
@@ -414,6 +430,17 @@ export class Satellite {
       return;
     }
 
+    // An authored period (Phase 32 D19): the phase is a function of scenario
+    // time, so every start (and every checkpoint restore) puts the bird at
+    // the same point of its figure-8, and it moves every frame (a slow bird
+    // has no 1 Hz step to hide)
+    if (this.geosyncConfig_.periodMs !== null) {
+      this.phase_ = this.geosyncConfig_.initialPhase + (2 * Math.PI * SimClock.scenarioElapsedMs()) / this.geosyncConfig_.periodMs;
+      this.applyFigure8Position_();
+
+      return;
+    }
+
     // Throttle position updates (scenario time: the wobble is sky, and pauses with it)
     const now = getSimulatedNowMs();
     const elapsed = now - this.lastPositionUpdateTime_;
@@ -436,10 +463,18 @@ export class Satellite {
     this.phase_ %= 2 * Math.PI;
     if (this.phase_ < 0) this.phase_ += 2 * Math.PI;
 
-    // Calculate new position using parametric equations:
-    // Elevation: single-frequency sine (one cycle per orbit)
-    // Azimuth: double-frequency sine (creates figure-8 crossover)
+    this.applyFigure8Position_();
+  }
+
+  /**
+   * Az/el from the figure-8 phase. Elevation: single-frequency sine (one
+   * cycle per orbit). Azimuth: double-frequency sine (the crossover).
+   */
+  private applyFigure8Position_(): void {
     const config = this.geosyncConfig_;
+    if (!config) {
+      return;
+    }
     this.el = (config.centerEl + config.elAmplitude * Math.sin(this.phase_)) as Degrees;
     this.az = (config.centerAz + config.azAmplitude * Math.sin(2 * this.phase_)) as Degrees;
 
