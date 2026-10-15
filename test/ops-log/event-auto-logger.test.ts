@@ -130,17 +130,37 @@ describe('EventAutoLogger antenna lines (nats-r4-s10-F1)', () => {
     EventBus.destroy();
   });
 
-  it('logs the start-of-shift lock once, and the step-track switch at once', () => {
+  it('writes no start-of-shift line, and the step-track switch at once (Phase 32 D2, nats-r7-s04-F1)', () => {
     const state = { trackingMode: 'program-track' as const, isPowered: true, isLocked: false, isBeaconLocked: true, isStepTrackEnabled: false };
+    // The start-up state and its lock settling are the silent baseline
     EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...state } as never);
-    EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...state, isLocked: true, isBeaconLocked: false } as never);
+    EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...state, isLocked: false, isBeaconLocked: false } as never);
     EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...state, isLocked: true, isStepTrackEnabled: true } as never);
 
     expect(
       OpsLogManager.getInstance()
         .getEntries()
         .map((e) => e.message)
-    ).toEqual(['Tracking mode: PROGRAM-TRACK, Power ON, Antenna LOCKED', 'Tracking mode: PROGRAM-TRACK + STEP-TRACK, Power ON, Antenna LOCKED']);
+    ).toEqual(['Tracking mode: PROGRAM-TRACK + STEP-TRACK, Power ON, Antenna LOCKED']);
+  });
+
+  it('takes a running antenna as the baseline, so a first command that is not a mode change still logs (Phase 32 D2)', () => {
+    const antennaState = { uuid: 'ant-vt', trackingMode: 'program-track' as const, isPowered: true, isLocked: true, isBeaconLocked: true, isStepTrackEnabled: false };
+    (globalThis as unknown as { signalRange?: unknown }).signalRange = {
+      simulationManager: { groundStations: [{ state: { id: 'VT-01' }, antennas: [{ state: antennaState }], rfFrontEnds: [], receivers: [], transmitters: [] }] },
+    };
+    try {
+      EventBus.getInstance().emit(Events.UPDATE, 16 as never);
+      // A lock flip on the running dish: still the start-up state
+      EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...antennaState, isLocked: false, isBeaconLocked: false } as never);
+      EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...antennaState, isPowered: false } as never);
+
+      const entries = OpsLogManager.getInstance().getEntries();
+      expect(entries.map((e) => e.message)).toEqual(['Tracking mode: PROGRAM-TRACK, Power OFF, Antenna LOCKED']);
+      expect(entries[0].source).toBe('VT-01 ANT');
+    } finally {
+      (globalThis as unknown as { signalRange?: unknown }).signalRange = undefined;
+    }
   });
 });
 
@@ -303,8 +323,10 @@ describe('Phase 30 Ops Log (nats-r5 D1, D2, D3)', () => {
     expect(messages()).toEqual(['Tracking mode: PROGRAM-TRACK, Power ON, Antenna UNLOCKED, Beacon freq: 4175.50 MHz', 'PROGRAM: slewing to TIDEMARK-1']);
   });
 
-  it('does not write the start-of-shift state again when the logger is rebuilt (nats-r5-s10-F1)', () => {
+  it('does not write the last antenna line again when the logger is rebuilt (nats-r5-s10-F1)', () => {
     const locked = { ...programTrack, isLocked: true, targetSatelliteId: 7 };
+    // Start-up baseline, then the Move to Target command writes the line
+    EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...programTrack, targetSatelliteId: null } as never);
     EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, locked as never);
     EventAutoLogger.destroy();
     EventAutoLogger.getInstance().initialize();
@@ -316,6 +338,8 @@ describe('Phase 30 Ops Log (nats-r5 D1, D2, D3)', () => {
   it('writes no line when only the lock word flips: mode, power and beacon do (nats-r6-s03-F1, s11-F1)', () => {
     const bus = EventBus.getInstance();
     const maint = { ...programTrack, trackingMode: 'maintenance' as const, targetSatelliteId: null };
+    // Start-up baseline, then the MAINT command
+    bus.emit(Events.ANTENNA_STATE_CHANGED, { ...programTrack, targetSatelliteId: null } as never);
     bus.emit(Events.ANTENNA_STATE_CHANGED, { ...maint, isBeaconLocked: true } as never);
     SimClock.advanceRun(5_000);
     // Weather ticks and syncs re-emit as the beacon comes and goes
@@ -330,6 +354,8 @@ describe('Phase 30 Ops Log (nats-r5 D1, D2, D3)', () => {
 
   it('completes a line with a beacon that arrives after a lock flip, keeping its lock word', () => {
     const bus = EventBus.getInstance();
+    // Start-up baseline in MANUAL, then PROGRAM picked
+    bus.emit(Events.ANTENNA_STATE_CHANGED, { ...programTrack, trackingMode: 'manual', targetSatelliteId: null } as never);
     bus.emit(Events.ANTENNA_STATE_CHANGED, { ...programTrack, targetSatelliteId: null } as never);
     bus.emit(Events.ANTENNA_STATE_CHANGED, { ...programTrack, isLocked: true, targetSatelliteId: 7 } as never);
 
@@ -338,6 +364,8 @@ describe('Phase 30 Ops Log (nats-r5 D1, D2, D3)', () => {
 
   it('logs a new beacon frequency on the same mode', () => {
     const manual = { ...programTrack, trackingMode: 'manual' as const, targetSatelliteId: null };
+    // Start-up baseline in PROGRAM, then MANUAL picked
+    EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...programTrack, targetSatelliteId: null } as never);
     EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, manual as never);
     EventBus.getInstance().emit(Events.ANTENNA_STATE_CHANGED, { ...manual, beaconFrequencyHz: 4165e6 } as never);
 
@@ -381,34 +409,118 @@ describe('Phase 30 Ops Log (nats-r5 D1, D2, D3)', () => {
       expect(entries.map((e) => e.category)).toEqual(['system', 'system']);
     });
 
-    it('writes the live detail at the raise and the last seen detail at the clear (nats-r6-s16-F1)', () => {
+    const emitWithClears = (alarms: unknown[], cleared: unknown[]) =>
+      EventBus.getInstance().emit(Events.ALARM_STATE_CHANGED, { alarms, cleared, highestSeverity: 'warning' } as never);
+
+    it('writes the live detail at the raise and the live value at the clear, with the peak while up (Phase 32 D5/D9, nats-r6-s16-F1, nats-r7-s05-F1)', () => {
       const buc = { severity: 'warning' as const, message: 'BUC high current draw', detail: '4.52 A', assetId: 'VT-01', equipmentType: 'RF', equipmentIndex: 0 };
       emitAlarms([buc]);
       emitAlarms([{ ...buc, detail: '4.61 A' }]);
       emitAlarms([{ ...buc, detail: '4.31 A' }]);
-      emitAlarms([]);
+      // AlarmService re-reads the value as the alarm goes
+      emitWithClears([], [{ ...buc, detail: '2.69 A' }]);
 
-      expect(messages()).toEqual(['ALARM raised: BUC high current draw (4.52 A)', 'ALARM cleared: BUC high current draw (4.31 A)']);
+      expect(messages()).toEqual(['ALARM raised: BUC high current draw (4.52 A)', 'ALARM cleared: BUC high current draw (2.69 A, peak 4.61 A)']);
     });
 
-    it('writes a severity rise as escalated and a fall as nothing (nats-r6-s16-F1)', () => {
-      const sunAlarm = { severity: 'warning' as const, message: 'SUN TRANSIT', detail: '3.1 dB', assetId: 'VT-01', equipmentType: 'ANT', equipmentIndex: 0 };
+    it('writes no stale value on a clear with no live value, only the peak (Phase 32 D5)', () => {
+      const buc = { severity: 'warning' as const, message: 'BUC high current draw', detail: '4.52 A', assetId: 'VT-01', equipmentType: 'RF', equipmentIndex: 0 };
+      emitAlarms([buc]);
+      emitAlarms([{ ...buc, detail: '4.61 A' }]);
+      emitAlarms([]);
+
+      expect(messages()).toEqual(['ALARM raised: BUC high current draw (4.52 A)', 'ALARM cleared: BUC high current draw (peak 4.61 A)']);
+    });
+
+    it('keeps a text detail as it is and adds no peak to it (Phase 32 D9)', () => {
+      const margin = {
+        severity: 'warning' as const,
+        message: 'Degraded margin',
+        detail: 'Modem 1: Es/N0 5.5 dB, need 5.0 dB',
+        assetId: 'VT-01',
+        equipmentType: 'RX',
+        equipmentIndex: 0,
+      };
+      emitAlarms([margin]);
+      emitWithClears([], [{ ...margin, detail: 'Modem 1: Es/N0 9.9 dB, need 5.0 dB' }]);
+
+      expect(messages()).toEqual(['ALARM raised: Degraded margin (Modem 1: Es/N0 5.5 dB, need 5.0 dB)', 'ALARM cleared: Degraded margin (Modem 1: Es/N0 9.9 dB, need 5.0 dB)']);
+    });
+
+    it('writes escalated only from a logged warning to an error, and a fall as nothing (Phase 32 D6)', () => {
+      const sunAlarm = { severity: 'warning' as const, message: 'SUN TRANSIT: ELEVATED SKY NOISE', detail: '3.1 dB', assetId: 'VT-01', equipmentType: 'ANT', equipmentIndex: 0 };
       emitAlarms([sunAlarm]);
-      emitAlarms([{ ...sunAlarm, severity: 'error', detail: '6.2 dB' }]);
+      emitAlarms([{ ...sunAlarm, severity: 'error', detail: '16.0 dB' }]);
       emitAlarms([{ ...sunAlarm, detail: '2.0 dB' }]);
-      emitAlarms([{ ...sunAlarm, severity: 'info', detail: '0.4 dB' }]);
-      emitAlarms([]);
+      emitAlarms([{ ...sunAlarm, severity: 'info', detail: '0.6 dB' }]);
+      emitWithClears([], [{ ...sunAlarm, detail: '0.5 dB' }]);
 
-      expect(messages()).toEqual(['ALARM raised: SUN TRANSIT (3.1 dB)', 'ALARM escalated: SUN TRANSIT (6.2 dB)', 'ALARM cleared: SUN TRANSIT (0.4 dB)']);
+      expect(messages()).toEqual([
+        'ALARM raised: SUN TRANSIT: ELEVATED SKY NOISE (3.1 dB)',
+        'ALARM escalated: SUN TRANSIT: ELEVATED SKY NOISE (16.0 dB)',
+        'ALARM cleared: SUN TRANSIT: ELEVATED SKY NOISE (0.5 dB, peak 16.0 dB)',
+      ]);
     });
 
-    it('writes an info alarm rising to a warning as escalated, and an info-only alarm never', () => {
+    it('writes an info alarm rising to a warning as raised, and an info-only alarm never (Phase 32 D6, nats-r7-s03-F2)', () => {
       const rain = { severity: 'info' as const, message: 'RAIN FADE', detail: 'fade 0.3 dB', assetId: 'VT-01', equipmentType: 'ANT', equipmentIndex: 0 };
       emitAlarms([rain, signal]);
       emitAlarms([{ ...rain, severity: 'warning', detail: 'fade 1.2 dB' }, signal]);
-      emitAlarms([signal]);
+      emitWithClears([signal], [{ ...rain, detail: 'fade 0.2 dB' }]);
 
-      expect(messages()).toEqual(['ALARM escalated: RAIN FADE (fade 1.2 dB)', 'ALARM cleared: RAIN FADE (fade 1.2 dB)']);
+      expect(messages()).toEqual(['ALARM raised: RAIN FADE (fade 1.2 dB)', 'ALARM cleared: RAIN FADE (fade 0.2 dB, peak 1.2 dB)']);
+    });
+
+    it('writes an info alarm jumping straight to an error as raised', () => {
+      const ice = { severity: 'info' as const, message: 'ICE ON FEED', detail: '0.4 dB', assetId: 'VT-01', equipmentType: 'ANT', equipmentIndex: 0 };
+      emitAlarms([ice]);
+      emitAlarms([{ ...ice, severity: 'error', detail: '5.1 dB' }]);
+
+      expect(messages()).toEqual(['ALARM raised: ICE ON FEED (5.1 dB)']);
+    });
+
+    it('writes every raise/clear pair of an error alarm, inside the relog window too (Phase 32 D4, nats-r7-s08-F1)', () => {
+      const lost = { severity: 'error' as const, message: 'Carrier lock lost', detail: 'Modem 1: no carrier', assetId: 'VT-01', equipmentType: 'RX', equipmentIndex: 0 };
+      emitAlarms([lost]);
+      emitAlarms([]);
+      SimClock.advanceRun(3_000);
+      emitAlarms([lost]);
+      emitAlarms([]);
+
+      expect(messages()).toEqual([
+        'ALARM raised: Carrier lock lost (Modem 1: no carrier)',
+        'ALARM cleared: Carrier lock lost',
+        'ALARM raised: Carrier lock lost (Modem 1: no carrier)',
+        'ALARM cleared: Carrier lock lost',
+      ]);
+    });
+
+    it('writes a warning re-raised inside the window as "up since" when the window closes, never with a late stamp alone (Phase 32 D4)', () => {
+      const margin = {
+        severity: 'warning' as const,
+        message: 'Degraded margin',
+        detail: 'Modem 1: Es/N0 5.6 dB, need 5.0 dB',
+        assetId: 'VT-01',
+        equipmentType: 'RX',
+        equipmentIndex: 0,
+      };
+      const clock = (ms: number) => {
+        const d = new Date(ms);
+        return [d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()].map((n) => n.toString().padStart(2, '0')).join(':');
+      };
+      emitAlarms([margin]);
+      emitAlarms([]);
+      SimClock.advanceRun(5_000);
+      const upSince = clock(SimClock.nowMs());
+      emitAlarms([margin]);
+      expect(messages()).toHaveLength(2);
+
+      // Still up when the window closes: written then, with when it came up
+      SimClock.advanceRun(25_000);
+      EventBus.getInstance().emit(Events.UPDATE, 16 as never);
+      expect(messages()[2]).toBe(`ALARM raised: Degraded margin (Modem 1: Es/N0 5.6 dB, need 5.0 dB, up since ${upSince})`);
+      emitAlarms([]);
+      expect(messages()).toHaveLength(4);
     });
 
     it('logs a flapping alarm once per 30 s', () => {

@@ -4,6 +4,8 @@ import { AlarmStatus } from '@app/equipment/base-equipment';
 import { LNBModuleCore, LNBState } from '@app/equipment/rf-front-end/lnb-module/lnb-module-core';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
+import { EventAutoLogger } from '@app/ops-log/event-auto-logger';
+import { stationTagForRfModule } from '@app/ops-log/station-tag';
 import { parseLocalizedNumber } from '@app/utils/parse-number';
 
 /**
@@ -335,12 +337,32 @@ export class LNBAdapter {
   }
 
   private applyHandler_(): void {
+    const previousLo = Number(this.lnbModule.state.loFrequency);
+    const previousGain = Number(this.lnbModule.state.gain);
     this.lnbModule.handleLoFrequencyChange(this.stagedLoFrequency_);
     this.lnbModule.handleGainChange(this.stagedGain_);
+    // An applied change is an operator action, logged like BUC gain and HPA
+    // back-off (Phase 32 D8, nats-r7-s02-F2)
+    if (this.stagedLoFrequency_ !== previousLo) {
+      this.logAction_(`LNB LO set to ${LNBAdapter.formatLo_(this.stagedLoFrequency_)} (was ${LNBAdapter.formatLo_(previousLo)})`);
+    }
+    if (this.stagedGain_ !== previousGain) {
+      this.logAction_(`LNB gain set to ${this.stagedGain_.toFixed(1)} dB (was ${previousGain.toFixed(1)} dB)`);
+    }
     this.hasPendingLoEdit_ = false;
     this.hasPendingGainEdit_ = false;
     this.syncDomWithState_(this.lnbModule.state);
     this.updateStagedDisplays_();
+  }
+
+  /** "5150 MHz", or "5150.5 MHz" for a fractional LO */
+  private static formatLo_(mhz: number): string {
+    return `${Number.isInteger(mhz) ? mhz : mhz.toFixed(1)} MHz`;
+  }
+
+  /** Ops Log line for a panel action, tagged with this LNB's station */
+  private logAction_(message: string): void {
+    EventAutoLogger.getInstance().logAction(message, 'RF FE', stationTagForRfModule(this.lnbModule));
   }
 
   private powerHandler_(e: Event): void {

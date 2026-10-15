@@ -2,6 +2,7 @@ import { Mock, Mocked, vi } from 'vitest';
 import { LNBModuleCore, LNBState } from '../../../../src/equipment/rf-front-end/lnb-module/lnb-module-core';
 import { EventBus } from '../../../../src/events/event-bus';
 import { Events } from '../../../../src/events/events';
+import { EventAutoLogger } from '../../../../src/ops-log/event-auto-logger';
 import { LNBAdapter } from '../../../../src/pages/mission-control/tabs/lnb-adapter';
 
 // Mock dependencies
@@ -149,6 +150,24 @@ describe('LNBAdapter', () => {
 
       expect(mockLnbModule.handleLoFrequencyChange).toHaveBeenCalledWith(6080);
       expect(mockLnbModule.handleGainChange).toHaveBeenCalledWith(55);
+    });
+
+    it('logs an applied LO or gain change with the old value, and nothing for an unchanged Apply (Phase 32 D8, nats-r7-s02-F2)', () => {
+      const logAction = vi.spyOn(EventAutoLogger.getInstance(), 'logAction').mockImplementation(() => undefined);
+      const click = (id: string) => (containerEl.querySelector(id) as HTMLButtonElement).click();
+
+      click('#lnb-apply-btn');
+      expect(logAction).not.toHaveBeenCalled();
+
+      for (let i = 0; i < 5; i++) click('#lnb-gain-dec-coarse');
+      click('#lnb-lo-dec-coarse');
+      click('#lnb-apply-btn');
+
+      expect(logAction.mock.calls.map(([message, system]) => `${message} [${system}]`)).toEqual([
+        'LNB LO set to 5980 MHz (was 6080 MHz) [RF FE]',
+        'LNB gain set to 50.0 dB (was 55.0 dB) [RF FE]',
+      ]);
+      logAction.mockRestore();
     });
   });
 

@@ -28,6 +28,7 @@ import {
   TxConfigChangedData,
   TxTransmitChangedData,
 } from '@app/events/events';
+import type { AlarmStateChangedWithClears } from '@app/services/alarm-service';
 import {
   formatAgcEvent,
   formatAntennaArrival,
@@ -47,7 +48,7 @@ import {
 } from './event-formatters';
 import { OpsLogManager } from './ops-log-manager';
 import type { OpsLogEntry } from './ops-log-types';
-import { stationSource, stationTagForAntennaState, stationTagForModemUuid, stationTagForRfModule, stationTagForRfState } from './station-tag';
+import { scenarioGroundStations, stationSource, stationTagForAntennaState, stationTagForModemUuid, stationTagForRfModule, stationTagForRfState } from './station-tag';
 
 /** The beacon-frequency tail of an antenna line ("..., Beacon freq: 4175.50 MHz") */
 const BEACON_SUFFIX_RE = /, Beacon freq: [\d.]+ MHz$/u;
@@ -70,9 +71,35 @@ function splitBeaconSuffix_(message: string): { base: string; beacon: string | n
   return { base: base.replace(LOCK_WORD_RE, ''), beacon: match ? match[0] : null };
 }
 
-/** Severity rank for escalation: only a rise writes a line */
+/** Severity rank: info alarms write nothing, warning and error write the raise */
 const SEVERITY_RANK: Readonly<Record<string, number>> = { info: 0, warning: 1, error: 2 };
 const WARNING_RANK = 1;
+const ERROR_RANK = 2;
+
+/** A detail that is one number with an optional word before it and one unit token after ("4.52 A", "fade 1.2 dB", "92°C") */
+const NUMERIC_DETAIL_RE = /^(?:[A-Za-z]+\s+)?(-?\d+(?:\.\d+)?)(\s*[^\s\d:,;()]+)?$/u;
+
+/** The highest value an alarm's detail read while it was up */
+interface AlarmPeak {
+  value: number;
+  /** The number and unit as the detail wrote it ("16.0 dB") */
+  text: string;
+}
+
+/** The value of a single-number detail, or null for text and multi-value details ("Modem 1: Es/N0 ...") */
+function numericDetail_(detail: string | undefined): AlarmPeak | null {
+  if (!detail) return null;
+  const match = NUMERIC_DETAIL_RE.exec(detail);
+  if (!match) return null;
+  const value = Number.parseFloat(match[1]);
+  return Number.isFinite(value) ? { value, text: `${match[1]}${match[2] ?? ''}` } : null;
+}
+
+/** Station-clock hh:mm:ss, as the log stamps its lines */
+function clockText_(ms: number): string {
+  const date = new Date(ms);
+  return [date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds()].map((n) => n.toString().padStart(2, '0')).join(':');
+}
 
 /** An alarm as the log writes it: "<label> (<detail>)", or the label alone */
 function alarmText_(label: string, detail: string | undefined): string {
@@ -91,6 +118,8 @@ interface SeenAlarm {
   source: string;
   severity: number;
   detail: string | undefined;
+  /** Highest single-number detail seen while it has been up, if its detail is a number */
+  peak: AlarmPeak | null;
 }
 
 /**
@@ -112,10 +141,23 @@ export class EventAutoLogger {
   /** Nesting depth of runWithoutLogging(): above 0 nothing is logged */
   private suppressDepth_ = 0;
 
-  /** Per-alarm quiet time after a raise is logged, so a flapping alarm logs once */
+  /**
+   * Per-warning quiet time after a raise is logged, so a flapping warning logs
+   * once. Error alarms are exempt: every Carrier lock lost dropout is the
+   * record (Phase 32 D4, nats-r7-s08-F1)
+   */
   private static readonly ALARM_RELOG_MS = 30_000;
-  /** Alarms whose raise is in the log and whose clear is not yet, by alarmKey_ */
-  private readonly loggedAlarms_: Set<string> = new Set();
+  /** Alarms whose raise is in the log and whose clear is not yet, by alarmKey_: the severity last written */
+  private readonly loggedAlarms_: Map<string, number> = new Map();
+  /**
+   * Warnings re-raised inside the relog window, by alarmKey_: the station-clock
+   * time they came up. Written when the window closes if still up, as "up since"
+   */
+  private readonly pendingRaises_: Map<string, number> = new Map();
+  /** The antenna state per source before its first line is written: the start-up baseline */
+  private readonly antennaBaseline_: Map<string, string> = new Map();
+  /** Antenna state objects already taken as a baseline */
+  private seededAntennaStates_: WeakSet<object> = new WeakSet();
   /** Every active alarm (info included) as last seen, by alarmKey_: severity and live detail */
   private readonly seenAlarms_: Map<string, SeenAlarm> = new Map();
   /** Run time each alarm's raise was last logged, by alarmKey_ */
@@ -139,6 +181,7 @@ export class EventAutoLogger {
   private readonly boundGpsdoHandler_: (data: Partial<GPSDOState>) => void;
   private readonly boundEquipmentActionHandler_: (data: EquipmentActionData) => void;
   private readonly boundAlarmStateHandler_: (data: AlarmStateChangedData) => void;
+  private readonly boundUpdateHandler_: () => void;
 
   private constructor() {
     this.eventBus_ = EventBus.getInstance();
@@ -161,6 +204,7 @@ export class EventAutoLogger {
     this.boundGpsdoHandler_ = this.handleGpsdoEvent_.bind(this);
     this.boundEquipmentActionHandler_ = this.handleEquipmentAction_.bind(this);
     this.boundAlarmStateHandler_ = this.handleAlarmState_.bind(this);
+    this.boundUpdateHandler_ = this.onUpdate_.bind(this);
   }
 
   static getInstance(): EventAutoLogger {
@@ -214,6 +258,7 @@ export class EventAutoLogger {
     this.eventBus_.on(Events.RF_FE_GPSDO_CHANGED, this.boundGpsdoHandler_);
     this.eventBus_.on(Events.EQUIPMENT_ACTION, this.boundEquipmentActionHandler_);
     this.eventBus_.on(Events.ALARM_STATE_CHANGED, this.boundAlarmStateHandler_);
+    this.eventBus_.on(Events.UPDATE, this.boundUpdateHandler_);
   }
 
   /**
@@ -270,8 +315,38 @@ export class EventAutoLogger {
   // Event Handlers
   // ════════════════════════════════════════════════════════════════════════════
 
+  /**
+   * Mode, staging, step-track and target of an antenna state: a change in it
+   * is an operator command (a Move to Target included)
+   */
+  private static antennaModeKey_(data: Partial<AntennaState>): string {
+    const isStaged = data.hasStagedChanges === true && data.stagedTargetElevation != null;
+    return `${data.trackingMode}|${isStaged}|${data.isStepTrackEnabled === true}|${data.targetSatelliteId ?? ''}`;
+  }
+
+  /**
+   * Take each scenario antenna's state as its start-up baseline (Phase 32 D2)
+   * the first time the logger sees that antenna and before it has a line, so
+   * the operator's first command (a power toggle, a mode pick) compares
+   * against where the dish started rather than being the baseline itself
+   */
+  private seedAntennaBaselines_(): void {
+    for (const gs of scenarioGroundStations()) {
+      for (const antenna of gs.antennas ?? []) {
+        const state = antenna?.state;
+        if (!state || this.seededAntennaStates_.has(state)) continue;
+        this.seededAntennaStates_.add(state);
+        const message = formatAntennaEvent(state);
+        const station = gs.state?.id;
+        const source = stationSource('ANT', station);
+        if (!message || this.lastAntennaLine_(source)) continue;
+        this.antennaBaseline_.set(source, message);
+        this.lastAntennaModeKey_.set(station ?? '', EventAutoLogger.antennaModeKey_(state));
+      }
+    }
+  }
+
   private handleAntennaEvent_(data: Partial<AntennaState>): void {
-    if (this.suppressDepth_ > 0) return;
     const message = formatAntennaEvent(data);
     if (!message) return;
     const station = stationTagForAntennaState(data);
@@ -279,9 +354,19 @@ export class EventAutoLogger {
     // A mode command (staged or applied) is an operator action: never throttle
     // it away, so an APPLY right after MAINT still logs (nats-r3-s11-F2), nor
     // the step-track switch (nats-r4-s10-F1)
-    const modeKey = `${data.trackingMode}|${data.hasStagedChanges === true && data.stagedTargetElevation != null}|${data.isStepTrackEnabled === true}`;
-    const modeChanged = this.lastAntennaModeKey_.get(station ?? '') !== modeKey;
+    const isStaged = data.hasStagedChanges === true && data.stagedTargetElevation != null;
+    const modeKey = EventAutoLogger.antennaModeKey_(data);
+    const previousModeKey = this.lastAntennaModeKey_.get(station ?? '');
+    const modeChanged = previousModeKey !== modeKey;
     this.lastAntennaModeKey_.set(station ?? '', modeKey);
+    // A state emitted with logging off (a tab open) is seen, not logged: it
+    // still sets the baseline and the mode a later command compares against
+    if (this.suppressDepth_ > 0) {
+      if (!this.lastAntennaLine_(source)) this.antennaBaseline_.set(source, message);
+      return;
+    }
+    // A command: a staged park, or a mode or target change against a state already seen
+    const isCommand = isStaged || (previousModeKey !== undefined && modeChanged);
 
     // Compare against the station's last antenna line in the log itself, not
     // only this logger's memory, so a rebuilt logger does not write the
@@ -290,6 +375,16 @@ export class EventAutoLogger {
     // and a mode command emits once without the beacon tail and once with the
     // target's, and the second completes the first line (nats-r5-s02-F1)
     const previous = this.lastAntennaLine_(source);
+    if (!previous && !isCommand) {
+      // No line for this antenna yet: the first state is the start-up
+      // baseline and writes nothing, and a later state that differs from it
+      // only by the lock word or the beacon tail is the start-up state
+      // settling, not an operator action (Phase 32 D2, nats-r7-s04-F1). A
+      // power change or a mode command still writes.
+      const baseline = this.antennaBaseline_.get(source);
+      this.antennaBaseline_.set(source, message);
+      if (baseline === undefined || splitBeaconSuffix_(baseline).base === splitBeaconSuffix_(message).base) return;
+    }
     if (previous) {
       const prev = splitBeaconSuffix_(previous.message);
       const next = splitBeaconSuffix_(message);
@@ -447,13 +542,23 @@ export class EventAutoLogger {
    * transient the operator rode out (S17's sun transit) is in the record
    * (nats-r5-s17-F1). Warnings and errors only: the info "Signal(s) Detected"
    * follows the modem's carrier and would log every lock loss and relock.
-   * An alarm that clears and comes back within ALARM_RELOG_MS of its last
-   * logged raise writes nothing until it has been quiet that long.
    *
-   * The text is the live label and detail ("BUC high current draw (4.52 A)"):
-   * the raise carries the value at the raise, the clear the last value seen
-   * before it cleared, and a severity rise (info to warning, warning to
-   * error) writes an "escalated" line; a fall writes nothing (nats-r6-s16-F1).
+   * - Raise: "ALARM raised: <label> (<live detail>)", written when the alarm
+   *   first reaches warning or error, so an alarm that starts at info writes
+   *   "raised", never "escalated" (Phase 32 D6, nats-r7-s03-F2).
+   * - Escalation: "ALARM escalated: ..." only for a logged warning becoming
+   *   an error; a fall writes nothing.
+   * - Relog window: a warning that clears and comes back within
+   *   ALARM_RELOG_MS of its last logged raise is held; if still up when the
+   *   window closes it is written as "ALARM raised: <label> (<detail>, up
+   *   since hh:mm:ss)", never with a late stamp alone. Errors are exempt:
+   *   every dropout writes its pair (Phase 32 D4, nats-r7-s08-F1).
+   * - Clear: "ALARM cleared: <label> (<value at the clear>)", the live value
+   *   AlarmService re-read when the alarm went (`cleared[].detail`), or no
+   *   value when there is none, never the value of the poll before
+   *   (Phase 32 D5, nats-r7-s05-F1). A single-number detail adds the peak it
+   *   reached while up when that is above the clear value: "(0.5 dB, peak
+   *   16.0 dB)" (Phase 32 D9, nats-r7-s17-F1).
    */
   private handleAlarmState_(data: AlarmStateChangedData): void {
     const now = SimClock.runMs();
@@ -465,42 +570,99 @@ export class EventAutoLogger {
       const seen = current.get(key);
       // The same alarm twice in one poll: keep the more severe
       if (seen && seen.severity >= severity) continue;
+      const detail = alarmDetail_(alarm);
       current.set(key, {
         label: alarm.message,
         source: `${alarm.assetId}(${alarm.equipmentType}${alarm.equipmentIndex + 1})`,
         severity,
-        detail: alarmDetail_(alarm),
+        detail,
+        peak: numericDetail_(detail),
       });
     }
 
     for (const [key, alarm] of current) {
       const previous = this.seenAlarms_.get(key);
+      if (previous?.peak && (!alarm.peak || previous.peak.value > alarm.peak.value)) alarm.peak = previous.peak;
       this.seenAlarms_.set(key, alarm);
       if (alarm.severity < WARNING_RANK) continue;
-      const text = alarmText_(alarm.label, alarm.detail);
 
-      // A rise writes even inside the flap window: an error is news
-      if (previous && alarm.severity > previous.severity) {
-        this.loggedAlarms_.add(key);
-        this.alarmRaiseLoggedMs_.set(key, now);
-        this.log_(`ALARM escalated: ${text}`, alarm.source, 'system');
+      const logged = this.loggedAlarms_.get(key);
+      if (logged !== undefined) {
+        if (logged === WARNING_RANK && alarm.severity === ERROR_RANK) {
+          this.loggedAlarms_.set(key, ERROR_RANK);
+          this.log_(`ALARM escalated: ${alarmText_(alarm.label, alarm.detail)}`, alarm.source, 'system');
+        }
         continue;
       }
 
-      if (this.loggedAlarms_.has(key)) continue;
+      const upSinceMs = this.pendingRaises_.get(key);
+      if (upSinceMs !== undefined) {
+        // Held in the window: an error is news at once
+        if (alarm.severity === ERROR_RANK) this.writeRaise_(key, alarm, now, upSinceMs);
+        continue;
+      }
       const lastRaise = this.alarmRaiseLoggedMs_.get(key);
       // Run time restarts each scenario, so a later stamp is from an earlier run
-      if (lastRaise !== undefined && now >= lastRaise && now - lastRaise < EventAutoLogger.ALARM_RELOG_MS) continue;
-      this.alarmRaiseLoggedMs_.set(key, now);
-      this.loggedAlarms_.add(key);
-      this.log_(`ALARM raised: ${text}`, alarm.source, 'system');
+      const inWindow = lastRaise !== undefined && now >= lastRaise && now - lastRaise < EventAutoLogger.ALARM_RELOG_MS;
+      if (inWindow && alarm.severity < ERROR_RANK) {
+        this.pendingRaises_.set(key, SimClock.nowMs());
+        continue;
+      }
+      this.writeRaise_(key, alarm, now);
     }
 
+    const clearedDetail = new Map<string, string | undefined>();
+    for (const alarm of (data as AlarmStateChangedWithClears).cleared ?? []) {
+      clearedDetail.set(EventAutoLogger.alarmKey_(alarm), alarmDetail_(alarm));
+    }
     for (const [key, last] of [...this.seenAlarms_]) {
       if (current.has(key)) continue;
       this.seenAlarms_.delete(key);
+      this.pendingRaises_.delete(key);
       if (!this.loggedAlarms_.delete(key)) continue;
-      this.log_(`ALARM cleared: ${alarmText_(last.label, last.detail)}`, last.source, 'system');
+      this.log_(`ALARM cleared: ${alarmText_(last.label, EventAutoLogger.clearDetail_(clearedDetail.get(key), last.peak))}`, last.source, 'system');
+    }
+
+    this.flushPendingRaises_();
+  }
+
+  /** The clear line's value: the live value at the clear, plus the peak while up when it was higher */
+  private static clearDetail_(detail: string | undefined, peak: AlarmPeak | null): string | undefined {
+    if (!peak) return detail;
+    const atClear = numericDetail_(detail);
+    if (detail && (!atClear || peak.value <= atClear.value)) return detail;
+    return detail ? `${detail}, peak ${peak.text}` : `peak ${peak.text}`;
+  }
+
+  /** Write an alarm's raise line and start its relog window */
+  private writeRaise_(key: string, alarm: SeenAlarm, nowRunMs: number, upSinceMs?: number): void {
+    this.pendingRaises_.delete(key);
+    this.alarmRaiseLoggedMs_.set(key, nowRunMs);
+    this.loggedAlarms_.set(key, alarm.severity);
+    const upSince = upSinceMs === undefined ? undefined : `up since ${clockText_(upSinceMs)}`;
+    const detail = upSince ? [alarm.detail, upSince].filter(Boolean).join(', ') : alarm.detail;
+    this.log_(`ALARM raised: ${alarmText_(alarm.label, detail)}`, alarm.source, 'system');
+  }
+
+  /** Per step: take new antennas' baselines, write held warnings whose window closed */
+  private onUpdate_(): void {
+    if (this.suppressDepth_ === 0) this.seedAntennaBaselines_();
+    this.flushPendingRaises_();
+  }
+
+  /** Write each held warning whose relog window has closed and that is still up */
+  private flushPendingRaises_(): void {
+    if (this.pendingRaises_.size === 0) return;
+    const now = SimClock.runMs();
+    for (const [key, upSinceMs] of [...this.pendingRaises_]) {
+      const lastRaise = this.alarmRaiseLoggedMs_.get(key);
+      if (lastRaise !== undefined && now >= lastRaise && now - lastRaise < EventAutoLogger.ALARM_RELOG_MS) continue;
+      const alarm = this.seenAlarms_.get(key);
+      if (!alarm || alarm.severity < WARNING_RANK) {
+        this.pendingRaises_.delete(key);
+        continue;
+      }
+      this.writeRaise_(key, alarm, now, upSinceMs);
     }
   }
 
@@ -536,6 +698,7 @@ export class EventAutoLogger {
     this.eventBus_.off(Events.RF_FE_GPSDO_CHANGED, this.boundGpsdoHandler_);
     this.eventBus_.off(Events.EQUIPMENT_ACTION, this.boundEquipmentActionHandler_);
     this.eventBus_.off(Events.ALARM_STATE_CHANGED, this.boundAlarmStateHandler_);
+    this.eventBus_.off(Events.UPDATE, this.boundUpdateHandler_);
 
     this.isEnabled_ = false;
     this.lastLogTime_.clear();
@@ -544,6 +707,9 @@ export class EventAutoLogger {
     this.loggedAlarms_.clear();
     this.seenAlarms_.clear();
     this.alarmRaiseLoggedMs_.clear();
+    this.pendingRaises_.clear();
+    this.antennaBaseline_.clear();
+    this.seededAntennaStates_ = new WeakSet();
   }
 
   /**
