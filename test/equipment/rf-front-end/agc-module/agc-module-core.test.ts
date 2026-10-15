@@ -165,7 +165,53 @@ describe('AGCModuleCore', () => {
       expect(agcModule.state.inputPower).toBeCloseTo(spm.getExternalNoise() - spm.agcGain, 1);
       expect(agcModule.state.inputPower).toBeGreaterThan(AGCModuleCore.DETECTOR_FLOOR_DBM);
       expect(agcModule.isNoiseOnly).toBe(true);
+      // Held for NOISE_ONLY_HOLD_MS before it alarms (Phase 31 D2)
+      SimClock.advanceRun(AGCModuleCore.NOISE_ONLY_HOLD_MS);
+      agcModule.update();
       expect(agcModule.getAlarms()).toContain('AGC on noise only - passband power is noise, no traffic carrier');
+    });
+
+    describe('noise-only hold (Phase 31 D2, nats-r6-s01-F1)', () => {
+      const NOISE_ONLY = 'AGC on noise only - passband power is noise, no traffic carrier';
+      const carrierAboveNoise = (): IfSignal => {
+        const spm = rfFrontEnd.couplerModule.signalPathManager;
+        const noiseIn = spm.getExternalNoise() - spm.agcGain;
+        return { frequency: 1500e6, bandwidth: 1e6, power: (noiseIn + 3) as dBm, origin: SignalOrigin.NOTCH_FILTER } as unknown as IfSignal;
+      };
+      const step = (ms: number) => {
+        for (let t = 0; t < ms; t += FIXED_STEP_MS) {
+          SimClock.step();
+          agcModule.update();
+        }
+      };
+
+      it('never alarms on a one-frame noise-only blip', () => {
+        const inputs = vi.spyOn(agcModule, 'inputSignals', 'get').mockReturnValue([carrierAboveNoise()]);
+        step(500);
+        inputs.mockReturnValue([]);
+        SimClock.step();
+        agcModule.update();
+        expect(agcModule.isNoiseOnly).toBe(true);
+        expect(agcModule.getAlarms()).not.toContain(NOISE_ONLY);
+        inputs.mockReturnValue([carrierAboveNoise()]);
+        step(2000);
+        expect(agcModule.getAlarms()).not.toContain(NOISE_ONLY);
+      });
+
+      it('raises after 1.2 s of noise only, not before 1 s, and clears at once', () => {
+        const inputs = vi.spyOn(agcModule, 'inputSignals', 'get').mockReturnValue([]);
+        step(900);
+        expect(agcModule.getAlarms()).not.toContain(NOISE_ONLY);
+        // Inside the hold the empty sky raises no max-gain rail either
+        expect(agcModule.getAlarms().some((a) => a.includes('max gain'))).toBe(false);
+        step(300);
+        expect(agcModule.getAlarms()).toContain(NOISE_ONLY);
+
+        inputs.mockReturnValue([carrierAboveNoise()]);
+        SimClock.step();
+        agcModule.update();
+        expect(agcModule.getAlarms()).not.toContain(NOISE_ONLY);
+      });
     });
 
     it('a carrier above the noise clears the no-carrier warning', () => {

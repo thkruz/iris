@@ -1,6 +1,6 @@
 import { GroundStation } from '@app/assets/ground-station/ground-station';
 import { AlarmStatus } from '@app/equipment/base-equipment';
-import { describeEsN0 } from '@app/equipment/receiver/rx-signal-quality';
+import { describeEsN0, describeEsN0ForAcquisition } from '@app/equipment/receiver/rx-signal-quality';
 import { EventBus } from '@app/events/event-bus';
 import { AggregatedAlarm, AlarmStateChangedData, Events } from '@app/events/events';
 import { SimClock } from '@app/simulation/sim-clock';
@@ -34,11 +34,21 @@ export class AlarmService {
   private previousAlarmsHash_ = '';
   private lastPollTime_ = -Infinity;
   private readonly pollInterval_ = 1000; // 1 second
+  /**
+   * Run time the service started counting from: no poll until
+   * STARTUP_SETTLE_MS after it (Phase 31 D2, nats-r6-s01-F1), so the store
+   * and checkpoint sync and the RF chain's first settled frames come before
+   * the first alarm set, and no raise/clear pair is written at scenario start
+   */
+  private settleFromRunMs_: number;
+  /** Run time the service waits before its first poll, ms */
+  static readonly STARTUP_SETTLE_MS = 1000;
   private readonly boundOnUpdate_: (dt: Milliseconds) => void;
   /** Station-clock ms each live alarm was first seen, by raiseKey_ */
   private static readonly raisedAtMs_ = new Map<string, number>();
 
   private constructor() {
+    this.settleFromRunMs_ = SimClock.runMs();
     this.boundOnUpdate_ = this.onUpdate_.bind(this);
     EventBus.getInstance().on(Events.UPDATE, this.boundOnUpdate_);
   }
@@ -52,8 +62,14 @@ export class AlarmService {
 
   private onUpdate_(_dt: Milliseconds): void {
     const now = SimClock.runMs();
-    // Run time restarts at 0 each scenario, so a later stamp is from an earlier run
-    if (now >= this.lastPollTime_ && now - this.lastPollTime_ < this.pollInterval_) return;
+    // Run time restarts at 0 each scenario, so a later stamp is from an
+    // earlier run: settle again from the new start
+    if (now < this.settleFromRunMs_ || now < this.lastPollTime_) {
+      this.settleFromRunMs_ = now;
+      this.lastPollTime_ = -Infinity;
+    }
+    if (now - this.settleFromRunMs_ < AlarmService.STARTUP_SETTLE_MS) return;
+    if (now - this.lastPollTime_ < this.pollInterval_) return;
     this.lastPollTime_ = now;
     this.pollAndAggregate_();
   }
@@ -196,9 +212,8 @@ export class AlarmService {
           });
         }
       }
-      const degraded = AlarmService.degradedMarginAlarm_(rx);
-      if (degraded) {
-        alarms.push({ ...degraded, assetId, equipmentType: 'RX', equipmentIndex: idx });
+      for (const rxAlarm of AlarmService.modemLockAlarms_(rx)) {
+        alarms.push({ ...rxAlarm, assetId, equipmentType: 'RX', equipmentIndex: idx });
       }
     });
 
@@ -206,41 +221,74 @@ export class AlarmService {
   }
 
   /**
-   * "Degraded margin" warning for a receiver whose powered modem is locked
-   * with less than 1 dB of Es/N0 over Required (nats-r5-s05-F1). Uses the
-   * lock tracker's own low-margin flag, so it raises below 1.0 dB of margin
-   * and clears at 1.5 dB, the same hysteresis as the modem's status bar. The
-   * label is fixed for its life; the live Es/N0 rides in the detail.
+   * The receiver's modem alarms, each one alarm per receiver with every
+   * affected modem in the detail:
+   * - "Degraded margin" (warning) for a powered modem locked with less than
+   *   1 dB of Es/N0 over Required (nats-r5-s05-F1). Uses the lock tracker's
+   *   own low-margin flag, so it raises below 1.0 dB of margin and clears at
+   *   1.5 dB, the same hysteresis as the modem's status bar.
+   * - "Carrier lock lost" (error) for a powered modem that had lock on its
+   *   current tuning and has dropped it (Phase 31 D1, nats-r6-s17-F1): up from
+   *   the loss until it relocks, is retuned or is powered off, so the board
+   *   reads Degraded -> Lock lost -> (Degraded) -> clean as a fade comes and
+   *   goes. A modem that never had lock raises nothing.
+   * Labels are fixed for their life; the live Es/N0 rides in the detail.
    */
-  private static degradedMarginAlarm_(rx: GroundStation['receivers'][number]): Pick<AlarmWithDetail, 'severity' | 'message' | 'detail'> | null {
+  private static modemLockAlarms_(rx: GroundStation['receivers'][number]): Pick<AlarmWithDetail, 'severity' | 'message' | 'detail'>[] {
     const modems = rx.state?.modems ?? [];
-    if (typeof rx.getSignalsInBandwidth !== 'function') return null;
-    const details: string[] = [];
+    if (typeof rx.getSignalsInBandwidth !== 'function') return [];
+    const degraded: string[] = [];
+    const lost: string[] = [];
     for (const modem of modems) {
       if (!modem.isPowered) continue;
+      // Advances the lazy lock tracker to now, as the Dashboard does
       const info = rx.getSignalsInBandwidth(modem);
       if (info.hasCarrier && info.hasLock && info.isLowMargin) {
-        details.push(`Modem ${modem.modemNumber}: ${describeEsN0(info)}`);
+        degraded.push(`Modem ${modem.modemNumber}: ${describeEsN0(info)}`);
+      }
+      const transition = typeof rx.getLockTransition === 'function' ? rx.getLockTransition(modem) : null;
+      if (!info.hasLock && transition?.hadLock && transition.lockLostAtMs !== null) {
+        lost.push(`Modem ${modem.modemNumber}: ${info.hasCarrier ? describeEsN0ForAcquisition(info) : 'no carrier'}`);
       }
     }
-    if (details.length === 0) return null;
-    return { severity: 'warning', message: AlarmService.DEGRADED_MARGIN_LABEL, detail: details.join('; ') };
+    const alarms: Pick<AlarmWithDetail, 'severity' | 'message' | 'detail'>[] = [];
+    if (lost.length > 0) alarms.push({ severity: 'error', message: AlarmService.LOCK_LOST_LABEL, detail: lost.join('; ') });
+    if (degraded.length > 0) alarms.push({ severity: 'warning', message: AlarmService.DEGRADED_MARGIN_LABEL, detail: degraded.join('; ') });
+    return alarms;
   }
 
   /**
-   * Alarms whose label must not move while they are up: an equipment message
-   * "RAIN FADE (0.6 dB)" becomes the label "RAIN FADE" with "fade 0.6 dB" in
-   * the detail, so the ticker and the Dashboard keep one name for it while
-   * the depth refreshes in the tooltip (nats-r5-s14-F2)
+   * Alarms whose label must not move while they are up (nats-r5-s14-F2,
+   * Phase 31 D3): an equipment message carrying a live value in parentheses,
+   * "BUC over-temperature (72.0 °C)" or "AGC at max gain (12.0 dB) - weak
+   * signal", becomes the label without the parenthesis ("BUC
+   * over-temperature", "AGC at max gain - weak signal") with the inner text
+   * ("72.0 °C") in the detail, so the ticker, the Dashboard and the Ops Log
+   * keep one name for it while the value refreshes. RAIN FADE keeps its
+   * "fade 0.6 dB" detail wording.
    */
   private static fixLabel_(alarm: AlarmWithDetail): AlarmWithDetail {
     const rain = /^RAIN FADE \((.+)\)$/u.exec(alarm.message);
     if (rain) return { ...alarm, message: AlarmService.RAIN_FADE_LABEL, detail: `fade ${rain[1]}` };
+    const valued = AlarmService.VALUE_IN_PARENS_.exec(alarm.message);
+    if (valued) {
+      const label = `${valued[1]}${valued[3]}`.trim();
+      if (label.length > 0) return { ...alarm, message: label, detail: valued[2] };
+    }
     return alarm;
   }
 
+  /**
+   * "<label> (<number><unit>)<suffix>": the first parenthesis holding a
+   * number followed by a unit (dB, A, °C, °, μs error); the suffix is kept
+   * in the label ("AGC at max gain (12.0 dB) - weak signal")
+   */
+  private static readonly VALUE_IN_PARENS_ = /^(.*?)\s*\((-?\d+(?:\.\d+)?\s*[^\s\d()][^()]*)\)(.*)$/u;
+
   /** Fixed label of the receiver low-margin warning */
   static readonly DEGRADED_MARGIN_LABEL = 'Degraded margin';
+  /** Fixed label of the receiver lock-loss error (Phase 31 D1) */
+  static readonly LOCK_LOST_LABEL = 'Carrier lock lost';
   /** Fixed label of the antenna rain-fade alarm */
   static readonly RAIN_FADE_LABEL = 'RAIN FADE';
 

@@ -59,6 +59,17 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
   private isNoiseOnly_ = false;
 
   /**
+   * How long the passband must read noise only, without a break, before the
+   * "AGC on noise only" alarm raises, ms (Phase 31 D2, nats-r6-s01-F1): the
+   * first frames after a load, before the chain has settled, must not write a
+   * raise/clear pair. Clearing is immediate.
+   */
+  static readonly NOISE_ONLY_HOLD_MS = 1000;
+
+  /** Run time the current noise-only spell started (null: a carrier is up) */
+  private noiseOnlySinceMs_: number | null = null;
+
+  /**
    * Hang time, ms (phase 29 D19, nats-r4-s08-F3). After the passband power
    * drops suddenly from a levelled state, the gain is held this long before
    * the release starts, as a hang AGC does, so a carrier that drops out for a
@@ -81,6 +92,26 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
   /** True when the AGC is levelling noise alone: no carrier above the noise in its passband */
   get isNoiseOnly(): boolean {
     return this.isNoiseOnly_;
+  }
+
+  /** Start or end the noise-only spell with this frame's reading */
+  private trackNoiseOnlySpell_(): void {
+    if (!this.isNoiseOnly_) {
+      this.noiseOnlySinceMs_ = null;
+      return;
+    }
+    const now = SimClock.runMs();
+    // Run time restarts at 0 each scenario
+    if (this.noiseOnlySinceMs_ === null || now < this.noiseOnlySinceMs_) {
+      this.noiseOnlySinceMs_ = now;
+    }
+  }
+
+  /** Noise only for at least NOISE_ONLY_HOLD_MS of run time without a break */
+  private isNoiseOnlyHeld_(): boolean {
+    if (!this.isNoiseOnly_ || this.noiseOnlySinceMs_ === null) return false;
+    const heldMs = SimClock.runMs() - this.noiseOnlySinceMs_;
+    return heldMs < 0 || heldMs >= AGCModuleCore.NOISE_ONLY_HOLD_MS;
   }
 
   /**
@@ -130,6 +161,7 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
     this.state.inputPower = AGCModuleCore.toDetectorReading_(totalPowerLinear);
     // Carriers lift the passband less than NOISE_ONLY_MARGIN_DB over the noise
     this.isNoiseOnly_ = noiseLinear > 0 && carriersLinear < noiseLinear * (10 ** (AGCModuleCore.NOISE_ONLY_MARGIN_DB / 10) - 1);
+    this.trackNoiseOnlySpell_();
 
     // Handle bypass mode - pass signals through unchanged
     if (this.state.isBypassed) {
@@ -246,12 +278,14 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
     const isRepositioning = this.rfFrontEnd_?.antenna?.isRepositioning ?? false;
 
     // Nothing to level but noise: the empty-sky (pre-AOS) indication
+    // Raised once it has held NOISE_ONLY_HOLD_MS; inside the hold nothing
+    // raises (a max-gain rail on empty sky is not the indication either).
+    // The detector integrates the whole IF passband: a narrow CW beacon can
+    // show on the analyzer and still be far below that integrated noise, so
+    // the text says "no traffic carrier", not "no carrier" (nats-r3-s09-F2).
+    // Keep the "AGC on noise only" prefix: specs and quizzes match on it.
     if (this.isNoiseOnly_) {
-      // The detector integrates the whole IF passband: a narrow CW beacon can
-      // show on the analyzer and still be far below that integrated noise, so
-      // the text says "no traffic carrier", not "no carrier" (nats-r3-s09-F2).
-      // Keep the "AGC on noise only" prefix: specs and quizzes match on it.
-      alarms.push('AGC on noise only - passband power is noise, no traffic carrier');
+      if (this.isNoiseOnlyHeld_()) alarms.push('AGC on noise only - passband power is noise, no traffic carrier');
     } else if (!isRepositioning && this.state.currentGain >= this.state.maxGain - 0.5) {
       // Warn when at gain limits
       alarms.push(`AGC at max gain (${this.state.currentGain.toFixed(1)} dB) - weak signal`);

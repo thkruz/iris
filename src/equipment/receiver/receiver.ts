@@ -39,6 +39,26 @@ interface LockTrack {
   attempt: number;
 }
 
+/**
+ * A modem's lock history on its current tuning (Phase 31 D1): whether it has
+ * had lock and, once it drops it, when. Kept until the modem relocks, is
+ * retuned (frequency, bandwidth, modulation or FEC) or is powered off, so a
+ * lock loss stays visible while the modem is out.
+ */
+export interface ModemLockTransition {
+  /** The modem was locked on this tuning */
+  hadLock: boolean;
+  /** Run time (ms) the lock was lost; null while it holds */
+  lockLostAtMs: number | null;
+  /** Carrier the modem was last locked to */
+  lastSignalId: string;
+}
+
+interface LockHistory extends ModemLockTransition {
+  /** Tuning the lock was held on (frequency|bandwidth|modulation|FEC) */
+  tuningKey: string;
+}
+
 export interface ReceiverModemState {
   antenna_id: number;
   modemNumber: number; // 1-4
@@ -199,6 +219,8 @@ export class Receiver extends BaseEquipment {
 
   /** Lock trackers by modem number */
   private readonly lockTracks_ = new Map<number, LockTrack>();
+  /** Lock history (had lock / lost at) by modem number */
+  private readonly lockHistory_ = new Map<number, LockHistory>();
 
   static getDefaultState(): ReceiverState {
     const modems: ReceiverModemState[] = Array.from({ length: 4 }, (_, idx) => {
@@ -230,7 +252,11 @@ export class Receiver extends BaseEquipment {
     // Run every powered modem's lock tracker each step, so acquisition time
     // accrues whether or not anything is looking at that modem
     for (const modem of this.state.modems) {
-      if (modem.isPowered) this.getSignalsInBandwidth(modem);
+      if (modem.isPowered) {
+        this.getSignalsInBandwidth(modem);
+      } else {
+        this.lockHistory_.delete(modem.modemNumber);
+      }
     }
     this.checkForAlarms_();
     this.syncDomWithState();
@@ -258,6 +284,9 @@ export class Receiver extends BaseEquipment {
 
       const stepHz = Math.max(-Receiver.AFC_MAX_STEP_HZ, Math.min(Receiver.AFC_MAX_STEP_HZ, offsetHz));
       modem.frequency = (modem.frequency + stepHz / 1e6) as MHz;
+      // AFC tracking is not a retune: carry the lock history along
+      const history = this.lockHistory_.get(modem.modemNumber);
+      if (history) history.tuningKey = Receiver.tuningKey_(modem);
     }
   }
 
@@ -679,6 +708,7 @@ export class Receiver extends BaseEquipment {
 
     if (signalsInBand.length === 0) {
       this.resetLock_(modem.modemNumber);
+      this.noteLockState_(modem, false, '');
       return noSignalResult;
     }
 
@@ -760,6 +790,7 @@ export class Receiver extends BaseEquipment {
     const lockMargin = effectiveEsN0 - requiredEsN0;
     const canAcquire = modem.isPowered && !formatMismatch && !isBandwidthClipped && isCentred && modcod !== null;
     const lock = this.trackLock_(modem.modemNumber, targetSignal.signalId, canAcquire, lockMargin, symbolRate);
+    this.noteLockState_(modem, lock.locked, targetSignal.signalId);
 
     return {
       hasCarrier: true,
@@ -859,6 +890,51 @@ export class Receiver extends BaseEquipment {
       total += 10 ** (s.power / 10) * (overlap / s.bandwidth);
     }
     return total;
+  }
+
+  /** What counts as a retune for the lock history: frequency, bandwidth, modulation, FEC */
+  private static tuningKey_(modem: ReceiverModemState): string {
+    return `${modem.frequency}|${modem.bandwidth}|${modem.modulation}|${modem.fec}`;
+  }
+
+  /**
+   * Record a lock evaluation in the modem's lock history: locked starts (or
+   * refreshes) it, the first unlocked evaluation after that stamps the loss,
+   * and a retune or power-off forgets it.
+   */
+  private noteLockState_(modem: ReceiverModemState, locked: boolean, signalId: string): void {
+    const key = Receiver.tuningKey_(modem);
+    if (!modem.isPowered) {
+      this.lockHistory_.delete(modem.modemNumber);
+      return;
+    }
+    if (locked) {
+      this.lockHistory_.set(modem.modemNumber, { hadLock: true, lockLostAtMs: null, lastSignalId: signalId, tuningKey: key });
+      return;
+    }
+    const history = this.lockHistory_.get(modem.modemNumber);
+    if (!history) return;
+    if (history.tuningKey !== key) {
+      this.lockHistory_.delete(modem.modemNumber);
+      return;
+    }
+    history.lockLostAtMs ??= SimClock.runMs();
+  }
+
+  /**
+   * The modem's lock transition on its current tuning (Phase 31 D1), or null
+   * when it has not had lock since it was last tuned or powered on. Reads the
+   * history the lock tracker last wrote; call getSignalsInBandwidth(modem)
+   * first to advance the tracker to now.
+   */
+  public getLockTransition(modem: ReceiverModemState): ModemLockTransition | null {
+    const history = this.lockHistory_.get(modem.modemNumber);
+    if (!history) return null;
+    if (!modem.isPowered || history.tuningKey !== Receiver.tuningKey_(modem)) {
+      this.lockHistory_.delete(modem.modemNumber);
+      return null;
+    }
+    return { hadLock: history.hadLock, lockLostAtMs: history.lockLostAtMs, lastSignalId: history.lastSignalId };
   }
 
   private resetLock_(modemNumber: number): void {
