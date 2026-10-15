@@ -277,10 +277,25 @@ export abstract class AntennaCore extends BaseEquipment {
   private lastTargetAz_: number | null = null;
   private lastTargetEl_: number | null = null;
   /**
+   * Step-track offsets inside the commanded target last update (Phase 32 D1,
+   * nats-r7-s06-F1): a dither step moves the target by the offset alone, so
+   * the commanded-step test measures the target net of them
+   */
+  private lastOffsetAz_: number | null = null;
+  private lastOffsetEl_: number | null = null;
+  /**
    * A commanded move (a new target position, not a tracker following its
    * bird) is under way and its arrival not yet reported (nats-r6-s11-F1)
    */
   private slewArrivalPending_ = false;
+  /**
+   * The scenario authored this dish locked on its program-track target
+   * (Phase 32 D2): the first update puts it on the target's current
+   * position instead of slewing the last degrees to it (one-shot, like the
+   * BUC's thermalPrimed_). An authored off-target start without the lock
+   * flag still slews.
+   */
+  private snapToAuthoredTargetPending_ = false;
 
   /** Pointing error under which a moving program track counts as on target, deg */
   private static readonly ON_TARGET_DEG = 0.01;
@@ -398,6 +413,9 @@ export abstract class AntennaCore extends BaseEquipment {
       if (initialState.targetPolarization === undefined) this.state.targetPolarization = this.state.polarization;
     }
 
+    this.snapToAuthoredTargetPending_ =
+      this.state.trackingMode === 'program-track' && initialState.isBeaconLocked === true && this.state.targetSatelliteId !== null && this.state.targetSatelliteId !== undefined;
+
     this.lastRenderState = structuredClone(this.state);
 
     // Initialize step track controller
@@ -468,7 +486,14 @@ export abstract class AntennaCore extends BaseEquipment {
     // This is the base tracking - always follows ephemeris
     if (automationAvailable && this.state.trackingMode === 'program-track' && this.state.targetSatelliteId !== null && this.state.isPowered && this.state.isOperational) {
       this.updateProgramTrackPosition_();
+      if (this.snapToAuthoredTargetPending_) {
+        this.snapToTarget_();
+      }
     }
+    this.snapToAuthoredTargetPending_ = false;
+    // The offsets this frame's target was built with: the controller below
+    // may step them, but the target only follows on the next frame
+    const targetOffsets = this.targetOffsets_();
 
     // Update step-track controller if step-track optimization is enabled (within program-track)
     if (automationAvailable && this.state.isStepTrackEnabled && this.state.isPowered && this.state.isOperational) {
@@ -476,7 +501,7 @@ export abstract class AntennaCore extends BaseEquipment {
     }
 
     // Slew actual position toward target at maxRate_deg_s
-    this.updateSlew_(dtMs);
+    this.updateSlew_(dtMs, targetOffsets);
 
     // Check for program-track lock whenever a target is being tracked. The
     // tolerance test decides, not the slew flag: a LEO tracker is slewing for
@@ -495,6 +520,30 @@ export abstract class AntennaCore extends BaseEquipment {
     this.updateSignals_();
     this.computeRfMetrics_();
     this.syncDomWithState();
+  }
+
+  /**
+   * Put the pedestal on the program-track target at once (Phase 32 D2, the
+   * S10 pull-in): the scenario says the dish is already locked there, so a
+   * 2-3 deg slew at load would take the own carrier out of the beam and
+   * write an UNLOCKED line nobody commanded. Nothing is reported: the target
+   * did not step and the pedestal never moved.
+   */
+  private snapToTarget_(): void {
+    this.state.azimuth = this.state.targetAzimuth;
+    this.state.elevation = this.state.targetElevation;
+    this.state.polarization = this.state.targetPolarization;
+    this.azRate_ = 0;
+    this.elRate_ = 0;
+  }
+
+  /** Step-track offsets the commanded target carries, deg (zero unless program-track with step-track on) */
+  private targetOffsets_(): { az: number; el: number } {
+    if (this.state.trackingMode !== 'program-track' || !this.state.isStepTrackEnabled) {
+      return { az: 0, el: 0 };
+    }
+
+    return { az: this.state.stepTrackAzOffset as number, el: this.state.stepTrackElOffset as number };
   }
 
   /** Bank any simulated time that jumped past this frame as slew budget. */
@@ -517,12 +566,14 @@ export abstract class AntennaCore extends BaseEquipment {
    * feeds the target's own rate forward, so a tracking pedestal follows a
    * moving bird without a standing lag, and brakes so it does not overshoot.
    */
-  private updateSlew_(dtMs?: number): void {
+  private updateSlew_(dtMs?: number, offsets: { az: number; el: number } = this.targetOffsets_()): void {
     if (!this.state.isPowered || !this.state.isOperational) {
       this.azRate_ = 0;
       this.elRate_ = 0;
       this.lastTargetAz_ = null;
       this.lastTargetEl_ = null;
+      this.lastOffsetAz_ = null;
+      this.lastOffsetEl_ = null;
       return;
     }
 
@@ -548,11 +599,13 @@ export abstract class AntennaCore extends BaseEquipment {
     // satellite, a mode change) is not a rate
     const targetAzRate = this.targetRate_(this.lastTargetAz_, this.state.targetAzimuth, frameDt, maxRate);
     const targetElRate = this.targetRate_(this.lastTargetEl_, this.state.targetElevation, frameDt, maxRate);
-    if (this.isCommandedStep_(frameDt, maxRate, isClockSkip)) {
+    if (this.isCommandedStep_(frameDt, maxRate, isClockSkip, offsets)) {
       this.slewArrivalPending_ = true;
     }
     this.lastTargetAz_ = this.state.targetAzimuth;
     this.lastTargetEl_ = this.state.targetElevation;
+    this.lastOffsetAz_ = offsets.az;
+    this.lastOffsetEl_ = offsets.el;
 
     let isMoving = false;
 
@@ -603,18 +656,25 @@ export abstract class AntennaCore extends BaseEquipment {
    * new position, STOW, MAINT, Move to Target), not a tracker following its
    * bird. Outside program-track the target only moves on command; in
    * program-track only a jump faster than the pedestal could follow counts,
-   * and never during a clock skip (the bird itself jumped).
+   * and never during a clock skip (the bird itself jumped). In program-track
+   * the step is measured net of the step-track offsets (Phase 32 D1,
+   * nats-r7-s06-F1): a dither probe or a held offset coming off moves the
+   * target by a tenth of a beamwidth in one frame, but it is the tracker
+   * climbing, not a command, so it never arms the arrival line.
    */
-  private isCommandedStep_(frameDt: number, maxRate: number, isClockSkip: boolean): boolean {
+  private isCommandedStep_(frameDt: number, maxRate: number, isClockSkip: boolean, offsets: { az: number; el: number }): boolean {
     if (this.lastTargetAz_ === null || this.lastTargetEl_ === null) {
       return false;
     }
-    const step = Math.max(Math.abs(this.state.targetAzimuth - this.lastTargetAz_), Math.abs(this.state.targetElevation - this.lastTargetEl_));
+    const dAz = this.state.targetAzimuth - this.lastTargetAz_;
+    const dEl = this.state.targetElevation - this.lastTargetEl_;
+    if (this.state.trackingMode !== 'program-track') {
+      return Math.max(Math.abs(dAz), Math.abs(dEl)) > AntennaCore.ON_TARGET_DEG;
+    }
+
+    const step = Math.max(Math.abs(dAz - (offsets.az - (this.lastOffsetAz_ ?? 0))), Math.abs(dEl - (offsets.el - (this.lastOffsetEl_ ?? 0))));
     if (step <= AntennaCore.ON_TARGET_DEG) {
       return false;
-    }
-    if (this.state.trackingMode !== 'program-track') {
-      return true;
     }
 
     return !isClockSkip && step / frameDt > maxRate * 3;
@@ -823,6 +883,10 @@ export abstract class AntennaCore extends BaseEquipment {
   }
 
   sync(data: Partial<AntennaState>): void {
+    // A restored or synced pointing that moved the dish is where it really is: no load snap
+    if ((data.azimuth !== undefined && data.azimuth !== this.state.azimuth) || (data.elevation !== undefined && data.elevation !== this.state.elevation)) {
+      this.snapToAuthoredTargetPending_ = false;
+    }
     this.state = { ...this.state, ...data };
     this.updateSignals_();
     this.computeRfMetrics_();
@@ -1116,6 +1180,14 @@ export abstract class AntennaCore extends BaseEquipment {
       if (beacon?.frequency) {
         this.state.beaconFrequencyHz = beacon.frequency as number;
       }
+      // A program track on a new bird pulls in from the next frame: this
+      // emission is the command-time line and carries the new beacon, so it
+      // must read UNLOCKED too (Phase 32 D2; the logger writes the mode line
+      // on the first beacon change, not on Move to Target's emission)
+      if (sat && isNewTarget && this.state.trackingMode === 'program-track' && this.state.isPowered && this.state.isOperational) {
+        const view = this.satView_(sat);
+        this.markRepositioningIfAway_(this.calculateShortestPathTarget_(this.state.azimuth, view.az), view.el as number);
+      }
     }
 
     // Offsets climbed on the old satellite mean nothing on the new one
@@ -1176,6 +1248,8 @@ export abstract class AntennaCore extends BaseEquipment {
     this.state.targetAzimuth = this.calculateShortestPathTarget_(this.state.azimuth, view.az);
     this.state.targetElevation = view.el;
 
+    this.markRepositioningIfAway_(this.state.targetAzimuth, this.state.targetElevation);
+
     // Set beacon frequency from satellite's transponder beacon (if available)
     const beacon = sat.transponders[0]?.beacon;
     if (beacon?.frequency) {
@@ -1185,6 +1259,22 @@ export abstract class AntennaCore extends BaseEquipment {
     this.updateSignals_();
     this.notifyStateChange_();
     this.syncDomWithState();
+  }
+
+  /**
+   * A real move starts now (Phase 32 D2, nats-r7-s04-F1): when the commanded
+   * pointing is more than ON_TARGET_DEG from where the dish is, the
+   * command-time state change already reads slewing and UNLOCKED, not the
+   * lock the dish held on the old pointing until the next frame catches up.
+   */
+  private markRepositioningIfAway_(az: number, el: number): void {
+    const travelDeg = Math.max(Math.abs(az - (this.state.azimuth as number)), Math.abs(el - (this.state.elevation as number)));
+    if (travelDeg <= AntennaCore.ON_TARGET_DEG) {
+      return;
+    }
+    this.state.isSlewing = true;
+    this.state.isLocked = false;
+    this.state.isBeaconLocked = false;
   }
 
   // ========================================================================
