@@ -173,24 +173,10 @@ export class ReceiverAdapter {
     this.cacheElement_('clip-penalty-display');
     this.cacheElement_('quant-penalty-display');
     this.cacheElement_('total-penalty-display');
-    this.createAdcCeilingLine_();
+    this.cacheElement_('adc-ceiling-display');
 
     // Status bar
     this.cacheElement_('status-bar');
-  }
-
-  /**
-   * The neutral "ADC SNR ceiling" line (phase 31 D10, r5-s07-F1), added just
-   * above the penalty breakdown. It is created here so the RX Analysis markup
-   * needs no change; it shows only while the ADC status is OPTIMAL.
-   */
-  private createAdcCeilingLine_(): void {
-    const section = this.domCache_.get('degradation-section');
-    if (!section?.parentElement) return;
-    if (!this.containerEl.querySelector('#adc-ceiling-display')) {
-      section.insertAdjacentHTML('beforebegin', '<div id="adc-ceiling-display" class="small text-muted mb-1 d-none"></div>');
-    }
-    this.cacheElement_('adc-ceiling-display');
   }
 
   /**

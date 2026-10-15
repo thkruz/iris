@@ -114,6 +114,7 @@ describe('ReceiverAdapter', () => {
       <span id="noise-floor-display"></span>
       <span id="adc-level-display"></span>
       <span id="adc-status-display"></span>
+      <div id="adc-ceiling-display" class="small text-muted mb-1 d-none"></div>
       <div id="degradation-section" class="d-none">
         <span id="clip-penalty-display"></span>
         <span id="quant-penalty-display"></span>
