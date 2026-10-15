@@ -51,6 +51,7 @@ import { ANTENNA_CONFIG_KEYS } from '@app/equipment/antenna/antenna-config-keys'
 import { AntennaUIHeadless } from '@app/equipment/antenna/antenna-ui-headless';
 import { createRFFrontEnd } from '@app/equipment/rf-front-end/rf-front-end-factory';
 import { EventBus } from '@app/events/event-bus';
+import { SimClock } from '@app/simulation/sim-clock';
 
 const AGC_NO_CARRIER = /AGC on noise only - passband power is noise, no traffic carrier/u;
 
@@ -75,8 +76,10 @@ describe('nats-eu board sweep: the pre-AOS board carries the RX AGC no-carrier w
     frontEnd.connectAntenna(antenna);
     antenna.attachRfFrontEnd(frontEnd);
 
-    // Two seconds at 60 Hz: well past the AGC release time constant.
+    // Two seconds at 60 Hz: well past the AGC release time constant and the Phase 31 D2
+    // noise-only hold (NOISE_ONLY_HOLD_MS of run time), so the clock has to step too.
     for (let i = 0; i < 120; i++) {
+      SimClock.step();
       antenna.update();
       frontEnd.update();
     }
