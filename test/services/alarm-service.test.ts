@@ -361,6 +361,8 @@ describe('AlarmService', () => {
       ['AGC at min gain (-29.8 dB) - possible interference', 'AGC at min gain - possible interference', '-29.8 dB'],
       ['LNB noise figure degraded (1.20 dB)', 'LNB noise figure degraded', '1.20 dB'],
       ['GPSDO in holdover (1.5 μs error)', 'GPSDO in holdover', '1.5 μs error'],
+      ['LNB noise temperature high (131 K)', 'LNB noise temperature high', '131 K'],
+      ['HPA overdrive (IM3 -24.8 dBc) - IMD degradation', 'HPA overdrive - IMD degradation', 'IM3 -24.8 dBc'],
     ])('moves the live value of "%s" into the detail (Phase 31 D3)', (raw, label, detail) => {
       const station = gs({ antennas: [{ getStatusAlarms: vi.fn().mockReturnValue([alarm('warning', raw)]) }] });
       expect(AlarmService.getAlarms(station as any)[0]).toEqual(expect.objectContaining({ message: label, detail }));
@@ -394,6 +396,87 @@ describe('AlarmService', () => {
         ['BUC over-temperature', '73.4 °C', 5_000],
       ]);
       AlarmService.destroy();
+    });
+  });
+
+  describe('live value at the clear (Phase 32 D5, nats-r7-s05-F1, nats-r6-s16-F1)', () => {
+    /** Poll once more, past the poll interval, and return the last emitted data */
+    const poll = () => {
+      SimClock.advanceRun(1_000);
+      updateHandler?.(16);
+      const calls = mockEventBus.emit.mock.calls.filter(([event]) => event === Events.ALARM_STATE_CHANGED);
+      return calls[calls.length - 1]?.[1];
+    };
+
+    beforeEach(() => {
+      AlarmService.destroy();
+      AlarmService.getInstance();
+      settleService();
+    });
+
+    afterEach(() => {
+      AlarmService.destroy();
+    });
+
+    it('re-reads the receiver Es/N0 for the modems a cleared Degraded margin named', () => {
+      const info = { hasCarrier: true, hasLock: true, isLowMargin: true, effectiveEsN0_dB: 5.5, requiredEsN0_dB: 5 };
+      const rx = {
+        getStatusAlarms: vi.fn().mockReturnValue([]),
+        state: { modems: [{ modemNumber: 1, isPowered: true }] },
+        getSignalsInBandwidth: vi.fn(() => info),
+      };
+      mockSimulationManager.groundStations = [gs({ state: { id: 'VT-01', isOperational: true }, receivers: [rx as any] })];
+      updateHandler?.(16);
+
+      // The notch goes in: margin back, the alarm goes on this poll
+      info.isLowMargin = false;
+      info.effectiveEsN0_dB = 9.9;
+      const data = poll();
+      expect(data.alarms).toEqual([]);
+      expect(data.cleared).toEqual([expect.objectContaining({ message: 'Degraded margin', assetId: 'VT-01', equipmentType: 'RX', detail: 'Modem 1: Es/N0 9.9 dB, need 5.0 dB' })]);
+    });
+
+    it('re-reads BUC current, HPA temperature and the antenna weather levels from module state', () => {
+      const buc = { currentDraw: 4.6, temperature: 40 };
+      const hpa = { temperature: 90 };
+      const antennaState = { skyNoiseDegradation_dB: 3.1, iceAccumulation_dB: 2.2, rainRate_mmh: 0 };
+      let up = true;
+      const rf = {
+        getStatusAlarms: vi.fn((rfCase: number) => (up && rfCase === 1 ? [alarm('error', 'BUC high current draw (4.60 A)'), alarm('error', 'HPA over-temperature (90°C)')] : [])),
+        bucModule: { state: buc },
+        hpaModule: { state: hpa },
+      };
+      const antenna = {
+        getStatusAlarms: vi.fn(() => (up ? [alarm('warning', 'SUN TRANSIT: ELEVATED SKY NOISE (3.1 dB)'), alarm('warning', 'ICE ON FEED (2.2 dB)')] : [])),
+        state: antennaState,
+      };
+      mockSimulationManager.groundStations = [gs({ state: { id: 'VT-01', isOperational: true }, rfFrontEnds: [rf as any], antennas: [antenna as any] })];
+      updateHandler?.(16);
+
+      up = false;
+      buc.currentDraw = 2.69;
+      hpa.temperature = 84.2;
+      antennaState.skyNoiseDegradation_dB = 0.4;
+      antennaState.iceAccumulation_dB = 0;
+      const data = poll();
+      expect(Object.fromEntries(data.cleared.map((a: { message: string; detail?: string }) => [a.message, a.detail]))).toEqual({
+        'BUC high current draw': '2.69 A',
+        'HPA over-temperature': '84°C',
+        'SUN TRANSIT: ELEVATED SKY NOISE': '0.4 dB',
+        'ICE ON FEED': '0.0 dB',
+      });
+    });
+
+    it('sends no detail for an alarm with no live value to re-read', () => {
+      let up = true;
+      const antenna = { getStatusAlarms: vi.fn(() => (up ? [alarm('warning', 'AUTO TRACK FAILED')] : [])) };
+      mockSimulationManager.groundStations = [gs({ antennas: [antenna] })];
+      updateHandler?.(16);
+      up = false;
+      const data = poll();
+      expect(data.cleared).toHaveLength(1);
+      expect(data.cleared[0].message).toBe('AUTO TRACK FAILED');
+      expect('detail' in data.cleared[0]).toBe(false);
     });
   });
 

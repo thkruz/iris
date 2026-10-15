@@ -413,8 +413,12 @@ export abstract class HPAModuleCore extends RFFrontEndModule<HPAState> {
     const alarms: string[] = [];
 
     // Overdrive alarm
+    // The IM3 level rides in parentheses: AlarmService keeps the label
+    // "HPA overdrive - IMD degradation" and moves "IM3 -24.8 dBc" into the
+    // detail (Phase 32 D7, nats-r7-s20)
     if (this.state.isOverdriven && this.state.isPowered) {
-      alarms.push('HPA overdrive - IMD degradation');
+      const imd = this.state.imdLevel;
+      alarms.push(Number.isFinite(imd) && imd > NO_IMD_DBC ? `HPA overdrive (IM3 ${imd.toFixed(1)} dBc) - IMD degradation` : 'HPA overdrive - IMD degradation');
     }
 
     // ALC end stop: the setpoint cannot be held

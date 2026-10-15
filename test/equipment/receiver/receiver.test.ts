@@ -369,13 +369,30 @@ describe('Receiver class', () => {
     });
 
     it('should return info alarm when signals are detected', () => {
-      receiver.state.availableSignals = [{ id: 'sig1', feed: 'test.mp4', isDegraded: false }];
+      receiver.connectRfFrontEnd(createMockRfFrontEnd([createMockIfSignal()], { noiseFloorNoGain: -40, totalRxGain: 0 }) as any);
+      settle(receiver);
 
       const alarms = receiver.getStatusAlarms();
 
       expect(alarms).toHaveLength(1);
       expect(alarms[0].severity).toBe('info');
       expect(alarms[0].message).toBe('Signal(s) Detected');
+    });
+
+    it('keeps "Signal(s) Detected" across a modem tab switch: any powered modem decoding counts (Phase 32 D15, nats-r7-s14-F2)', () => {
+      // Modem 1 decodes the carrier; modems 2-4 are tuned off it
+      for (const modem of receiver.state.modems.slice(1)) modem.frequency = 1500 as MHz;
+      receiver.connectRfFrontEnd(createMockRfFrontEnd([createMockIfSignal()], { noiseFloorNoGain: -40, totalRxGain: 0 }) as any);
+      settle(receiver);
+      expect(receiver.getStatusAlarms().map((a) => a.message)).toEqual(['Signal(s) Detected']);
+
+      receiver.setActiveModem(2);
+      expect(receiver.state.availableSignals).toEqual([]);
+      expect(receiver.getStatusAlarms().map((a) => a.message)).toEqual(['Signal(s) Detected']);
+
+      // Only a powered modem counts
+      receiver.state.modems[0].isPowered = false;
+      expect(receiver.getStatusAlarms()).toEqual([]);
     });
   });
 
@@ -1595,6 +1612,38 @@ describe('Receiver class', () => {
       setMargin(0.9);
       advanceSimTime(100);
       expect(receiver.getSignalsInBandwidth().isLowMargin).toBe(true);
+    });
+
+    it('reads "acquiring" on the first evaluation after an Apply with a carrier present (Phase 32 D10, nats-r7-s19-F1)', () => {
+      setMargin(8);
+      // First look at this tuning: the tracker has held for 0 ms
+      const first = receiver.getSignalsInBandwidth();
+      expect(first.hasLock).toBe(false);
+      expect(first.lockState).toBe('acquiring');
+
+      // Retune off and back (a new Apply): acquiring again at once, not below threshold
+      settle(receiver);
+      receiver.state.modems[0].frequency = 1401 as MHz;
+      const retuned = receiver.getSignalsInBandwidth();
+      expect(retuned.lockState === 'acquiring' || retuned.lockState === 'locked').toBe(true);
+    });
+
+    it('a sidelobe copy does not rename or unlock the main carrier: an id differing only by #n is the same carrier (Phase 32 D3, nats-r7-s04-F2)', () => {
+      settle(receiver);
+      expect(receiver.getSignalsInBandwidth().hasLock).toBe(true);
+
+      // The satellite renumbers the copies: the carrier the modem holds arrives as "#2"
+      signal.signalId = 'test-signal-1#2';
+      advanceSimTime(100);
+      const info = receiver.getSignalsInBandwidth();
+      expect(info.hasLock).toBe(true);
+      expect(info.targetSignalId).toBe('test-signal-1#2');
+      expect(receiver.getLockTransition(receiver.state.modems[0])?.lockLostAtMs).toBeNull();
+
+      // A different carrier is still a new acquisition
+      signal.signalId = 'other-carrier';
+      advanceSimTime(100);
+      expect(receiver.getSignalsInBandwidth().hasLock).toBe(false);
     });
 
     it('never locks a carrier whose labels differ, however strong (format mismatch)', () => {

@@ -5,6 +5,8 @@ import { TapPoint } from '../../src/equipment/rf-front-end/coupler-module/tap-po
 import { EventBus } from '../../src/events/event-bus';
 import { Events } from '../../src/events/events';
 import { AlarmService } from '../../src/services/alarm-service';
+import { SimClock } from '../../src/simulation/sim-clock';
+import { SimulationManager } from '../../src/simulation/simulation-manager';
 import { advanceSimTime } from '../helpers/sim-time';
 
 Object.defineProperty(HTMLMediaElement.prototype, 'play', {
@@ -160,5 +162,45 @@ describe('AlarmService: Carrier lock lost (Phase 31 D1, nats-r6-s17-F1)', () => 
     expect(info.hasLock).toBe(false);
     expect(rxAlarms()).toEqual([]);
     expect(rx.getLockTransition(rx.state.modems[0])).toBeNull();
+  });
+
+  it('a sidelobe copy renaming the carrier raises no Carrier lock lost (Phase 32 D3, nats-r7-s04-F2)', () => {
+    atMargin(3);
+    run(11_000);
+    signal.signalId = 'payload-1#2';
+    run(200);
+    signal.signalId = 'payload-1';
+    run(200);
+    expect(rxAlarms()).toEqual([]);
+    expect(rx.getSignalsInBandwidth(rx.state.modems[0]).hasLock).toBe(true);
+  });
+
+  it('keeps the Signal(s) Detected raise time across a modem tab switch (Phase 32 D15, nats-r7-s14-F2)', () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(5_000);
+    const sim = vi.spyOn(SimulationManager, 'getInstance').mockReturnValue({ groundStations: [station] } as never);
+    try {
+      atMargin(3);
+      run(11_000);
+      AlarmService.getInstance();
+      SimClock.advanceRun(AlarmService.STARTUP_SETTLE_MS);
+      const poll = () => {
+        SimClock.advanceRun(1_000);
+        EventBus.getInstance().emit(Events.UPDATE, 16 as never);
+        return AlarmService.getAlarms(station as never).find((a) => a.message === 'Signal(s) Detected');
+      };
+      expect(poll()?.raisedAtMs).toBe(5_000);
+
+      // RX 2 (powered, no carrier) then back to RX 1, each across a poll
+      rx.state.modems[1].isPowered = true;
+      rx.state.modems[1].frequency = 1500 as never;
+      now.mockReturnValue(9_000);
+      rx.setActiveModem(2);
+      expect(poll()?.raisedAtMs).toBe(5_000);
+      rx.setActiveModem(1);
+      expect(poll()?.raisedAtMs).toBe(5_000);
+    } finally {
+      sim.mockRestore();
+      now.mockRestore();
+    }
   });
 });

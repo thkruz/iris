@@ -18,6 +18,17 @@ export interface AlarmWithDetail extends AggregatedAlarm {
 }
 
 /**
+ * ALARM_STATE_CHANGED as AlarmService emits it: the active alarms, plus the
+ * alarms that went since the last emit, each with the live value AlarmService
+ * re-read at the moment it went (Phase 32 D5, nats-r7-s05-F1). `detail` is
+ * absent when the alarm has no live value to quote. The Ops Log writes it on
+ * the clear line instead of the value of the poll before.
+ */
+export interface AlarmStateChangedWithClears extends AlarmStateChangedData {
+  cleared?: AlarmWithDetail[];
+}
+
+/**
  * AlarmService - Centralized alarm aggregation service
  *
  * Polls all equipment for alarms every second and emits ALARM_STATE_CHANGED
@@ -46,6 +57,8 @@ export class AlarmService {
   private readonly boundOnUpdate_: (dt: Milliseconds) => void;
   /** Station-clock ms each live alarm was first seen, by raiseKey_ */
   private static readonly raisedAtMs_ = new Map<string, number>();
+  /** The last poll's alarms and their stations, by raiseKey_, to re-read a cleared alarm's value */
+  private previousAlarms_ = new Map<string, { alarm: AlarmWithDetail; gs: GroundStation }>();
 
   private constructor() {
     this.settleFromRunMs_ = SimClock.runMs();
@@ -67,6 +80,7 @@ export class AlarmService {
     if (now < this.settleFromRunMs_ || now < this.lastPollTime_) {
       this.settleFromRunMs_ = now;
       this.lastPollTime_ = -Infinity;
+      this.previousAlarms_.clear();
     }
     if (now - this.settleFromRunMs_ < AlarmService.STARTUP_SETTLE_MS) return;
     if (now - this.lastPollTime_ < this.pollInterval_) return;
@@ -77,17 +91,90 @@ export class AlarmService {
   private pollAndAggregate_(): void {
     const alarms: AlarmWithDetail[] = [];
     const sim = SimulationManager.getInstance();
+    const present = new Map<string, { alarm: AlarmWithDetail; gs: GroundStation }>();
 
     for (const gs of sim.groundStations) {
-      alarms.push(...AlarmService.collectGroundStationAlarms_(gs));
+      for (const alarm of AlarmService.collectGroundStationAlarms_(gs)) {
+        alarms.push(alarm);
+        present.set(AlarmService.raiseKey_(alarm), { alarm, gs });
+      }
     }
 
     // Future: for (const sat of sim.satellites) { ... }
 
+    // An alarm in the last poll and not in this one has gone: quote the value
+    // its source reads now, not the one from the poll before it went
+    const cleared: AlarmWithDetail[] = [];
+    for (const [key, { alarm, gs }] of this.previousAlarms_) {
+      if (present.has(key)) continue;
+      const { raisedAtMs: _raisedAtMs, detail: _lastDetail, ...gone } = alarm;
+      const detail = AlarmService.liveDetailOf_(gs, alarm);
+      cleared.push(detail === undefined ? gone : { ...gone, detail });
+    }
+    this.previousAlarms_ = present;
+
     // The poll sees every station, so an alarm missing here has cleared:
     // forget its raise time, so a re-raise stamps afresh
     AlarmService.stampRaisedAt_(alarms, true);
-    this.emitIfChanged_(AlarmService.sortBySeverity_(alarms));
+    this.emitIfChanged_(AlarmService.sortBySeverity_(alarms), cleared);
+  }
+
+  /**
+   * The live value behind a known alarm label as its source reads it now
+   * (Phase 32 D5): the receiver's Es/N0 for each modem the alarm named, BUC
+   * current and temperature, HPA temperature, LNB noise temperature, and the
+   * antenna's ICE, RAIN FADE and SUN TRANSIT levels, in the detail format the
+   * raise used. Undefined for any other alarm, or when the source is gone.
+   */
+  private static liveDetailOf_(gs: GroundStation, alarm: AlarmWithDetail): string | undefined {
+    const index = alarm.equipmentIndex;
+    switch (alarm.equipmentType) {
+      case 'RX': {
+        if (alarm.message !== AlarmService.DEGRADED_MARGIN_LABEL && alarm.message !== AlarmService.LOCK_LOST_LABEL) return undefined;
+        const rx = gs.receivers?.[index];
+        if (typeof rx?.getSignalsInBandwidth !== 'function') return undefined;
+        const named = new Set([...(alarm.detail ?? '').matchAll(/Modem (\d+)/gu)].map((m) => Number(m[1])));
+        const parts: string[] = [];
+        for (const modem of rx.state?.modems ?? []) {
+          if (!named.has(modem.modemNumber) || !modem.isPowered) continue;
+          const info = rx.getSignalsInBandwidth(modem);
+          parts.push(`Modem ${modem.modemNumber}: ${info.hasCarrier ? describeEsN0(info) : 'no carrier'}`);
+        }
+        return parts.length > 0 ? parts.join('; ') : undefined;
+      }
+      case 'ANT': {
+        const antenna = gs.antennas?.[index];
+        const state = antenna?.state;
+        if (!state) return undefined;
+        if (alarm.message === 'SUN TRANSIT: ELEVATED SKY NOISE') return AlarmService.dbText_(state.skyNoiseDegradation_dB);
+        if (alarm.message === 'ICE ON FEED') return AlarmService.dbText_(state.iceAccumulation_dB);
+        if (alarm.message === AlarmService.RAIN_FADE_LABEL) {
+          const fade = state.rainRate_mmh > 0 && typeof antenna.rainCnLossDb === 'function' ? antenna.rainCnLossDb() : 0;
+          const text = AlarmService.dbText_(fade);
+          return text === undefined ? undefined : `fade ${text}`;
+        }
+        return undefined;
+      }
+      case 'RF': {
+        const rf = gs.rfFrontEnds?.[index];
+        if (!rf) return undefined;
+        const buc = rf.bucModule?.state;
+        const hpa = rf.hpaModule?.state;
+        const lnb = rf.lnbModule?.state;
+        if (alarm.message === 'BUC high current draw' && Number.isFinite(buc?.currentDraw)) return `${buc.currentDraw.toFixed(2)} A`;
+        if (alarm.message === 'BUC over-temperature' && Number.isFinite(buc?.temperature)) return `${buc.temperature.toFixed(1)} °C`;
+        if (alarm.message === 'HPA over-temperature' && Number.isFinite(hpa?.temperature)) return `${hpa.temperature.toFixed(0)}°C`;
+        if (alarm.message === 'LNB noise temperature high' && Number.isFinite(lnb?.noiseTemperature)) return `${lnb.noiseTemperature.toFixed(0)} K`;
+        return undefined;
+      }
+      default:
+        return undefined;
+    }
+  }
+
+  /** "0.5 dB", or undefined for a missing level */
+  private static dbText_(value: number | undefined): string | undefined {
+    return typeof value === 'number' && Number.isFinite(value) ? `${value.toFixed(1)} dB` : undefined;
   }
 
   /**
@@ -280,10 +367,12 @@ export class AlarmService {
 
   /**
    * "<label> (<number><unit>)<suffix>": the first parenthesis holding a
-   * number followed by a unit (dB, A, °C, °, μs error); the suffix is kept
-   * in the label ("AGC at max gain (12.0 dB) - weak signal")
+   * number followed by a unit (dB, A, °C, °, μs error), optionally named by
+   * one word before it ("IM3 -24.8 dBc", Phase 32 D7); the suffix is kept in
+   * the label ("AGC at max gain (12.0 dB) - weak signal", "HPA overdrive
+   * (IM3 -24.8 dBc) - IMD degradation")
    */
-  private static readonly VALUE_IN_PARENS_ = /^(.*?)\s*\((-?\d+(?:\.\d+)?\s*[^\s\d()][^()]*)\)(.*)$/u;
+  private static readonly VALUE_IN_PARENS_ = /^(.*?)\s*\(((?:[A-Za-z][A-Za-z0-9/]*\s+)?-?\d+(?:\.\d+)?\s*[^\s\d()][^()]*)\)(.*)$/u;
 
   /** Fixed label of the receiver low-margin warning */
   static readonly DEGRADED_MARGIN_LABEL = 'Degraded margin';
@@ -301,16 +390,20 @@ export class AlarmService {
     return alarm.severity === 'error' || alarm.severity === 'warning' || alarm.severity === 'info';
   }
 
-  /** @param alarms every active alarm, most severe first */
-  private emitIfChanged_(alarms: AggregatedAlarm[]): void {
+  /**
+   * @param alarms every active alarm, most severe first
+   * @param cleared the alarms that went on this poll, with their live value
+   */
+  private emitIfChanged_(alarms: AggregatedAlarm[], cleared: AlarmWithDetail[] = []): void {
     const hash = JSON.stringify(alarms);
     if (hash === this.previousAlarmsHash_) return;
     this.previousAlarmsHash_ = hash;
 
-    const data: AlarmStateChangedData = {
+    const data: AlarmStateChangedWithClears = {
       alarms,
       highestSeverity: alarms[0]?.severity ?? 'success',
     };
+    if (cleared.length > 0) data.cleared = cleared;
 
     EventBus.getInstance().emit(Events.ALARM_STATE_CHANGED, data);
   }

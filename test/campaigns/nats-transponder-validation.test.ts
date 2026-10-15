@@ -331,7 +331,8 @@ describe('hub carriers are what the stations radiate (phase 27)', () => {
       partner: { stationId: 'ME-02', txModems: [txModem(1, 'TIDEMARK-1-Teleport', 1057e6, 36e6, TM1)], prep: me02Hot },
     });
     both.fly(30_000);
-    expect(relayedIds(both.sat)).toEqual(['TIDEMARK-1-Teleport', 'TIDEMARK-1-Teleport#2']);
+    // The stronger arrival (ME-02 hot) keeps the bare id, the weaker is the copy (Phase 32 D3)
+    expect(relayedIds(both.sat)).toEqual(['TIDEMARK-1-Teleport#2', 'TIDEMARK-1-Teleport']);
     // Two copies on one frequency: the weaker is co-channel I on the stronger
     expect(clean).toBeGreaterThan(12);
     expect(clean - both.read().cnRatio_dB).toBeGreaterThan(6);

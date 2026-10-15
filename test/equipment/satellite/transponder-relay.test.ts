@@ -114,6 +114,21 @@ describe('transponder relay (phase 19.3)', () => {
     expect(out[0].power - out[1].power).toBeCloseTo(6, 0);
   });
 
+  it('a sidelobe copy does not rename or unlock the main carrier: the strongest arrival keeps the bare id (Phase 32 D3, nats-r7-s04-F2)', () => {
+    const sat = makeSat();
+    // The weak sidelobe copy arrives first, the main carrier second
+    sat.rxSignal = [carrier({ power: isoAt(30) }), carrier({ power: isoAt(3) })];
+    sat.update();
+    const out = relayed(sat);
+    expect(out.map((s) => s.signalId)).toEqual(['c#2', 'c']);
+    expect(out[1].power).toBeGreaterThan(out[0].power);
+
+    // An arrival no transponder takes is not counted: the in-band carrier keeps its id
+    sat.rxSignal = [carrier({ frequency: (UPLINK_HZ + 500e6) as RfFrequency, power: isoAt(0) }), carrier({ power: isoAt(3) })];
+    sat.update();
+    expect(relayed(sat).map((s) => s.signalId)).toEqual(['c']);
+  });
+
   it('a break-before-make handover never has both on the air: the new arrival is the only carrier', () => {
     const sat = makeSat();
     sat.rxSignal = [carrier({ power: isoAt(3) })];

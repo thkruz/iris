@@ -514,7 +514,10 @@ export class Receiver extends BaseEquipment {
   public getStatusAlarms(): AlarmStatus[] {
     const alarms: AlarmStatus[] = [];
 
-    if (this.state.availableSignals.length > 0) {
+    // Any powered modem decoding a carrier, not the active modem's
+    // availableSignals: a modem tab click rebuilt that list, so the alarm
+    // vanished and was re-stamped (Phase 32 D15, nats-r7-s14-F2)
+    if (this.state.modems.some((modem) => modem.isPowered && this.getVisibleSignals(modem).length > 0)) {
       alarms.push({
         message: `Signal(s) Detected`,
         severity: 'info',
@@ -821,7 +824,10 @@ export class Receiver extends BaseEquipment {
       modcod,
       requiredEsN0_dB: requiredEsN0,
       lockMargin_dB: lockMargin,
-      lockState: lock.locked ? 'locked' : lock.heldMs > 0 ? 'acquiring' : 'unlocked',
+      // Above the acquire line and acquirable reads 'acquiring' from the first
+      // evaluation: right after an Apply the tracker has held for 0 ms, and
+      // the badge read "Below threshold" over its own Es/N0 (Phase 32 D10, nats-r7-s19-F1)
+      lockState: lock.locked ? 'locked' : lock.heldMs > 0 || (canAcquire && lockMargin >= LOCK_HYSTERESIS_DB) ? 'acquiring' : 'unlocked',
       isLowMargin: lock.locked && lock.lowMargin,
     };
   }
@@ -963,6 +969,12 @@ export class Receiver extends BaseEquipment {
     const dt = Math.max(0, now - track.lastMs);
     track.lastMs = now;
 
+    // The same carrier under a copy suffix ("X" <-> "X#2") is not a new
+    // carrier: another station's sidelobe copy reorders the suffixes, the
+    // demodulator keeps its lock (Phase 32 D3, nats-r7-s04-F2)
+    if (track.signalId !== signalId && Receiver.isSameCarrier_(track.signalId, signalId)) {
+      track.signalId = signalId;
+    }
     if (track.signalId !== signalId || !canAcquire) {
       track.locked = false;
       track.heldMs = 0;
@@ -1000,6 +1012,16 @@ export class Receiver extends BaseEquipment {
     }
 
     return track;
+  }
+
+  /** A carrier id without the satellite's copy suffix ("TIDEMARK-1-Teleport#2" -> "TIDEMARK-1-Teleport") */
+  private static carrierBaseId_(signalId: string): string {
+    return signalId.replace(/#\d+$/u, '');
+  }
+
+  /** Two ids that differ only by a `#n` copy suffix name the same carrier */
+  private static isSameCarrier_(a: string, b: string): boolean {
+    return a !== '' && b !== '' && Receiver.carrierBaseId_(a) === Receiver.carrierBaseId_(b);
   }
 
   /** Seeded acquisition time for one attempt on one carrier, ms */

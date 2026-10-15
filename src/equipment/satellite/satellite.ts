@@ -492,13 +492,28 @@ export class Satellite {
     // full power) put two copies on one frequency, and each is the other's
     // co-channel interference. A correct handover is break-before-make
     // (TrafficControlManager.executeHandover), so the pair never overlaps.
-    // A repeated id gets a suffix so the receiver counts the copy as I.
-    const seen = new Map<string, number>();
-    for (const signal of this.rxSignal) {
-      const n = (seen.get(signal.signalId) ?? 0) + 1;
-      seen.set(signal.signalId, n);
-      accept(n === 1 ? signal : { ...signal, signalId: `${signal.signalId}#${n}` }, signal.power);
+    // A repeated id gets a suffix so the receiver counts the copy as I. The
+    // strongest arrival keeps the bare id and only the weaker copies are
+    // suffixed, strongest first, counting only arrivals a transponder takes:
+    // another station's sidelobe copy never renames the main carrier, so the
+    // modem locked on it does not see a new carrier (Phase 32 D3, nats-r7-s04-F2)
+    const copies = new Map<string, number[]>();
+    this.rxSignal.forEach((signal, index) => {
+      if (!this.findTransponderByUplinkFrequency(signal.frequency, signal.polarization)?.isActive) return;
+      copies.set(signal.signalId, [...(copies.get(signal.signalId) ?? []), index]);
+    });
+    const copyIds = new Map<number, string>();
+    for (const [signalId, indices] of copies) {
+      // Stable sort: equal powers keep arrival order
+      const ranked = [...indices].sort((a, b) => (this.rxSignal[b].power as number) - (this.rxSignal[a].power as number));
+      ranked.forEach((index, rank) => {
+        if (rank > 0) copyIds.set(index, `${signalId}#${rank + 1}`);
+      });
     }
+    this.rxSignal.forEach((signal, index) => {
+      const copyId = copyIds.get(index);
+      accept(copyId ? { ...signal, signalId: copyId } : signal, signal.power);
+    });
     for (const signal of this.externalSignal) {
       accept(signal, (signal.power as number) - freeSpaceLossDb(signal.frequency as number, externalRangeKm));
     }

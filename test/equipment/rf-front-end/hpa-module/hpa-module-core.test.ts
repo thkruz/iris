@@ -222,7 +222,9 @@ describe('HPAModuleCore (phase 19.6 amplifier model)', () => {
       hot.update();
       expect(ok.state.isOverdriven).toBe(false);
       expect(hot.state.isOverdriven).toBe(true);
-      expect(hot.getAlarms()).toContain('HPA overdrive - IMD degradation');
+      // The IM3 level rides in the message for AlarmService's detail (Phase 32 D7)
+      const overdrive = hot.getAlarms().find((a) => a.startsWith('HPA overdrive'));
+      expect(overdrive).toBe(`HPA overdrive (IM3 ${hot.state.imdLevel.toFixed(1)} dBc) - IMD degradation`);
     });
 
     it('draws regrowth shoulders for one carrier and 2f1 - f2 products for two', () => {

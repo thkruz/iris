@@ -118,6 +118,8 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
    * temperature calls setTemperature first)
    */
   private thermalPrimed_ = false;
+  /** A staged excess current snaps the draw to its equilibrium on the next update */
+  private isCurrentPrimeDue_ = false;
   /** Case temperature log for the TX Chain trend readout (nats-s13-F1) */
   readonly temperatureLog = new ThermalTrendLog();
   /** The log needs its past written: first sample, or a scenario just staged the temperature */
@@ -608,6 +610,11 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
    */
   setExcessCurrent(amps: number): void {
     this.excessCurrentA_ = Math.max(0, amps);
+    // A staged fault starts at its equilibrium current: the 2 s ramp from the
+    // healthy draw made the first poll over 4.5 A read 4.52 A while the board
+    // settled at 5.37 A (Phase 32 D5, nats-r6-s16-F1). Primed on the next
+    // update, once the output power for the operating point is known
+    this.isCurrentPrimeDue_ = this.excessCurrentA_ > 0;
   }
 
   get excessCurrentA(): number {
@@ -663,7 +670,12 @@ export abstract class BUCModuleCore extends RFFrontEndModule<BUCState> {
       this.thermalPrimed_ = true;
       this.state.temperature = this.equilibriumTemperatureC();
       this.state.currentDraw = this.equilibriumCurrentA();
+      this.isCurrentPrimeDue_ = false;
       return;
+    }
+    if (this.isCurrentPrimeDue_) {
+      this.isCurrentPrimeDue_ = false;
+      this.state.currentDraw = this.equilibriumCurrentA();
     }
     if (!(dtS > 0)) {
       return;

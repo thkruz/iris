@@ -503,11 +503,12 @@ export abstract class LNBModuleCore extends RFFrontEndModule<LNBState> {
       alarms.push('LNB not locked to reference');
     }
 
-    // High noise temperature alarm. No number: the noise temperature settles
-    // within seconds of power-on, faster than the ticker refreshes, so a
-    // quoted value read stale against the LNB panel (nats-r4-s16-F3)
+    // High noise temperature alarm. AlarmService moves the number into the
+    // detail under the fixed label "LNB noise temperature high", refreshed
+    // every poll, so it no longer reads stale against the LNB panel
+    // (nats-r4-s16-F3) and the Ops Log line carries it (Phase 32 D7, nats-r7-s12-F2)
     if (this.state.noiseTemperature > 100) {
-      alarms.push('LNB noise temperature high');
+      alarms.push(`LNB noise temperature high (${this.state.noiseTemperature.toFixed(0)} K)`);
     }
 
     // High noise figure alarm
