@@ -1,4 +1,5 @@
 import { Mock, vi } from 'vitest';
+import { findPeakPlateau } from '../../../../src/equipment/real-time-spectrum-analyzer/peak-plateau';
 import { RealTimeSpectrumAnalyzer } from '../../../../src/equipment/real-time-spectrum-analyzer/real-time-spectrum-analyzer';
 import { SpectralDensityPlot } from '../../../../src/equipment/real-time-spectrum-analyzer/rtsa-screen/spectral-density-plot';
 import { SpectrumDataProcessor } from '../../../../src/equipment/real-time-spectrum-analyzer/spectrum-data-processor';
@@ -446,7 +447,50 @@ describe('SpectralDensityPlot', () => {
         const marker = topMarkers[markerIndex] ?? topMarkers[0];
         expect(marker.signal).toBeCloseTo(-50, 1);
         expect(marker.x).toBe(302);
-        expect(SpectralDensityPlot.plateauCentre(mockDataProcessor.combinedData, 300)).toBe(302);
+        expect(findPeakPlateau(mockDataProcessor.combinedData)?.bin).toBe(302);
+      });
+
+      it('keeps a peak above Max Amp: true level in the readout, marker clamped at the top edge (phase 32 D11, r7-s12-F1)', () => {
+        mockSpecA.state.isPeakTracking = true;
+        mockSpecA.state.maxAmplitude = -60;
+        // Beacon at -57.7 dBm runs off the top of a -100/-60 window; a noise spike at -99.1 is inside it
+        sweep(-105, { 120: -99.1, 400: -57.7 });
+        const { topMarkers, markerIndex } = mockSpecA.state;
+        const marker = topMarkers[markerIndex] ?? topMarkers[0];
+        expect(marker.x).toBe(400);
+        expect(marker.signal).toBeCloseTo(-57.7, 1);
+        expect(marker.y).toBe(0);
+      });
+
+      it('holds its pick on a noisy flat top until the maximum moves by more than 0.5 dB (phase 32 D11, r7-s15-F1)', () => {
+        mockSpecA.state.isPeakTracking = true;
+        const flatTop = (jitter: (x: number) => number, lift = 0) => {
+          const spikes: Record<number, number> = {};
+          for (let x = 200; x <= 600; x++) {
+            spikes[x] = -54.4 + lift + jitter(x);
+          }
+          return spikes;
+        };
+        // Sweep 1: the noisiest bin is at the left of the top; the pick is the centre of the run
+        sweep(
+          -90,
+          flatTop((x) => (x === 230 ? 0.2 : ((x * 7) % 5) * 0.04))
+        );
+        const first = mockSpecA.state.topMarkers[mockSpecA.state.markerIndex].x;
+        expect(first).toBe(400);
+
+        // Sweeps 2-4: the noise moves the maximum to other bins, under 0.5 dB: the marker stays
+        for (const hot of [580, 260, 455]) {
+          sweep(
+            -90,
+            flatTop((x) => (x === hot ? 0.25 : ((x * 3) % 7) * 0.03))
+          );
+          expect(mockSpecA.state.topMarkers[mockSpecA.state.markerIndex].x).toBe(first);
+        }
+
+        // The carrier steps up 3 dB on the right half only: the maximum moved, so it re-picks
+        sweep(-90, { ...flatTop(() => 0), ...Object.fromEntries(Array.from({ length: 101 }, (_, i) => [500 + i, -51.4])) });
+        expect(mockSpecA.state.topMarkers[mockSpecA.state.markerIndex].x).toBe(550);
       });
 
       it('without tracking, a placed marker stays where it was put', () => {
@@ -510,6 +554,26 @@ describe('SpectralDensityPlot', () => {
         const boxOrders = fillRect.mock.invocationCallOrder.filter((o) => o < order && o > lastStroke);
         expect(boxOrders.length, text).toBeGreaterThan(0);
       }
+    });
+
+    it('puts each amplitude label on an opaque box, 2 px padded, from the left edge (phase 32 D12)', () => {
+      expect(SpectralDensityPlot.LABEL_BOX_ALPHA).toBe(1);
+      expect(SpectralDensityPlot.LABEL_BOX_PAD_PX).toBe(2);
+      plot = new SpectralDensityPlot(canvas, mockSpecA, mockDataProcessor, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+      vi.advanceTimersByTime(1100);
+      (mockSpecA as unknown as { traceIntervalMs: number }).traceIntervalMs = 100;
+      const ctx = canvas.getContext('2d')!;
+      const stroke = vi.spyOn(ctx, 'stroke');
+      const fillRect = vi.spyOn(ctx, 'fillRect');
+
+      plot.update();
+      plot.draw();
+
+      const lastStroke = Math.max(...stroke.mock.invocationCallOrder);
+      const labelBoxes = fillRect.mock.calls.filter((_, i) => fillRect.mock.invocationCallOrder[i] > lastStroke);
+      expect(labelBoxes.length).toBeGreaterThan(0);
+      // Every numeric label box starts at x = 0; the dBm unit box sits beside the top label
+      expect(labelBoxes.filter(([x]) => x === 0).length).toBe(labelBoxes.length - 1);
     });
 
     it('keeps the amplitude labels out of the cached grid image', () => {

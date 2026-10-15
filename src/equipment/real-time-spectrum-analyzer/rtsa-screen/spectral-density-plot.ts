@@ -1,4 +1,5 @@
 import type { TraceMode } from '@app/equipment/real-time-spectrum-analyzer/analyzer-control/ac-trace-btn/ac-trace-btn';
+import { holdPeakPlateau } from '@app/equipment/real-time-spectrum-analyzer/peak-plateau';
 import { RealTimeSpectrumAnalyzer } from '@app/equipment/real-time-spectrum-analyzer/real-time-spectrum-analyzer';
 import { SpectrumDataProcessor } from '@app/equipment/real-time-spectrum-analyzer/spectrum-data-processor';
 import { Rng } from '@app/simulation/rng';
@@ -36,9 +37,12 @@ export class SpectralDensityPlot extends RTSAScreen {
   /** Pixel size of LABEL_FONT, the height of an amplitude label's box */
   static readonly LABEL_FONT_PX = 11;
   /** Padding around an amplitude label's box */
-  static readonly LABEL_BOX_PAD_PX = 1;
-  /** Opacity of the dark box behind an amplitude label */
-  static readonly LABEL_BOX_ALPHA = 0.7;
+  static readonly LABEL_BOX_PAD_PX = 2;
+  /**
+   * Opacity of the dark box behind an amplitude label: opaque, so no trace
+   * shows through a number (phase 32 D12, r6-s01-F3)
+   */
+  static readonly LABEL_BOX_ALPHA = 1;
 
   /**
    * Label band under the trace area, CSS px (Phase 30 D21, nats-r4-s04-F4):
@@ -46,21 +50,6 @@ export class SpectralDensityPlot extends RTSAScreen {
    * the Min Amp line never runs through them
    */
   static readonly LABEL_BAND_PX = 16;
-
-  /**
-   * The centre of the run of equal values that starts at `start` (phase 31
-   * D15, r6-s07-F1): a flat-top carrier's peak is the middle of its top, not
-   * its leftmost bin. Peak Search (`RealTimeSpectrumAnalyzer.peakSearch`) and
-   * the in-plot markers share this rule so the readout and the marker agree.
-   */
-  static plateauCentre(data: ArrayLike<number>, start: number): number {
-    let end = start;
-    while (end + 1 < data.length && data[end + 1] === data[start]) {
-      end++;
-    }
-
-    return start + Math.floor((end - start) / 2);
-  }
 
   // Data processor reference (shared data source)
   private readonly dataProcessor: SpectrumDataProcessor;
@@ -415,23 +404,35 @@ export class SpectralDensityPlot extends RTSAScreen {
   }
 
   private updateTopMarkers() {
+    const state = this.specA.state;
+    const isTracking = state.isMarkerOn && Boolean(state.isPeakTracking);
     // A tracking Peak Search marker re-finds the peak on every sweep (Phase 30 D11)
-    if (this.specA.state.isMarkerOn && this.specA.state.isPeakTracking) {
-      this.specA.state.isUpdateMarkers = true;
+    if (isTracking) {
+      state.isUpdateMarkers = true;
+    } else {
+      state.peakHold = undefined;
     }
-    if (this.specA.state.isUpdateMarkers) {
+    if (state.isUpdateMarkers) {
       // Find peaks in the currently selected trace
-      this.specA.state.topMarkers = [];
+      state.topMarkers = [];
 
-      const selectedTraceIndex = this.specA.state.selectedTrace - 1;
+      const selectedTraceIndex = state.selectedTrace - 1;
       const selectedTraceData = this.traceData[selectedTraceIndex];
 
       if (!selectedTraceData) {
-        this.specA.state.isUpdateMarkers = false;
+        state.isUpdateMarkers = false;
         return;
       }
 
-      // Find local maxima (peaks) in the selected trace
+      // The main pick is Peak Search's: the whole trace, above Max Amp too, a
+      // flat top within 0.5 dB read at its centre, and while tracking it holds
+      // until the maximum moves (phase 32 D11, r7-s12-F1, r7-s15-F1)
+      const pick = holdPeakPlateau(selectedTraceData, this.width, isTracking ? state.peakHold : null);
+      if (isTracking) {
+        state.peakHold = pick ? { bin: pick.bin, maxDbm: pick.maxDbm } : undefined;
+      }
+
+      // Other local maxima (peaks) for stepping the marker by hand
       const peaks: { x: number; signal: number }[] = [];
 
       // A flat top (a run of equal points) is one peak at its centre
@@ -445,53 +446,45 @@ export class SpectralDensityPlot extends RTSAScreen {
           end++;
         }
         const next = selectedTraceData[end + 1];
+        const centre = x + Math.floor((end - x) / 2);
+        const isOnPick = pick !== null && centre >= pick.start && centre <= pick.end;
 
         // Check if this is a local maximum
-        if (end + 1 < this.width && current > next && current > this.specA.noiseFloorAndGain + 3) {
-          peaks.push({ x: x + Math.floor((end - x) / 2), signal: current });
+        if (!isOnPick && end + 1 < this.width && current > next && current > this.specA.noiseFloorAndGain + 3) {
+          peaks.push({ x: centre, signal: current });
         }
         x = end;
       }
 
-      // Sort by signal strength and take top 10
+      // Sort by signal strength; the pick plus the top 9 others
       peaks.sort((a, b) => b.signal - a.signal);
-      const topPeaks = peaks.slice(0, 10);
-      // No peak clears the floor (the spike is gone): the marker still sits
-      // on the highest point of the trace, not on a leftover position
-      if (topPeaks.length === 0) {
-        let best = 0;
-        for (let x = 1; x < this.width; x++) {
-          if (selectedTraceData[x] > selectedTraceData[best]) best = x;
-        }
-        best = SpectralDensityPlot.plateauCentre(selectedTraceData.subarray(0, this.width), best);
-        if (Number.isFinite(selectedTraceData[best])) {
-          topPeaks.push({ x: best, signal: selectedTraceData[best] });
-        }
+      const topPeaks = peaks.slice(0, pick ? 9 : 10);
+      if (pick) {
+        topPeaks.unshift({ x: pick.bin, signal: selectedTraceData[pick.bin] });
       }
 
-      // Convert to marker format
+      // Convert to marker format: a peak outside the amplitude window keeps
+      // its true level and sits clamped at the plot edge
       topPeaks.forEach((peak) => {
-        const y = (peak.signal - this.specA.state.minAmplitude) / this.range;
-        if (y > 0 && y < 1) {
-          this.specA.state.topMarkers.push({
-            x: peak.x,
-            y: 1 - y,
-            signal: peak.signal,
-          });
-        }
+        const y = (peak.signal - state.minAmplitude) / this.range;
+        state.topMarkers.push({
+          x: peak.x,
+          y: 1 - Math.max(0, Math.min(1, y)),
+          signal: peak.signal,
+        });
       });
 
-      // If less than 10 markers, fill with remaining trace peaks
-      if (this.specA.state.topMarkers.length < 10) {
-        for (let x = 0; x < this.width && this.specA.state.topMarkers.length < 10; x++) {
+      // If less than 10 markers, fill with remaining trace points on screen
+      if (state.topMarkers.length < 10) {
+        for (let x = 0; x < this.width && state.topMarkers.length < 10; x++) {
           const signal = selectedTraceData[x];
-          const y = (signal - this.specA.state.minAmplitude) / this.range;
+          const y = (signal - state.minAmplitude) / this.range;
 
           if (y > 0 && y < 1) {
             // Check if we already have a marker near this position
-            const tooClose = this.specA.state.topMarkers.some((m) => Math.abs(m.x - x) < 10);
+            const tooClose = state.topMarkers.some((m) => Math.abs(m.x - x) < 10);
             if (!tooClose) {
-              this.specA.state.topMarkers.push({
+              state.topMarkers.push({
                 x,
                 y: 1 - y,
                 signal,
@@ -502,24 +495,31 @@ export class SpectralDensityPlot extends RTSAScreen {
       }
 
       // Sort markers in ascending x order for drawing
-      this.specA.state.topMarkers.sort((a, b) => a.x - b.x);
+      state.topMarkers.sort((a, b) => a.x - b.x);
 
-      // Set this.specA.state.markerIndex to the highest signal marker
-      this.specA.state.markerIndex = 0;
-      let highestSignal = -Infinity;
-      this.specA.state.topMarkers.forEach((marker, index) => {
-        if (marker.signal > highestSignal) {
-          highestSignal = marker.signal;
-          this.specA.state.markerIndex = index;
-        }
-      });
+      // The marker sits on the pick; without one, on the highest marker
+      state.markerIndex = 0;
+      if (pick) {
+        state.markerIndex = Math.max(
+          0,
+          state.topMarkers.findIndex((marker) => marker.x === pick.bin)
+        );
+      } else {
+        let highestSignal = -Infinity;
+        state.topMarkers.forEach((marker, index) => {
+          if (marker.signal > highestSignal) {
+            highestSignal = marker.signal;
+            state.markerIndex = index;
+          }
+        });
+      }
 
-      this.specA.state.isUpdateMarkers = false;
+      state.isUpdateMarkers = false;
     }
 
     // Draw marker for the current selected marker
-    if (this.specA.state.isMarkerOn && this.specA.state.topMarkers.length > 0) {
-      const marker = this.specA.state.topMarkers[this.specA.state.markerIndex] ?? this.specA.state.topMarkers[0];
+    if (state.isMarkerOn && state.topMarkers.length > 0) {
+      const marker = state.topMarkers[state.markerIndex] ?? state.topMarkers[0];
       this.drawMarker(marker.x, marker.y, marker.signal);
     }
   }
@@ -639,6 +639,8 @@ export class SpectralDensityPlot extends RTSAScreen {
     ctx.font = SpectralDensityPlot.LABEL_FONT;
 
     const numLabels = isDualScreenMode ? 5 : 10;
+    // Boxes start at the left edge (phase 32 D12): no trace sliver beside them
+    const pad = SpectralDensityPlot.LABEL_BOX_PAD_PX;
     const inset = 4;
     const { maxAmplitude, minAmplitude } = this.specA.state;
     for (let i = 0; i <= numLabels; i++) {
@@ -654,13 +656,13 @@ export class SpectralDensityPlot extends RTSAScreen {
         y = this.plotHeight_ - inset;
       }
       const decimals = Number.isInteger(power) ? 0 : 1;
-      this.drawBoxedLabel_(ctx, power.toFixed(decimals), inset, y, baseline);
+      this.drawBoxedLabel_(ctx, power.toFixed(decimals), pad, y, baseline);
     }
-    this.drawBoxedLabel_(ctx, 'dBm', inset + 34, inset, 'top');
+    this.drawBoxedLabel_(ctx, 'dBm', pad + 34, inset, 'top');
     ctx.restore();
   }
 
-  /** One label on a translucent dark box sized to the text (1 px padding) */
+  /** One label on an opaque dark box sized to the text (LABEL_BOX_PAD_PX padding) */
   private drawBoxedLabel_(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, baseline: CanvasTextBaseline): void {
     const pad = SpectralDensityPlot.LABEL_BOX_PAD_PX;
     const height = SpectralDensityPlot.LABEL_FONT_PX;

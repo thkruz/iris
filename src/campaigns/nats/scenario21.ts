@@ -132,7 +132,7 @@ export const scenario21Data: ScenarioData = {
             inputValue: '',
             traces: [
               { isVisible: true, isUpdating: true, mode: 'clearwrite' },
-              { isVisible: true, isUpdating: true, mode: 'maxhold' },
+              { isVisible: false, isUpdating: true, mode: 'maxhold' }, // hidden: it kept the pre-notch shelf (Phase 32 D13, r7-s21-F1)
               { isVisible: false, isUpdating: false, mode: 'clearwrite' },
             ],
             selectedTrace: 1,

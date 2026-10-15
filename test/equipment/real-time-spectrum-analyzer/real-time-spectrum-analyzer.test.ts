@@ -791,7 +791,7 @@ describe('RealTimeSpectrumAnalyzer', () => {
   });
 });
 
-describe('RealTimeSpectrumAnalyzer.peakSearch plateau rule (phase 31 D15, r6-s07-F1)', () => {
+describe('RealTimeSpectrumAnalyzer.peakSearch plateau rule (phase 31 D15, phase 32 D11)', () => {
   const search = (data: number[]) =>
     RealTimeSpectrumAnalyzer.prototype.peakSearch.call({
       dataProcessor: { combinedData: new Float32Array(data) },
@@ -813,5 +813,19 @@ describe('RealTimeSpectrumAnalyzer.peakSearch plateau rule (phase 31 D15, r6-s07
   it('a single highest bin is unchanged', () => {
     const peak = search([-90, -90, -90, -90, -90, -90, -90, -50, -90, -90]);
     expect(peak?.frequencyHz).toBeCloseTo(995e6 + 7.5e6, 0);
+  });
+
+  it('reads a noisy flat top (every bin within 0.5 dB of the maximum) at its centre (phase 32 D11, r7-s15-F1)', () => {
+    // Bins 2..8 within 0.5 dB of -54.2 (bin 3 is the noisiest); centre is bin 5
+    const peak = search([-90, -80, -54.5, -54.2, -54.6, -54.4, -54.3, -54.6, -54.5, -80]);
+    expect(peak?.bin).toBe(5);
+    expect(peak?.maxDbm).toBeCloseTo(-54.2, 3);
+    expect(peak?.levelDbm).toBeCloseTo(-54.4, 3);
+    expect(peak?.frequencyHz).toBeCloseTo(995e6 + 5.5e6, 0);
+  });
+
+  it('a bin exactly 0.5 dB down is off the top', () => {
+    const peak = search([-90, -90, -60.5, -60, -90, -90, -90, -90, -90, -90]);
+    expect(peak?.bin).toBe(3);
   });
 });

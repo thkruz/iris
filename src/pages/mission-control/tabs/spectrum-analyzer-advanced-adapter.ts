@@ -248,8 +248,8 @@ export class SpectrumAnalyzerAdvancedAdapter {
     if (peakReadout) {
       // While the Peak Search marker tracks, the readout is the marker, so the
       // two never disagree (phase 31 D15, r6-s07-F1)
-      const peak = this.trackedMarkerPeak_() ?? analyzer.peakSearch?.();
-      peakReadout.textContent = peak ? `Peak: ${SpectrumAnalyzerAdvancedAdapter.formatMHz(peak.frequencyHz)} MHz @ ${peak.levelDbm.toFixed(1)} dBm` : 'Peak: --- MHz @ --- dBm';
+      const peak = this.trackedMarkerPeak_() ?? analyzer.peakSearch?.() ?? null;
+      peakReadout.textContent = SpectrumAnalyzerAdvancedAdapter.formatPeakReadout(peak);
     }
 
     const rbwStatus = this.domCache_.get('sa-rbw-status');
@@ -374,16 +374,37 @@ export class SpectrumAnalyzerAdvancedAdapter {
   /**
    * Peak Search: marker on, placed on the highest point of the trace, and it
    * follows the live peak on every sweep until the marker is turned off or
-   * moved by hand (Phase 30 D11, nats-r5-s05-F3)
+   * moved by hand (Phase 30 D11, nats-r5-s05-F3). One `peakSearch()` at the
+   * click places the marker and writes the readout and the log line, so all
+   * three carry the same pick (phase 32 D11, r7-s12-F1, r7-s15-F1).
    */
   private handlePeakSearch_(): void {
     const state = this.spectrumAnalyzer.state;
+    const peak = this.spectrumAnalyzer.peakSearch?.() ?? null;
     state.isMarkerOn = true;
-    state.isUpdateMarkers = true;
     state.isPeakTracking = true;
+    if (peak && typeof peak.bin === 'number') {
+      const range = state.maxAmplitude - state.minAmplitude;
+      const y = range > 0 ? (peak.levelDbm - state.minAmplitude) / range : 0;
+      // Above Max Amp the marker sits clamped at the top edge, true level kept
+      state.topMarkers = [{ x: peak.bin, y: 1 - Math.max(0, Math.min(1, y)), signal: peak.levelDbm }];
+      state.markerIndex = 0;
+      state.peakHold = { bin: peak.bin, maxDbm: peak.maxDbm ?? peak.levelDbm };
+    } else {
+      state.isUpdateMarkers = true;
+    }
     this.syncLiveReadouts_();
+    const peakReadout = this.domCache_.get('sa-peak-readout');
+    if (peakReadout) {
+      peakReadout.textContent = SpectrumAnalyzerAdvancedAdapter.formatPeakReadout(peak);
+    }
     this.emitStateChange_();
-    this.logPeakSearch_();
+    this.logPeakSearch_(peak);
+  }
+
+  /** `Peak: 1085.000001 MHz @ -69.2 dBm`, or dashes with no peak */
+  static formatPeakReadout(peak: { frequencyHz: number; levelDbm: number } | null): string {
+    return peak ? `Peak: ${SpectrumAnalyzerAdvancedAdapter.formatMHz(peak.frequencyHz)} MHz @ ${peak.levelDbm.toFixed(1)} dBm` : 'Peak: --- MHz @ --- dBm';
   }
 
   private handlePauseToggle_(): void {
@@ -700,9 +721,8 @@ export class SpectrumAnalyzerAdvancedAdapter {
     return `SPEC A: ${(state.centerFrequency / 1e6).toFixed(3)} MHz, span ${(state.span / 1e6).toFixed(3)} MHz, ${rbw}, ${amp(state.minAmplitude)}/${amp(state.maxAmplitude)} dBm`;
   }
 
-  /** `SPEC A: Peak Search 1085.000001 MHz @ -69.2 dBm` */
-  private logPeakSearch_(): void {
-    const peak = this.spectrumAnalyzer.peakSearch?.();
+  /** `SPEC A: Peak Search 1085.000001 MHz @ -69.2 dBm`, the click's own pick */
+  private logPeakSearch_(peak: { frequencyHz: number; levelDbm: number } | null): void {
     const line = peak ? `SPEC A: Peak Search ${(peak.frequencyHz / 1e6).toFixed(6)} MHz @ ${peak.levelDbm.toFixed(1)} dBm` : 'SPEC A: Peak Search';
     EventAutoLogger.getInstance().logAction(line, 'SPEC A', this.stationId_());
   }

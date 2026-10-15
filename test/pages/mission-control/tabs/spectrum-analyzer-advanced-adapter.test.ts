@@ -420,7 +420,7 @@ describe('SpectrumAnalyzerAdvancedAdapter Ops Log lines and peak readout (phase 
       changeCenterFreq: vi.fn(),
       changeBandwidth: vi.fn(),
       updateScreenVisibility: vi.fn(),
-      peakSearch: vi.fn(() => ({ frequencyHz: 1085.000001e6, levelDbm: -69.2 })),
+      peakSearch: vi.fn(() => ({ frequencyHz: 1085.000001e6, levelDbm: -69.2, bin: 42, maxDbm: -69.0 })),
       spectrumDataProcessor: { combinedData: new Float32Array(100) },
     } as unknown as RealTimeSpectrumAnalyzer;
 
@@ -484,6 +484,31 @@ describe('SpectrumAnalyzerAdvancedAdapter Ops Log lines and peak readout (phase 
   it('Peak Search writes its result at once', () => {
     (containerEl.querySelector('#sa-peak-search') as HTMLButtonElement).click();
     expect(logAction).toHaveBeenCalledWith('SPEC A: Peak Search 1085.000001 MHz @ -69.2 dBm', 'SPEC A', 'VT-01');
+  });
+
+  it('Peak Search is one pick: the marker, the readout and the log line carry the same peak (phase 32 D11)', () => {
+    const state = analyzer.state;
+    state.topMarkers = [{ x: 7, y: 0.9, signal: -99.1 }]; // a stale noise-spike marker
+    state.markerIndex = 0;
+    (analyzer.peakSearch as Mock).mockClear();
+    (containerEl.querySelector('#sa-peak-search') as HTMLButtonElement).click();
+
+    expect(analyzer.peakSearch).toHaveBeenCalledTimes(1);
+    expect(state.isMarkerOn).toBe(true);
+    expect(state.isPeakTracking).toBe(true);
+    expect(state.topMarkers).toHaveLength(1);
+    expect(state.topMarkers[0]).toMatchObject({ x: 42, signal: -69.2 });
+    expect(state.markerIndex).toBe(0);
+    expect(state.peakHold).toEqual({ bin: 42, maxDbm: -69.0 });
+    expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1085.000001 MHz @ -69.2 dBm');
+    expect(logAction).toHaveBeenCalledWith('SPEC A: Peak Search 1085.000001 MHz @ -69.2 dBm', 'SPEC A', 'VT-01');
+  });
+
+  it('a peak above Max Amp sits clamped at the top edge with its true level', () => {
+    analyzer.state.maxAmplitude = -75;
+    (containerEl.querySelector('#sa-peak-search') as HTMLButtonElement).click();
+    expect(analyzer.state.topMarkers[0]).toMatchObject({ x: 42, y: 0, signal: -69.2 });
+    expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1085.000001 MHz @ -69.2 dBm');
   });
 
   it('while the Peak Search marker tracks, the peak readout is the marker', () => {

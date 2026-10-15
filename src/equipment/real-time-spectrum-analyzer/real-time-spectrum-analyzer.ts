@@ -13,6 +13,7 @@ import { Rng } from '@app/simulation/rng';
 import { dB, Hertz, IfSignal, RfSignal } from '@app/types';
 import { AnalyzerControlBox } from './analyzer-control-box';
 import { defaultSpectrumAnalyzerState } from './defaultSpectrumAnalyzerState';
+import { findPeakPlateau, type PeakHold } from './peak-plateau';
 import './real-time-spectrum-analyzer.css';
 import { SpectralDensityPlot } from '@app/equipment/real-time-spectrum-analyzer/rtsa-screen/spectral-density-plot';
 import { WaterfallDisplay } from '@app/equipment/real-time-spectrum-analyzer/rtsa-screen/waterfall-display';
@@ -144,6 +145,12 @@ export interface RealTimeSpectrumAnalyzerState {
    * off or moved by hand, so it never labels a peak that has gone
    */
   isPeakTracking?: boolean;
+  /**
+   * The tracking marker's held pick (phase 32 D11, r7-s15-F1): its bin and the
+   * trace maximum at pick time. It holds until the maximum moves by more than
+   * PEAK_PLATEAU_DB or the bin falls off the flat top.
+   */
+  peakHold?: PeakHold;
   topMarkers: MarkerPoint[];
   markerIndex: number;
   refreshRate: number; // in Hz
@@ -472,35 +479,29 @@ export class RealTimeSpectrumAnalyzer extends BaseEquipment {
   }
 
   /**
-   * The highest point of the live trace (Peak Search): frequency (Hz) and
-   * level (dBm), or null before the first trace. A flat top reads at the
-   * centre of its equal run, the rule the in-plot markers use (phase 31 D15).
+   * The highest point of the live trace (Peak Search): frequency (Hz), level
+   * (dBm) at the picked bin, the bin itself and the trace maximum, or null
+   * before the first trace. It searches the whole trace, above Max Amp too,
+   * and reads a flat top (every bin within PEAK_PLATEAU_DB of the maximum) at
+   * its centre, the rule the in-plot marker uses (phase 32 D11).
    */
-  peakSearch(): { frequencyHz: number; levelDbm: number } | null {
+  peakSearch(): { frequencyHz: number; levelDbm: number; bin: number; maxDbm: number } | null {
     const data = this.dataProcessor?.combinedData;
     if (!data || data.length === 0) {
       return null;
     }
-    let best = 0;
-    for (let x = 1; x < data.length; x++) {
-      if (data[x] > data[best]) {
-        best = x;
-      }
-    }
-    // The centre of an equal run (SpectralDensityPlot.plateauCentre's rule,
-    // inlined so this method does not depend on the plot module)
-    let end = best;
-    while (end + 1 < data.length && data[end + 1] === data[best]) {
-      end++;
-    }
-    best += Math.floor((end - best) / 2);
-    const level = data[best];
-    if (!Number.isFinite(level)) {
+    const pick = findPeakPlateau(data);
+    if (!pick) {
       return null;
     }
     const start = this.state.centerFrequency - this.state.span / 2;
 
-    return { frequencyHz: start + ((best + 0.5) / data.length) * this.state.span, levelDbm: level };
+    return {
+      frequencyHz: start + ((pick.bin + 0.5) / data.length) * this.state.span,
+      levelDbm: data[pick.bin],
+      bin: pick.bin,
+      maxDbm: pick.maxDbm,
+    };
   }
 
   /** The VBW in use: the set value, or RBW x AUTO_VBW_RATIO */
