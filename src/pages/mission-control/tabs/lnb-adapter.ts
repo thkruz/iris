@@ -2,6 +2,7 @@ import { CardAlarmBadge } from '@app/components/card-alarm-badge/card-alarm-badg
 import { qs } from '@app/engine/utils/query-selector';
 import { AlarmStatus } from '@app/equipment/base-equipment';
 import { LNBModuleCore, LNBState } from '@app/equipment/rf-front-end/lnb-module/lnb-module-core';
+import { classifyRfAlarmSeverity } from '@app/equipment/rf-front-end/rf-front-end-core';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { EventAutoLogger } from '@app/ops-log/event-auto-logger';
@@ -461,20 +462,9 @@ export class LNBAdapter {
   private getAlarmsFromModule_(): AlarmStatus[] {
     const alarmStrings = this.lnbModule.getAlarms();
     return alarmStrings.map((message) => ({
-      severity: this.classifySeverity_(message),
+      severity: classifyRfAlarmSeverity(message),
       message,
     }));
-  }
-
-  /**
-   * Classify alarm message severity based on content
-   */
-  private classifySeverity_(message: string): AlarmStatus['severity'] {
-    const lowerMsg = message.toLowerCase();
-    if (lowerMsg.includes('not locked') || lowerMsg.includes('error')) {
-      return 'warning';
-    }
-    return 'warning'; // Default to warning for any alarm
   }
 
   dispose(): void {

@@ -148,6 +148,26 @@
   font-weight: 500;
 }
 
+/* Ticker row severity colours (global-command-bar.ts getColorClass_). The
+   class names are Tailwind-style but no Tailwind sheet is loaded, so without
+   these rules every row inherited the body grey. Same palette as the count
+   badges above. */
+.alarm-messages .text-red-400 {
+  color: #fca5a5;
+}
+
+.alarm-messages .text-yellow-400 {
+  color: #fde047;
+}
+
+.alarm-messages .text-blue-400 {
+  color: #93c5fd;
+}
+
+.alarm-messages .text-green-400 {
+  color: #86efac;
+}
+
 .alarm-separator {
   color: rgba(255, 255, 255, 0.3);
 }
