@@ -206,14 +206,14 @@ export const scenario23Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'The ACU automation fault is on the ticker and the Antenna card is red, but the RF chain is healthy. Before touching anything, what do you record?',
             options: [
-              'Current position (Az 153.1 / El 35.1 on TM-1) and that beacon + carrier are still locked - the dish is ON the bird',
+              'Current position (Az 153.1 / El 35.1 on TM-1) and that the carrier is still locked - the dish is ON the bird',
               'Nothing yet (the alarm is time-stamped by IT) and switch to manual at once - every second in faulted program-track risks the bird',
               'The ACU serial and firmware (for ticket NOC-2026-2231) and the alarm text - IT needs the warranty details before they touch it',
               'A full spectrum sweep (every TM-1 transponder) and the noise floor - the fault could be RF, and the sweep proves it is not',
             ],
             correctIndex: 0,
             explanation:
-              'The single most valuable asset right now is that the dish is already pointed correctly, and whatever you do next must not lose that. Record it before you move, so if a manual input goes wrong you know exactly where home was.',
+              'The single most valuable asset right now is that the dish is already pointed correctly, and whatever you do next must not lose that. The carrier is still locked (the Receivers card reads "Signals: 1 locked"), so the dish is ON the bird; the Antenna card lock and beacon C/N read UNKNOWN with the ACU faulted, and you prove the beacon on RF later. Record the position before you move, so if a manual input goes wrong you know exactly where home was.',
             pointPenalty: 5,
           },
           mustMaintain: false,

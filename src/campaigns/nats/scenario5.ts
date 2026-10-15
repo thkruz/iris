@@ -365,7 +365,7 @@ export const scenario5Data: ScenarioData = {
       nice: ['K0737', 'S0421', 'T0153', 'K1032'], // K0737: Knowledge of RF spectrum characteristics, S0421: Skill in using test equipment, T0153: Monitor network capacity and performance, K1032: Knowledge of RF propagation
       title: 'Configure Spectrum View',
       description:
-        'The spectrum analyzer is currently configured for beacon observation. Reconfigure it to see the full wideband signal - widen the span (50-100 MHz), center on the downlink IF frequency, RBW Auto, and set the amplitude window to Min -100 dBm / Max -30 dBm so both the noise floor and the carrier show.',
+        'The spectrum analyzer is currently configured for beacon observation. Reconfigure it to see the full wideband signal - widen the span (50-100 MHz), center on the downlink IF frequency, RBW back to Auto (it was left on 10 Hz for the beacon, far too narrow for a wide span), and set the amplitude window to Min -100 dBm / Max -30 dBm so both the noise floor and the carrier show.',
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['verify-speca-initial-state'],
       timeLimitSeconds: 3 * 60,

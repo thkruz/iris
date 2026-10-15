@@ -688,7 +688,7 @@ export const scenario9Data: ScenarioData = {
       nice: ['S0421', 'K0741'],
       title: 'Inhibit TX Before Repointing',
       description:
-        "The sister teleport is taking TIDEMARK-1's carrier for the check. On TX Chain, disable VT-01's HPA output before the dish moves: a keyed dish sweeping off TIDEMARK-1 would paint the neighbouring satellites, and two stations on one carrier interfere. Expect VT-01's Dashboard to show 'AGC on noise only' until you take TM-1 back: with our carrier off, the receive modem's passband holds noise and no traffic carrier.",
+        "The sister teleport is taking TIDEMARK-1's carrier for the check. On TX Chain, disable VT-01's HPA output before the dish moves: a keyed dish sweeping off TIDEMARK-1 would paint the neighbouring satellites, and two stations on one carrier interfere. Expect two alarms on VT-01's Dashboard until you take TM-1 back: 'AGC on noise only' (with our carrier off, the receive modem's passband holds noise and no traffic carrier) and 'Carrier lock lost' (Modem 1 has no carrier to lock to). Both are expected and clear once VT-01 takes TM-1 back.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['switch-to-vermont'],
       timeLimitSeconds: 2 * 60,
@@ -942,14 +942,14 @@ export const scenario9Data: ScenarioData = {
             // the station clock on the entry itself
             question: 'Which line correctly records this shift in the operations log?',
             options: [
-              'Morning rounds complete. VT-01/TM-1, ME-02/TM-2, TM-3 beacon verified via VT-01 spot-check (TM-1 on the sister teleport meanwhile). No anomalies.',
+              'Morning rounds complete. VT-01/TM-1, ME-02/TM-2, TM-3 beacon verified via VT-01 spot-check (TM-1 on the sister teleport meanwhile; the two expected TX-inhibit alarms on VT-01 raised and cleared). No anomalies.',
               'Morning rounds incomplete. VT-01/TM-1, ME-02/TM-2 checked, TM-3 spot-check deferred to next shift. No anomalies.',
-              'Morning rounds complete. VT-01/TM-1, ME-02/TM-2 checked, multiple alarms cleared on VT-01. See trouble ticket.',
+              'Morning rounds complete. VT-01/TM-1, ME-02/TM-2 checked, two alarms raised and cleared on VT-01. Trouble ticket opened.',
               'Morning rounds complete. VT-01 repointed to TM-3 for spot-check, TM-1 traffic dropped during the check. No anomalies.',
             ],
             correctIndex: 0,
             explanation:
-              'Routine work logged routinely: what was checked, what the TM-3 check needed (TM-1 on the sister teleport meanwhile) and that nothing was found. The Operations Log stamps the station clock on the entry for you. Next operator picks up with full context.',
+              'Routine work logged routinely: what was checked, what the TM-3 check needed (TM-1 on the sister teleport meanwhile) and that nothing was found. The two VT-01 alarms (AGC on noise only, Carrier lock lost) were the expected result of the TX inhibit and cleared once VT-01 took TM-1 back: they belong in the log line, not in a trouble ticket, and that line also drops the TM-3 check. The Operations Log stamps the station clock on the entry for you. Next operator picks up with full context.',
             pointPenalty: 5,
           },
           mustMaintain: false,

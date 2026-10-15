@@ -1208,7 +1208,7 @@ export const scenario2Data: ScenarioData = {
         Maintenance crew is on site, waiting on us for the antenna feed assembly. Their window runs to 09:50, so we're taking TIDEMARK-1 offline now.
       </p>
       <p>
-        We will shut down in sequence: HPA first, then BUC, then stop the modem, then LNB, then stow the antenna. Never skip steps, never reverse order. Read the Mission Brief. Go.
+        We will shut down in sequence: HPA first, then BUC, then stop the modem, then LNB, then park the antenna at maintenance. Never skip steps, never reverse order. Read the Mission Brief. Go.
       </p>
       `,
       character: Character.CHARLIE_BROOKS,
@@ -1395,7 +1395,7 @@ export const scenario2Data: ScenarioData = {
           Good. Control systems and GPSDO stay on - we need them for timing and to command the antenna. But all RF equipment is de-energized.
         </p>
         <p>
-          Now stow the antenna. Click the ACU Control tab.
+          Now park the antenna at maintenance. Click the ACU Control tab.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,
@@ -1617,7 +1617,7 @@ export const scenario2Data: ScenarioData = {
       'final-verification': {
         text: `
         <p>
-          That's scheduled maintenance. Power down in sequence, stow safely, restore in reverse order. You did it correctly - no one got hurt, no equipment got damaged, all within our Authorized Service Interruption window.
+          That's scheduled maintenance. Power down in sequence, park the antenna at maintenance, restore in reverse order. You did it correctly - no one got hurt, no equipment got damaged, all within our Authorized Service Interruption window.
         </p>
         <p>
           Tomorrow we'll look at what happens when things don't go according to plan. Weather events, unexpected faults, that kind of thing. For now, go get some coffee or whatever it is you do here when not training.

@@ -32,6 +32,11 @@ interface Scenario14Objective {
   /** Wait (ms) for the objective to report complete after its action */
   waitDoneMs?: number;
   /**
+   * Jump the scenario clock this far (ms, window.advanceClock) after the
+   * action, as a player waiting it out would; it burns the step's countdown
+   */
+  advanceMs?: number;
+  /**
    * Reads the panel the quiz is about and asserts the keyed option is what
    * the screen shows, before the answer is clicked (the answer comes from
    * the sim state, not from matching the option text)
@@ -146,14 +151,28 @@ const SCENARIO_14_OBJECTIVES: Scenario14Objective[] = [
   {
     id: 'monitor-during-fade',
     title: 'Monitor Through the Fade',
-    // C/N >= 7 dB held 20 s, accrued only while RX Analysis is open
+    // Phase 32 D20: the RAIN FADE alarm (about 2 min into the cell) held 20 s
+    // and C/N >= 7 dB held 20 s, accrued only while RX Analysis is open. The
+    // jump fits the 6 min countdown
     type: 'auto',
+    advanceMs: 150000,
     waitDoneMs: 90000,
   },
   {
     id: 'agc-behavior-quiz',
     title: 'AGC Behavior in the Fade',
     type: 'quiz',
+    // The quiz says the cell is over the dish: the RAIN FADE alarm is up
+    // (nats-r7-s14-F1, it used to open before any fade)
+    checkScreen: async (page) => {
+      const rainFadeUp = await page.evaluate(() => {
+        const gs = (window as any).signalRange?.simulationManager?.groundStations?.find((g: any) => g.state?.id === 'VT-01');
+        const alarms: Array<{ message: string }> = gs?.antennas?.[0]?.getStatusAlarms?.() ?? [];
+
+        return alarms.some((a) => a.message.startsWith('RAIN FADE'));
+      });
+      expect(rainFadeUp).toBe(true);
+    },
     correctAnswer: 'AGC is compensating - the demodulator still sees a usable signal, and the gain stage still has headroom',
   },
   {
@@ -331,6 +350,11 @@ async function executeObjective(page: import('@playwright/test').Page, missionCo
       await skip.click({ timeout: 90000 });
       break;
     }
+  }
+
+  if (objective.advanceMs) {
+    await page.waitForFunction(() => typeof (window as any).advanceClock === 'function');
+    await page.evaluate((ms) => (window as any).advanceClock(ms), objective.advanceMs);
   }
 
   if (objective.waitDoneMs) {

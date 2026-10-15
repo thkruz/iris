@@ -56,7 +56,7 @@ const SCENARIO_23_OBJECTIVES: Scenario23Objective[] = [
     id: 'confirm-fault-dashboard',
     title: 'Confirm the Automation Fault',
     type: 'quiz',
-    correctAnswer: 'Current position (Az 153.1 / El 35.1 on TM-1) and that beacon + carrier are still locked - the dish is ON the bird',
+    correctAnswer: 'Current position (Az 153.1 / El 35.1 on TM-1) and that the carrier is still locked - the dish is ON the bird',
   },
   {
     id: 'what-automation-did-quiz',

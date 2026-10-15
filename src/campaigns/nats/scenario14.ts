@@ -54,7 +54,36 @@ import { ses10Satellite, tidemark1Satellite, tidemark2Satellite } from './satell
  *   - ME-02 has been running TIDEMARK-2 since S3 - available as fallback
  *     but currently busy with its own customers.
  *   - James Okafor speaks the customer-impact side; he doesn't talk RF.
+ *
+ * Sim notes:
+ *   - Fade gating (Phase 32 D20, nats-r7-s14-F1): the rain starts as
+ *     'monitor-during-fade' opens and ramps in over 180 s, so the RAIN FADE
+ *     alarm (C/N loss >= 0.5 dB) comes up about 2 minutes in. That step's
+ *     watch row reads the alarm live on VT-01's antenna and has to hold 20 s,
+ *     so it and every fade-phase step behind it (AGC Behavior, AGC Headroom,
+ *     the HPA read "with the cell overhead") wait for the cell. Before, the
+ *     20 s C/N watch finished before any dip and the quizzes ran ahead of it.
+ *     The custom evaluator reads through the window.signalRange handle (no
+ *     manager imports), as S17's sky-noise rows do.
  */
+
+/** Whether VT-01's antenna has the RAIN FADE alarm up right now. */
+const vt01RainFadeUp = (): boolean => {
+  const w = window as unknown as {
+    signalRange?: {
+      simulationManager?: {
+        groundStations?: Array<{
+          state?: { id?: string };
+          antennas?: Array<{ getStatusAlarms?: () => Array<{ message: string }> }>;
+        }>;
+      };
+    };
+  };
+  const gs = w.signalRange?.simulationManager?.groundStations?.find((g) => g.state?.id === 'VT-01');
+  const alarms = gs?.antennas?.[0]?.getStatusAlarms?.() ?? [];
+
+  return alarms.some((a) => a.message.startsWith('RAIN FADE'));
+};
 
 export const scenario14Data: ScenarioData = {
   id: 'nats-scenario14',
@@ -498,7 +527,7 @@ export const scenario14Data: ScenarioData = {
       nice: ['T0153', 'S0675'],
       title: 'Monitor Through the Fade',
       description:
-        "Stay on RX Analysis as the front arrives (within seconds of this step opening) and watch RX modem 1's Raw C/N for 20 s. At C-band the dip is about 1 dB, not much more than the readout's normal wander; the modem loses that 1 dB because our own uplink is rained on too, while the RAIN FADE alarm detail reads the downlink loss alone, about 0.7 dB at the peak. The alarm shows once the fade passes 0.5 dB, about 2 minutes into the cell, and the ACU Environmental card shows Precipitation ACTIVE while the cell is overhead.",
+        "Stay on RX Analysis as the front arrives (within seconds of this step opening) and watch RX modem 1's Raw C/N until the RAIN FADE alarm is up, then for 20 s more with it up. At C-band the dip is about 1 dB, not much more than the readout's normal wander; the modem loses that 1 dB because our own uplink is rained on too, while the RAIN FADE alarm detail reads the downlink loss alone, about 0.7 dB at the peak. The alarm shows once the fade passes 0.5 dB, about 2 minutes into the cell, and the ACU Environmental card shows Precipitation ACTIVE while the cell is overhead.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['baseline-margin-quiz'],
       timeLimitSeconds: 6 * 60,
@@ -510,6 +539,18 @@ export const scenario14Data: ScenarioData = {
           description: 'RX Analysis Open',
           params: { tab: 'rx-analysis' },
           mustMaintain: true,
+        },
+        {
+          // The cell is overhead: the live RAIN FADE alarm, held 20 s on RX
+          // Analysis, gates this watch and the fade-phase steps behind it
+          // (Phase 32 D20, nats-r7-s14-F1)
+          type: 'custom',
+          description: 'RAIN FADE Alarm Up (cell overhead)',
+          params: {
+            evaluator: vt01RainFadeUp,
+          },
+          mustMaintain: true,
+          maintainDuration: 20,
         },
         {
           type: 'receiver-signal-locked',
@@ -582,7 +623,7 @@ export const scenario14Data: ScenarioData = {
           description: 'AGC Headroom Interpretation',
           params: {
             character: Character.SYSTEM,
-            question: 'Through the cell the AGC gain moves by a few tenths of a dB and stays far below its maximum. What does that say about the decision to hold?',
+            question: 'Through the cell the AGC gain moves by under 1 dB and stays far below its maximum. What does that say about the decision to hold?',
             options: [
               'Plenty of headroom remaining - link is comfortable, hold is justified',
               'Headroom is already spent - any non-zero AGC value means hand over now',
@@ -591,7 +632,7 @@ export const scenario14Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'The rain moves the total passband power by only a few tenths of a dB, so the AGC gain follows by a few tenths, a small slice of its range: the cushion is barely touched. The handover trigger is not AGC active - it is AGC near max with continued fade, or modem unlock. We are nowhere near either.',
+              'The rain moves the total passband power by under 1 dB, so the AGC gain follows by under 1 dB (0.5-1.0 dB measured), a small slice of its range: the cushion is barely touched. The handover trigger is not AGC active - it is AGC near max with continued fade, or modem unlock. We are nowhere near either.',
             pointPenalty: 5,
           },
           mustMaintain: false,
