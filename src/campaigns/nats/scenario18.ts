@@ -793,9 +793,9 @@ export const scenario18Data: ScenarioData = {
             character: Character.SYSTEM,
             question: 'Which entry hands this off correctly?',
             options: [
-              'TM-2 vehicle anomaly (Halifax ref): N-S burn overran, ~1.3° inclination, ephemeris stale. ME-02 step-track from ~0920, carrier recovered, no impact. Pointing history to Halifax. Anomaly OPEN.',
-              'TM-2 tracking anomaly (ME-02 ref): program-track lost margin, ephemeris stale. Step-track from ~0920, carrier recovered, no impact. Fix confirmed, no further action. Anomaly CLOSED.',
-              'TM-2 vehicle anomaly (Halifax ref): N-S burn overran, ~1.3° inclination, ephemeris stale. ME-02 step-track 0920 to 0930, carrier recovered, no impact. Returned to program-track. Anomaly CLOSED.',
+              'TM-2 vehicle anomaly (Halifax ref): N-S burn overran, ~1.3° inclination, ephemeris stale. ME-02 step-track engaged this shift (time in the Ops Log), carrier recovered, no impact. Pointing history to Halifax. Anomaly OPEN.',
+              'TM-2 tracking anomaly (ME-02 ref): program-track lost margin, ephemeris stale. Step-track engaged this shift, carrier recovered, no impact. Fix confirmed, no further action. Anomaly CLOSED.',
+              'TM-2 vehicle anomaly (Halifax ref): N-S burn overran, ~1.3° inclination, ephemeris stale. ME-02 step-track for the burn window only, carrier recovered, no impact. Returned to program-track. Anomaly CLOSED.',
               'TM-2 vehicle anomaly (Halifax ref): thruster degradation under investigation. ME-02 carrier nominal, no impact. Halifax holds all detail and next steps. Anomaly OPEN, no ground actions.',
             ],
             correctIndex: 0,

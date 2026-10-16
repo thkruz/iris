@@ -96,7 +96,13 @@ export const scenario3Data: ScenarioData = {
             elevation: 90 as Degrees,
             // polarization: derived from geometry (Phase 29 D8, geoPolarizationSkewDeg)
             isTracking: false,
-            trackingMode: 'manual',
+            // Authored stowed like S12 (phase 33 D14), so the board reads
+            // STOWED rather than Manual Tracking Enabled
+            trackingMode: 'stow',
+            isBeaconLocked: false,
+            targetSatelliteId: null,
+            slewing: false,
+            isLocked: false,
           } as Partial<AntennaState>,
         ],
         rfFrontEnds: [
@@ -188,11 +194,13 @@ export const scenario3Data: ScenarioData = {
         linkMarginDegradation: 8, // dB - exceeds acceptable threshold
         // Q5: wet snow at 2+ in/h in 25-40 mph wind outpaces the feed heater
         // (sized for about 1 in/h; the wind strips its heat). With the heater
-        // on, ice still builds toward 10 - 0.4 x 12 = 5.2 dB; lock goes near
-        // 4 dB (12.7 dB clear-sky C/N; Phase 29 D9: acquires about 4.7, holds to about 3.7), about 13-15 min
-        // after the heater comes on. The heater buys time; the handover is
-        // still needed.
-        heaterMeltDbPerMin: 0.4,
+        // on, ice still builds toward 10 - 0.5 x 12 = 4.0 dB (12.7 dB
+        // clear-sky C/N; Phase 29 D9: acquires about 4.7, holds to about
+        // 3.7). C/N under the 4.7 dB reacquire point about 15 min in, lock
+        // lost near 3.5 dB of ice about 22 min in (phase 33 D13: after a
+        // steady handover, nats-s3-heater-lock.test.ts). The heater buys
+        // time; the handover is still needed.
+        heaterMeltDbPerMin: 0.5,
       },
     ],
     trafficOwnership: [

@@ -586,7 +586,7 @@ export const scenario24Data: ScenarioData = {
       nice: ['S0593', 'T1567'],
       title: 'Take TM-1 Off the Air',
       description:
-        "Before the dish leaves TIDEMARK-1, take VT-01's TM-1 carrier off the air on TX Chain: disable the HPA output first, then mute the BUC. A carrier keyed through a slew sweeps every satellite on the arc. SeaLink's backup hub carries the TM-1 trunk for the AURORA-7 window (booked with the pass).",
+        "Before the dish leaves TIDEMARK-1, take VT-01's TM-1 carrier off the air on TX Chain: disable the HPA output first, then mute the BUC. A carrier keyed through a slew sweeps every satellite on the arc. SeaLink's backup hub carries the TM-1 trunk for the AURORA-7 window (booked with the pass). Expect two alarms on VT-01's Dashboard once it is off the air: 'AGC on noise only' and 'Carrier lock lost' (Modem 1 has no carrier to lock to). Both are expected and stay up while SeaLink's backup hub carries TM-1.",
       groundStation: 'VT-01',
       prerequisiteObjectiveIds: ['return-vermont-for-pass'],
       timeLimitSeconds: 2 * 60,

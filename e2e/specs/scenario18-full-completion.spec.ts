@@ -175,7 +175,7 @@ const SCENARIO_18_OBJECTIVES: Scenario18Objective[] = [
     title: 'Log the Anomaly Response',
     type: 'quiz',
     correctAnswer:
-      'TM-2 vehicle anomaly (Halifax ref): N-S burn overran, ~1.3° inclination, ephemeris stale. ME-02 step-track from ~0920, carrier recovered, no impact. Pointing history to Halifax. Anomaly OPEN.',
+      'TM-2 vehicle anomaly (Halifax ref): N-S burn overran, ~1.3° inclination, ephemeris stale. ME-02 step-track engaged this shift (time in the Ops Log), carrier recovered, no impact. Pointing history to Halifax. Anomaly OPEN.',
   },
 ];
 

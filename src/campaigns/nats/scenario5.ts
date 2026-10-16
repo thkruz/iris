@@ -566,7 +566,7 @@ export const scenario5Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              "Work it from what you can see. The analyzer shows one steady carrier about 1 MHz wide, not a raised noise floor across the band, so it is not solar noise. SeaLink's ships out on the Atlantic see the damage too, so the spike is inside the transponder, not just in our downlink: a tower near Vermont would hurt only us. Our TX chain reads normal, and a spur from our BUC would be a CW line, not a modulated carrier a megahertz wide. What fits is another operator's uplink: TP-1 is horizontal, its twin on the same frequencies is vertical for frequency reuse, and the other operator's V-pol carrier is leaking into our H-pol transponder because their uplink's polarization isolation is imperfect.",
+              "Work it from what you can see. The analyzer shows one steady carrier about 1 MHz wide, not a raised noise floor across the band, so it is not solar noise. SeaLink's ships out on the Atlantic see the damage too, so the spike is inside the transponder, not just in our downlink: a tower near Vermont would hurt only us. Our TX chain reads normal, and a spur from our BUC would be a CW line, not a modulated carrier a megahertz wide. What fits is another operator's uplink: TP-1 takes horizontal uplinks, its twin on the same frequencies takes vertical ones for frequency reuse, and the other operator's V-pol uplink is leaking into our H-pol transponder because their uplink's polarization isolation is imperfect.",
             pointPenalty: 5,
           },
           mustMaintain: false,
@@ -1046,7 +1046,7 @@ export const scenario5Data: ScenarioData = {
           1,515 megahertz IF is our notch target. Now let's figure out what's putting it there. Work it from the evidence: is it a carrier or a raised noise floor? Is it only in our downlink, or are the ships seeing it too?
         </p>
         <p>
-          And think about polarization. We're using horizontal polarization on this transponder. Satellite transponders often have matching transponders on the orthogonal polarization for frequency reuse - another operator might be using that vertical pol slot.
+          And think about polarization. TP-1 takes our uplink on horizontal and sends it back down on vertical - that's why the OMT card reads TX H, RX V. Satellites often reuse the same frequencies on the orthogonal polarization - another operator might be uplinking into that vertical slot.
         </p>
         `,
         character: Character.CHARLIE_BROOKS,

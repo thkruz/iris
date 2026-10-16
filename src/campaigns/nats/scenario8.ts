@@ -670,7 +670,7 @@ export const scenario8Data: ScenarioData = {
           params: {
             character: Character.SYSTEM,
             question:
-              'Weather service reports freezing rain expected in 2 hours. Step-track now holds beacon lock, though RX 1 still drops the carrier now and then. What is the appropriate action?',
+              'Weather service reports freezing rain expected in 2 hours. Step-track now holds beacon lock, though RX 1 still drops the carrier every few seconds. What is the appropriate action?',
             options: [
               'Enable feed heater now as a precaution, continue monitoring the link',
               'Stow the antenna now as a precaution, accept the link outage until it passes',
@@ -1330,7 +1330,7 @@ export const scenario8Data: ScenarioData = {
         <em>[Text message from Dana at 2:03 AM]</em>
       </p>
       <p>
-        "Hey - just got a trouble ticket. Customer reports intermittent connectivity on AURORA-7, signal dropouts every few minutes. I'm on-call but heading back to sleep. You've got this."
+        "Hey - just got a trouble ticket. Customer reports intermittent connectivity on AURORA-7, signal dropouts every few seconds. I'm on-call but heading back to sleep. You've got this."
       </p>
       <p>
         "Charlie's out of state visiting family. Call me only if it's a genuine emergency. Good luck."
