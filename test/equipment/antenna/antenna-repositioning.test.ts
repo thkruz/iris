@@ -11,6 +11,7 @@ import { antennaLockLabel } from '../../../src/equipment/antenna/tracking-mode-l
 import { EventBus } from '../../../src/events/event-bus';
 import { type AntennaSlewCompleteData, Events } from '../../../src/events/events';
 import { EventAutoLogger } from '../../../src/ops-log/event-auto-logger';
+import { formatAntennaArrival } from '../../../src/ops-log/event-formatters';
 import { OpsLogManager } from '../../../src/ops-log/ops-log-manager';
 import { FIXED_STEP_MS, SimClock } from '../../../src/simulation/sim-clock';
 
@@ -164,6 +165,25 @@ describe('Antenna repositioning (phase 31 D5)', () => {
     expect(arrivals[0]).toMatchObject({ mode: 'manual', targetSatelliteId: null, targetSatelliteName: null });
     expect(arrivals[0].azimuth).toBeCloseTo(153.1, 3);
     expect(arrivals[0].elevation).toBeCloseTo(35.1, 3);
+  });
+
+  it('reports the arrival of a 0.01 deg manual nudge, two decimals on the line (Phase 33 D8, nats-r8-s23-F2)', () => {
+    const antenna = new HeadlessAntenna({
+      trackingMode: 'manual',
+      azimuth: 153.1 as never,
+      elevation: 35.1 as never,
+      targetAzimuth: 153.1 as never,
+      targetElevation: 35.1 as never,
+    });
+    antenna.update(100);
+
+    antenna.state.targetAzimuth = 153.11 as never;
+    runUntilStopped(antenna);
+    antenna.update(100);
+
+    expect(arrivals).toHaveLength(1);
+    expect(arrivals[0]).toMatchObject({ mode: 'manual' });
+    expect(formatAntennaArrival(arrivals[0])).toBe('MANUAL: at Az 153.11, El 35.10');
   });
 
   it('reports no arrival for a tracker following its target (no command)', () => {

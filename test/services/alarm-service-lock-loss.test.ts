@@ -4,6 +4,7 @@ import { Receiver } from '../../src/equipment/receiver/receiver';
 import { TapPoint } from '../../src/equipment/rf-front-end/coupler-module/tap-points';
 import { EventBus } from '../../src/events/event-bus';
 import { Events } from '../../src/events/events';
+import { OpsLogManager } from '../../src/ops-log/ops-log-manager';
 import { AlarmService } from '../../src/services/alarm-service';
 import { SimClock } from '../../src/simulation/sim-clock';
 import { SimulationManager } from '../../src/simulation/simulation-manager';
@@ -176,31 +177,34 @@ describe('AlarmService: Carrier lock lost (Phase 31 D1, nats-r6-s17-F1)', () => 
   });
 
   it('keeps the Signal(s) Detected raise time across a modem tab switch (Phase 32 D15, nats-r7-s14-F2)', () => {
-    const now = vi.spyOn(Date, 'now').mockReturnValue(5_000);
     const sim = vi.spyOn(SimulationManager, 'getInstance').mockReturnValue({ groundStations: [station] } as never);
     try {
       atMargin(3);
       run(11_000);
+      // Raise times are scenario-clock stamps once the Ops Log seeds the clock (Phase 33 D5)
+      OpsLogManager.initialize();
+      OpsLogManager.getInstance().resume();
       AlarmService.getInstance();
       SimClock.advanceRun(AlarmService.STARTUP_SETTLE_MS);
+      // One scenario second of steps, so the poll (on the scenario second, Phase 33 D7) runs
       const poll = () => {
-        SimClock.advanceRun(1_000);
+        run(1_000);
         EventBus.getInstance().emit(Events.UPDATE, 16 as never);
         return AlarmService.getAlarms(station as never).find((a) => a.message === 'Signal(s) Detected');
       };
-      expect(poll()?.raisedAtMs).toBe(5_000);
+      const raisedAtMs = poll()?.raisedAtMs;
+      expect(raisedAtMs).toBe(SimClock.nowMs());
 
       // RX 2 (powered, no carrier) then back to RX 1, each across a poll
       rx.state.modems[1].isPowered = true;
       rx.state.modems[1].frequency = 1500 as never;
-      now.mockReturnValue(9_000);
       rx.setActiveModem(2);
-      expect(poll()?.raisedAtMs).toBe(5_000);
+      expect(poll()?.raisedAtMs).toBe(raisedAtMs);
       rx.setActiveModem(1);
-      expect(poll()?.raisedAtMs).toBe(5_000);
+      expect(poll()?.raisedAtMs).toBe(raisedAtMs);
     } finally {
       sim.mockRestore();
-      now.mockRestore();
+      OpsLogManager.destroy();
     }
   });
 });

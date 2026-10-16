@@ -98,14 +98,16 @@ export function formatAntennaEvent(data: Partial<AntennaState>): string | null {
 }
 
 /** Azimuth as the ACU prints it, 0-360 */
-function formatAz_(azimuth: number): string {
-  return (((azimuth % 360) + 360) % 360).toFixed(1);
+function formatAz_(azimuth: number, digits = 1): string {
+  return (((azimuth % 360) + 360) % 360).toFixed(digits);
 }
 
 /**
  * The arrival line of a commanded antenna move (nats-r6-s11-F1):
  * "PROGRAM: on target TIDEMARK-1 (Az 188.4, El 29.3)", "STOW: parked (El 90.0)",
- * "MAINTENANCE: parked (El 5.0)", "MANUAL: at Az 153.1, El 35.1"
+ * "MAINTENANCE: parked (El 5.0)", "MANUAL: at Az 153.11, El 35.10". The
+ * MANUAL line carries two decimals so a 0.01 deg nudge reads as moved
+ * (Phase 33 D8, nats-r8-s23-F2); the others keep one.
  */
 export function formatAntennaArrival(data: AntennaSlewCompleteData): string {
   const az = formatAz_(data.azimuth);
@@ -118,7 +120,7 @@ export function formatAntennaArrival(data: AntennaSlewCompleteData): string {
     case 'maintenance':
       return `MAINTENANCE: parked (El ${el})`;
     default:
-      return `MANUAL: at Az ${az}, El ${el}`;
+      return `MANUAL: at Az ${formatAz_(data.azimuth, 2)}, El ${data.elevation.toFixed(2)}`;
   }
 }
 

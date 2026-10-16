@@ -1,7 +1,8 @@
 import { Mock, vi } from 'vitest';
 import { Events } from '../../src/events/events';
+import { OpsLogManager } from '../../src/ops-log/ops-log-manager';
 import { AlarmService } from '../../src/services/alarm-service';
-import { SimClock } from '../../src/simulation/sim-clock';
+import { FIXED_STEP_MS, SimClock } from '../../src/simulation/sim-clock';
 
 type AlarmLike = { severity: string; message: string };
 
@@ -37,6 +38,21 @@ vi.mock('@app/events/event-bus', () => ({
   },
 }));
 
+/**
+ * Whether the scenario clock counts as running for raise stamps: most cases
+ * stamp on the (mocked) wall clock as before Phase 33 D5, so it reads as
+ * running; 'real' defers to OpsLogManager like the app
+ */
+const clock = vi.hoisted(() => ({ running: true as boolean | 'real' }));
+
+vi.mock('@app/simulation/sim-time', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/simulation/sim-time')>();
+  return {
+    ...actual,
+    isScenarioClockRunning: () => (clock.running === 'real' ? actual.isScenarioClockRunning() : clock.running),
+  };
+});
+
 vi.mock('@app/simulation/simulation-manager', () => ({
   SimulationManager: {
     getInstance: () => mockSimulationGetInstance(),
@@ -63,6 +79,11 @@ function settleService(): void {
   SimClock.advanceRun(AlarmService.STARTUP_SETTLE_MS);
 }
 
+/** Run `ms` of fixed steps: run and scenario time both move (Phase 33 D7 polls on the scenario second) */
+function runSteps(ms: number): void {
+  for (let i = 0; i < Math.round(ms / FIXED_STEP_MS); i++) SimClock.step();
+}
+
 describe('AlarmService', () => {
   beforeEach(() => {
     (AlarmService as any).instance_ = null;
@@ -76,6 +97,7 @@ describe('AlarmService', () => {
     mockSimulationGetInstance.mockClear();
 
     vi.spyOn(Date, 'now').mockReturnValue(1000);
+    clock.running = true;
   });
 
   afterEach(() => {
@@ -156,8 +178,9 @@ describe('AlarmService', () => {
 
     settleService();
     updateHandler?.(16);
-    SimClock.advanceRun(1500);
+    runSteps(1500);
     updateHandler?.(16);
+    expect(mockSimulationGetInstance).toHaveBeenCalledTimes(2);
 
     // First tick should emit, second should be suppressed as unchanged
     const emits = mockEventBus.emit.mock.calls.filter(([event]) => event === Events.ALARM_STATE_CHANGED);
@@ -280,7 +303,7 @@ describe('AlarmService', () => {
 
       // Cleared on a poll, raised again later: a new raise time
       antenna.getStatusAlarms.mockReturnValue([]);
-      SimClock.advanceRun(1_000);
+      runSteps(1_000);
       updateHandler?.(16);
       antenna.getStatusAlarms.mockReturnValue([alarm('warning', 'ACQUIRING LOCK...')]);
       expect(AlarmService.getAlarms('VT-01')[0].raisedAtMs).toBe(400_000);
@@ -363,6 +386,7 @@ describe('AlarmService', () => {
       ['GPSDO in holdover (1.5 μs error)', 'GPSDO in holdover', '1.5 μs error'],
       ['LNB noise temperature high (131 K)', 'LNB noise temperature high', '131 K'],
       ['HPA overdrive (IM3 -24.8 dBc) - IMD degradation', 'HPA overdrive - IMD degradation', 'IM3 -24.8 dBc'],
+      ['LNB input overload (0.7 dB) - gain compression', 'LNB input overload - gain compression', '0.7 dB'],
     ])('moves the live value of "%s" into the detail (Phase 31 D3)', (raw, label, detail) => {
       const station = gs({ antennas: [{ getStatusAlarms: vi.fn().mockReturnValue([alarm('warning', raw)]) }] });
       expect(AlarmService.getAlarms(station as any)[0]).toEqual(expect.objectContaining({ message: label, detail }));
@@ -370,10 +394,10 @@ describe('AlarmService', () => {
 
     it('leaves a label with no parenthesised value alone', () => {
       const station = gs({
-        antennas: [{ getStatusAlarms: vi.fn().mockReturnValue([alarm('warning', 'ACQUIRING LOCK...'), alarm('warning', 'LNB input overload - 1.2 dB gain compression')]) }],
+        antennas: [{ getStatusAlarms: vi.fn().mockReturnValue([alarm('warning', 'ACQUIRING LOCK...'), alarm('warning', 'HPA overdrive - IMD degradation')]) }],
       });
       const alarms = AlarmService.getAlarms(station as any);
-      expect(alarms.map((a) => a.message)).toEqual(['ACQUIRING LOCK...', 'LNB input overload - 1.2 dB gain compression']);
+      expect(alarms.map((a) => a.message)).toEqual(['ACQUIRING LOCK...', 'HPA overdrive - IMD degradation']);
       expect(alarms.map((a) => a.detail)).toEqual([undefined, undefined]);
     });
 
@@ -387,7 +411,7 @@ describe('AlarmService', () => {
       updateHandler?.(16);
       rf.getStatusAlarms.mockImplementation((rfCase: number) => (rfCase === 1 ? [alarm('error', 'BUC over-temperature (73.4 °C)')] : []));
       (Date.now as Mock).mockReturnValue(6_000);
-      SimClock.advanceRun(1_000);
+      runSteps(1_000);
       updateHandler?.(16);
       const published = mockEventBus.emit.mock.calls.filter(([event]) => event === Events.ALARM_STATE_CHANGED).map(([, data]) => data.alarms[0]);
       expect(published).toHaveLength(2);
@@ -402,7 +426,7 @@ describe('AlarmService', () => {
   describe('live value at the clear (Phase 32 D5, nats-r7-s05-F1, nats-r6-s16-F1)', () => {
     /** Poll once more, past the poll interval, and return the last emitted data */
     const poll = () => {
-      SimClock.advanceRun(1_000);
+      runSteps(1_000);
       updateHandler?.(16);
       const calls = mockEventBus.emit.mock.calls.filter(([event]) => event === Events.ALARM_STATE_CHANGED);
       return calls[calls.length - 1]?.[1];
@@ -467,6 +491,47 @@ describe('AlarmService', () => {
       });
     });
 
+    describe('LNB compression and HPA IM3 (Phase 33 D6, nats-r8-s07-F1, nats-r7-s12-F2)', () => {
+      const lnbModule = { compressionDb: 0.7, state: {} };
+      const hpa = { isPowered: true, imdLevel: -24.8, temperature: 40 };
+      let up = true;
+      const rf = {
+        getStatusAlarms: vi.fn((rfCase: number) =>
+          up && rfCase === 1 ? [alarm('warning', 'LNB input overload (0.7 dB) - gain compression'), alarm('warning', 'HPA overdrive (IM3 -24.8 dBc) - IMD degradation')] : []
+        ),
+        lnbModule,
+        hpaModule: { state: hpa },
+      };
+      const clearedDetails = (data: { cleared: { message: string; detail?: string }[] }) => Object.fromEntries(data.cleared.map((a) => [a.message, a.detail]));
+
+      beforeEach(() => {
+        up = true;
+        lnbModule.compressionDb = 0.7;
+        Object.assign(hpa, { isPowered: true, imdLevel: -24.8 });
+        mockSimulationManager.groundStations = [gs({ state: { id: 'VT-01', isOperational: true }, rfFrontEnds: [rf as any] })];
+        updateHandler?.(16);
+      });
+
+      it('re-reads the LNB compression and the HPA IM3 level at the clear', () => {
+        up = false;
+        lnbModule.compressionDb = 0;
+        hpa.imdLevel = -43.1;
+        expect(clearedDetails(poll())).toEqual({
+          'LNB input overload - gain compression': '0.0 dB',
+          'HPA overdrive - IMD degradation': 'IM3 -43.1 dBc',
+        });
+      });
+
+      it('quotes no IM3 once the HPA is off (its -80 dBc no-IMD floor)', () => {
+        up = false;
+        Object.assign(hpa, { isPowered: false, imdLevel: -80 });
+        const data = poll();
+        const overdrive = data.cleared.find((a: { message: string }) => a.message === 'HPA overdrive - IMD degradation');
+        expect(overdrive).toBeDefined();
+        expect('detail' in overdrive).toBe(false);
+      });
+    });
+
     it('sends no detail for an alarm with no live value to re-read', () => {
       let up = true;
       const antenna = { getStatusAlarms: vi.fn(() => (up ? [alarm('warning', 'AUTO TRACK FAILED')] : [])) };
@@ -477,6 +542,106 @@ describe('AlarmService', () => {
       expect(data.cleared).toHaveLength(1);
       expect(data.cleared[0].message).toBe('AUTO TRACK FAILED');
       expect('detail' in data.cleared[0]).toBe(false);
+    });
+  });
+
+  describe('raise time waits for the scenario clock (Phase 33 D5, nats-r8-s03-F1)', () => {
+    afterEach(() => {
+      OpsLogManager.destroy();
+      AlarmService.destroy();
+    });
+
+    it('stamps nothing before the Ops Log seeds the clock, then the scenario start, never the wall clock', () => {
+      AlarmService.destroy();
+      clock.running = 'real';
+      const station = gs({ state: { id: 'ME-02', isOperational: true }, antennas: [{ getStatusAlarms: vi.fn().mockReturnValue([alarm('warning', 'ICE ON FEED (0.5 dB)')]) }] });
+      mockSimulationManager.groundStations = [station];
+      (Date.now as Mock).mockReturnValue(Date.UTC(2026, 9, 16, 4, 21, 50));
+
+      // The Mission Overview renders its station cards before initializeAsync_ seeds the clock
+      expect(AlarmService.getAlarms(station as any)[0].raisedAtMs).toBeUndefined();
+
+      OpsLogManager.initialize('12:00:00', '2026-03-15');
+      const start = Date.UTC(2026, 2, 15, 12, 0, 0);
+      expect(SimClock.nowMs()).toBe(start);
+      AlarmService.getInstance();
+      settleService();
+      // Paused for the brief review: the poll still runs, on run time
+      updateHandler?.(16);
+      const [, polled] = mockEventBus.emit.mock.calls.find(([event]) => event === Events.ALARM_STATE_CHANGED) ?? [];
+      expect(polled.alarms[0].raisedAtMs).toBe(start);
+      expect(AlarmService.getAlarms('ME-02')[0].raisedAtMs).toBe(start);
+    });
+  });
+
+  describe('sampling on the scenario second (Phase 33 D7, nats-r8-s20-F1)', () => {
+    afterEach(() => {
+      SimClock.resume('scenario');
+      mockSimulationGetInstance.mockImplementation(() => mockSimulationManager);
+      AlarmService.destroy();
+    });
+
+    it('polls on the first tick of each scenario second, and not on run time alone', () => {
+      AlarmService.destroy();
+      AlarmService.getInstance();
+      mockSimulationManager.groundStations = [gs()];
+      settleService();
+      updateHandler?.(16);
+      const pollAtMs: number[] = [];
+      mockSimulationGetInstance.mockImplementation(() => {
+        pollAtMs.push(SimClock.nowMs());
+        return mockSimulationManager;
+      });
+
+      // An objective wait fast-forwards run time only: the scenario second has not turned
+      SimClock.advanceRun(5_000);
+      updateHandler?.(16);
+      expect(pollAtMs).toEqual([]);
+
+      for (let i = 0; i < 3 * 60; i++) {
+        SimClock.step();
+        updateHandler?.(16);
+      }
+      expect(pollAtMs).toHaveLength(3);
+      for (const [i, ms] of pollAtMs.entries()) {
+        expect(ms % 1000).toBeLessThan(FIXED_STEP_MS);
+        if (i > 0) {
+          expect(Math.floor(ms / 1000) - Math.floor(pollAtMs[i - 1] / 1000)).toBe(1);
+        }
+      }
+    });
+
+    it('falls back to one poll per second of run time while the scenario clock is paused', () => {
+      AlarmService.destroy();
+      AlarmService.getInstance();
+      mockSimulationManager.groundStations = [gs()];
+      settleService();
+      SimClock.pause('scenario');
+      const scenarioMs = SimClock.nowMs();
+
+      updateHandler?.(16);
+      expect(mockSimulationGetInstance).toHaveBeenCalledTimes(1);
+      runSteps(900);
+      updateHandler?.(16);
+      expect(mockSimulationGetInstance).toHaveBeenCalledTimes(1);
+      runSteps(100);
+      updateHandler?.(16);
+      expect(mockSimulationGetInstance).toHaveBeenCalledTimes(2);
+      expect(SimClock.nowMs()).toBe(scenarioMs);
+    });
+
+    it('moves its UPDATE handler behind the listeners already subscribed (WeatherManager)', () => {
+      AlarmService.destroy();
+      AlarmService.subscribeAfterExistingListeners();
+      expect(mockEventBus.off).not.toHaveBeenCalled();
+
+      AlarmService.getInstance();
+      const handler = updateHandler;
+      mockEventBus.on.mockClear();
+      AlarmService.subscribeAfterExistingListeners();
+      expect(mockEventBus.off).toHaveBeenCalledWith(Events.UPDATE, handler);
+      expect(mockEventBus.on).toHaveBeenCalledWith(Events.UPDATE, handler);
+      expect(mockEventBus.off.mock.invocationCallOrder[0]).toBeLessThan(mockEventBus.on.mock.invocationCallOrder[0]);
     });
   });
 

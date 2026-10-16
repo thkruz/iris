@@ -4,7 +4,7 @@ import { describeEsN0, describeEsN0ForAcquisition } from '@app/equipment/receive
 import { EventBus } from '@app/events/event-bus';
 import { AggregatedAlarm, AlarmStateChangedData, Events } from '@app/events/events';
 import { SimClock } from '@app/simulation/sim-clock';
-import { getSimulatedNowMs } from '@app/simulation/sim-time';
+import { getSimulatedNowMs, isScenarioClockRunning } from '@app/simulation/sim-time';
 import { SimulationManager } from '@app/simulation/simulation-manager';
 import { Milliseconds } from 'ootk';
 
@@ -44,7 +44,10 @@ export class AlarmService {
   private static instance_: AlarmService | null = null;
   private previousAlarmsHash_ = '';
   private lastPollTime_ = -Infinity;
-  private readonly pollInterval_ = 1000; // 1 second
+  /** Run time between polls while the scenario clock is paused, ms */
+  private readonly pollInterval_ = 1000;
+  /** Scenario-clock second (floor of SimClock.nowMs() / 1000) of the last poll */
+  private lastPollSecond_: number | null = null;
   /**
    * Run time the service started counting from: no poll until
    * STARTUP_SETTLE_MS after it (Phase 31 D2, nats-r6-s01-F1), so the store
@@ -73,6 +76,29 @@ export class AlarmService {
     return AlarmService.instance_;
   }
 
+  /**
+   * Move the UPDATE handler behind every listener subscribed so far, so a
+   * poll reads the state they wrote on the same tick. The page calls it once
+   * WeatherManager exists (Phase 33 D7, nats-r8-s20-F1): ice, rain and sun
+   * levels are written on UPDATE, and a poll that ran first quoted the value
+   * one tick old. No-op without an instance.
+   */
+  static subscribeAfterExistingListeners(): void {
+    const service = AlarmService.instance_;
+    if (!service) return;
+    const bus = EventBus.getInstance();
+    bus.off(Events.UPDATE, service.boundOnUpdate_);
+    bus.on(Events.UPDATE, service.boundOnUpdate_);
+  }
+
+  /**
+   * Poll once per scenario-clock second, on the tick the second turns
+   * (Phase 33 D7, nats-r8-s20-F1), so the raise/clear line, the peak and the
+   * ACU card's once-a-second readout sample the same moment. While the
+   * scenario clock is paused (brief review, a passed quiz) it does not turn,
+   * so the poll falls back to once per second of run time and the board
+   * still follows the equipment.
+   */
   private onUpdate_(_dt: Milliseconds): void {
     const now = SimClock.runMs();
     // Run time restarts at 0 each scenario, so a later stamp is from an
@@ -80,11 +106,15 @@ export class AlarmService {
     if (now < this.settleFromRunMs_ || now < this.lastPollTime_) {
       this.settleFromRunMs_ = now;
       this.lastPollTime_ = -Infinity;
+      this.lastPollSecond_ = null;
       this.previousAlarms_.clear();
     }
     if (now - this.settleFromRunMs_ < AlarmService.STARTUP_SETTLE_MS) return;
-    if (now - this.lastPollTime_ < this.pollInterval_) return;
+    const second = Math.floor(SimClock.nowMs() / 1000);
+    const due = SimClock.isPaused('scenario') ? now - this.lastPollTime_ >= this.pollInterval_ : second !== this.lastPollSecond_;
+    if (!due) return;
     this.lastPollTime_ = now;
+    this.lastPollSecond_ = second;
     this.pollAndAggregate_();
   }
 
@@ -122,9 +152,9 @@ export class AlarmService {
   /**
    * The live value behind a known alarm label as its source reads it now
    * (Phase 32 D5): the receiver's Es/N0 for each modem the alarm named, BUC
-   * current and temperature, HPA temperature, LNB noise temperature, and the
-   * antenna's ICE, RAIN FADE and SUN TRANSIT levels, in the detail format the
-   * raise used. Undefined for any other alarm, or when the source is gone.
+   * current and temperature, HPA temperature and IM3 level, LNB noise
+   * temperature and compression (Phase 33 D6), and the antenna's ICE, RAIN
+   * FADE and SUN TRANSIT levels, in the detail format the raise used. Undefined for any other alarm, or when the source is gone.
    */
   private static liveDetailOf_(gs: GroundStation, alarm: AlarmWithDetail): string | undefined {
     const index = alarm.equipmentIndex;
@@ -165,6 +195,16 @@ export class AlarmService {
         if (alarm.message === 'BUC over-temperature' && Number.isFinite(buc?.temperature)) return `${buc.temperature.toFixed(1)} °C`;
         if (alarm.message === 'HPA over-temperature' && Number.isFinite(hpa?.temperature)) return `${hpa.temperature.toFixed(0)}°C`;
         if (alarm.message === 'LNB noise temperature high' && Number.isFinite(lnb?.noiseTemperature)) return `${lnb.noiseTemperature.toFixed(0)} K`;
+        // Phase 33 D6 (nats-r8-s07-F1, nats-r7-s12-F2)
+        if (alarm.message === AlarmService.LNB_OVERLOAD_LABEL) {
+          const compression = rf.lnbModule?.compressionDb;
+          return typeof compression === 'number' && Number.isFinite(compression) ? `${compression.toFixed(1)} dB` : undefined;
+        }
+        if (alarm.message === AlarmService.HPA_OVERDRIVE_LABEL) {
+          const imd = hpa?.imdLevel;
+          // -80 dBc is the HPA's "no IMD" floor (off, or no drive)
+          return hpa?.isPowered && typeof imd === 'number' && Number.isFinite(imd) && imd > AlarmService.NO_IMD_DBC_ ? `IM3 ${imd.toFixed(1)} dBc` : undefined;
+        }
         return undefined;
       }
       default:
@@ -188,9 +228,15 @@ export class AlarmService {
 
   /**
    * Set `raisedAtMs` on each alarm: the station-clock time it was first seen.
+   * Nothing is recorded until the scenario clock runs (Phase 33 D5,
+   * nats-r8-s03-F1): the Mission Overview renders station cards before the
+   * Ops Log seeds the clock, and a stamp taken then was the wall clock, kept
+   * for the alarm's life. The first poll after the clock starts stamps the
+   * scenario start; until then the alarm carries no raise time.
    * @param prune true when `alarms` is every station's full set (the poll)
    */
   private static stampRaisedAt_(alarms: AggregatedAlarm[], prune: boolean): void {
+    if (!isScenarioClockRunning()) return;
     const nowMs = getSimulatedNowMs();
     const seen = new Set<string>();
     for (const alarm of alarms) {
@@ -380,6 +426,12 @@ export class AlarmService {
   static readonly LOCK_LOST_LABEL = 'Carrier lock lost';
   /** Fixed label of the antenna rain-fade alarm */
   static readonly RAIN_FADE_LABEL = 'RAIN FADE';
+  /** Fixed label of the LNB compression alarm, "(0.7 dB)" split into the detail (Phase 33 D6) */
+  static readonly LNB_OVERLOAD_LABEL = 'LNB input overload - gain compression';
+  /** Fixed label of the HPA overdrive alarm, "(IM3 -24.8 dBc)" split into the detail */
+  static readonly HPA_OVERDRIVE_LABEL = 'HPA overdrive - IMD degradation';
+  /** The HPA's IM3 reading with no intermodulation (powered off, no drive), dBc */
+  private static readonly NO_IMD_DBC_ = -80;
 
   /** The live value behind an alarm's fixed label ("Modem 1: Es/N0 5.6 dB, need 5.0 dB"), if it has one */
   static detailOf(alarm: AggregatedAlarm): string | undefined {

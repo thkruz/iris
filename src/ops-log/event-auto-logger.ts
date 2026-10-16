@@ -76,8 +76,13 @@ const SEVERITY_RANK: Readonly<Record<string, number>> = { info: 0, warning: 1, e
 const WARNING_RANK = 1;
 const ERROR_RANK = 2;
 
-/** A detail that is one number with an optional word before it and one unit token after ("4.52 A", "fade 1.2 dB", "92°C") */
-const NUMERIC_DETAIL_RE = /^(?:[A-Za-z]+\s+)?(-?\d+(?:\.\d+)?)(\s*[^\s\d:,;()]+)?$/u;
+/**
+ * A detail that is one number with an optional word before it and one unit
+ * token after ("4.52 A", "fade 1.2 dB", "92°C", "IM3 -43.1 dBc"). The word may
+ * carry digits after its first letter, as AlarmService's VALUE_IN_PARENS_
+ * allows (Phase 33 D6, nats-r7-s12-F2)
+ */
+const NUMERIC_DETAIL_RE = /^(?:[A-Za-z][A-Za-z0-9/]*\s+)?(-?\d+(?:\.\d+)?)(\s*[^\s\d:,;()]+)?$/u;
 
 /** The highest value an alarm's detail read while it was up */
 interface AlarmPeak {

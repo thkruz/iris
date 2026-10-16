@@ -161,6 +161,8 @@ export class Receiver extends BaseEquipment {
   private videoPlayTime: { [url: string]: number } = {};
   powerSwitch: PowerSwitch;
   rfFrontEnd_: RFFrontEndCore | null = null;
+  /** The placeholder uuid getDefaultState() carries, never a real receiver's */
+  private static readonly DEFAULT_UUID_ = 'default';
 
   constructor(parentId: string, antennas: AntennaCore[], state?: Partial<ReceiverState>, teamId: number = 1, serverId: number = 1) {
     super(teamId);
@@ -169,7 +171,11 @@ export class Receiver extends BaseEquipment {
 
     const defaults = Receiver.getDefaultState();
 
-    const uuid = state?.uuid ?? this.uuid;
+    // getDefaultState() carries the placeholder uuid 'default': a receiver
+    // built from it (a second station's {...getDefaultState(), ...}) takes its
+    // own, so its events tag the right station and its DOM ids stay unique
+    // (Phase 33 D9, nats-r7-s03-F1)
+    const uuid = state?.uuid !== undefined && state.uuid !== Receiver.DEFAULT_UUID_ ? state.uuid : this.uuid;
     const team_id = state?.team_id ?? this.teamId;
     const server_id = state?.server_id ?? serverId;
 

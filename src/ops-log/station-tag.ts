@@ -111,8 +111,18 @@ export function stationTagForModemUuid(uuid: string | undefined, modem?: unknown
   return stationTagFor(
     (gs) =>
       (gs.transmitters ?? []).some((t) => (modem !== undefined && t.state?.modems?.includes(modem as never)) || (uuid !== undefined && t.state?.uuid === uuid)) ||
-      (gs.receivers ?? []).some((r) => uuid !== undefined && r.state?.uuid === uuid)
+      (gs.receivers ?? []).some((r) => uuid !== undefined && (r.state?.uuid === uuid || ownUuid_(r) === uuid))
   );
+}
+
+/**
+ * The equipment object's own uuid (BaseEquipment.uuid), which Receiver events
+ * carry even when its state was authored with another uuid (Phase 33 D9,
+ * nats-r7-s03-F1). Read structurally: the field is protected.
+ */
+function ownUuid_(equipment: unknown): string | undefined {
+  const uuid = (equipment as { uuid?: unknown } | null)?.uuid;
+  return typeof uuid === 'string' ? uuid : undefined;
 }
 
 /** Ops Log source label: "VT-01 TX", or "TX" when no station matched (outside a scenario) */

@@ -518,7 +518,7 @@ export abstract class LNBModuleCore extends RFFrontEndModule<LNBState> {
 
     // Input overload: the LNB is past linear (a loop driven too hard, a strong interferer)
     if (this.compressionDb_ >= LNB_COMPRESSION_ALARM_DB) {
-      alarms.push(`LNB input overload - ${this.compressionDb_.toFixed(1)} dB gain compression`);
+      alarms.push(`LNB input overload (${this.compressionDb_.toFixed(1)} dB) - gain compression`);
     }
 
     return alarms;

@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import { Receiver } from '../../src/equipment/receiver/receiver';
 import type { TransmitterModem } from '../../src/equipment/transmitter/transmitter';
 import { EventBus } from '../../src/events/event-bus';
 import { Events } from '../../src/events/events';
@@ -100,7 +101,8 @@ describe('event formatters (nats-r3-s11-F1, s11-F2)', () => {
     );
     expect(formatAntennaArrival({ ...at, mode: 'stow', elevation: 90 })).toBe('STOW: parked (El 90.0)');
     expect(formatAntennaArrival({ ...at, mode: 'maintenance', elevation: 5 })).toBe('MAINTENANCE: parked (El 5.0)');
-    expect(formatAntennaArrival({ ...at, mode: 'manual', azimuth: -206.9, elevation: 35.1 })).toBe('MANUAL: at Az 153.1, El 35.1');
+    // MANUAL prints two decimals, so a 0.01 deg nudge reads as moved (Phase 33 D8, nats-r8-s23-F2)
+    expect(formatAntennaArrival({ ...at, mode: 'manual', azimuth: -206.89, elevation: 35.1 })).toBe('MANUAL: at Az 153.11, El 35.10');
   });
 
   it('names step-track on the tracking line, so engaging it logs (nats-r4-s10-F1)', () => {
@@ -306,6 +308,28 @@ describe('EventAutoLogger station tags (nats-r3-s11-F1)', () => {
     expect(lastEntry().source).toBe('VT-01 ANT');
   });
 
+  it('tags a tune on a receiver built from getDefaultState() with its own station (Phase 33 D9, nats-r7-s03-F1)', () => {
+    // As S3 builds its stations: VT-01 from the defaults, ME-02 spread over
+    // them. Each built alone: the modem buttons' fixed ids would collide in
+    // jsdom's id lookup
+    document.body.innerHTML = '<div id="rx-vt"></div>';
+    const rxVt = new Receiver('rx-vt', [], Receiver.getDefaultState());
+    document.body.innerHTML = '<div id="rx-me"></div>';
+    const rxMe = new Receiver('rx-me', [], { ...Receiver.getDefaultState(), activeModem: 1 });
+    expect(rxVt.state.uuid).not.toBe('default');
+    expect(rxMe.state.uuid).not.toBe(rxVt.state.uuid);
+    setStations([
+      { ...station('VT-01', vtModem), receivers: [rxVt] },
+      { ...station('ME-02', meModem), receivers: [rxMe] },
+    ]);
+
+    rxMe.applyChanges();
+
+    expect(lastEntry().message).toMatch(/^M1: Tuned to /u);
+    expect(lastEntry().source).toBe('ME-02 RX');
+    document.body.innerHTML = '';
+  });
+
   it('logAction writes an automatic action like a manual one, station-tagged', () => {
     EventAutoLogger.getInstance().logAction('HPA disabled (handover)', 'RF FE', 'VT-01');
 
@@ -461,6 +485,63 @@ describe('Phase 30 Ops Log (nats-r5 D1, D2, D3)', () => {
       emitAlarms([]);
 
       expect(messages()).toEqual(['ALARM raised: BUC high current draw (4.52 A)', 'ALARM cleared: BUC high current draw (peak 4.61 A)']);
+    });
+
+    it('keeps the peak of an IM3 and an LNB compression detail (Phase 33 D6, nats-r7-s12-F2, nats-r8-s07-F1)', () => {
+      const overdrive = {
+        severity: 'warning' as const,
+        message: 'HPA overdrive - IMD degradation',
+        detail: 'IM3 -30.2 dBc',
+        assetId: 'VT-01',
+        equipmentType: 'RF',
+        equipmentIndex: 0,
+      };
+      const overload = {
+        severity: 'warning' as const,
+        message: 'LNB input overload - gain compression',
+        detail: '0.6 dB',
+        assetId: 'VT-01',
+        equipmentType: 'RF',
+        equipmentIndex: 0,
+      };
+      emitAlarms([overdrive, overload]);
+      emitAlarms([
+        { ...overdrive, detail: 'IM3 -24.8 dBc' },
+        { ...overload, detail: '0.7 dB' },
+      ]);
+      emitAlarms([
+        { ...overdrive, detail: 'IM3 -27.5 dBc' },
+        { ...overload, detail: '0.5 dB' },
+      ]);
+      emitWithClears(
+        [],
+        [
+          { ...overdrive, detail: 'IM3 -43.1 dBc' },
+          { ...overload, detail: '0.0 dB' },
+        ]
+      );
+
+      expect(messages()).toEqual([
+        'ALARM raised: HPA overdrive - IMD degradation (IM3 -30.2 dBc)',
+        'ALARM raised: LNB input overload - gain compression (0.6 dB)',
+        'ALARM cleared: HPA overdrive - IMD degradation (IM3 -43.1 dBc, peak -24.8 dBc)',
+        'ALARM cleared: LNB input overload - gain compression (0.0 dB, peak 0.7 dB)',
+      ]);
+    });
+
+    it('writes only the IM3 peak when the HPA went off with the alarm (no live IM3)', () => {
+      const overdrive = {
+        severity: 'warning' as const,
+        message: 'HPA overdrive - IMD degradation',
+        detail: 'IM3 -24.8 dBc',
+        assetId: 'VT-01',
+        equipmentType: 'RF',
+        equipmentIndex: 0,
+      };
+      emitAlarms([overdrive]);
+      emitWithClears([], [{ ...overdrive, detail: undefined }]);
+
+      expect(messages()).toEqual(['ALARM raised: HPA overdrive - IMD degradation (IM3 -24.8 dBc)', 'ALARM cleared: HPA overdrive - IMD degradation (peak -24.8 dBc)']);
     });
 
     it('keeps a text detail as it is and adds no peak to it (Phase 32 D9)', () => {

@@ -299,6 +299,8 @@ export abstract class AntennaCore extends BaseEquipment {
 
   /** Pointing error under which a moving program track counts as on target, deg */
   private static readonly ON_TARGET_DEG = 0.01;
+  /** Smallest target change outside program-track that counts as a command, deg (float noise below it) */
+  private static readonly COMMAND_STEP_EPSILON_DEG_ = 1e-6;
 
   /**
    * Program-track reads LOCKED while the beam costs the satellite less than
@@ -654,7 +656,8 @@ export abstract class AntennaCore extends BaseEquipment {
   /**
    * The commanded target stepped this frame: an operator or mode command (a
    * new position, STOW, MAINT, Move to Target), not a tracker following its
-   * bird. Outside program-track the target only moves on command; in
+   * bird. Outside program-track the target only moves on command, so any
+   * change above float noise counts (Phase 33 D8); in
    * program-track only a jump faster than the pedestal could follow counts,
    * and never during a clock skip (the bird itself jumped). In program-track
    * the step is measured net of the step-track offsets (Phase 32 D1,
@@ -669,7 +672,10 @@ export abstract class AntennaCore extends BaseEquipment {
     const dAz = this.state.targetAzimuth - this.lastTargetAz_;
     const dEl = this.state.targetElevation - this.lastTargetEl_;
     if (this.state.trackingMode !== 'program-track') {
-      return Math.max(Math.abs(dAz), Math.abs(dEl)) > AntennaCore.ON_TARGET_DEG;
+      // Any operator input counts, a 0.01 deg nudge included (Phase 33 D8,
+      // nats-r8-s23-F2): the target only moves on command here, so the floor
+      // is float noise, not the on-target window
+      return Math.max(Math.abs(dAz), Math.abs(dEl)) > AntennaCore.COMMAND_STEP_EPSILON_DEG_;
     }
 
     const step = Math.max(Math.abs(dAz - (offsets.az - (this.lastOffsetAz_ ?? 0))), Math.abs(dEl - (offsets.el - (this.lastOffsetEl_ ?? 0))));

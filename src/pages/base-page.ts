@@ -30,6 +30,7 @@ import { WorkingDocumentManager } from '@app/scenarios/working-document-manager'
 import { ScenarioCompletionHandler } from '@app/scoring/scenario-completion-handler';
 import { ScoreCalculator } from '@app/scoring/score-calculator';
 import { SecurityConsoleCore } from '@app/security-console/security-console-core';
+import { AlarmService } from '@app/services/alarm-service';
 import { SimulationManager } from '@app/simulation/simulation-manager';
 import { SpaceEventManager } from '@app/space-events/space-event-manager';
 import { AppState } from '@app/sync/storage';
@@ -115,6 +116,10 @@ export abstract class BasePage extends BaseElement {
       // tick from scenario start rather than first ACU-tab render
       if ((scenario.settings.weatherEvents?.length ?? 0) > 0) {
         WeatherManager.getInstance();
+        // AlarmService subscribed first (MissionControlPage builds it before
+        // the checkpoint await): move its poll behind WeatherManager so it
+        // reads this tick's ice and rain, not the last tick's (Phase 33 D7)
+        AlarmService.subscribeAfterExistingListeners();
       }
 
       // Start scheduled interference events (uplink jammers etc.)
