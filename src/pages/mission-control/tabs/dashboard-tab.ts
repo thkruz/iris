@@ -11,6 +11,7 @@ import { EventBus } from '@app/events/event-bus';
 import { AggregatedAlarm, Events } from '@app/events/events';
 import { AlarmService, AlarmWithDetail } from '@app/services/alarm-service';
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
+import { AlarmLedOptions, alarmLed, applyAlarmLed } from '../alarm-led';
 import { severityGlyph } from '../glyphs';
 import { STATION_STATUS_BADGE, stationStatusLabel } from '../station-status-label';
 import { formatBucOutputPower } from './buc-adapter';
@@ -56,6 +57,10 @@ const ALARM_ICON: Record<AlarmEntry['level'], string> = {
  */
 export class DashboardTab extends BaseElement {
   private static readonly UPDATE_INTERVAL_MS = 1000;
+  /** RF alarm label prefixes of the receive chain (RF case 2 less the GPSDO) */
+  private static readonly RX_CHAIN_PREFIXES_ = ['LNB', 'AGC', 'Notch', 'Filter'] as const;
+  /** RF alarm label prefixes of the transmit chain (RF case 1) */
+  private static readonly TX_CHAIN_PREFIXES_ = ['BUC', 'HPA'] as const;
 
   private readonly groundStation: GroundStation;
   private readonly domCache_: Map<string, HTMLElement> = new Map();
@@ -639,18 +644,14 @@ export class DashboardTab extends BaseElement {
       cnEl.textContent = state.beaconCN !== null ? `${state.beaconCN.toFixed(1)} dB` : '-- dB';
     }
 
-    // Fault LED
-    const faultEl = this.domCache_.get('antenna-fault-led');
-    if (faultEl) {
-      // Green when healthy, red on fault, grey only when the pedestal is off (s01-F14)
-      let ledState = 'off';
-      if (state.hasFault || state.isAcuAutomationFaulted) {
-        ledState = 'error';
-      } else if (state.isPowered) {
-        ledState = 'success';
-      }
-      faultEl.className = `card-alarm-led ${ledState}`;
-    }
+    // Fault LED: the station's ANT alarms plus the pointing-limit fault,
+    // which raises no alarm of its own; grey only when the pedestal is off
+    // (s01-F14), titled with the top alarm (Phase 33 D2, nats-r8-s17-F1)
+    this.syncAlarmLed_('antenna-fault-led', (alarm) => alarm.equipmentType === 'ANT', {
+      isPowered: state.isPowered,
+      offTitle: 'Antenna off',
+      extra: state.hasFault ? [{ severity: 'error', message: state.faultMessage ?? 'Antenna fault' }] : undefined,
+    });
   }
 
   private syncGpsdoSummary_(): void {
@@ -736,38 +737,32 @@ export class DashboardTab extends BaseElement {
       powerEl.className = `card-alarm-led ${rfFe.lnbModule.state.isPowered ? 'success' : 'off'}`;
     }
 
-    // Header fault LED: the LNB alarms' worst severity (Phase 32 D14)
-    this.syncChainFaultLed_('rx-chain-fault-led', ['LNB'], lnbPowered, 'LNB off');
+    // Header fault LED: the receive chain's RF alarms (LNB, AGC, notch,
+    // filter), grey while the LNB is off (Phase 32 D14, Phase 33 D2, nats-r8-s02-F2)
+    this.syncAlarmLed_('rx-chain-fault-led', DashboardTab.rfAlarmMatcher_(DashboardTab.RX_CHAIN_PREFIXES_), {
+      isPowered: lnbPowered,
+      offTitle: 'LNB off',
+    });
   }
 
   /**
-   * A chain card's header fault LED (Phase 32 D14, nats-r7-s13-F1), built like
-   * the antenna's: the worst AlarmService severity among this station's RF
-   * alarms from the named modules - red for an error, amber for a warning,
-   * green for none, grey while the modules are all unpowered - titled with the
-   * top alarm's label, the same severity the ticker and the module card show.
+   * RF alarms carry no TX/RX field, so a chain LED picks its alarms by label
+   * prefix (rf-front-end-core.ts case 1 / case 2)
    */
-  private syncChainFaultLed_(id: string, modulePrefixes: string[], isPowered: boolean, offTitle: string): void {
-    const led = this.domCache_.get(id);
-    if (!led) return;
+  private static rfAlarmMatcher_(prefixes: readonly string[]): (alarm: AlarmWithDetail) => boolean {
+    return (alarm) => alarm.equipmentType === 'RF' && prefixes.some((prefix) => alarm.message.startsWith(prefix));
+  }
 
-    const top = this.stationAlarms_.find(
-      (alarm) => alarm.equipmentType === 'RF' && (alarm.severity === 'error' || alarm.severity === 'warning') && modulePrefixes.some((prefix) => alarm.message.startsWith(prefix))
-    );
-    let ledState: string;
-    let title: string;
-    if (!isPowered) {
-      ledState = 'off';
-      title = offTitle;
-    } else if (top) {
-      ledState = top.severity;
-      title = top.message;
-    } else {
-      ledState = 'success';
-      title = 'No alarms';
+  /**
+   * One summary LED from this station's AlarmService alarms (Phase 33 D2):
+   * grey when off, red / amber for the worst error / warning titled with the
+   * top alarm, grey when idle, else green "No alarms". Every LED gets a title.
+   */
+  private syncAlarmLed_(id: string, match: (alarm: AlarmWithDetail) => boolean, opts: AlarmLedOptions): void {
+    const led = this.domCache_.get(id);
+    if (led) {
+      applyAlarmLed(led, alarmLed(this.stationAlarms_, match, opts));
     }
-    led.className = `card-alarm-led ${ledState}`;
-    led.title = title;
   }
 
   private syncTxChainSummary_(): void {
@@ -819,9 +814,38 @@ export class DashboardTab extends BaseElement {
       }
     }
 
-    // Header fault LED: the BUC + HPA alarms' worst severity (Phase 32 D14)
-    const txPowered = (rfFe.bucModule?.state.isPowered ?? false) || (rfFe.hpaModule?.state.isPowered ?? false);
-    this.syncChainFaultLed_('tx-chain-fault-led', ['BUC', 'HPA'], txPowered, 'BUC and HPA off');
+    // Header fault LED: the BUC + HPA alarms' worst severity (Phase 32 D14);
+    // grey while the chain is not radiating, titled with the reason (Phase 33
+    // D2, nats-r8-s02-F1: a disabled HPA raises no alarm but is not green)
+    const bucPowered = rfFe.bucModule?.state.isPowered ?? false;
+    const hpaPowered = rfFe.hpaModule?.state.isPowered ?? false;
+    this.syncAlarmLed_('tx-chain-fault-led', DashboardTab.rfAlarmMatcher_(DashboardTab.TX_CHAIN_PREFIXES_), {
+      isPowered: bucPowered || hpaPowered,
+      offTitle: 'BUC and HPA off',
+      idleTitle: DashboardTab.txChainIdleTitle_(rfFe),
+    });
+  }
+
+  /**
+   * Why a powered transmit chain is not radiating, or undefined when it is
+   * (BUC on and unmuted, HPA on with its output enabled)
+   */
+  private static txChainIdleTitle_(rfFe: GroundStation['rfFrontEnds'][number]): string | undefined {
+    const buc = rfFe.bucModule?.state;
+    const hpa = rfFe.hpaModule?.state;
+    if (!hpa?.isPowered) {
+      return 'HPA off';
+    }
+    if (!hpa.isHpaEnabled) {
+      return 'HPA output disabled';
+    }
+    if (!buc?.isPowered) {
+      return 'BUC off';
+    }
+    if (buc.isMuted) {
+      return 'BUC muted';
+    }
+    return undefined;
   }
 
   private syncReceiversSummary_(): void {
@@ -865,19 +889,15 @@ export class DashboardTab extends BaseElement {
       signalsEl.textContent = `${lockedCount} locked`;
     }
 
-    // Quality LED (green if any signal, amber if degraded, red if none)
-    const qualityEl = this.domCache_.get('rx-quality');
-    if (qualityEl) {
-      const signals = receivers.flatMap((rx) => rx.state.availableSignals ?? []);
-      const hasDegraded = signals.some((s) => s.isDegraded);
-      if (signals.length === 0) {
-        qualityEl.className = 'card-alarm-led off';
-      } else if (hasDegraded) {
-        qualityEl.className = 'card-alarm-led warning';
-      } else {
-        qualityEl.className = 'card-alarm-led success';
-      }
-    }
+    // Quality LED: the station's RX alarms (Carrier lock lost red, Degraded
+    // margin amber), grey with no modem on or no carrier at all (Phase 33 D2,
+    // nats-r8-s24-F1)
+    const signals = receivers.flatMap((rx) => rx.state.availableSignals ?? []);
+    this.syncAlarmLed_('rx-quality', (alarm) => alarm.equipmentType === 'RX', {
+      isPowered: activeModems > 0,
+      offTitle: 'No modem powered',
+      idleTitle: signals.length === 0 ? 'No carrier' : undefined,
+    });
   }
 
   private syncTransmittersSummary_(): void {
@@ -889,7 +909,6 @@ export class DashboardTab extends BaseElement {
     const totalModems = modems.length;
     const activeModems = modems.filter((m) => m.isPowered).length;
     const transmittingModems = modems.filter((m) => m.isTransmitting).length;
-    const faultedModems = modems.filter((m) => m.isFaulted).length;
 
     // Active modems
     const activeEl = this.domCache_.get('tx-active');
@@ -910,11 +929,12 @@ export class DashboardTab extends BaseElement {
       budgetEl.textContent = `${percentage.toFixed(0)}%`;
     }
 
-    // Fault LED
-    const faultEl = this.domCache_.get('tx-fault');
-    if (faultEl) {
-      faultEl.className = `card-alarm-led ${faultedModems > 0 ? 'error' : 'off'}`;
-    }
+    // Fault LED: the station's TX alarms (Faulted, Power Exceeds red;
+    // Intermittent Fault, Approaching amber) (Phase 33 D2, nats-r8-s08-F1)
+    this.syncAlarmLed_('tx-fault', (alarm) => alarm.equipmentType === 'TX', {
+      isPowered: activeModems > 0,
+      offTitle: 'No modem powered',
+    });
   }
 
   /**

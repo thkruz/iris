@@ -4,7 +4,7 @@ import { AlarmStatus } from '@app/equipment/base-equipment';
 import { ValidationError, validateModemBandwidth, validateModemFrequency } from '@app/equipment/modem/modem-constraints';
 import { ADCStatus } from '@app/equipment/receiver/adc-degradation';
 import { IQSignalInfo, Receiver, ReceiverModemState } from '@app/equipment/receiver/receiver';
-import { classifyRxSignal, describeEsN0, describeEsN0ForAcquisition, describePayloadProblem, RxPayloadStatus, RxSignalQuality } from '@app/equipment/receiver/rx-signal-quality';
+import { classifyRxSignal, describePayloadProblem, RxModemSeverity, RxModemVerdict, RxPayloadStatus, rxModemVerdict } from '@app/equipment/receiver/rx-signal-quality';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { parseLocalizedNumber } from '@app/utils/parse-number';
@@ -100,6 +100,13 @@ export class ReceiverAdapter {
 
   private getPayloadProblem_(): string | null {
     return describePayloadProblem(this.payloadStatusProvider_?.() ?? null);
+  }
+
+  /** The card's one verdict for a modem with a carrier: badge, status bar and LED */
+  private getVerdict_(signalInfo: IQSignalInfo): RxModemVerdict {
+    // The payload decoder only qualifies a good margin; skip the read otherwise
+    const payloadProblem = classifyRxSignal(signalInfo) === 'good' ? this.getPayloadProblem_() : null;
+    return rxModemVerdict(signalInfo, payloadProblem);
   }
 
   /**
@@ -671,15 +678,15 @@ export class ReceiverAdapter {
     const signalInfo = this.receiver.getSignalsInBandwidth(activeModem);
     this.signalSampleListener_?.(signalInfo);
 
-    // Signal Quality Status Badge - the shared grading (lock tracker + MODCOD margin)
+    // Signal Quality Status Badge - the card's one verdict (margin grade + payload)
     if (signalStatus) {
       if (!signalInfo.hasCarrier) {
         signalStatus.className = 'status-badge status-badge-none';
         signalStatus.textContent = 'None';
       } else {
-        const [badgeClass, badgeText] = ReceiverAdapter.QUALITY_BADGES[classifyRxSignal(signalInfo)];
-        signalStatus.className = `status-badge ${badgeClass}`;
-        signalStatus.textContent = badgeText;
+        const verdict = this.getVerdict_(signalInfo);
+        signalStatus.className = `status-badge ${verdict.badgeClass}`;
+        signalStatus.textContent = verdict.badgeText;
       }
     }
 
@@ -845,14 +852,12 @@ export class ReceiverAdapter {
     this.domCache_.get('adc-ceiling-display')?.classList.add('d-none');
   }
 
-  /** Badge class and text for each signal grade */
-  private static readonly QUALITY_BADGES: Record<RxSignalQuality, [string, string]> = {
-    good: ['status-badge-good', 'Good'],
-    degraded: ['status-badge-degraded', 'Degraded'],
-    acquiring: ['status-badge-degraded', 'Acquiring'],
-    'format-mismatch': ['status-badge-error', 'Mismatch'],
-    'bandwidth-clipped': ['status-badge-error', 'Clipped'],
-    'below-threshold': ['status-badge-error', 'No Lock'],
+  /** Status bar alert class for each verdict severity */
+  private static readonly STATUS_ALERTS: Record<RxModemSeverity, string> = {
+    success: 'alert-success',
+    info: 'alert-info',
+    warning: 'alert-warning',
+    error: 'alert-danger',
   };
 
   /** Write a readout, or "--" when the value is missing or meaningless */
@@ -970,38 +975,10 @@ export class ReceiverAdapter {
       return;
     }
 
-    const effectiveCn = signalInfo.effectiveCnRatio_dB ?? signalInfo.cnRatio_dB;
-    const esN0Text = describeEsN0(signalInfo);
-    // Unlocked: quote the acquire line (required + 0.5 dB), not "need" (Phase 30 D10)
-    const acquireText = describeEsN0ForAcquisition(signalInfo);
-
-    // One grading for the status bar, the alarm badge and the signal badge
-    const quality = classifyRxSignal(signalInfo);
-    const payloadProblem = quality === 'good' ? this.getPayloadProblem_() : null;
-
-    if (quality === 'good' && payloadProblem) {
-      statusBar.className = 'alert alert-warning mt-3';
-      statusBar.textContent = `Signal locked - ${payloadProblem} (${esN0Text})`;
-    } else if (quality === 'good') {
-      statusBar.className = 'alert alert-success mt-3';
-      statusBar.textContent = `Signal locked - Good margin (${esN0Text})`;
-    } else if (quality === 'degraded') {
-      statusBar.className = 'alert alert-warning mt-3';
-      statusBar.textContent = `Signal locked - Degraded margin (${esN0Text})`;
-    } else if (quality === 'acquiring') {
-      statusBar.className = 'alert alert-info mt-3';
-      statusBar.textContent = `Acquiring lock (${acquireText})`;
-    } else if (quality === 'format-mismatch') {
-      // The carrier is there; the modem's modulation/FEC labels are wrong
-      statusBar.className = 'alert alert-danger mt-3';
-      statusBar.textContent = `Carrier present, no lock - Format mismatch: check modulation and FEC (C/N: ${effectiveCn.toFixed(1)} dB)`;
-    } else if (quality === 'bandwidth-clipped') {
-      statusBar.className = 'alert alert-danger mt-3';
-      statusBar.textContent = `Carrier present, no lock - Bandwidth clipped by the IF filter (C/N: ${effectiveCn.toFixed(1)} dB)`;
-    } else {
-      statusBar.className = 'alert alert-danger mt-3';
-      statusBar.textContent = `Signal no lock - Below threshold (${acquireText})`;
-    }
+    // One verdict for the status bar, the alarm badge and the signal badge
+    const verdict = this.getVerdict_(signalInfo);
+    statusBar.className = `alert ${ReceiverAdapter.STATUS_ALERTS[verdict.severity]} mt-3`;
+    statusBar.textContent = verdict.statusText;
   }
 
   /**
@@ -1025,38 +1002,13 @@ export class ReceiverAdapter {
       return alarms;
     }
 
-    const esN0Text = describeEsN0(signalInfo);
-    const acquireText = describeEsN0ForAcquisition(signalInfo);
-
-    // Same grading as the status bar
-    switch (classifyRxSignal(signalInfo)) {
-      case 'good': {
-        const payloadProblem = this.getPayloadProblem_();
-        if (payloadProblem) {
-          alarms.push({ severity: 'warning', message: payloadProblem });
-        }
-        break;
-      }
-      case 'degraded':
-        alarms.push({ severity: 'warning', message: `Degraded margin (${esN0Text})` });
-        break;
-      case 'acquiring':
-        alarms.push({ severity: 'info', message: `Acquiring lock (${acquireText})` });
-        break;
-      case 'format-mismatch':
-        alarms.push({ severity: 'error', message: 'No lock: format mismatch (modulation/FEC)' });
-        break;
-      case 'bandwidth-clipped':
-        alarms.push({ severity: 'error', message: 'No lock: carrier clipped by the IF filter' });
-        break;
-      default:
-        alarms.push({ severity: 'error', message: `No lock: below threshold (${acquireText})` });
-        break;
-    }
-
-    // Add interference warning if present
-    if (signalInfo.interferenceCount && signalInfo.interferenceCount > 0) {
-      alarms.push({ severity: 'warning', message: `${signalInfo.interferenceCount} interferer(s) detected` });
+    // Same verdict as the status bar and the signal badge. An interferer is
+    // named inside the degraded-margin line, never as its own warning: a
+    // notched spike at a good margin still clears the receiver's -10 dB
+    // presence gate (Phase 33 D4, nats-r8-s05-F2)
+    const verdict = this.getVerdict_(signalInfo);
+    if (verdict.alarmMessage) {
+      alarms.push({ severity: verdict.severity, message: verdict.alarmMessage });
     }
 
     return alarms;

@@ -322,13 +322,25 @@ describe('DashboardTab', () => {
       expect(labels).toContain('TX Modems On');
     });
 
-    it('lights the antenna fault LED green when healthy, red on fault (s01-F14)', () => {
-      expect(document.querySelector('#antenna-fault-led')?.className).toContain('success');
-      (mockGroundStation.antennas[0].state as { hasFault: boolean }).hasFault = true;
+    it('lights the antenna fault LED green when healthy, red on fault, titled (s01-F14, Phase 33 D2)', () => {
+      const led = () => document.querySelector('#antenna-fault-led') as HTMLElement;
+      expect(led().className).toBe('card-alarm-led success');
+      expect(led().title).toBe('No alarms');
+      const state = mockGroundStation.antennas[0].state as { hasFault: boolean; faultMessage: string | null; isPowered: boolean };
+      state.hasFault = true;
+      state.faultMessage = 'Azimuth 400.0° exceeds limit [0°, 360°]';
       vi.spyOn(Date, 'now').mockReturnValue(10_000_000);
       const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
       updateHandler();
-      expect(document.querySelector('#antenna-fault-led')?.className).toContain('error');
+      expect(led().className).toBe('card-alarm-led error');
+      expect(led().title).toBe('Azimuth 400.0° exceeds limit [0°, 360°]');
+
+      // Grey only when the pedestal is off
+      state.isPowered = false;
+      vi.spyOn(Date, 'now').mockReturnValue(11_000_000);
+      updateHandler();
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('Antenna off');
     });
 
     it('shows step-track on the antenna mode badge (s01-F3)', () => {
@@ -346,6 +358,8 @@ describe('DashboardTab', () => {
       state.trackingMode = 'program-track';
       state.isStepTrackEnabled = false;
       state.isAcuAutomationFaulted = true;
+      // The LED reads the antenna's alarm, as the ticker does (Phase 33 D2)
+      (mockGroundStation.antennas[0].getStatusAlarms as Mock).mockReturnValue([{ severity: 'error', message: 'ACU AUTOMATION FAULT - MANUAL CONTROL ONLY' }]);
       vi.spyOn(Date, 'now').mockReturnValue(30_000_000);
       const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
       updateHandler();
@@ -354,6 +368,7 @@ describe('DashboardTab', () => {
       expect(mode?.className).toContain('status-badge-red');
       expect(mode?.className).not.toContain('status-badge-green');
       expect(document.querySelector('#antenna-fault-led')?.className).toContain('error');
+      expect((document.querySelector('#antenna-fault-led') as HTMLElement).title).toBe('ACU AUTOMATION FAULT - MANUAL CONTROL ONLY');
     });
   });
 
@@ -402,6 +417,10 @@ describe('DashboardTab', () => {
       resync(49_000_000);
       expect(status()?.textContent).toBe('DISABLED');
       expect(status()?.className).toContain('status-badge-gray');
+      // Not radiating: the header LED is grey too, not green (Phase 33 D2, nats-r8-s02-F1)
+      const led = document.querySelector('#tx-chain-fault-led') as HTMLElement;
+      expect(led.className).toBe('card-alarm-led off');
+      expect(led.title).toBe('HPA output disabled');
 
       hpa.state.isHpaEnabled = true;
       resync(50_000_000);
@@ -427,7 +446,7 @@ describe('DashboardTab', () => {
       expect(led().className).toBe('card-alarm-led warning');
       expect(led().title).toBe('BUC cooling fault - fan/heatsink degraded');
 
-      // An error outranks it; the title is the label without its value
+      // An error outranks it; the title is the label, then its live value (Phase 33 D2)
       rfFe.getStatusAlarms.mockImplementation((rfCase: number) =>
         rfCase === 1
           ? [
@@ -438,7 +457,7 @@ describe('DashboardTab', () => {
       );
       resync(53_000_000);
       expect(led().className).toBe('card-alarm-led error');
-      expect(led().title).toBe('HPA over-temperature');
+      expect(led().title).toBe('HPA over-temperature - 95 °C');
 
       // An LNB alarm is not the TX chain's; info is not a fault
       rfFe.getStatusAlarms.mockImplementation((rfCase: number) =>
@@ -447,19 +466,47 @@ describe('DashboardTab', () => {
       resync(54_000_000);
       expect(led().className).toBe('card-alarm-led success');
 
-      // Grey only with both BUC and HPA off
+      // Grey whenever the chain is not radiating, titled with the reason
+      // (Phase 33 D2, nats-r8-s02-F1)
+      rfFe.bucModule.state.isMuted = true;
+      resync(54_500_000);
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('BUC muted');
+      rfFe.bucModule.state.isMuted = false;
       rfFe.bucModule.state.isPowered = false;
       resync(55_000_000);
-      expect(led().className).toBe('card-alarm-led success');
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('BUC off');
+      rfFe.bucModule.state.isPowered = true;
       rfFe.hpaModule.state.isPowered = false;
+      resync(55_500_000);
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('HPA off');
+      // A real alarm still outranks the idle grey
+      rfFe.getStatusAlarms.mockImplementation((rfCase: number) => (rfCase === 1 ? [{ severity: 'error', message: 'BUC not locked to 10 MHz reference' }] : []));
+      resync(55_700_000);
+      expect(led().className).toBe('card-alarm-led error');
+      rfFe.bucModule.state.isPowered = false;
       resync(56_000_000);
       expect(led().className).toBe('card-alarm-led off');
       expect(led().title).toBe('BUC and HPA off');
     });
 
-    it('RF Chain RX header LED follows the LNB alarms, grey with the LNB off (Phase 32 D14)', () => {
+    it('RF Chain RX header LED follows the LNB, AGC, notch and filter alarms, grey with the LNB off (Phase 32 D14, Phase 33 D2)', () => {
       const led = () => document.querySelector('#rx-chain-fault-led') as HTMLElement;
       const rfFe = mockGroundStation.rfFrontEnds[0] as any;
+      expect(led().className).toBe('card-alarm-led success');
+      expect(led().title).toBe('No alarms');
+
+      // nats-r8-s02-F2: the AGC alarm lights the RX chain, with its value in the title
+      rfFe.getStatusAlarms.mockImplementation((rfCase: number) => (rfCase === 2 ? [{ severity: 'warning', message: 'AGC at max gain (12.0 dB) - weak signal' }] : []));
+      resync(56_500_000);
+      expect(led().className).toBe('card-alarm-led warning');
+      expect(led().title).toBe('AGC at max gain - weak signal - 12.0 dB');
+
+      // A BUC alarm is not the RX chain's
+      rfFe.getStatusAlarms.mockImplementation((rfCase: number) => (rfCase === 1 ? [{ severity: 'error', message: 'BUC not locked to 10 MHz reference' }] : []));
+      resync(56_700_000);
       expect(led().className).toBe('card-alarm-led success');
 
       rfFe.getStatusAlarms.mockImplementation((rfCase: number) => (rfCase === 2 ? [{ severity: 'warning', message: 'LNB noise temperature high' }] : []));
@@ -563,6 +610,80 @@ describe('DashboardTab', () => {
 
       expect(document.querySelector('#alarm-list .alarm-message')?.textContent).toBe('RAIN FADE');
       expect(document.querySelector('#alarm-list .alarm-detail')?.textContent).toBe('fade 0.6 dB');
+    });
+
+    it('Receivers Quality reads the RX alarms: red on lock loss, grey with no carrier or no modem (Phase 33 D2, nats-r8-s24-F1)', () => {
+      const led = () => document.querySelector('#rx-quality') as HTMLElement;
+      const rx = mockGroundStation.receivers[0] as any;
+      // Powered modems, no carrier in view
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('No carrier');
+
+      rx.state.availableSignals = [{ isDegraded: false }];
+      sync(44_000_000);
+      expect(led().className).toBe('card-alarm-led success');
+      expect(led().title).toBe('No alarms');
+
+      rx.getStatusAlarms.mockReturnValue([{ severity: 'error', message: 'Carrier lock lost' }]);
+      sync(45_000_000);
+      expect(led().className).toBe('card-alarm-led error');
+      expect(led().title).toBe('Carrier lock lost');
+
+      // An RF or TX alarm is not the receivers'; info never lights
+      rx.getStatusAlarms.mockReturnValue([{ severity: 'info', message: 'Signal(s) Detected' }]);
+      (mockGroundStation.transmitters[0].getStatusAlarms as Mock).mockReturnValue([{ severity: 'error', message: 'Modem 1 Faulted' }]);
+      sync(46_000_000);
+      expect(led().className).toBe('card-alarm-led success');
+
+      for (const modem of rx.state.modems) {
+        modem.isPowered = false;
+      }
+      sync(47_000_000);
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('No modem powered');
+    });
+
+    it('Transmitters Faults reads the TX alarms: amber on an intermittent fault, grey with no modem (Phase 33 D2, nats-r8-s08-F1)', () => {
+      const led = () => document.querySelector('#tx-fault') as HTMLElement;
+      const tx = mockGroundStation.transmitters[0] as any;
+      expect(led().className).toBe('card-alarm-led success');
+      expect(led().title).toBe('No alarms');
+
+      tx.getStatusAlarms.mockReturnValue([{ severity: 'warning', message: 'Modem 1 Intermittent Fault' }]);
+      sync(48_000_000);
+      expect(led().className).toBe('card-alarm-led warning');
+      expect(led().title).toBe('Modem 1 Intermittent Fault');
+
+      tx.getStatusAlarms.mockReturnValue([
+        { severity: 'warning', message: 'Modem 1 Intermittent Fault' },
+        { severity: 'error', message: 'Modem 1 Faulted' },
+      ]);
+      sync(49_000_000);
+      expect(led().className).toBe('card-alarm-led error');
+      expect(led().title).toBe('Modem 1 Faulted');
+
+      for (const modem of tx.state.modems) {
+        modem.isPowered = false;
+      }
+      sync(49_500_000);
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('No modem powered');
+    });
+
+    it('Antenna LED reads a SUN TRANSIT error red, titled with the alarm (Phase 33 D2, nats-r8-s17-F1)', () => {
+      const led = () => document.querySelector('#antenna-fault-led') as HTMLElement;
+      (mockGroundStation.antennas[0].getStatusAlarms as Mock).mockReturnValue([
+        { severity: 'info', message: 'Manual Tracking Enabled' },
+        { severity: 'error', message: 'SUN TRANSIT' },
+      ]);
+      sync(49_700_000);
+      expect(led().className).toBe('card-alarm-led error');
+      expect(led().title).toBe('SUN TRANSIT');
+
+      // Info alone never lights it
+      (mockGroundStation.antennas[0].getStatusAlarms as Mock).mockReturnValue([{ severity: 'info', message: 'Manual Tracking Enabled' }]);
+      sync(49_800_000);
+      expect(led().className).toBe('card-alarm-led success');
     });
 
     it('stamps each alarm on the station clock when first raised, not the wall clock (nats-r3-s08-F2)', () => {

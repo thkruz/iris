@@ -96,8 +96,120 @@ export function describePayloadProblem(payload: RxPayloadStatus | null): string 
   if (payload.channelStatus === 'Critical') {
     return 'Payload errors';
   }
-  if (payload.channelStatus === 'Degraded') {
-    return 'Payload degraded';
-  }
+  // 'Degraded' is the FEC's low-margin flag, which the margin grade already
+  // shows; repeating it here put "Payload degraded" beside a GOOD badge for a
+  // tick after the margin recovered (Phase 33 D4, nats-r8-s21-F1)
   return null;
+}
+
+/** How loudly the modem card speaks: the status bar alert and the card LED share it */
+export type RxModemSeverity = 'success' | 'info' | 'warning' | 'error';
+
+/**
+ * The RX modem card's one verdict (Phase 33 D4, nats-r8-s05-F2, nats-r8-s21-F1):
+ * the Signal Quality badge, the status bar and the card LED all read this, so
+ * the card can never show GOOD beside an amber LED or a payload warning.
+ */
+export interface RxModemVerdict {
+  /** The margin grade from the lock tracker */
+  grade: RxSignalQuality;
+  /** `status-badge-*` class for the Signal Quality badge */
+  badgeClass: string;
+  /** Signal Quality badge text */
+  badgeText: string;
+  /** Status bar text */
+  statusText: string;
+  /** Status bar alert level and card LED severity ('success' = no alarm) */
+  severity: RxModemSeverity;
+  /** The card LED's alarm line, null when the modem has nothing to report */
+  alarmMessage: string | null;
+}
+
+/** Badge class and text for each signal grade */
+const QUALITY_BADGES: Record<RxSignalQuality, [string, string]> = {
+  good: ['status-badge-good', 'Good'],
+  degraded: ['status-badge-degraded', 'Degraded'],
+  acquiring: ['status-badge-degraded', 'Acquiring'],
+  'format-mismatch': ['status-badge-error', 'Mismatch'],
+  'bandwidth-clipped': ['status-badge-error', 'Clipped'],
+  'below-threshold': ['status-badge-error', 'No Lock'],
+};
+
+/** " - 2 interferer(s) in band", or '' with none */
+function describeInterferers(info: IQSignalInfo): string {
+  const count = info.interferenceCount ?? 0;
+  return count > 0 ? ` - ${count} interferer(s) in band` : '';
+}
+
+/**
+ * Grade a modem with a carrier (callers check `hasCarrier` first) together
+ * with the payload decoder's problem from `describePayloadProblem`. A payload
+ * problem at a good margin turns the whole card amber. An interferer is named
+ * only while it costs margin: an in-band carrier at a good margin (a notched
+ * spike still clears the -10 dB presence gate) is no alarm.
+ */
+export function rxModemVerdict(info: IQSignalInfo, payloadProblem: string | null): RxModemVerdict {
+  const grade = classifyRxSignal(info);
+  const [badgeClass, badgeText] = QUALITY_BADGES[grade];
+  const esN0Text = describeEsN0(info);
+  // Unlocked: quote the acquire line (required + 0.5 dB), not "need" (Phase 30 D10)
+  const acquireText = describeEsN0ForAcquisition(info);
+  const cn = info.effectiveCnRatio_dB ?? info.cnRatio_dB;
+  const cnText = Number.isFinite(cn) ? cn.toFixed(1) : '--';
+
+  switch (grade) {
+    case 'good':
+      if (payloadProblem) {
+        return {
+          grade,
+          badgeClass: QUALITY_BADGES.degraded[0],
+          badgeText: QUALITY_BADGES.degraded[1],
+          statusText: `Signal locked - ${payloadProblem} (${esN0Text})`,
+          severity: 'warning',
+          alarmMessage: payloadProblem,
+        };
+      }
+      return { grade, badgeClass, badgeText, statusText: `Signal locked - Good margin (${esN0Text})`, severity: 'success', alarmMessage: null };
+    case 'degraded': {
+      const message = `Degraded margin (${esN0Text})${describeInterferers(info)}`;
+      return { grade, badgeClass, badgeText, statusText: `Signal locked - ${message}`, severity: 'warning', alarmMessage: message };
+    }
+    case 'acquiring':
+      return {
+        grade,
+        badgeClass,
+        badgeText,
+        statusText: `Acquiring lock (${acquireText})`,
+        severity: 'info',
+        alarmMessage: `Acquiring lock (${acquireText})`,
+      };
+    case 'format-mismatch':
+      // The carrier is there; the modem's modulation/FEC labels are wrong
+      return {
+        grade,
+        badgeClass,
+        badgeText,
+        statusText: `Carrier present, no lock - Format mismatch: check modulation and FEC (C/N: ${cnText} dB)`,
+        severity: 'error',
+        alarmMessage: 'No lock: format mismatch (modulation/FEC)',
+      };
+    case 'bandwidth-clipped':
+      return {
+        grade,
+        badgeClass,
+        badgeText,
+        statusText: `Carrier present, no lock - Bandwidth clipped by the IF filter (C/N: ${cnText} dB)`,
+        severity: 'error',
+        alarmMessage: 'No lock: carrier clipped by the IF filter',
+      };
+    default:
+      return {
+        grade,
+        badgeClass,
+        badgeText,
+        statusText: `Signal no lock - Below threshold (${acquireText})`,
+        severity: 'error',
+        alarmMessage: `No lock: below threshold (${acquireText})`,
+      };
+  }
 }

@@ -875,6 +875,87 @@ describe('ReceiverAdapter', () => {
     });
   });
 
+  describe('one verdict for badge, status bar and card LED (Phase 33 D4)', () => {
+    const sync = () => {
+      (adapter as any).lastStateString = '';
+      (adapter as any).syncDomWithState_();
+    };
+    const badge = () => containerEl.querySelector('#signal-status') as HTMLElement;
+    const statusBar = () => containerEl.querySelector('#status-bar') as HTMLElement;
+    /** The alarms the card LED was last painted from */
+    const ledAlarms = () => {
+      const calls = ((adapter as any).alarmBadge_.update as Mock).mock.calls;
+      return calls[calls.length - 1][0];
+    };
+
+    it('raises no alarm for an in-band interferer at a good margin, so the LED stays green (nats-r8-s05-F2)', () => {
+      mockReceiver.getSignalsInBandwidth.mockReturnValue({
+        hasCarrier: true,
+        hasLock: true,
+        cnRatio_dB: 14,
+        effectiveCnRatio_dB: 14,
+        interferenceCount: 1,
+      });
+      sync();
+
+      expect(ledAlarms()).toEqual([]);
+      expect(badge().textContent).toBe('Good');
+      expect(statusBar().className).toContain('alert-success');
+    });
+
+    it('names the interferer inside the one degraded-margin warning', () => {
+      mockReceiver.getSignalsInBandwidth.mockReturnValue({
+        hasCarrier: true,
+        hasLock: true,
+        isLowMargin: true,
+        cnRatio_dB: 6,
+        effectiveCnRatio_dB: 6,
+        effectiveEsN0_dB: 5.6,
+        requiredEsN0_dB: 5.03,
+        interferenceCount: 1,
+      });
+      sync();
+
+      expect(ledAlarms()).toEqual([{ severity: 'warning', message: 'Degraded margin (Es/N0 5.6 dB, need 5.0 dB) - 1 interferer(s) in band' }]);
+      expect(badge().textContent).toBe('Degraded');
+      expect(statusBar().textContent).toContain('Degraded margin');
+      expect(statusBar().textContent).toContain('1 interferer(s) in band');
+    });
+
+    it('reads amber on the badge, the status bar and the LED for a payload problem at a good margin (nats-r8-s21-F1)', () => {
+      mockReceiver.getSignalsInBandwidth.mockReturnValue({
+        hasCarrier: true,
+        hasLock: true,
+        cnRatio_dB: 15,
+        effectiveCnRatio_dB: 15,
+      });
+      adapter.setPayloadStatusProvider(() => ({ frameSyncLocked: true, rsUncorrectableBlocks: 3, channelStatus: 'Critical' }));
+      sync();
+
+      expect(badge().textContent).toBe('Degraded');
+      expect(badge().className).toContain('status-badge-degraded');
+      expect(statusBar().className).toContain('alert-warning');
+      expect(statusBar().textContent).toContain('RS overload');
+      expect(ledAlarms()).toEqual([{ severity: 'warning', message: 'RS overload' }]);
+    });
+
+    it('shows no payload line for the FEC Degraded status alone (the margin grade carries it)', () => {
+      mockReceiver.getSignalsInBandwidth.mockReturnValue({
+        hasCarrier: true,
+        hasLock: true,
+        cnRatio_dB: 15,
+        effectiveCnRatio_dB: 15,
+      });
+      adapter.setPayloadStatusProvider(() => ({ frameSyncLocked: true, rsUncorrectableBlocks: 0, channelStatus: 'Degraded' }));
+      sync();
+
+      expect(badge().textContent).toBe('Good');
+      expect(statusBar().textContent).toContain('Good margin');
+      expect(statusBar().textContent).not.toContain('Payload');
+      expect(ledAlarms()).toEqual([]);
+    });
+  });
+
   describe('video monitor', () => {
     it('should show no-power state when modem off', () => {
       mockReceiver.state.modems[0].isPowered = false;

@@ -8,6 +8,7 @@ import { RxPayloadStatus } from '@app/equipment/receiver/rx-signal-quality';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { FaultInjector } from '@app/faults';
+import { SimClock } from '@app/simulation/sim-clock';
 
 /**
  * RX Payload state interface with data integrity metrics
@@ -78,6 +79,8 @@ export class RxPayloadAdapter {
   private readonly fecSimulator_: FECSimulator;
   private lastSyncTime_: number = 0;
   private hasFecSample_: boolean = false;
+  /** Run time of the last FEC sample, so the modem card can read it live */
+  private lastFecRunMs_: number = Number.NaN;
   private readonly domCache_: Map<string, HTMLElement> = new Map();
   private readonly boundUpdateHandler_: () => void;
   private readonly alarmBadge_: CardAlarmBadge;
@@ -150,6 +153,14 @@ export class RxPayloadAdapter {
    * Null until the first FEC sample from a receiver.
    */
   public getPayloadStatus(): RxPayloadStatus | null {
+    // Live, not the panel's 250 ms wall-clock paint: the modem card's sync
+    // phase differs from this one, and a sample from before a burst ended
+    // read as a payload problem beside a recovered margin (Phase 33 D4,
+    // nats-r8-s21-F1). A same-tick read reuses the sample.
+    if (this.lastFecRunMs_ !== SimClock.runMs()) {
+      this.updateFecFromReceiver_();
+      this.applyFaultOverrides_();
+    }
     if (!this.hasFecSample_) {
       return null;
     }
@@ -207,6 +218,7 @@ export class RxPayloadAdapter {
     // Calculate FEC metrics
     const fecMetrics = this.fecSimulator_.calculate(input);
     this.hasFecSample_ = true;
+    this.lastFecRunMs_ = SimClock.runMs();
 
     // Update state with calculated metrics
     this.state_.frameSyncLocked = fecMetrics.frameSyncLocked;

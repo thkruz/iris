@@ -42,10 +42,18 @@ vi.mock('../../../../src/weather/weather-manager', () => ({
   WeatherManager: {
     getInstance: vi.fn(() => ({
       isPrecipitationActive: vi.fn(() => false),
+      getActiveWeatherEvents: vi.fn(() => []),
     })),
   },
 }));
+vi.mock('../../../../src/services/alarm-service', () => ({
+  AlarmService: {
+    getAlarms: vi.fn(() => []),
+  },
+}));
 
+import { AlarmService } from '../../../../src/services/alarm-service';
+import { SimClock } from '../../../../src/simulation/sim-clock';
 import { SimulationManager } from '../../../../src/simulation/simulation-manager';
 import { WeatherManager } from '../../../../src/weather/weather-manager';
 
@@ -136,6 +144,7 @@ describe('ACUControlTab', () => {
           handleStepTrackToggle: vi.fn(),
           handleHeaterToggle: vi.fn(),
           handleRainBlowerToggle: vi.fn(),
+          handlePowerToggle: vi.fn(),
         },
       ],
       rfFrontEnds: [
@@ -152,12 +161,18 @@ describe('ACUControlTab', () => {
     containerEl.id = 'acu-control-container';
     document.body.appendChild(containerEl);
 
+    // The alarm-facing readouts refresh once per scenario second (Phase 33
+    // D7); the tests move that second with the Date.now they already mock
+    (AlarmService.getAlarms as Mock).mockReturnValue([]);
+    vi.spyOn(SimClock, 'nowMs').mockImplementation(() => Date.now());
+
     tab = new ACUControlTab(mockGroundStation, 'acu-control-container');
   });
 
   afterEach(() => {
     tab.dispose();
     document.body.innerHTML = '';
+    vi.restoreAllMocks();
   });
 
   describe('constructor', () => {
@@ -710,18 +725,21 @@ describe('ACUControlTab', () => {
       expect(contextTitle?.textContent).toBe('Program + Step Track');
     });
 
-    it('should show warning ACU status LED when not operational', () => {
+    it('should show a red ACU status LED titled with the ANTENNA NOT OPERATIONAL alarm', () => {
       const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
 
       const antenna = mockGroundStation.antennas[0];
       antenna.state.isPowered = true;
       antenna.state.isOperational = false;
+      (AlarmService.getAlarms as Mock).mockReturnValue([{ severity: 'error', message: 'ANTENNA NOT OPERATIONAL', assetId: 'GS-001', equipmentType: 'ANT', equipmentIndex: 0 }]);
 
       vi.spyOn(Date, 'now').mockReturnValue(2000);
       updateHandler();
 
-      const statusLed = document.querySelector(`#${PREFIX}status-led`);
-      expect(statusLed?.className).toContain('card-alarm-led warning');
+      const statusLed = document.querySelector(`#${PREFIX}status-led`) as HTMLElement;
+      expect(statusLed.className).toBe('card-alarm-led ms-2 error');
+      expect(statusLed.title).toBe('ANTENNA NOT OPERATIONAL');
+      antenna.state.isOperational = true;
     });
 
     it('should show off ACU status LED when not powered', () => {
@@ -733,8 +751,79 @@ describe('ACUControlTab', () => {
       vi.spyOn(Date, 'now').mockReturnValue(2000);
       updateHandler();
 
-      const statusLed = document.querySelector(`#${PREFIX}status-led`);
-      expect(statusLed?.className).toContain('card-alarm-led off');
+      const statusLed = document.querySelector(`#${PREFIX}status-led`) as HTMLElement;
+      expect(statusLed.classList.contains('off')).toBe(true);
+      expect(statusLed.classList.contains('ms-2')).toBe(true);
+      expect(statusLed.title).toBe('Antenna off');
+      antenna.state.isPowered = true;
+    });
+
+    describe('ACU status LED from AlarmService (Phase 33 D2, nats-r8-s23-F1)', () => {
+      const led = () => document.querySelector(`#${PREFIX}status-led`) as HTMLElement;
+      const sync = (now: number) => {
+        const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
+        vi.spyOn(Date, 'now').mockReturnValue(now);
+        updateHandler();
+      };
+      const antAlarm = (severity: string, message: string, equipmentIndex = 0) => ({ severity, message, assetId: 'GS-001', equipmentType: 'ANT', equipmentIndex });
+
+      beforeEach(() => {
+        const state = mockGroundStation.antennas[0].state;
+        state.isPowered = true;
+        state.isOperational = true;
+        state.hasFault = false;
+        state.faultMessage = null;
+      });
+
+      it('reads ACU AUTOMATION FAULT red, titled with the alarm, and keeps the id and ms-2', () => {
+        (AlarmService.getAlarms as Mock).mockReturnValue([antAlarm('error', 'ACU AUTOMATION FAULT - MANUAL CONTROL ONLY')]);
+        sync(3000);
+        expect(led().id).toBe(`${PREFIX}status-led`);
+        expect(led().className).toBe('card-alarm-led ms-2 error');
+        expect(led().title).toBe('ACU AUTOMATION FAULT - MANUAL CONTROL ONLY');
+        expect(AlarmService.getAlarms).toHaveBeenCalledWith(mockGroundStation);
+      });
+
+      it('shows the worst ANT alarm and ignores other equipment and other antennas', () => {
+        (AlarmService.getAlarms as Mock).mockReturnValue([
+          { severity: 'error', message: 'HPA over-temperature', assetId: 'GS-001', equipmentType: 'RF', equipmentIndex: 0 },
+          antAlarm('error', 'SUN TRANSIT', 1),
+          antAlarm('warning', 'ICE ON FEED (2.4 dB)'),
+        ]);
+        sync(3000);
+        expect(led().classList.contains('warning')).toBe(true);
+        expect(led().title).toBe('ICE ON FEED (2.4 dB)');
+      });
+
+      it('lights the module fault as an error, then reads green No alarms once clear', () => {
+        const state = mockGroundStation.antennas[0].state;
+        state.hasFault = true;
+        state.faultMessage = 'Servo amplifier fault';
+        sync(3000);
+        expect(led().classList.contains('error')).toBe(true);
+        expect(led().title).toBe('Servo amplifier fault');
+
+        state.faultMessage = null;
+        sync(4000);
+        expect(led().title).toBe('Antenna fault');
+
+        state.hasFault = false;
+        sync(5000);
+        expect(led().className).toBe('card-alarm-led ms-2 success');
+        expect(led().title).toBe('No alarms');
+      });
+
+      it('goes grey at once when the power switch turns the antenna off', () => {
+        sync(3000);
+        expect(led().classList.contains('success')).toBe(true);
+        const powerSwitch = document.querySelector(`#${PREFIX}power-switch`) as HTMLInputElement;
+        mockGroundStation.antennas[0].state.isPowered = false;
+        powerSwitch.checked = false;
+        powerSwitch.dispatchEvent(new Event('change'));
+        expect(led().classList.contains('off')).toBe(true);
+        expect(led().title).toBe('Antenna off');
+        mockGroundStation.antennas[0].state.isPowered = true;
+      });
     });
 
     it('should update ice accumulation display', () => {
@@ -877,9 +966,23 @@ describe('ACUControlTab', () => {
       vi.spyOn(Date, 'now').mockReturnValue(now);
       updateHandler();
     };
-    const setPrecip = (on: boolean) => {
-      WeatherManager.getInstance.mockReturnValue({ isPrecipitationActive: vi.fn(() => on) });
+    const setWeather = (events: { type: string }[]) => {
+      WeatherManager.getInstance.mockReturnValue({
+        isPrecipitationActive: vi.fn(() => events.some((e) => ['snow', 'rain', 'hail', 'ice'].includes(e.type))),
+        getActiveWeatherEvents: vi.fn(() => events.map((e) => ({ ...e, groundStationId: 'GS-001', isActive: true }))),
+      });
     };
+    const envLed = () => document.querySelector(`#${PREFIX}env-led`) as HTMLElement;
+
+    beforeEach(() => {
+      const state = mockGroundStation.antennas[0].state;
+      state.isHeaterEnabled = false;
+      state.isRainBlowerEnabled = false;
+      state.iceAccumulation_dB = 0;
+    });
+    afterEach(() => {
+      setWeather([]);
+    });
 
     it('lights the heater LED green while on, titled Heater ON / OFF', () => {
       const antenna = mockGroundStation.antennas[0];
@@ -896,9 +999,9 @@ describe('ACUControlTab', () => {
     });
 
     it('turns the Environmental header amber with ice at the ICE ON FEED warning level, titled with the depth', () => {
-      setPrecip(false);
+      setWeather([]);
       const antenna = mockGroundStation.antennas[0];
-      const led = () => document.querySelector(`#${PREFIX}env-led`) as HTMLElement;
+      const led = envLed;
 
       antenna.state.iceAccumulation_dB = 3.1;
       sync(3000);
@@ -917,17 +1020,111 @@ describe('ACUControlTab', () => {
       expect(led().title).toBe('Clear - ice 0.3 dB, no precipitation');
     });
 
-    it('turns the Environmental header amber while precipitation is active', () => {
-      setPrecip(true);
-      try {
-        mockGroundStation.antennas[0].state.iceAccumulation_dB = 0;
-        sync(3000);
-        const led = document.querySelector(`#${PREFIX}env-led`) as HTMLElement;
-        expect(led.className).toBe('card-alarm-led warning');
-        expect(led.title).toBe('Precipitation active - ice 0.0 dB');
-      } finally {
-        setPrecip(false);
-      }
+    it('reads snow amber with the heater off and green with it on (Phase 33 D3, nats-r7-s20-F1)', () => {
+      setWeather([{ type: 'snow' }]);
+      const state = mockGroundStation.antennas[0].state;
+
+      sync(3000);
+      expect(envLed().className).toBe('card-alarm-led warning');
+      expect(envLed().title).toBe('Snow falling - feed heater OFF, ice 0.0 dB');
+
+      state.isHeaterEnabled = true;
+      state.iceAccumulation_dB = 1.2;
+      sync(4000);
+      expect(envLed().className).toBe('card-alarm-led success');
+      expect(envLed().title).toBe('Snow falling - feed heater ON, ice 1.2 dB');
+
+      // The heater does not excuse ice at the alarm levels
+      state.iceAccumulation_dB = 2.4;
+      sync(5000);
+      expect(envLed().className).toBe('card-alarm-led warning');
+      expect(envLed().title).toBe('Ice on feed 2.4 dB');
+      state.iceAccumulation_dB = 5.1;
+      sync(6000);
+      expect(envLed().className).toBe('card-alarm-led error');
+      expect(envLed().title).toBe('Ice on feed 5.1 dB');
+    });
+
+    it('names hail and freezing rain by type and leaves the blower out of frozen precipitation', () => {
+      const state = mockGroundStation.antennas[0].state;
+      state.isRainBlowerEnabled = true;
+      setWeather([{ type: 'hail' }]);
+      sync(3000);
+      expect(envLed().className).toBe('card-alarm-led warning');
+      expect(envLed().title).toBe('Hail falling - feed heater OFF, ice 0.0 dB');
+
+      setWeather([{ type: 'ice' }]);
+      state.isHeaterEnabled = true;
+      sync(4000);
+      expect(envLed().className).toBe('card-alarm-led success');
+      expect(envLed().title).toBe('Freezing rain falling - feed heater ON, ice 0.0 dB');
+    });
+
+    it('reads rain amber with the heater and blower both off, green with either on', () => {
+      setWeather([{ type: 'rain' }]);
+      const state = mockGroundStation.antennas[0].state;
+
+      sync(3000);
+      expect(envLed().className).toBe('card-alarm-led warning');
+      expect(envLed().title).toBe('Rain falling - feed heater and rain blower OFF, ice 0.0 dB');
+
+      state.isRainBlowerEnabled = true;
+      sync(4000);
+      expect(envLed().className).toBe('card-alarm-led success');
+      expect(envLed().title).toBe('Rain falling - rain blower ON, ice 0.0 dB');
+
+      state.isRainBlowerEnabled = false;
+      state.isHeaterEnabled = true;
+      sync(5000);
+      expect(envLed().className).toBe('card-alarm-led success');
+      expect(envLed().title).toBe('Rain falling - feed heater ON, ice 0.0 dB');
+    });
+
+    it('reports the unmitigated event when two fall at once, and ignores wind and fog', () => {
+      setWeather([{ type: 'wind' }, { type: 'rain' }, { type: 'snow' }]);
+      const state = mockGroundStation.antennas[0].state;
+      state.isRainBlowerEnabled = true;
+      sync(3000);
+      expect(envLed().className).toBe('card-alarm-led warning');
+      expect(envLed().title).toBe('Snow falling - feed heater OFF, ice 0.0 dB');
+
+      setWeather([{ type: 'fog' }, { type: 'wind' }]);
+      sync(4000);
+      expect(envLed().className).toBe('card-alarm-led off');
+    });
+
+    it('refreshes the ice readout and Environmental LED once per scenario second (Phase 33 D7, nats-r8-s20-F1)', () => {
+      const state = mockGroundStation.antennas[0].state;
+      const ice = () => document.querySelector(`#${PREFIX}ice-accumulation-display`) as HTMLElement;
+      state.iceAccumulation_dB = 1;
+      sync(3000);
+      expect(ice().textContent).toBe('1.0 dB');
+
+      // Later ticks in the same scenario second keep the sampled value
+      state.iceAccumulation_dB = 2.2;
+      sync(3500);
+      sync(3999);
+      expect(ice().textContent).toBe('1.0 dB');
+      expect(envLed().className).toBe('card-alarm-led off');
+
+      sync(4000);
+      expect(ice().textContent).toBe('2.2 dB');
+      expect(envLed().className).toBe('card-alarm-led warning');
+    });
+
+    it('refreshes at once when the operator switches the heater, mid-second', () => {
+      setWeather([{ type: 'snow' }]);
+      const state = mockGroundStation.antennas[0].state;
+      sync(3000);
+      expect(envLed().className).toBe('card-alarm-led warning');
+
+      vi.spyOn(Date, 'now').mockReturnValue(3400);
+      state.isHeaterEnabled = true;
+      const heaterSwitch = document.querySelector(`#${PREFIX}heater-switch`) as HTMLInputElement;
+      heaterSwitch.checked = true;
+      heaterSwitch.dispatchEvent(new Event('change'));
+      expect(envLed().className).toBe('card-alarm-led success');
+      expect(envLed().title).toBe('Snow falling - feed heater ON, ice 0.0 dB');
     });
   });
 
@@ -935,6 +1132,7 @@ describe('ACUControlTab', () => {
     it('should update precipitation status from weather manager', () => {
       WeatherManager.getInstance.mockReturnValue({
         isPrecipitationActive: vi.fn(() => true),
+        getActiveWeatherEvents: vi.fn(() => [{ type: 'snow', groundStationId: 'GS-001', isActive: true }]),
       });
 
       const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];

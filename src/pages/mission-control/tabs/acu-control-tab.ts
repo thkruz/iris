@@ -10,9 +10,12 @@ import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { EventAutoLogger } from '@app/ops-log/event-auto-logger';
 import { stationTagForAntennaState } from '@app/ops-log/station-tag';
+import { AlarmService } from '@app/services/alarm-service';
+import { SimClock } from '@app/simulation/sim-clock';
 import { SimulationManager } from '@app/simulation/simulation-manager';
 import { parseLocalizedNumber } from '@app/utils/parse-number';
 import { WeatherManager } from '@app/weather/weather-manager';
+import { alarmLed, applyAlarmLed } from '../alarm-led';
 import './acu-control-tab.css';
 import { AntennaAdapter } from './antenna-adapter';
 import { OMTAdapter } from './omt-adapter';
@@ -70,6 +73,20 @@ export class ACUControlTab extends BaseElement {
   /** ICE ON FEED warning / error levels, dB (AntennaCore.getStatusAlarms) */
   private static readonly ICE_ON_FEED_WARNING_DB = 2;
   private static readonly ICE_ON_FEED_ERROR_DB = 5;
+
+  /** Falling precipitation by weather event type, as the Environmental LED titles it */
+  private static readonly PRECIP_LABELS_: Readonly<Record<string, string>> = { snow: 'Snow', hail: 'Hail', ice: 'Freezing rain', rain: 'Rain' };
+  /** Precipitation the feed heater mitigates (it melts what would freeze on the feed) */
+  private static readonly FROZEN_PRECIP_: ReadonlySet<string> = new Set(['snow', 'hail', 'ice']);
+
+  /**
+   * Scenario second (floor(SimClock.nowMs() / 1000)) the alarm-facing readouts
+   * (ACU header LED, precipitation, ice, Environmental LED) last refreshed on.
+   * AlarmService samples on the same boundary (Phase 33 D7, nats-r8-s20-F1),
+   * so the card, the alarm tooltip and the Ops Log raise/clear lines quote one
+   * value per second. NaN until the first refresh.
+   */
+  private lastAlarmSyncSecond_ = Number.NaN;
 
   // Beacon display throttling (1 second interval like other adapters)
   private static readonly BEACON_UPDATE_INTERVAL_MS = 1000;
@@ -538,7 +555,7 @@ export class ACUControlTab extends BaseElement {
         this.polarPlot_.draw(antenna.state.azimuth, antenna.state.elevation);
       }
       this.syncUiWithState_(antenna);
-      this.syncIceAccumulation_(antenna);
+      this.syncAlarmReadouts_(antenna, false);
     };
     EventBus.getInstance().on(Events.UPDATE, this.antennaStateHandler_);
 
@@ -563,6 +580,23 @@ export class ACUControlTab extends BaseElement {
     this.polarPlot_.onDomReady();
     this.polarPlot_.draw(antenna.state.azimuth, antenna.state.elevation);
     this.syncUiWithState_(antenna);
+    this.syncAlarmReadouts_(antenna, true);
+  }
+
+  /**
+   * The readouts AlarmService also reports on refresh once per scenario second
+   * (Phase 33 D7), or at once with `force` after an operator action (heater,
+   * blower, power) so the switch and its LED answer the click even while the
+   * clock is paused.
+   */
+  private syncAlarmReadouts_(antenna: (typeof this.groundStation.antennas)[0], force: boolean): void {
+    const second = Math.floor(SimClock.nowMs() / 1000);
+    if (!force && second === this.lastAlarmSyncSecond_) {
+      return;
+    }
+    this.lastAlarmSyncSecond_ = second;
+    this.syncStatusLed_(antenna);
+    this.syncIceAccumulation_(antenna);
   }
 
   /** True once the canvas has replaced this tab's DOM (stale instance awaiting disposal). */
@@ -738,6 +772,7 @@ export class ACUControlTab extends BaseElement {
       if (antenna.state.isHeaterEnabled !== wasOn) {
         EventAutoLogger.getInstance().logAction(`Feed heater ${antenna.state.isHeaterEnabled ? 'ON' : 'OFF'}`, 'ANT', stationTagForAntennaState(antenna.state));
       }
+      this.syncAlarmReadouts_(antenna, true);
     };
     this.addHandler_('heater-switch', heaterSwitch, 'change', heaterHandler);
 
@@ -747,6 +782,7 @@ export class ACUControlTab extends BaseElement {
       if (antenna.state.isRainBlowerEnabled !== wasOn) {
         EventAutoLogger.getInstance().logAction(`Rain blower ${antenna.state.isRainBlowerEnabled ? 'ON' : 'OFF'}`, 'ANT', stationTagForAntennaState(antenna.state));
       }
+      this.syncAlarmReadouts_(antenna, true);
     };
     this.addHandler_('blower-switch', blowerSwitch, 'change', blowerHandler);
   }
@@ -758,6 +794,7 @@ export class ACUControlTab extends BaseElement {
     if (powerSwitch) {
       const powerHandler = () => {
         antenna.handlePowerToggle(powerSwitch.checked);
+        this.syncAlarmReadouts_(antenna, true);
       };
       this.addHandler_('power-switch', powerSwitch, 'change', powerHandler);
     }
@@ -913,17 +950,7 @@ export class ACUControlTab extends BaseElement {
     const powerSwitch = this.qs_<HTMLInputElement>('power-switch');
     if (powerSwitch) powerSwitch.checked = state.isPowered;
 
-    // Sync ACU status LED
-    const statusLed = this.qs_('status-led');
-    if (statusLed) {
-      if (!state.isPowered) {
-        statusLed.className = 'card-alarm-led off ms-2';
-      } else if (!state.isOperational) {
-        statusLed.className = 'card-alarm-led warning ms-2';
-      } else {
-        statusLed.className = 'card-alarm-led success ms-2';
-      }
-    }
+    // The ACU status LED is synced by syncStatusLed_() once per scenario second
 
     // Sync loopback switch
     const loopbackSwitch = this.qs_<HTMLInputElement>('loopback-switch');
@@ -1128,6 +1155,26 @@ export class ACUControlTab extends BaseElement {
     }
   }
 
+  /**
+   * ACU header LED (Phase 33 D2, nats-r8-s23-F1): this antenna's AlarmService
+   * alarms, worst first, titled with the top one ("ACU AUTOMATION FAULT -
+   * MANUAL CONTROL ONLY" red), plus the module's `hasFault` as an error;
+   * grey "Antenna off" unpowered, green "No alarms" otherwise
+   */
+  private syncStatusLed_(antenna: (typeof this.groundStation.antennas)[0]): void {
+    const statusLed = this.qs_('status-led');
+    if (!statusLed) {
+      return;
+    }
+    const state = antenna.state;
+    const led = alarmLed(AlarmService.getAlarms(this.groundStation), (alarm) => alarm.equipmentType === 'ANT' && alarm.equipmentIndex === this.antennaIndex_, {
+      isPowered: state.isPowered,
+      offTitle: 'Antenna off',
+      extra: state.hasFault ? [{ severity: 'error', message: state.faultMessage ?? 'Antenna fault' }] : [],
+    });
+    applyAlarmLed(statusLed, led);
+  }
+
   private syncIceAccumulation_(antenna: (typeof this.groundStation.antennas)[0]): void {
     const iceDisplay = this.qs_('ice-accumulation-display');
     if (iceDisplay) {
@@ -1160,31 +1207,73 @@ export class ACUControlTab extends BaseElement {
   }
 
   /**
-   * Environmental card header LED (Phase 32 D14, nats-r7-s20-F1): the ICE ON
-   * FEED alarm's colour while ice is at its warning level or above (red at its
-   * error level), amber while precipitation is active, grey otherwise; the
+   * Environmental card header LED (Phase 32 D14, Phase 33 D3, nats-r7-s20-F1):
+   * the ICE ON FEED alarm's colour while ice is at its warning level or above
+   * (red at its error level); below that, amber only while precipitation falls
+   * unmitigated - snow, hail or freezing rain with the feed heater off, rain
+   * with both the heater and the rain blower off (the heater keeps the feed
+   * dry too, and the blower has no modelled effect beyond that; S14 rides out
+   * its rain cell on the heater alone). Mitigated precipitation is green
+   * ("Snow falling - feed heater ON, ice 0.0 dB"), no precipitation grey. The
    * title carries the ice depth either way.
    */
   private syncEnvironmentalLed_(antenna: (typeof this.groundStation.antennas)[0]): void {
     const led = this.qs_('env-led');
     if (!led) return;
 
+    const state = antenna.state;
     const ice = antenna.state.iceAccumulation_dB;
-    const isPrecip = WeatherManager.getInstance().isPrecipitationActive(this.groundStation.state.id);
+    const iceText = `ice ${ice.toFixed(1)} dB`;
     let ledState = 'off';
-    let title = `Clear - ice ${ice.toFixed(1)} dB, no precipitation`;
+    let title = `Clear - ${iceText}, no precipitation`;
     if (ice >= ACUControlTab.ICE_ON_FEED_ERROR_DB) {
       ledState = 'error';
       title = `Ice on feed ${ice.toFixed(1)} dB`;
     } else if (ice >= ACUControlTab.ICE_ON_FEED_WARNING_DB) {
       ledState = 'warning';
       title = `Ice on feed ${ice.toFixed(1)} dB`;
-    } else if (isPrecip) {
-      ledState = 'warning';
-      title = `Precipitation active - ice ${ice.toFixed(1)} dB`;
+    } else {
+      const precip = this.worstPrecipitation_(state.isHeaterEnabled, state.isRainBlowerEnabled);
+      if (precip) {
+        const label = ACUControlTab.PRECIP_LABELS_[precip.type] ?? 'Precipitation';
+        ledState = precip.isMitigated ? 'success' : 'warning';
+        title = `${label} falling - ${precip.protection}, ${iceText}`;
+      }
     }
     led.className = `card-alarm-led ${ledState}`;
     led.title = title;
+  }
+
+  /**
+   * The active precipitation event at this station the Environmental LED
+   * reports: the first unmitigated one, else the first mitigated one, else
+   * null. `protection` names the feed's state against it.
+   */
+  private worstPrecipitation_(isHeaterOn: boolean, isBlowerOn: boolean): { type: string; isMitigated: boolean; protection: string } | null {
+    let mitigated: { type: string; isMitigated: boolean; protection: string } | null = null;
+    for (const event of WeatherManager.getInstance().getActiveWeatherEvents(this.groundStation.state.id)) {
+      if (!(event.type in ACUControlTab.PRECIP_LABELS_)) {
+        continue;
+      }
+      let isMitigated: boolean;
+      let protection: string;
+      if (ACUControlTab.FROZEN_PRECIP_.has(event.type)) {
+        isMitigated = isHeaterOn;
+        protection = `feed heater ${isHeaterOn ? 'ON' : 'OFF'}`;
+      } else {
+        isMitigated = isHeaterOn || isBlowerOn;
+        if (isHeaterOn) {
+          protection = 'feed heater ON';
+        } else if (isBlowerOn) {
+          protection = 'rain blower ON';
+        } else {
+          protection = 'feed heater and rain blower OFF';
+        }
+      }
+      if (!isMitigated) return { type: event.type, isMitigated, protection };
+      mitigated ??= { type: event.type, isMitigated, protection };
+    }
+    return mitigated;
   }
 
   public activate(): void {

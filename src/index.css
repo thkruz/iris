@@ -54,6 +54,8 @@ body {
   /* Red for errors/faults */
   --color-warning: #eab308;
   /* Yellow for warnings */
+  --color-info: #93c5fd;
+  /* Blue for info (the alarm ticker's info colour) */
 }
 
 body {
