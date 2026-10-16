@@ -46,6 +46,7 @@
     "lint:fix": "biome check --write ./src ./test ./e2e ./build ./scripts/plugin",
     "format": "biome format --write ./src ./test ./e2e ./build ./scripts/plugin",
     "vo-manifest": "node scripts/vo-manifest.mjs",
+    "vo-review": "node scripts/vo-review.mjs",
     "author": "node scripts/author.mjs",
     "author:intake": "node scripts/author.mjs intake"
   },
