@@ -4,7 +4,7 @@ import { RealTimeSpectrumAnalyzer } from '@app/equipment/real-time-spectrum-anal
 import { SpectrumDataProcessor } from '@app/equipment/real-time-spectrum-analyzer/spectrum-data-processor';
 import { Rng } from '@app/simulation/rng';
 import { SimulationManager } from '@app/simulation/simulation-manager';
-import { Hertz, IfSignal, MHz, RfSignal } from '@app/types';
+import { Hertz, IfSignal, RfSignal } from '@app/types';
 import { RTSAScreen } from './rtsa-screen';
 
 /** The frequency axis: one label per tick, and the unit they are in (drawn once) */
@@ -216,12 +216,16 @@ export class SpectralDensityPlot extends RTSAScreen {
           this.updateTrace_(traceIndex, isWindowChanged ? 'clearwrite' : trace.mode);
         }
 
-        // A retune puts the Peak Search bin on another frequency: release it
-        // and mark the new trace's peak (phase 33 D10)
+        // A centre or span change puts the marker's bin on another frequency:
+        // release the marker completely, no re-pick on the new trace, so the
+        // diamond and both readouts clear until the next Peak Search (phase 34
+        // D2, r9-s03-F1). An amplitude-only change keeps it (same bin).
         const freqKey = `${this.minFreq}|${this.maxFreq}`;
-        if (this.traceFreqKey_ !== '' && freqKey !== this.traceFreqKey_ && this.specA.state.peakMarkerBin !== undefined) {
-          this.specA.state.peakMarkerBin = undefined;
-          this.specA.state.isUpdateMarkers = true;
+        const state = this.specA.state;
+        if (this.traceFreqKey_ !== '' && freqKey !== this.traceFreqKey_ && (state.peakMarkerBin !== undefined || state.isMarkerOn)) {
+          state.peakMarkerBin = undefined;
+          state.isMarkerOn = false;
+          state.isUpdateMarkers = false;
         }
         this.traceFreqKey_ = freqKey;
 
@@ -884,9 +888,24 @@ export class SpectralDensityPlot extends RTSAScreen {
   static readonly MARKER_MIN_TIP_PX = 10;
 
   /**
+   * A marker frequency in MHz with six decimals, from whole Hz in integer
+   * arithmetic (phase 34 D3, r9-s15-F1): the plot label, the Peak and Mkr
+   * readouts and the SPEC A Peak Search line all print it, so one pick reads
+   * the same everywhere. Never `toFixed` on a float (phase 33 D12).
+   */
+  static formatMarkerMHz(hz: number): string {
+    const n = Math.round(hz);
+    const sign = n < 0 ? '-' : '';
+    const abs = Math.abs(n);
+
+    return `${sign}${Math.trunc(abs / 1e6)}.${String(abs % 1e6).padStart(6, '0')}`;
+  }
+
+  /**
    * The marker diamond with its tip on the trace (phase 33 D11, r8-s09-F1),
    * frequency and level above it, or below it when the two lines do not fit
-   * above (a peak near Max Amp)
+   * above (a peak near Max Amp). Each line sits on an opaque box like the
+   * amplitude labels, so no trace runs through it (phase 34 D3, r9-s12-F1)
    */
   private drawMarker(markerIndex: number, markerY: number, levelDbm: number): void {
     const ctx = this.ctx;
@@ -907,21 +926,24 @@ export class SpectralDensityPlot extends RTSAScreen {
       // Frequency and level, kept inside the plot
       ctx.save();
       ctx.font = SpectralDensityPlot.LABEL_FONT;
-      ctx.fillStyle = '#fff';
-      ctx.textBaseline = 'bottom';
       ctx.textAlign = 'left';
-      const freqMhz = ((this.minFreq + ((markerIndex + 0.5) * (this.maxFreq - this.minFreq)) / this.width) / 1e6) as MHz;
-      const lines = [`${freqMhz.toFixed(6)} MHz`, `${levelDbm.toFixed(1)} dBm`];
+      const freqHz = this.minFreq + ((markerIndex + 0.5) * (this.maxFreq - this.minFreq)) / this.width;
+      const lines = [`${SpectralDensityPlot.formatMarkerMHz(freqHz)} MHz`, `${levelDbm.toFixed(1)} dBm`];
       const textWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
       const textX = Math.min(Math.max(4, x - textWidth / 2), this.plotWidth_ - textWidth - 4);
-      const isRoomAbove = y - 26 - SpectralDensityPlot.LABEL_FONT_PX >= 0;
+      // One boxed line is LABEL_FONT_PX + 2 pads tall; the boxes stack without
+      // overlapping and the lower one ends above the diamond (y - 10 .. y)
+      const pad = SpectralDensityPlot.LABEL_BOX_PAD_PX;
+      const step = SpectralDensityPlot.LABEL_FONT_PX + 2 * pad;
+      const nearBottom = y - 10 - pad - 1;
+      const isRoomAbove = nearBottom - step - SpectralDensityPlot.LABEL_FONT_PX - pad >= 0;
       if (isRoomAbove) {
-        ctx.fillText(lines[0], textX, y - 26);
-        ctx.fillText(lines[1], textX, y - 12);
+        this.drawBoxedLabel_(ctx, lines[0], textX, nearBottom - step, 'bottom');
+        this.drawBoxedLabel_(ctx, lines[1], textX, nearBottom, 'bottom');
       } else {
-        ctx.textBaseline = 'top';
-        ctx.fillText(lines[0], textX, y + 4);
-        ctx.fillText(lines[1], textX, y + 18);
+        const nearTop = y + 4;
+        this.drawBoxedLabel_(ctx, lines[0], textX, nearTop, 'top');
+        this.drawBoxedLabel_(ctx, lines[1], textX, nearTop + step, 'top');
       }
       ctx.restore();
     }

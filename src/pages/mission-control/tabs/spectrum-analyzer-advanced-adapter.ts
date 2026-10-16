@@ -3,6 +3,7 @@ import { qs } from '@app/engine/utils/query-selector';
 import { EngineeringModeService } from '@app/engineering-mode/engineering-mode-service';
 import type { TraceMode } from '@app/equipment/real-time-spectrum-analyzer/analyzer-control/ac-trace-btn/ac-trace-btn';
 import { RealTimeSpectrumAnalyzer, RealTimeSpectrumAnalyzerState } from '@app/equipment/real-time-spectrum-analyzer/real-time-spectrum-analyzer';
+import { SpectralDensityPlot } from '@app/equipment/real-time-spectrum-analyzer/rtsa-screen/spectral-density-plot';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { EventAutoLogger } from '@app/ops-log/event-auto-logger';
@@ -33,11 +34,6 @@ export class SpectrumAnalyzerAdvancedAdapter {
   private readonly stateChangeHandler_: (state: Partial<RealTimeSpectrumAnalyzerState>) => void;
   private readonly updateHandler_: () => void;
   private lastLiveSyncMs_: number = 0;
-  /**
-   * The last Peak Search result (phase 33 D10): the "Peak:" readout keeps it
-   * while the marker stays on its bin, so the readout is the SPEC A line
-   */
-  private peakClick_: { frequencyHz: number; levelDbm: number; bin: number } | null = null;
   /** Live readouts (peak, RBW in use) refresh at most this often, ms */
   private static readonly LIVE_READOUT_INTERVAL_MS = 500;
   /** A retune across several fields writes one Ops Log line after this quiet time, ms (phase 31 D13) */
@@ -251,11 +247,16 @@ export class SpectrumAnalyzerAdvancedAdapter {
 
     const peakReadout = this.domCache_.get('sa-peak-readout');
     if (peakReadout) {
-      // While the marker stays on the Peak Search bin the readout keeps the
-      // click's result, the value the SPEC A line logged (phase 33 D10)
-      const peak = this.heldPeakClick_() ?? analyzer.peakSearch?.() ?? null;
+      // Built from analyzer state only (phase 34 D1, r9-s03-F1): the pinned
+      // Peak Search bin and its live level, the same marker the plot labels.
+      // No pinned bin (before any Peak Search, after a retune) reads dashes, and
+      // a rebuilt adapter shows the marker the analyzer still holds
+      const state = analyzer.state;
+      const peak = state.isMarkerOn && state.peakMarkerBin !== undefined ? this.activeMarker_() : null;
       peakReadout.textContent = SpectrumAnalyzerAdvancedAdapter.formatPeakReadout(peak);
     }
+    // A retune releases the marker on the plot (phase 34 D2): the checkbox follows
+    this.setCheckboxValue_('sa-marker-enabled', analyzer.state.isMarkerOn);
 
     const rbwStatus = this.domCache_.get('sa-rbw-status');
     if (rbwStatus && typeof analyzer.effectiveRbwHz === 'number') {
@@ -381,8 +382,9 @@ export class SpectrumAnalyzerAdvancedAdapter {
    * one `peakSearch()` at the click reads the trace on screen, places the
    * marker on that bin, and writes the readout and the log line, so all three
    * carry the same pick. The marker stays on the bin (its level re-read every
-   * sweep); the readout keeps the click result. A paused screen repaints its
-   * frozen trace with the marker (r8-s01-F1).
+   * sweep); the readout then follows that bin's live level from analyzer state
+   * (phase 34 D1). A paused screen repaints its frozen trace with the marker
+   * (r8-s01-F1).
    */
   private handlePeakSearch_(): void {
     const state = this.spectrumAnalyzer.state;
@@ -395,11 +397,9 @@ export class SpectrumAnalyzerAdvancedAdapter {
       state.topMarkers = [{ x: peak.bin, y: 1 - Math.max(0, Math.min(1, y)), signal: peak.levelDbm }];
       state.markerIndex = 0;
       state.peakMarkerBin = peak.bin;
-      this.peakClick_ = { frequencyHz: peak.frequencyHz, levelDbm: peak.levelDbm, bin: peak.bin };
     } else {
       state.peakMarkerBin = undefined;
       state.isUpdateMarkers = true;
-      this.peakClick_ = null;
     }
     this.redrawIfPaused_();
     this.syncLiveReadouts_();
@@ -420,7 +420,7 @@ export class SpectrumAnalyzerAdvancedAdapter {
 
   /** `Peak: 1085.000001 MHz @ -69.2 dBm`, or dashes with no peak */
   static formatPeakReadout(peak: { frequencyHz: number; levelDbm: number } | null): string {
-    return peak ? `Peak: ${SpectrumAnalyzerAdvancedAdapter.formatMHz(peak.frequencyHz)} MHz @ ${peak.levelDbm.toFixed(1)} dBm` : 'Peak: --- MHz @ --- dBm';
+    return peak ? `Peak: ${SpectralDensityPlot.formatMarkerMHz(peak.frequencyHz)} MHz @ ${peak.levelDbm.toFixed(1)} dBm` : 'Peak: --- MHz @ --- dBm';
   }
 
   private handlePauseToggle_(): void {
@@ -671,7 +671,7 @@ export class SpectrumAnalyzerAdvancedAdapter {
     }
 
     const marker = this.activeMarker_();
-    markerInfo.textContent = marker ? `Mkr: ${SpectrumAnalyzerAdvancedAdapter.formatMHz(marker.frequencyHz)} MHz @ ${marker.levelDbm.toFixed(1)} dBm` : 'Mkr: --- MHz @ --- dBm';
+    markerInfo.textContent = marker ? `Mkr: ${SpectralDensityPlot.formatMarkerMHz(marker.frequencyHz)} MHz @ ${marker.levelDbm.toFixed(1)} dBm` : 'Mkr: --- MHz @ --- dBm';
   }
 
   /** The marker on screen as frequency (Hz) and level (dBm), or null when off or not placed */
@@ -684,14 +684,6 @@ export class SpectrumAnalyzerAdvancedAdapter {
     }
     // A marker's x is its trace point: back to frequency across the span
     return { frequencyHz: state.centerFrequency - state.span / 2 + ((marker.x + 0.5) / points) * state.span, levelDbm: marker.signal };
-  }
-
-  /** The Peak Search click result while the marker is still on its bin, else null */
-  private heldPeakClick_(): { frequencyHz: number; levelDbm: number } | null {
-    const state = this.spectrumAnalyzer.state;
-    const click = this.peakClick_;
-
-    return click && state.isMarkerOn && state.peakMarkerBin === click.bin ? click : null;
   }
 
   // ============ Ops Log (phase 31 D13, r6-s15-F2) ============
@@ -744,7 +736,7 @@ export class SpectrumAnalyzerAdvancedAdapter {
 
   /** `SPEC A: Peak Search 1085.000001 MHz @ -69.2 dBm`, the click's own pick */
   private logPeakSearch_(peak: { frequencyHz: number; levelDbm: number } | null): void {
-    const line = peak ? `SPEC A: Peak Search ${(peak.frequencyHz / 1e6).toFixed(6)} MHz @ ${peak.levelDbm.toFixed(1)} dBm` : 'SPEC A: Peak Search';
+    const line = peak ? `SPEC A: Peak Search ${SpectralDensityPlot.formatMarkerMHz(peak.frequencyHz)} MHz @ ${peak.levelDbm.toFixed(1)} dBm` : 'SPEC A: Peak Search';
     EventAutoLogger.getInstance().logAction(line, 'SPEC A', this.stationId_());
   }
 

@@ -497,7 +497,7 @@ describe('SpectralDensityPlot', () => {
         expect(mockSpecA.state.peakMarkerBin).toBeUndefined();
       });
 
-      it('a retune releases the bin and marks the new trace', () => {
+      it('a retune releases the marker completely: bin cleared, marker off, no re-pick on the new trace (phase 34 D2)', () => {
         plot.setFrequencyRange(1452.5e6 as Hertz, 1527.5e6 as Hertz);
         mockSpecA.state.peakMarkerBin = 400;
         sweep(-82, { 400: -46.8 });
@@ -506,7 +506,25 @@ describe('SpectralDensityPlot', () => {
         plot.setFrequencyRange(1462.5e6 as Hertz, 1537.5e6 as Hertz);
         sweep(-82, { 250: -50 });
         expect(mockSpecA.state.peakMarkerBin).toBeUndefined();
-        expect(activeMarker().x).toBe(250);
+        expect(mockSpecA.state.isMarkerOn).toBe(false);
+        expect(mockSpecA.state.isUpdateMarkers).toBe(false);
+        // No diamond drawn on the new traces
+        const fill = vi.spyOn(canvas.getContext('2d')!, 'fill');
+        fill.mockClear();
+        sweep(-82, { 250: -50 });
+        sweep(-82, { 250: -50 });
+        expect(fill).not.toHaveBeenCalled();
+      });
+
+      it('an amplitude-only change keeps the marker on its bin', () => {
+        plot.setFrequencyRange(1452.5e6 as Hertz, 1527.5e6 as Hertz);
+        mockSpecA.state.peakMarkerBin = 400;
+        sweep(-82, { 400: -46.8 });
+        mockSpecA.state.maxAmplitude = 10;
+        sweep(-82, { 400: -46.8 });
+        expect(mockSpecA.state.isMarkerOn).toBe(true);
+        expect(mockSpecA.state.peakMarkerBin).toBe(400);
+        expect(activeMarker().x).toBe(400);
       });
 
       it('selectedTraceData is the trace as drawn, not the live frame (Max Hold here)', () => {
@@ -638,6 +656,65 @@ describe('SpectralDensityPlot', () => {
 
       expect(mockSpecA.state.topMarkers[mockSpecA.state.markerIndex].y).toBe(0);
       expect(moveTo.mock.calls.filter(([mx]) => mx === 400.5).at(-1)?.[1]).toBe(SpectralDensityPlot.MARKER_MIN_TIP_PX);
+    });
+
+    describe('boxed marker label (phase 34 D3, r9-s12-F1)', () => {
+      /** Draw with a peak at bin 400; returns the two label fillText calls with their call order, and the fillRect/fill spies */
+      const drawPeak = (level: number) => {
+        mockDataProcessor.combinedData = new Float32Array(DEFAULT_WIDTH).fill(-90);
+        mockDataProcessor.combinedData[400] = level;
+        plot.update();
+        const ctx = canvas.getContext('2d')!;
+        const fillText = vi.spyOn(ctx, 'fillText');
+        const fillRect = vi.spyOn(ctx, 'fillRect');
+        const fill = vi.spyOn(ctx, 'fill');
+        plot.draw();
+        const levelText = `${level.toFixed(1)} dBm`;
+        const labelIdx = fillText.mock.calls.map(([t], i) => ((String(t).endsWith(' MHz') && String(t) !== 'MHz') || t === levelText ? i : -1)).filter((i) => i >= 0);
+
+        return { fillText, fillRect, fill, labelIdx };
+      };
+
+      const expectBoxedLabels = ({ fillText, fillRect, fill, labelIdx }: ReturnType<typeof drawPeak>, tipY: number, isAbove: boolean) => {
+        expect(labelIdx).toHaveLength(2);
+        const diamondOrder = fill.mock.invocationCallOrder.at(-1)!;
+        let prevOrder = diamondOrder;
+        for (const idx of labelIdx) {
+          const order = fillText.mock.invocationCallOrder[idx];
+          // An opaque box is drawn after the previous line and just before this one
+          const boxIdx = fillRect.mock.invocationCallOrder.findIndex((o) => o > prevOrder && o < order);
+          expect(boxIdx, String(fillText.mock.calls[idx][0])).toBeGreaterThanOrEqual(0);
+          // The box stays clear of the diamond (tipY - 10 .. tipY)
+          const [, top, , height] = fillRect.mock.calls[boxIdx] as number[];
+          if (isAbove) {
+            expect(top + height).toBeLessThanOrEqual(tipY - 10);
+          } else {
+            expect(top).toBeGreaterThan(tipY);
+          }
+          prevOrder = order;
+        }
+      };
+
+      it('above the diamond: a fillRect precedes each label line', () => {
+        const drawn = drawPeak(-50);
+        expectBoxedLabels(drawn, traceHeight * 0.5, true);
+      });
+
+      it('below the diamond (a peak near Max Amp): a fillRect precedes each label line', () => {
+        const drawn = drawPeak(-8);
+        expectBoxedLabels(drawn, traceHeight * 0.08, false);
+      });
+
+      it('prints the marker frequency with formatMarkerMHz, six decimals from whole Hz', () => {
+        // 80 MHz over 800 bins: bin 400 centres at 1449.90449 + 40.05 = 1489.95449 MHz
+        plot.setFrequencyRange(1449.90449e6 as Hertz, 1529.90449e6 as Hertz);
+        const { fillText } = drawPeak(-50);
+        expect(fillText.mock.calls.map(([t]) => String(t))).toContain('1489.954490 MHz');
+        expect(SpectralDensityPlot.formatMarkerMHz(1489.95449e6)).toBe('1489.954490');
+        expect(SpectralDensityPlot.formatMarkerMHz(1484.375e6)).toBe('1484.375000');
+        expect(SpectralDensityPlot.formatMarkerMHz(1085.000001e6)).toBe('1085.000001');
+        expect(SpectralDensityPlot.formatMarkerMHz(1499.9999996e6)).toBe('1500.000000');
+      });
     });
   });
 

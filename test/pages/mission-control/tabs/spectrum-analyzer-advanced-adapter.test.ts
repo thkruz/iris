@@ -536,7 +536,7 @@ describe('SpectrumAnalyzerAdvancedAdapter Ops Log lines and peak readout (phase 
     expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1085.000001 MHz @ -69.2 dBm');
   });
 
-  it('while the marker stays on the Peak Search bin, the readout keeps the click result and Mkr reads the bin now (phase 33 D10)', () => {
+  it('while the marker stays on the Peak Search bin, the readout and Mkr both read that bin now (phase 34 D1)', () => {
     const state = analyzer.state;
     (containerEl.querySelector('#sa-peak-search') as HTMLButtonElement).click();
     // A later sweep: the level at bin 42 moved, and a noise spike is now higher elsewhere
@@ -545,13 +545,43 @@ describe('SpectrumAnalyzerAdvancedAdapter Ops Log lines and peak readout (phase 
     state.markerIndex = 0;
     (analyzer.peakSearch as Mock).mockReturnValue({ frequencyHz: 1500e6, levelDbm: -60, bin: 63, maxDbm: -60 });
     (adapter as unknown as { syncLiveReadouts_: () => void }).syncLiveReadouts_();
-    expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1085.000001 MHz @ -69.2 dBm');
-    expect(containerEl.querySelector('#sa-marker-info')?.textContent).toBe('Mkr: 1484.375 MHz @ -69.6 dBm');
+    expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1484.375000 MHz @ -69.6 dBm');
+    expect(containerEl.querySelector('#sa-marker-info')?.textContent).toBe('Mkr: 1484.375000 MHz @ -69.6 dBm');
 
-    // The marker moved by hand: the readout is Peak Search's live result again
+    // The marker moved by hand: no pinned bin, the readout reads dashes (no fresh search)
     state.peakMarkerBin = undefined;
     (adapter as unknown as { syncLiveReadouts_: () => void }).syncLiveReadouts_();
-    expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1500 MHz @ -60.0 dBm');
+    expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: --- MHz @ --- dBm');
+  });
+
+  it('reads dashes before any Peak Search, even with a peak on the trace (phase 34 D1, r9-s03-F1)', () => {
+    (analyzer.peakSearch as Mock).mockClear();
+    for (let n = 0; n < 3; n++) {
+      (adapter as unknown as { syncLiveReadouts_: () => void }).syncLiveReadouts_();
+    }
+    expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: --- MHz @ --- dBm');
+    expect(analyzer.peakSearch).not.toHaveBeenCalled();
+  });
+
+  it('a new adapter on the same analyzer shows the pinned marker, not a fresh peakSearch() (phase 34 D1, tab round trip)', () => {
+    (containerEl.querySelector('#sa-peak-search') as HTMLButtonElement).click();
+    analyzer.state.topMarkers = [{ x: 42, y: 0.5, signal: -69.6 }];
+    adapter.dispose();
+    (analyzer.peakSearch as Mock).mockReturnValue({ frequencyHz: 1500e6, levelDbm: -60, bin: 63, maxDbm: -60 });
+    (analyzer.peakSearch as Mock).mockClear();
+
+    adapter = new SpectrumAnalyzerAdvancedAdapter(analyzer, containerEl);
+
+    expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1484.375000 MHz @ -69.6 dBm');
+    expect(analyzer.peakSearch).not.toHaveBeenCalled();
+  });
+
+  it('prints the plot label, the SPEC A line and the readout with the same six decimals (phase 34 D3, r9-s15-F1)', () => {
+    (analyzer.peakSearch as Mock).mockReturnValue({ frequencyHz: 1489.95449e6, levelDbm: -54.4, bin: 50, maxDbm: -54.4 });
+    (containerEl.querySelector('#sa-peak-search') as HTMLButtonElement).click();
+    expect(SpectralDensityPlot.formatMarkerMHz(1489.95449e6)).toBe('1489.954490');
+    expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1489.954490 MHz @ -54.4 dBm');
+    expect(logAction).toHaveBeenCalledWith('SPEC A: Peak Search 1489.954490 MHz @ -54.4 dBm', 'SPEC A', 'VT-01');
   });
 
   it('a paused Peak Search repaints the frozen screen before the readouts; a live one does not', () => {
@@ -700,7 +730,7 @@ describe('Peak Search end to end: log line = readout = marker (phase 33 D10, r7-
     }
   });
 
-  it('on noise: the readout keeps the logged pick and the marker stays on its bin, reading the level there each sweep', () => {
+  it('on noise: the marker stays on its bin and the readout follows it, the level there each sweep (phase 34 D1)', () => {
     const noisyTop = (x: number): number => (x >= 300 && x <= 500 ? -54.4 + noise() * 0.6 : -90 + noise() * 2);
     sweep(noisyTop);
     const logged = clickAndCheck();
@@ -709,12 +739,42 @@ describe('Peak Search end to end: log line = readout = marker (phase 33 D10, r7-
     for (let n = 0; n < 20; n++) {
       sweep(noisyTop);
       expect(analyzer.state.peakMarkerBin).toBe(bin);
-      expect(parse(text('sa-peak-readout'))).toEqual(logged);
+      const readout = parse(text('sa-peak-readout'));
       const marker = parse(text('sa-marker-info'));
+      expect(readout).toEqual(marker);
       expect(marker.mhz).toBe(logged.mhz);
       expect(marker.dbm).toBeCloseTo(plot.selectedTraceData![bin], 1);
     }
     expect(logAction.mock.calls.filter(([line]) => String(line).startsWith('SPEC A: Peak Search'))).toHaveLength(1);
+  });
+
+  it('a retune releases the marker: Peak and Mkr read dashes, isMarkerOn false, no re-pick (phase 34 D2, r9-s03-F1)', () => {
+    const carrier = (x: number): number => (x === 400 ? -50 : -90);
+    sweep(carrier);
+    clickAndCheck();
+    expect(analyzer.state.isMarkerOn).toBe(true);
+
+    plot.setFrequencyRange(1462.5e6 as Hertz, 1537.5e6 as Hertz);
+    sweep((x) => (x === 250 ? -45 : -90));
+    expect(analyzer.state.isMarkerOn).toBe(false);
+    expect(analyzer.state.peakMarkerBin).toBeUndefined();
+    expect(text('sa-peak-readout')).toBe('Peak: --- MHz @ --- dBm');
+    expect(text('sa-marker-info')).toBe('Mkr: --- MHz @ --- dBm');
+    expect((containerEl.querySelector('#sa-marker-enabled') as HTMLInputElement).checked).toBe(false);
+
+    // Further sweeps on the new window never place a marker by themselves
+    sweep((x) => (x === 250 ? -45 : -90));
+    expect(text('sa-peak-readout')).toBe('Peak: --- MHz @ --- dBm');
+  });
+
+  it('an amplitude-only change keeps the marker on its bin', () => {
+    sweep((x) => (x === 400 ? -50 : -90));
+    const logged = clickAndCheck();
+    analyzer.state.maxAmplitude = -20;
+    sweep((x) => (x === 400 ? -50 : -90));
+    expect(analyzer.state.isMarkerOn).toBe(true);
+    expect(analyzer.state.peakMarkerBin).toBe(400);
+    expect(parse(text('sa-peak-readout'))).toEqual(logged);
   });
 
   it('paused: Peak Search reads the frozen trace on screen, not the live frame', () => {
