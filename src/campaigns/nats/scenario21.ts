@@ -645,7 +645,7 @@ export const scenario21Data: ScenarioData = {
             ],
             correctIndex: 0,
             explanation:
-              'The notch takes most of the interferer out: lock margin goes from about 1.5 dB to about 5 dB during the bursts. The notched 8 MHz slice costs the carrier about a dB, which is why the off periods read about 12 dB instead of the clean 13. The customer is up with margin to spare.',
+              'The notch takes most of the interferer out: lock margin goes from about 1.5 dB to about 5 dB during the bursts. Degraded margin raises when Es/N0 is less than 1.0 dB over the lock threshold and clears again at 1.5 dB over it. The notched 8 MHz slice costs the carrier about a dB, which is why the off periods read about 12 dB instead of the clean 13. The customer is up with margin to spare.',
             pointPenalty: 5,
           },
           mustMaintain: false,
