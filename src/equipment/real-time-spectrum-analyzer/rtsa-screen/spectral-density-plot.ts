@@ -1,11 +1,17 @@
 import type { TraceMode } from '@app/equipment/real-time-spectrum-analyzer/analyzer-control/ac-trace-btn/ac-trace-btn';
-import { holdPeakPlateau } from '@app/equipment/real-time-spectrum-analyzer/peak-plateau';
+import { findPeakPlateau, plateauAt } from '@app/equipment/real-time-spectrum-analyzer/peak-plateau';
 import { RealTimeSpectrumAnalyzer } from '@app/equipment/real-time-spectrum-analyzer/real-time-spectrum-analyzer';
 import { SpectrumDataProcessor } from '@app/equipment/real-time-spectrum-analyzer/spectrum-data-processor';
 import { Rng } from '@app/simulation/rng';
 import { SimulationManager } from '@app/simulation/simulation-manager';
 import { Hertz, IfSignal, MHz, RfSignal } from '@app/types';
 import { RTSAScreen } from './rtsa-screen';
+
+/** The frequency axis: one label per tick, and the unit they are in (drawn once) */
+export interface FrequencyAxisLabels {
+  labels: string[];
+  unit: string;
+}
 
 /** Seeded draws for this module (see simulation/rng.ts). */
 const random = (): number => Rng.stream('display:spectral-density').next();
@@ -23,6 +29,8 @@ export class SpectralDensityPlot extends RTSAScreen {
   private isTraceDirty_: boolean = true;
   /** Frequency/amplitude window the traces were taken for */
   private traceWindowKey_: string = '';
+  /** Frequency window the traces were taken for (a retune releases the Peak Search bin) */
+  private traceFreqKey_: string = '';
 
   /** CSS size of the plot (drawing coordinates); the bitmap is this x devicePixelRatio */
   private plotWidth_: number;
@@ -77,8 +85,8 @@ export class SpectralDensityPlot extends RTSAScreen {
     hold: '#4eb136ff', // Yellow (maintains color from before hold)
   };
 
-  // Frequency label caching
-  private readonly frequencyLabelCache: Map<string, string[]> = new Map();
+  // Frequency label caching, per frequency window
+  private readonly frequencyLabelCache: Map<string, FrequencyAxisLabels> = new Map();
 
   // Grid + labels ImageData caching
   private cachedGridImageData: ImageData | null = null;
@@ -208,6 +216,15 @@ export class SpectralDensityPlot extends RTSAScreen {
           this.updateTrace_(traceIndex, isWindowChanged ? 'clearwrite' : trace.mode);
         }
 
+        // A retune puts the Peak Search bin on another frequency: release it
+        // and mark the new trace's peak (phase 33 D10)
+        const freqKey = `${this.minFreq}|${this.maxFreq}`;
+        if (this.traceFreqKey_ !== '' && freqKey !== this.traceFreqKey_ && this.specA.state.peakMarkerBin !== undefined) {
+          this.specA.state.peakMarkerBin = undefined;
+          this.specA.state.isUpdateMarkers = true;
+        }
+        this.traceFreqKey_ = freqKey;
+
         this.traceWindowKey_ = windowKey;
         this.lastTraceTime_ = now;
         this.isTraceDirty_ = true;
@@ -292,6 +309,14 @@ export class SpectralDensityPlot extends RTSAScreen {
     return this.plotHeight_;
   }
 
+  /**
+   * The selected trace as drawn (any trace mode; frozen while paused): what
+   * Peak Search reads (phase 33 D10, r7-s15-F1), or null with no such trace
+   */
+  get selectedTraceData(): Float32Array | null {
+    return this.traceData[this.specA.state.selectedTrace - 1] ?? null;
+  }
+
   /** Height (CSS px) of the trace area: the plot less the label band under it */
   private get traceHeight_(): number {
     return Math.max(1, this.plotHeight_ - SpectralDensityPlot.LABEL_BAND_PX);
@@ -300,6 +325,17 @@ export class SpectralDensityPlot extends RTSAScreen {
   /** X (CSS px) of trace point `index` */
   private xOf_(index: number): number {
     return ((index + 0.5) / this.width) * this.plotWidth_;
+  }
+
+  /** The cached grid is missing or was drawn for another frequency/amplitude window */
+  private get isLayoutStale_(): boolean {
+    return (
+      !this.cachedGridImageData ||
+      this.cachedMinFreq !== this.minFreq ||
+      this.cachedMaxFreq !== this.maxFreq ||
+      this.cachedMinAmplitude !== this.specA.state.minAmplitude ||
+      this.cachedMaxAmplitude !== this.specA.state.maxAmplitude
+    );
   }
 
   draw(): void {
@@ -312,19 +348,33 @@ export class SpectralDensityPlot extends RTSAScreen {
       this.syncCanvasSize_();
     }
 
-    const isLayoutStale =
-      !this.cachedGridImageData ||
-      this.cachedMinFreq !== this.minFreq ||
-      this.cachedMaxFreq !== this.maxFreq ||
-      this.cachedMinAmplitude !== this.specA.state.minAmplitude ||
-      this.cachedMaxAmplitude !== this.specA.state.maxAmplitude;
-
     // Grid and labels follow any centre/span/amplitude change at once; the
     // traces redraw when a new one is taken
-    if (!isLayoutStale && !this.isTraceDirty_) {
+    if (!this.isLayoutStale_ && !this.isTraceDirty_) {
       return;
     }
 
+    this.paint_();
+  }
+
+  /**
+   * Repaint while paused (phase 33 D10, r8-s01-F1): the cached grid, the frozen
+   * traces, the amplitude labels and the markers, so a Peak Search or a marker
+   * change shows on a paused screen. It never takes a trace (no `update()`).
+   */
+  redrawFrozen(): void {
+    if (!this.running) {
+      return;
+    }
+    if (this.isSizeStale_ || this.canvas.width !== Math.max(1, Math.round(this.plotWidth_ * this.dpr_))) {
+      this.syncCanvasSize_();
+    }
+    this.paint_();
+  }
+
+  /** Grid (cached), traces, amplitude labels and markers, from the traces held now */
+  private paint_(): void {
+    const isLayoutStale = this.isLayoutStale_;
     const isDualScreenMode = this.canvas.id.endsWith('-spectral');
     this.range = this.specA.state.maxAmplitude - this.specA.state.minAmplitude;
     this.ctx.setTransform(this.dpr_, 0, 0, this.dpr_, 0, 0);
@@ -405,12 +455,14 @@ export class SpectralDensityPlot extends RTSAScreen {
 
   private updateTopMarkers() {
     const state = this.specA.state;
-    const isTracking = state.isMarkerOn && Boolean(state.isPeakTracking);
-    // A tracking Peak Search marker re-finds the peak on every sweep (Phase 30 D11)
-    if (isTracking) {
+    if (!state.isMarkerOn) {
+      state.peakMarkerBin = undefined;
+    }
+    const pinnedBin = state.peakMarkerBin;
+    // The Peak Search marker stays on its bin and re-reads the level there
+    // every sweep, so a notched-out spike reads its notched level (phase 33 D10)
+    if (pinnedBin !== undefined) {
       state.isUpdateMarkers = true;
-    } else {
-      state.peakHold = undefined;
     }
     if (state.isUpdateMarkers) {
       // Find peaks in the currently selected trace
@@ -424,13 +476,10 @@ export class SpectralDensityPlot extends RTSAScreen {
         return;
       }
 
-      // The main pick is Peak Search's: the whole trace, above Max Amp too, a
-      // flat top within 0.5 dB read at its centre, and while tracking it holds
-      // until the maximum moves (phase 32 D11, r7-s12-F1, r7-s15-F1)
-      const pick = holdPeakPlateau(selectedTraceData, this.width, isTracking ? state.peakHold : null);
-      if (isTracking) {
-        state.peakHold = pick ? { bin: pick.bin, maxDbm: pick.maxDbm } : undefined;
-      }
+      // The main pick: the Peak Search bin when one is held (it never
+      // re-picks, phase 33 D10), else Peak Search's own rule: the whole trace,
+      // above Max Amp too, a flat top within 0.5 dB read at its centre (phase 32 D11)
+      const pick = pinnedBin !== undefined ? plateauAt(selectedTraceData, this.width, pinnedBin) : findPeakPlateau(selectedTraceData, this.width);
 
       // Other local maxima (peaks) for stepping the marker by hand
       const peaks: { x: number; signal: number }[] = [];
@@ -497,7 +546,7 @@ export class SpectralDensityPlot extends RTSAScreen {
       // Sort markers in ascending x order for drawing
       state.topMarkers.sort((a, b) => a.x - b.x);
 
-      // The marker sits on the pick; without one, on the highest marker
+      // The marker sits on the pick (the Peak Search bin); without one, on the highest marker
       state.markerIndex = 0;
       if (pick) {
         state.markerIndex = Math.max(
@@ -546,80 +595,123 @@ export class SpectralDensityPlot extends RTSAScreen {
     });
   }
 
+  /**
+   * Exact frequency tick labels (phase 33 D12, r8-s15-F1): the ticks from
+   * `minHz` to `maxHz` in `numTicks` steps, in whole Hz, written in the unit
+   * that gives the shortest text (MHz on a tie, then fewer decimals) with the
+   * fewest decimals d at which every tick is whole at 10^-d of that unit. The
+   * digits come from integer arithmetic, never toFixed on a float, so 1490/75
+   * reads 1452.5, 1460.0, 1467.5 ... MHz. The unit is drawn once, as a tag.
+   */
+  static frequencyAxisLabels(minHz: number, maxHz: number, numTicks: number = 10): FrequencyAxisLabels {
+    const ticksHz: number[] = [];
+    for (let i = 0; i <= numTicks; i++) {
+      ticksHz.push(Math.round(minHz + ((maxHz - minHz) * i) / numTicks));
+    }
+
+    let best: FrequencyAxisLabels | null = null;
+    let bestLength = Infinity;
+    let bestDecimals = Infinity;
+    for (const { unit, exponent } of SpectralDensityPlot.FREQUENCY_UNITS_) {
+      // Smallest d whose resolution 10^(exponent - d) Hz divides every tick
+      let decimals = 0;
+      while (decimals < exponent && !ticksHz.every((hz) => hz % 10 ** (exponent - decimals) === 0)) {
+        decimals++;
+      }
+      const resolutionHz = 10 ** (exponent - decimals);
+      const scale = 10 ** decimals;
+      const labels = ticksHz.map((hz) => {
+        const steps = Math.round(Math.abs(hz) / resolutionHz);
+        const whole = Math.floor(steps / scale);
+        const fraction = decimals > 0 ? `.${String(steps % scale).padStart(decimals, '0')}` : '';
+
+        return `${hz < 0 ? '-' : ''}${whole}${fraction}`;
+      });
+      const length = Math.max(...labels.map((label) => label.length));
+      if (length < bestLength || (length === bestLength && decimals < bestDecimals && best?.unit !== 'MHz')) {
+        best = { labels, unit };
+        bestLength = length;
+        bestDecimals = decimals;
+      }
+    }
+
+    return best ?? { labels: ticksHz.map(String), unit: 'Hz' };
+  }
+
+  /** Units the frequency axis can use, MHz first so it wins a tie */
+  private static readonly FREQUENCY_UNITS_: readonly { unit: string; exponent: number }[] = [
+    { unit: 'MHz', exponent: 6 },
+    { unit: 'GHz', exponent: 9 },
+    { unit: 'kHz', exponent: 3 },
+    { unit: 'Hz', exponent: 0 },
+  ];
+
+  /** Least clear space between two frequency labels' boxes, CSS px */
+  static readonly TICK_GAP_PX = 2;
+
+  /** Frequency divisions across the plot (NUM_FREQ_DIVISIONS + 1 tick labels) */
+  static readonly NUM_FREQ_DIVISIONS = 10;
+
+  /** The frequency axis for the current window, cached per window */
+  private frequencyAxis_(): FrequencyAxisLabels {
+    const cacheKey = `${this.minFreq}|${this.maxFreq}`;
+    let axis = this.frequencyLabelCache.get(cacheKey);
+    if (!axis) {
+      axis = SpectralDensityPlot.frequencyAxisLabels(this.minFreq, this.maxFreq, SpectralDensityPlot.NUM_FREQ_DIVISIONS);
+      this.frequencyLabelCache.set(cacheKey, axis);
+    }
+
+    return axis;
+  }
+
   private drawFrequencyLabels(ctx: CanvasRenderingContext2D, _isDualScreenMode: boolean): void {
     ctx.save();
     ctx.fillStyle = '#fff';
     ctx.textBaseline = 'bottom';
     ctx.font = SpectralDensityPlot.LABEL_FONT;
 
-    const numLabels = 10;
+    const numLabels = SpectralDensityPlot.NUM_FREQ_DIVISIONS;
     const inset = 4;
-    const padding = 8; // minimum spacing between labels
     const y = this.plotHeight_ - inset;
-    // The bottom amplitude label shares the band at the left edge
-    const minAmplitude = this.specA.state.minAmplitude;
-    const ampLabel = minAmplitude.toFixed(Number.isInteger(minAmplitude) ? 0 : 1);
-    const ampLabelRight = inset + ctx.measureText(ampLabel).width;
+    const { labels } = this.frequencyAxis_();
 
-    // Enough decimals that neighbouring ticks differ: a fixed toFixed(3) GHz
-    // printed "1.075 GHz" on every tick of a 2 kHz span (nats-s01-F9)
-    const stepHz = (this.maxFreq - this.minFreq) / numLabels;
-    const decimalsFor = (unitHz: number): number => (stepHz > 0 ? Math.min(9, Math.max(0, Math.ceil(-Math.log10(stepHz / unitHz) - 1e-9))) : 3);
-    const format = (freq: number): string => {
-      if (freq >= 1e9) {
-        return `${(freq / 1e9).toFixed(decimalsFor(1e9))} GHz`;
-      } else if (freq >= 1e6) {
-        return `${(freq / 1e6).toFixed(decimalsFor(1e6))} MHz`;
-      } else if (freq >= 1e3) {
-        return `${(freq / 1e3).toFixed(decimalsFor(1e3))} kHz`;
-      }
-
-      return `${Math.round(freq)} Hz`;
-    };
-
-    // Every tick from start to stop; the end labels are inset so they stay
-    // on the plot, and a label that would overlap its neighbour is skipped
-    // (the centre and the stop always draw)
-    const ticks: { x: number; text: string; width: number; align: CanvasTextAlign; left: number; right: number }[] = [];
+    // Every tick from start to stop; the band is the frequency axis's alone
+    // (the Min Amp label sits above it, phase 33 D12), so tick 0 starts at the
+    // inset and the end labels stay on the plot
+    const ticks: { x: number; text: string; align: CanvasTextAlign; left: number; right: number }[] = [];
     for (let i = 0; i <= numLabels; i++) {
-      const freq = this.minFreq + ((this.maxFreq - this.minFreq) * i) / numLabels;
-      const cacheKey = `${freq}|${stepHz}`;
-      let text = this.frequencyLabelCache.get(cacheKey)?.[0];
-      if (!text) {
-        text = format(freq);
-        this.frequencyLabelCache.set(cacheKey, [text]);
-      }
+      const text = labels[i];
       const width = ctx.measureText(text).width;
-      const x = (i / numLabels) * this.plotWidth_;
       let align: CanvasTextAlign = 'center';
-      let left = x - width / 2;
+      let textX = (i / numLabels) * this.plotWidth_;
+      let left = textX - width / 2;
       if (i === 0) {
         align = 'left';
-        left = ampLabelRight + padding;
+        textX = inset;
+        left = inset;
       } else if (i === numLabels) {
         align = 'right';
-        left = this.plotWidth_ - inset - width;
+        textX = this.plotWidth_ - inset;
+        left = textX - width;
       }
-      ticks.push({ x, text, width, align, left, right: left + width });
+      ticks.push({ x: textX, text, align, left, right: left + width });
     }
 
-    const mustDraw = new Set([numLabels / 2, numLabels]);
-    const drawn: { left: number; right: number }[] = [{ left: inset, right: ampLabelRight }];
-    const overlaps = (t: { left: number; right: number }): boolean => drawn.some((d) => t.left < d.right + padding && t.right > d.left - padding);
-    // Fixed ticks first, then the rest left to right where they fit
-    for (const i of [numLabels / 2, numLabels, ...ticks.keys()]) {
+    // Start, stop and centre go first, then the rest left to right; tick 0
+    // always draws, and no label draws whose box would come within
+    // TICK_GAP_PX of one already drawn, so two labels never run together
+    // (a 2 kHz span at 1074.5 MHz has 9-character labels, phase 33 D12)
+    const order = [0, numLabels, numLabels / 2, ...ticks.keys()];
+    const gap = SpectralDensityPlot.TICK_GAP_PX;
+    const drawn: { left: number; right: number }[] = [];
+    const overlaps = (t: { left: number; right: number }): boolean => drawn.some((d) => t.left < d.right + gap && t.right > d.left - gap);
+    for (const i of order) {
       const tick = ticks[i];
-      if (drawn.includes(tick) || (!mustDraw.has(i) && overlaps(tick))) {
+      if (drawn.includes(tick) || (i !== 0 && overlaps(tick))) {
         continue;
       }
       ctx.textAlign = tick.align;
-      let textX = tick.x;
-      if (tick.align === 'left') {
-        textX = tick.left;
-      } else if (tick.align === 'right') {
-        textX = this.plotWidth_ - inset;
-      }
-      ctx.fillText(tick.text, textX, y);
+      ctx.fillText(tick.text, tick.x, y);
       drawn.push(tick);
     }
     ctx.restore();
@@ -629,8 +721,10 @@ export class SpectralDensityPlot extends RTSAScreen {
    * Amplitude (dBm) labels, drawn after the traces each on a small translucent
    * dark box so the trace never overdraws a number (phase 31 D8). Every
    * graticule line is labelled, top (Max Amp) to bottom (Min Amp); the top
-   * label sits inside the plot and the bottom one in the label band under the
-   * trace area (Phase 30 D21), left of the frequency ticks.
+   * label sits inside the plot and the bottom one just above the bottom grid
+   * line, inside the trace area, so the label band is the frequency axis's
+   * (phase 33 D12). The units are tags: dBm beside the top label, the
+   * frequency unit at the bottom right.
    */
   private drawPowerLabels(ctx: CanvasRenderingContext2D, isDualScreenMode: boolean): void {
     ctx.save();
@@ -653,12 +747,14 @@ export class SpectralDensityPlot extends RTSAScreen {
         y = inset;
       } else if (i === numLabels) {
         baseline = 'bottom';
-        y = this.plotHeight_ - inset;
+        y = this.traceHeight_ - pad - 2;
       }
       const decimals = Number.isInteger(power) ? 0 : 1;
       this.drawBoxedLabel_(ctx, power.toFixed(decimals), pad, y, baseline);
     }
     this.drawBoxedLabel_(ctx, 'dBm', pad + 34, inset, 'top');
+    const { unit } = this.frequencyAxis_();
+    this.drawBoxedLabel_(ctx, unit, this.plotWidth_ - pad - ctx.measureText(unit).width, this.traceHeight_ - pad - 2, 'bottom');
     ctx.restore();
   }
 
@@ -781,11 +877,22 @@ export class SpectralDensityPlot extends RTSAScreen {
     ctx.stroke();
   }
 
+  /**
+   * Lowest y (CSS px) of the marker's tip: the diamond is 10 px tall, so a
+   * marker clamped at the top edge (a peak above Max Amp) still shows whole
+   */
+  static readonly MARKER_MIN_TIP_PX = 10;
+
+  /**
+   * The marker diamond with its tip on the trace (phase 33 D11, r8-s09-F1),
+   * frequency and level above it, or below it when the two lines do not fit
+   * above (a peak near Max Amp)
+   */
   private drawMarker(markerIndex: number, markerY: number, levelDbm: number): void {
     const ctx = this.ctx;
     if (markerIndex > 0) {
       const x = this.xOf_(markerIndex);
-      const y = Math.max(40, this.traceHeight_ * markerY - 2);
+      const y = Math.max(SpectralDensityPlot.MARKER_MIN_TIP_PX, this.traceHeight_ * markerY);
 
       // Draw diamond marker
       ctx.beginPath();
@@ -807,8 +914,15 @@ export class SpectralDensityPlot extends RTSAScreen {
       const lines = [`${freqMhz.toFixed(6)} MHz`, `${levelDbm.toFixed(1)} dBm`];
       const textWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
       const textX = Math.min(Math.max(4, x - textWidth / 2), this.plotWidth_ - textWidth - 4);
-      ctx.fillText(lines[0], textX, y - 26);
-      ctx.fillText(lines[1], textX, y - 12);
+      const isRoomAbove = y - 26 - SpectralDensityPlot.LABEL_FONT_PX >= 0;
+      if (isRoomAbove) {
+        ctx.fillText(lines[0], textX, y - 26);
+        ctx.fillText(lines[1], textX, y - 12);
+      } else {
+        ctx.textBaseline = 'top';
+        ctx.fillText(lines[0], textX, y + 4);
+        ctx.fillText(lines[1], textX, y + 18);
+      }
       ctx.restore();
     }
   }

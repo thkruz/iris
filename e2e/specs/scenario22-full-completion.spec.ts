@@ -252,11 +252,14 @@ async function configureSpeca(page: import('@playwright/test').Page, centerFrequ
   // The quiz asks for the level off the Peak readout: read it from the
   // screen first (about -69 dBm, ~6 dB under the -63 dBm reference;
   // nats-r3-s22-F1 read -69.2 to -69.4 step-tracked)
-  await page.locator('#sa-peak-search').click();
+  // Peak Search is one shot since Phase 33 D10 (the readout keeps the click
+  // result), so re-click inside the poll until the trace has settled
   const readout = page.locator('#sa-peak-readout');
   await expect
     .poll(
       async () => {
+        await page.locator('#sa-peak-search').click();
+        await page.waitForTimeout(300);
         const match = /@\s*(-?\d+(?:\.\d+)?)\s*dBm/u.exec((await readout.textContent()) ?? '');
         return match ? Number.parseFloat(match[1]) : Number.NaN;
       },

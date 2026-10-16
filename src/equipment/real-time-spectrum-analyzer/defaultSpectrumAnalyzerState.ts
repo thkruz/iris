@@ -9,7 +9,6 @@ export const defaultSpectrumAnalyzerState: Partial<RealTimeSpectrumAnalyzerState
   isMinHold: false,
   isMarkerOn: false,
   isUpdateMarkers: false,
-  isPeakTracking: false,
   topMarkers: [],
   markerIndex: 0,
 

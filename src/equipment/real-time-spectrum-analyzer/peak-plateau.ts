@@ -1,7 +1,9 @@
 /**
- * Peak Search's pick rule, shared by `RealTimeSpectrumAnalyzer.peakSearch` and
- * the in-plot marker (`SpectralDensityPlot.updateTopMarkers`) so the readout,
- * the marker and the Ops Log line agree (phase 32 D11, r7-s12-F1, r7-s15-F1).
+ * Peak Search's pick rule, used by `RealTimeSpectrumAnalyzer.peakSearch` at the
+ * click and by the in-plot marker (`SpectralDensityPlot.updateTopMarkers`) when
+ * the marker is turned on, so the readout, the marker and the Ops Log line
+ * agree (phase 32 D11). Peak Search is one shot (phase 33 D10): the marker stays
+ * on the clicked bin, `plateauAt` reads that bin each sweep.
  */
 
 /**
@@ -20,12 +22,6 @@ export interface PeakPlateau {
   start: number;
   /** Last bin of that run */
   end: number;
-}
-
-/** A tracking marker's held pick: its bin and the trace maximum when it was picked */
-export interface PeakHold {
-  bin: number;
-  maxDbm: number;
 }
 
 /**
@@ -59,22 +55,26 @@ export function findPeakPlateau(data: ArrayLike<number>, length: number = data.l
 }
 
 /**
- * The pick for a tracking marker: it keeps `held` while the trace maximum is
- * within PEAK_PLATEAU_DB of the maximum at pick time and the held bin is still
- * within PEAK_PLATEAU_DB of the maximum (still on the flat top); otherwise a
- * fresh `findPeakPlateau` pick. A held result keeps the pick-time maxDbm as its
- * reference, so slow drift past 0.5 dB still re-picks.
+ * The run around a pinned Peak Search bin (phase 33 D10): the bin and its
+ * level now, and the contiguous bins within PEAK_PLATEAU_DB of that level, so
+ * the hand-stepping list does not put a second marker on the same flat top.
+ * The bin never moves; a bin with no finite level is a run of one.
  */
-export function holdPeakPlateau(data: ArrayLike<number>, length: number, held: PeakHold | null | undefined): PeakPlateau | null {
-  const fresh = findPeakPlateau(data, length);
-  if (!fresh || !held || held.bin < 0 || held.bin >= Math.min(length, data.length)) {
-    return fresh;
+export function plateauAt(data: ArrayLike<number>, length: number, bin: number): PeakPlateau {
+  const n = Math.min(length, data.length);
+  const level = data[bin];
+  if (bin < 0 || bin >= n || !Number.isFinite(level)) {
+    return { bin, maxDbm: level, start: bin, end: bin };
   }
-  const isMaxSteady = Math.abs(fresh.maxDbm - held.maxDbm) <= PEAK_PLATEAU_DB;
-  const isStillOnTop = data[held.bin] > fresh.maxDbm - PEAK_PLATEAU_DB;
-  if (isMaxSteady && isStillOnTop) {
-    return { ...fresh, bin: held.bin, maxDbm: held.maxDbm };
+  const floor = level - PEAK_PLATEAU_DB;
+  let start = bin;
+  while (start > 0 && data[start - 1] > floor) {
+    start--;
+  }
+  let end = bin;
+  while (end + 1 < n && data[end + 1] > floor) {
+    end++;
   }
 
-  return fresh;
+  return { bin, maxDbm: level, start, end };
 }

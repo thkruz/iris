@@ -13,7 +13,7 @@ import { Rng } from '@app/simulation/rng';
 import { dB, Hertz, IfSignal, RfSignal } from '@app/types';
 import { AnalyzerControlBox } from './analyzer-control-box';
 import { defaultSpectrumAnalyzerState } from './defaultSpectrumAnalyzerState';
-import { findPeakPlateau, type PeakHold } from './peak-plateau';
+import { findPeakPlateau } from './peak-plateau';
 import './real-time-spectrum-analyzer.css';
 import { SpectralDensityPlot } from '@app/equipment/real-time-spectrum-analyzer/rtsa-screen/spectral-density-plot';
 import { WaterfallDisplay } from '@app/equipment/real-time-spectrum-analyzer/rtsa-screen/waterfall-display';
@@ -140,17 +140,12 @@ export interface RealTimeSpectrumAnalyzerState {
   isMarkerOn: boolean;
   isUpdateMarkers: boolean;
   /**
-   * Peak Search tracking (Phase 30 D11, nats-r5-s05-F3): the marker re-finds
-   * the highest point of the trace on every sweep until the marker is turned
-   * off or moved by hand, so it never labels a peak that has gone
+   * The bin Peak Search put the marker on (phase 33 D10, supersedes the Phase 30
+   * D11 tracking): the marker stays on it and its level is re-read there every
+   * sweep, so a notched-out spike reads its notched level. Cleared when the
+   * marker is turned off or moved by hand, or the frequency window changes.
    */
-  isPeakTracking?: boolean;
-  /**
-   * The tracking marker's held pick (phase 32 D11, r7-s15-F1): its bin and the
-   * trace maximum at pick time. It holds until the maximum moves by more than
-   * PEAK_PLATEAU_DB or the bin falls off the flat top.
-   */
-  peakHold?: PeakHold;
+  peakMarkerBin?: number;
   topMarkers: MarkerPoint[];
   markerIndex: number;
   refreshRate: number; // in Hz
@@ -479,14 +474,32 @@ export class RealTimeSpectrumAnalyzer extends BaseEquipment {
   }
 
   /**
-   * The highest point of the live trace (Peak Search): frequency (Hz), level
-   * (dBm) at the picked bin, the bin itself and the trace maximum, or null
-   * before the first trace. It searches the whole trace, above Max Amp too,
-   * and reads a flat top (every bin within PEAK_PLATEAU_DB of the maximum) at
-   * its centre, the rule the in-plot marker uses (phase 32 D11).
+   * The spectral plot on screen: the full-size one, the upper half in "both"
+   * mode, or null in waterfall-only mode
+   */
+  get visibleSpectralPlot(): SpectralDensityPlot | null {
+    switch (this.state.screenMode) {
+      case 'spectralDensity':
+        return this.spectralDensity;
+      case 'both':
+        return this.spectralDensityBoth;
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Peak Search, one shot (phase 33 D10): the highest point of the trace on
+   * screen (the visible plot's selected trace, whatever its mode: what the
+   * operator sees, paused or live; the live data only in waterfall-only mode)
+   * as frequency (Hz), level (dBm) at the picked bin, the bin and the trace
+   * maximum, or null before the first trace. It searches the whole trace,
+   * above Max Amp too, and reads a flat top (every bin within PEAK_PLATEAU_DB
+   * of the maximum) at its centre (phase 32 D11).
    */
   peakSearch(): { frequencyHz: number; levelDbm: number; bin: number; maxDbm: number } | null {
-    const data = this.dataProcessor?.combinedData;
+    const plot = this.visibleSpectralPlot;
+    const data = plot ? plot.selectedTraceData : this.dataProcessor?.combinedData;
     if (!data || data.length === 0) {
       return null;
     }
@@ -502,6 +515,15 @@ export class RealTimeSpectrumAnalyzer extends BaseEquipment {
       bin: pick.bin,
       maxDbm: pick.maxDbm,
     };
+  }
+
+  /**
+   * Repaint the visible plot's frozen trace with the grid, amplitude labels and
+   * markers while paused, without taking a new trace (phase 33 D10, r8-s01-F1),
+   * so a Peak Search or marker change shows on a paused screen
+   */
+  redrawFrozen(): void {
+    this.visibleSpectralPlot?.redrawFrozen();
   }
 
   /** The VBW in use: the set value, or RBW x AUTO_VBW_RATIO */

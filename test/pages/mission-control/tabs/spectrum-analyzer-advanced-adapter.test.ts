@@ -1,5 +1,7 @@
 import { Mock, Mocked, vi } from 'vitest';
 import { RealTimeSpectrumAnalyzer } from '../../../../src/equipment/real-time-spectrum-analyzer/real-time-spectrum-analyzer';
+import { SpectralDensityPlot } from '../../../../src/equipment/real-time-spectrum-analyzer/rtsa-screen/spectral-density-plot';
+import type { SpectrumDataProcessor } from '../../../../src/equipment/real-time-spectrum-analyzer/spectrum-data-processor';
 import { EventBus } from '../../../../src/events/event-bus';
 import { Events } from '../../../../src/events/events';
 import { SpectrumAnalyzerAdvancedAdapter } from '../../../../src/pages/mission-control/tabs/spectrum-analyzer-advanced-adapter';
@@ -9,6 +11,9 @@ vi.mock('../../../../src/events/event-bus');
 const { logAction } = vi.hoisted(() => ({ logAction: vi.fn() }));
 vi.mock('../../../../src/ops-log/event-auto-logger', () => ({
   EventAutoLogger: { getInstance: () => ({ logAction }) },
+}));
+vi.mock('../../../../src/simulation/simulation-manager', () => ({
+  SimulationManager: { getInstance: () => ({ isDeveloperMode: false }) },
 }));
 
 describe('SpectrumAnalyzerAdvancedAdapter', () => {
@@ -303,18 +308,39 @@ describe('SpectrumAnalyzerAdvancedAdapter', () => {
       expect(mockSpectrumAnalyzer.state.markerIndex).toBe(5);
     });
 
-    it('stops Peak Search tracking when the marker is turned off or moved by hand (Phase 30 D11)', () => {
+    it('releases the Peak Search bin when the marker is turned off or moved by hand (phase 33 D10)', () => {
       const markerCheckbox = containerEl.querySelector('#sa-marker-enabled') as HTMLInputElement;
-      mockSpectrumAnalyzer.state.isPeakTracking = true;
+      mockSpectrumAnalyzer.state.peakMarkerBin = 42;
       markerCheckbox.checked = false;
       markerCheckbox.dispatchEvent(new Event('change'));
-      expect(mockSpectrumAnalyzer.state.isPeakTracking).toBe(false);
+      expect(mockSpectrumAnalyzer.state.peakMarkerBin).toBeUndefined();
 
       const markerIndexInput = containerEl.querySelector('#sa-marker-index') as HTMLInputElement;
-      mockSpectrumAnalyzer.state.isPeakTracking = true;
+      mockSpectrumAnalyzer.state.peakMarkerBin = 42;
       markerIndexInput.value = '2';
       markerIndexInput.dispatchEvent(new Event('input'));
-      expect(mockSpectrumAnalyzer.state.isPeakTracking).toBe(false);
+      expect(mockSpectrumAnalyzer.state.peakMarkerBin).toBeUndefined();
+    });
+
+    it('repaints the frozen screen when a marker changes while paused, not while live (phase 33 D10, r8-s01-F1)', () => {
+      const redrawFrozen = vi.fn();
+      (mockSpectrumAnalyzer as unknown as { redrawFrozen: () => void }).redrawFrozen = redrawFrozen;
+      const markerCheckbox = containerEl.querySelector('#sa-marker-enabled') as HTMLInputElement;
+      const markerIndexInput = containerEl.querySelector('#sa-marker-index') as HTMLInputElement;
+
+      markerCheckbox.checked = true;
+      markerCheckbox.dispatchEvent(new Event('change'));
+      expect(redrawFrozen).not.toHaveBeenCalled();
+
+      mockSpectrumAnalyzer.state.isPaused = true;
+      markerCheckbox.checked = false;
+      markerCheckbox.dispatchEvent(new Event('change'));
+      markerCheckbox.checked = true;
+      markerCheckbox.dispatchEvent(new Event('change'));
+      expect(mockSpectrumAnalyzer.state.isUpdateMarkers).toBe(true);
+      markerIndexInput.value = '3';
+      markerIndexInput.dispatchEvent(new Event('input'));
+      expect(redrawFrozen).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -486,7 +512,7 @@ describe('SpectrumAnalyzerAdvancedAdapter Ops Log lines and peak readout (phase 
     expect(logAction).toHaveBeenCalledWith('SPEC A: Peak Search 1085.000001 MHz @ -69.2 dBm', 'SPEC A', 'VT-01');
   });
 
-  it('Peak Search is one pick: the marker, the readout and the log line carry the same peak (phase 32 D11)', () => {
+  it('Peak Search is one shot: the marker, the readout and the log line carry the same peak (phase 32 D11, phase 33 D10)', () => {
     const state = analyzer.state;
     state.topMarkers = [{ x: 7, y: 0.9, signal: -99.1 }]; // a stale noise-spike marker
     state.markerIndex = 0;
@@ -495,11 +521,10 @@ describe('SpectrumAnalyzerAdvancedAdapter Ops Log lines and peak readout (phase 
 
     expect(analyzer.peakSearch).toHaveBeenCalledTimes(1);
     expect(state.isMarkerOn).toBe(true);
-    expect(state.isPeakTracking).toBe(true);
     expect(state.topMarkers).toHaveLength(1);
     expect(state.topMarkers[0]).toMatchObject({ x: 42, signal: -69.2 });
     expect(state.markerIndex).toBe(0);
-    expect(state.peakHold).toEqual({ bin: 42, maxDbm: -69.0 });
+    expect(state.peakMarkerBin).toBe(42);
     expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1085.000001 MHz @ -69.2 dBm');
     expect(logAction).toHaveBeenCalledWith('SPEC A: Peak Search 1085.000001 MHz @ -69.2 dBm', 'SPEC A', 'VT-01');
   });
@@ -511,19 +536,194 @@ describe('SpectrumAnalyzerAdvancedAdapter Ops Log lines and peak readout (phase 
     expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1085.000001 MHz @ -69.2 dBm');
   });
 
-  it('while the Peak Search marker tracks, the peak readout is the marker', () => {
+  it('while the marker stays on the Peak Search bin, the readout keeps the click result and Mkr reads the bin now (phase 33 D10)', () => {
     const state = analyzer.state;
-    state.isMarkerOn = true;
-    state.isPeakTracking = true;
-    // Marker at point 49 of 100 across 1452.5..1527.5 MHz: 1452.5 + 49.5 * 0.75 = 1489.625 MHz
-    state.topMarkers = [{ x: 49, y: 0.5, signal: -61.3 }];
+    (containerEl.querySelector('#sa-peak-search') as HTMLButtonElement).click();
+    // A later sweep: the level at bin 42 moved, and a noise spike is now higher elsewhere
+    // Bin 42 of 100 across 1452.5..1527.5 MHz: 1452.5 + 42.5 * 0.75 = 1484.375 MHz
+    state.topMarkers = [{ x: 42, y: 0.5, signal: -69.6 }];
     state.markerIndex = 0;
-    (adapter as unknown as { syncLiveReadouts_: () => void }).syncLiveReadouts_();
-    expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1489.625 MHz @ -61.3 dBm');
-
-    // Not tracking: the readout is Peak Search's own result
-    state.isPeakTracking = false;
+    (analyzer.peakSearch as Mock).mockReturnValue({ frequencyHz: 1500e6, levelDbm: -60, bin: 63, maxDbm: -60 });
     (adapter as unknown as { syncLiveReadouts_: () => void }).syncLiveReadouts_();
     expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1085.000001 MHz @ -69.2 dBm');
+    expect(containerEl.querySelector('#sa-marker-info')?.textContent).toBe('Mkr: 1484.375 MHz @ -69.6 dBm');
+
+    // The marker moved by hand: the readout is Peak Search's live result again
+    state.peakMarkerBin = undefined;
+    (adapter as unknown as { syncLiveReadouts_: () => void }).syncLiveReadouts_();
+    expect(containerEl.querySelector('#sa-peak-readout')?.textContent).toBe('Peak: 1500 MHz @ -60.0 dBm');
+  });
+
+  it('a paused Peak Search repaints the frozen screen before the readouts; a live one does not', () => {
+    const redrawFrozen = vi.fn();
+    (analyzer as unknown as { redrawFrozen: () => void }).redrawFrozen = redrawFrozen;
+    (containerEl.querySelector('#sa-peak-search') as HTMLButtonElement).click();
+    expect(redrawFrozen).not.toHaveBeenCalled();
+
+    analyzer.state.isPaused = true;
+    (containerEl.querySelector('#sa-peak-search') as HTMLButtonElement).click();
+    expect(redrawFrozen).toHaveBeenCalledTimes(1);
+    expect(redrawFrozen.mock.invocationCallOrder[0]).toBeLessThan(logAction.mock.invocationCallOrder.at(-1)!);
+  });
+});
+
+describe('Peak Search end to end: log line = readout = marker (phase 33 D10, r7-s15-F1, r8-s01-F1)', () => {
+  const WIDTH = 800;
+  const HEIGHT = 230;
+  let analyzer: RealTimeSpectrumAnalyzer;
+  let dataProcessor: { combinedData: Float32Array; noiseData: Float32Array };
+  let plot: SpectralDensityPlot;
+  let containerEl: HTMLElement;
+  let adapter: SpectrumAnalyzerAdvancedAdapter;
+  const w = globalThis as unknown as { signalRange?: unknown };
+  let seed = 1;
+  /** Deterministic noise in [-0.5, 0.5) */
+  const noise = (): number => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648 - 0.5;
+  };
+
+  const sweep = (carrier: (x: number) => number): void => {
+    const data = new Float32Array(WIDTH);
+    for (let x = 0; x < WIDTH; x++) {
+      data[x] = carrier(x);
+    }
+    dataProcessor.combinedData = data;
+    vi.advanceTimersByTime(1000);
+    if (!analyzer.state.isPaused) {
+      plot.update();
+      plot.draw();
+    }
+    (adapter as unknown as { syncLiveReadouts_: () => void }).syncLiveReadouts_();
+  };
+  const text = (id: string): string => containerEl.querySelector(`#${id}`)?.textContent ?? '';
+  /** Frequency (MHz) and level (dBm) out of a "... 1490.125 MHz @ -54.4 dBm" line */
+  const parse = (line: string): { mhz: number; dbm: number } => {
+    const match = /(-?\d+(?:\.\d+)?) MHz @ (-?\d+\.\d) dBm/u.exec(line);
+    return { mhz: Number(match?.[1]), dbm: Number(match?.[2]) };
+  };
+  const logLine = (): string => String(logAction.mock.calls.at(-1)?.[0] ?? '');
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    logAction.mockClear();
+    seed = 1;
+    (EventBus.getInstance as Mock).mockReturnValue({ on: vi.fn(), off: vi.fn(), emit: vi.fn() });
+    dataProcessor = { combinedData: new Float32Array(WIDTH).fill(-90), noiseData: new Float32Array(WIDTH).fill(-100) };
+    analyzer = Object.assign(Object.create(RealTimeSpectrumAnalyzer.prototype) as RealTimeSpectrumAnalyzer, {
+      uuid: 'sa-e2e',
+      dataProcessor: dataProcessor as unknown as SpectrumDataProcessor,
+      spectralDensity: null,
+      inputSignals: [],
+      state: {
+        uuid: 'sa-e2e',
+        centerFrequency: 1490e6,
+        span: 75e6,
+        rbw: 1e6,
+        referenceLevel: -20,
+        scaleDbPerDiv: 10,
+        refreshRate: 10,
+        isPaused: false,
+        minAmplitude: -100,
+        maxAmplitude: -30,
+        noiseFloorNoGain: -95,
+        isSkipLnaGainDuringDraw: true,
+        screenMode: 'both',
+        selectedTrace: 1,
+        traces: [
+          { isVisible: true, isUpdating: true, mode: 'clearwrite' },
+          { isVisible: false, isUpdating: false, mode: 'clearwrite' },
+          { isVisible: false, isUpdating: false, mode: 'clearwrite' },
+        ],
+        isMarkerOn: false,
+        isUpdateMarkers: false,
+        markerIndex: 0,
+        topMarkers: [],
+      },
+    });
+    const canvas = document.createElement('canvas');
+    plot = new SpectralDensityPlot(canvas, analyzer, dataProcessor as unknown as SpectrumDataProcessor, WIDTH, HEIGHT);
+    plot.setFrequencyRange(1452.5e6 as Hertz, 1527.5e6 as Hertz);
+    analyzer.spectralDensityBoth = plot;
+    vi.advanceTimersByTime(1100);
+
+    w.signalRange = { simulationManager: { groundStations: [{ state: { id: 'VT-01' }, spectrumAnalyzers: [analyzer] }] } };
+    containerEl = document.createElement('div');
+    containerEl.innerHTML = `
+      <input type="number" id="sa-center-freq" /><input type="number" id="sa-span" /><input type="number" id="sa-ref-level" />
+      <input type="number" id="sa-min-amp" /><input type="number" id="sa-max-amp" /><input type="number" id="sa-marker-index" />
+      <input type="checkbox" id="sa-trace-visible" /><input type="checkbox" id="sa-trace-updating" /><input type="checkbox" id="sa-marker-enabled" />
+      <button id="sa-mode-spectral"></button><button id="sa-mode-waterfall"></button><button id="sa-mode-both"></button>
+      <button id="sa-auto-tune"></button><button id="sa-pause"></button><button id="sa-peak-search"></button>
+      <button id="sa-trace-1"></button><button id="sa-trace-2"></button><button id="sa-trace-3"></button>
+      <select id="sa-rbw"><option value="auto">Auto</option></select>
+      <select id="sa-scale"><option value="10">10</option></select>
+      <select id="sa-refresh"><option value="10">10</option></select>
+      <select id="sa-trace-mode"><option value="clearwrite">CW</option></select>
+      <div id="sa-engineering-controls"></div>
+      <span id="sa-peak-readout"></span>
+      <span id="sa-marker-info"></span>
+    `;
+    document.body.appendChild(containerEl);
+    adapter = new SpectrumAnalyzerAdvancedAdapter(analyzer, containerEl);
+  });
+
+  afterEach(() => {
+    adapter.dispose();
+    plot.dispose();
+    document.body.innerHTML = '';
+    delete w.signalRange;
+    vi.useRealTimers();
+  });
+
+  const clickAndCheck = (): { mhz: number; dbm: number } => {
+    (containerEl.querySelector('#sa-peak-search') as HTMLButtonElement).click();
+    const logged = parse(logLine());
+    expect(logLine()).toMatch(/^SPEC A: Peak Search /u);
+    expect(parse(text('sa-peak-readout'))).toEqual(logged);
+    expect(parse(text('sa-marker-info'))).toEqual(logged);
+    return logged;
+  };
+
+  it('on a flat top: the click, the readout and the marker agree, and stay so across 20 sweeps', () => {
+    const flatTop = (x: number): number => (x >= 300 && x <= 500 ? -54.4 : -90);
+    sweep(flatTop);
+    const logged = clickAndCheck();
+    const bin = analyzer.state.peakMarkerBin;
+    expect(bin).toBe(400);
+
+    for (let n = 0; n < 20; n++) {
+      sweep(flatTop);
+      expect(analyzer.state.peakMarkerBin).toBe(bin);
+      expect(parse(text('sa-peak-readout'))).toEqual(logged);
+      expect(parse(text('sa-marker-info'))).toEqual(logged);
+    }
+  });
+
+  it('on noise: the readout keeps the logged pick and the marker stays on its bin, reading the level there each sweep', () => {
+    const noisyTop = (x: number): number => (x >= 300 && x <= 500 ? -54.4 + noise() * 0.6 : -90 + noise() * 2);
+    sweep(noisyTop);
+    const logged = clickAndCheck();
+    const bin = analyzer.state.peakMarkerBin!;
+
+    for (let n = 0; n < 20; n++) {
+      sweep(noisyTop);
+      expect(analyzer.state.peakMarkerBin).toBe(bin);
+      expect(parse(text('sa-peak-readout'))).toEqual(logged);
+      const marker = parse(text('sa-marker-info'));
+      expect(marker.mhz).toBe(logged.mhz);
+      expect(marker.dbm).toBeCloseTo(plot.selectedTraceData![bin], 1);
+    }
+    expect(logAction.mock.calls.filter(([line]) => String(line).startsWith('SPEC A: Peak Search'))).toHaveLength(1);
+  });
+
+  it('paused: Peak Search reads the frozen trace on screen, not the live frame', () => {
+    sweep((x) => (x === 250 ? -50 : -90));
+    analyzer.state.isPaused = true;
+    // The live frame moves on; the screen does not
+    sweep((x) => (x === 600 ? -40 : -90));
+    const logged = clickAndCheck();
+    expect(analyzer.state.peakMarkerBin).toBe(250);
+    expect(logged.dbm).toBe(-50);
   });
 });

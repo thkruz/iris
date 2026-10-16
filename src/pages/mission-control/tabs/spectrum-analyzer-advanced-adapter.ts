@@ -33,6 +33,11 @@ export class SpectrumAnalyzerAdvancedAdapter {
   private readonly stateChangeHandler_: (state: Partial<RealTimeSpectrumAnalyzerState>) => void;
   private readonly updateHandler_: () => void;
   private lastLiveSyncMs_: number = 0;
+  /**
+   * The last Peak Search result (phase 33 D10): the "Peak:" readout keeps it
+   * while the marker stays on its bin, so the readout is the SPEC A line
+   */
+  private peakClick_: { frequencyHz: number; levelDbm: number; bin: number } | null = null;
   /** Live readouts (peak, RBW in use) refresh at most this often, ms */
   private static readonly LIVE_READOUT_INTERVAL_MS = 500;
   /** A retune across several fields writes one Ops Log line after this quiet time, ms (phase 31 D13) */
@@ -246,9 +251,9 @@ export class SpectrumAnalyzerAdvancedAdapter {
 
     const peakReadout = this.domCache_.get('sa-peak-readout');
     if (peakReadout) {
-      // While the Peak Search marker tracks, the readout is the marker, so the
-      // two never disagree (phase 31 D15, r6-s07-F1)
-      const peak = this.trackedMarkerPeak_() ?? analyzer.peakSearch?.() ?? null;
+      // While the marker stays on the Peak Search bin the readout keeps the
+      // click's result, the value the SPEC A line logged (phase 33 D10)
+      const peak = this.heldPeakClick_() ?? analyzer.peakSearch?.() ?? null;
       peakReadout.textContent = SpectrumAnalyzerAdvancedAdapter.formatPeakReadout(peak);
     }
 
@@ -372,27 +377,31 @@ export class SpectrumAnalyzerAdvancedAdapter {
   }
 
   /**
-   * Peak Search: marker on, placed on the highest point of the trace, and it
-   * follows the live peak on every sweep until the marker is turned off or
-   * moved by hand (Phase 30 D11, nats-r5-s05-F3). One `peakSearch()` at the
-   * click places the marker and writes the readout and the log line, so all
-   * three carry the same pick (phase 32 D11, r7-s12-F1, r7-s15-F1).
+   * Peak Search, one shot (phase 33 D10, supersedes Phase 30 D11 tracking):
+   * one `peakSearch()` at the click reads the trace on screen, places the
+   * marker on that bin, and writes the readout and the log line, so all three
+   * carry the same pick. The marker stays on the bin (its level re-read every
+   * sweep); the readout keeps the click result. A paused screen repaints its
+   * frozen trace with the marker (r8-s01-F1).
    */
   private handlePeakSearch_(): void {
     const state = this.spectrumAnalyzer.state;
     const peak = this.spectrumAnalyzer.peakSearch?.() ?? null;
     state.isMarkerOn = true;
-    state.isPeakTracking = true;
     if (peak && typeof peak.bin === 'number') {
       const range = state.maxAmplitude - state.minAmplitude;
       const y = range > 0 ? (peak.levelDbm - state.minAmplitude) / range : 0;
       // Above Max Amp the marker sits clamped at the top edge, true level kept
       state.topMarkers = [{ x: peak.bin, y: 1 - Math.max(0, Math.min(1, y)), signal: peak.levelDbm }];
       state.markerIndex = 0;
-      state.peakHold = { bin: peak.bin, maxDbm: peak.maxDbm ?? peak.levelDbm };
+      state.peakMarkerBin = peak.bin;
+      this.peakClick_ = { frequencyHz: peak.frequencyHz, levelDbm: peak.levelDbm, bin: peak.bin };
     } else {
+      state.peakMarkerBin = undefined;
       state.isUpdateMarkers = true;
+      this.peakClick_ = null;
     }
+    this.redrawIfPaused_();
     this.syncLiveReadouts_();
     const peakReadout = this.domCache_.get('sa-peak-readout');
     if (peakReadout) {
@@ -400,6 +409,13 @@ export class SpectrumAnalyzerAdvancedAdapter {
     }
     this.emitStateChange_();
     this.logPeakSearch_(peak);
+  }
+
+  /** A paused screen repaints its frozen trace with the markers (phase 33 D10, r8-s01-F1) */
+  private redrawIfPaused_(): void {
+    if (this.spectrumAnalyzer.state.isPaused) {
+      this.spectrumAnalyzer.redrawFrozen?.();
+    }
   }
 
   /** `Peak: 1085.000001 MHz @ -69.2 dBm`, or dashes with no peak */
@@ -449,9 +465,10 @@ export class SpectrumAnalyzerAdvancedAdapter {
   private handleMarkerEnabledChange_(e: Event): void {
     const checked = (e.target as HTMLInputElement).checked;
     this.spectrumAnalyzer.state.isMarkerOn = checked;
-    if (!checked) {
-      this.spectrumAnalyzer.state.isPeakTracking = false;
-    }
+    // On: mark the trace afresh; off: release the Peak Search bin
+    this.spectrumAnalyzer.state.isUpdateMarkers = checked;
+    this.spectrumAnalyzer.state.peakMarkerBin = undefined;
+    this.redrawIfPaused_();
     this.emitStateChange_();
   }
 
@@ -459,8 +476,9 @@ export class SpectrumAnalyzerAdvancedAdapter {
     const value = parseInt((e.target as HTMLInputElement).value, 10);
     if (!isNaN(value) && value >= 0) {
       this.spectrumAnalyzer.state.markerIndex = value;
-      // A marker moved by hand stops following the peak
-      this.spectrumAnalyzer.state.isPeakTracking = false;
+      // A marker moved by hand leaves the Peak Search bin
+      this.spectrumAnalyzer.state.peakMarkerBin = undefined;
+      this.redrawIfPaused_();
       this.emitStateChange_();
     }
   }
@@ -668,9 +686,12 @@ export class SpectrumAnalyzerAdvancedAdapter {
     return { frequencyHz: state.centerFrequency - state.span / 2 + ((marker.x + 0.5) / points) * state.span, levelDbm: marker.signal };
   }
 
-  /** The Peak Search marker while it tracks the live peak, else null */
-  private trackedMarkerPeak_(): { frequencyHz: number; levelDbm: number } | null {
-    return this.spectrumAnalyzer.state.isPeakTracking ? this.activeMarker_() : null;
+  /** The Peak Search click result while the marker is still on its bin, else null */
+  private heldPeakClick_(): { frequencyHz: number; levelDbm: number } | null {
+    const state = this.spectrumAnalyzer.state;
+    const click = this.peakClick_;
+
+    return click && state.isMarkerOn && state.peakMarkerBin === click.bin ? click : null;
   }
 
   // ============ Ops Log (phase 31 D13, r6-s15-F2) ============

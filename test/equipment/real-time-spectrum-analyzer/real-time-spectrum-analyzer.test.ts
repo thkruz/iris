@@ -829,3 +829,38 @@ describe('RealTimeSpectrumAnalyzer.peakSearch plateau rule (phase 31 D15, phase 
     expect(peak?.bin).toBe(3);
   });
 });
+
+describe('RealTimeSpectrumAnalyzer.peakSearch reads the trace on screen (phase 33 D10, r7-s15-F1)', () => {
+  const live = new Float32Array([-90, -90, -90, -90, -90, -90, -90, -40, -90, -90]);
+  const drawn = new Float32Array([-90, -90, -55, -90, -90, -90, -90, -90, -90, -90]);
+  const analyzerIn = (screenMode: string, redrawFrozen = vi.fn()) => {
+    const plot = { selectedTraceData: drawn, redrawFrozen };
+    return Object.assign(Object.create(RealTimeSpectrumAnalyzer.prototype) as RealTimeSpectrumAnalyzer, {
+      dataProcessor: { combinedData: live },
+      spectralDensity: plot,
+      spectralDensityBoth: plot,
+      state: { centerFrequency: 1000e6, span: 10e6, screenMode },
+    });
+  };
+
+  it('picks from the visible plot selected trace in spectral and both modes, not the live frame', () => {
+    for (const mode of ['spectralDensity', 'both']) {
+      const peak = analyzerIn(mode).peakSearch();
+      expect(peak?.bin, mode).toBe(2);
+      expect(peak?.levelDbm, mode).toBe(-55);
+    }
+  });
+
+  it('falls back to the live data in waterfall-only mode', () => {
+    expect(analyzerIn('waterfall').peakSearch()?.bin).toBe(7);
+  });
+
+  it('redrawFrozen repaints the visible plot only', () => {
+    const redraw = vi.fn();
+    analyzerIn('both', redraw).redrawFrozen();
+    expect(redraw).toHaveBeenCalledTimes(1);
+    const none = vi.fn();
+    analyzerIn('waterfall', none).redrawFrozen();
+    expect(none).not.toHaveBeenCalled();
+  });
+});
