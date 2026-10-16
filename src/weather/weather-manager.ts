@@ -9,6 +9,7 @@ import { Events, WeatherEventData } from '@app/events/events';
 import { ObjectiveAnchors } from '@app/objectives/objective-anchor';
 import { ScenarioManager } from '@app/scenario-manager';
 import { missionNowMs } from '@app/simulation/mission-clock';
+import { SimClock } from '@app/simulation/sim-clock';
 import { SimulationManager } from '@app/simulation/simulation-manager';
 import type { Milliseconds } from 'ootk';
 
@@ -151,7 +152,11 @@ export class WeatherManager {
   /** Main update loop - called on each simulation tick */
   private update_(dt: Milliseconds): void {
     const elapsedSeconds = this.getElapsedMissionTime();
-    const dtSeconds = dt / 1000;
+    // UPDATE fires on every fixed step, scenario clock held or not: ice
+    // builds and melts on scenario time only, so it holds while a dialog,
+    // brief or quiz holds the clock (Phase 34 D9, nats-r9-s20-F1). An
+    // operator time skip is not a step and stays excluded, as before
+    const dtSeconds = SimClock.isPaused('scenario') ? 0 : dt / 1000;
 
     // Start objective-anchored events whose objective has come up
     this.anchorEvents_(elapsedSeconds);

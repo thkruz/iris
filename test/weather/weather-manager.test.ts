@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
 import { Events, WeatherEventData } from '../../src/events/events';
+import { FIXED_STEP_MS, SimClock } from '../../src/simulation/sim-clock';
 import { IceAccumulationConfig, WeatherEventRuntime, WeatherManager } from '../../src/weather/weather-manager';
 import { setScenarioElapsed } from '../helpers/sim-time';
 
@@ -724,6 +725,71 @@ describe('WeatherManager', () => {
       // should be skipped (we can't take log of non-positive number)
       // The accumulation time should not be updated (remains at 0 from creation)
       expect(manager.getIceAccumulationTime('antenna-1')).toBe(0);
+    });
+  });
+
+  describe('ice runs on scenario time (Phase 34 D9, nats-r9-s20-F1)', () => {
+    let updateHandler: (dt: number) => void;
+    /** One fixed step with its UPDATE, as SimulationManager runs it (UPDATE fires paused or not) */
+    const stepOnce = () => {
+      SimClock.step();
+      updateHandler(FIXED_STEP_MS);
+    };
+
+    beforeEach(() => {
+      mockEventBusInstance.on.mockImplementation((event: string, handler: any) => {
+        if (event === Events.UPDATE) {
+          updateHandler = handler;
+        }
+      });
+    });
+
+    afterEach(() => {
+      SimClock.resume('scenario');
+    });
+
+    it.each([
+      ['builds with the heater off', false, undefined, 1.0, 'grows'],
+      ['melts with the heater on', true, undefined, 3.0, 'shrinks'],
+      ['balances load and melt with the heater on in a storm that outpaces it', true, 0.1, 1.0, 'grows'],
+    ] as const)('holds while the scenario clock is paused, and %s once it runs', (_name, isHeaterEnabled, heaterMeltDbPerMin, startIce, direction) => {
+      mockScenarioSettings.weatherEvents = [
+        {
+          id: 'snow-1',
+          groundStationId: 'gs-1',
+          type: 'snow',
+          severity: 'moderate',
+          startTime: 0,
+          duration: 3600,
+          linkMarginDegradation: 2,
+          ...(heaterMeltDbPerMin === undefined ? {} : { heaterMeltDbPerMin }),
+        },
+      ];
+      mockAntennas = [createMockAntenna('antenna-1', isHeaterEnabled, startIce)];
+      mockGroundStations.push({ state: { id: 'gs-1' }, antennas: mockAntennas });
+      SimClock.resume('scenario');
+      WeatherManager.getInstance();
+      setScenarioElapsed(1000);
+      stepOnce();
+      const iceAtPause = mockAntennas[0].state.iceAccumulation_dB;
+
+      // A brief, dialog or quiz holds the scenario clock for 10 s of run time
+      SimClock.pause('scenario');
+      for (let i = 0; i < 600; i++) {
+        stepOnce();
+      }
+      expect(mockAntennas[0].state.iceAccumulation_dB).toBe(iceAtPause);
+
+      SimClock.resume('scenario');
+      for (let i = 0; i < 60; i++) {
+        stepOnce();
+      }
+      const iceAfter = mockAntennas[0].state.iceAccumulation_dB;
+      if (direction === 'grows') {
+        expect(iceAfter).toBeGreaterThan(iceAtPause);
+      } else {
+        expect(iceAfter).toBeLessThan(iceAtPause);
+      }
     });
   });
 

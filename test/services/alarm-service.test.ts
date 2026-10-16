@@ -86,6 +86,8 @@ function runSteps(ms: number): void {
 
 describe('AlarmService', () => {
   beforeEach(() => {
+    // The poll snapshot and the raise stamps are static: no case reads another's
+    AlarmService.destroy();
     (AlarmService as any).instance_ = null;
     updateHandler = null;
     mockSimulationManager.groundStations = [];
@@ -270,18 +272,28 @@ describe('AlarmService', () => {
       AlarmService.destroy();
     });
 
-    it('stamps the time an alarm was first seen and keeps it while its live number moves', () => {
+    it('stamps the time an alarm was first polled and keeps it while its live number moves', () => {
       AlarmService.destroy();
+      AlarmService.getInstance();
       const rf = { getStatusAlarms: vi.fn((rfCase: number) => (rfCase === 1 ? [alarm('error', 'BUC over-temperature (72.3 °C)')] : [])) };
       const station = gs({ state: { id: 'VT-01', isOperational: true }, rfFrontEnds: [rf] });
+      mockSimulationManager.groundStations = [station];
+
+      // A read before any poll collects live and makes no stamp (Phase 34 D8)
+      (Date.now as Mock).mockReturnValue(4_000);
+      expect(AlarmService.getAlarms(station as any)[0].raisedAtMs).toBeUndefined();
 
       (Date.now as Mock).mockReturnValue(5_000);
+      settleService();
+      updateHandler?.(16);
       expect(AlarmService.getAlarms(station as any)[0].raisedAtMs).toBe(5_000);
 
-      // Rendered a minute later, the temperature has moved: same alarm, same raise time
+      // Polled a minute later, the temperature has moved: same alarm, same raise time
       (Date.now as Mock).mockReturnValue(65_000);
       rf.getStatusAlarms.mockImplementation((rfCase: number) => (rfCase === 1 ? [alarm('error', 'BUC over-temperature (72.0 °C)')] : []));
-      expect(AlarmService.getAlarms(station as any)[0].raisedAtMs).toBe(5_000);
+      runSteps(1_000);
+      updateHandler?.(16);
+      expect(AlarmService.getAlarms(station as any)[0]).toEqual(expect.objectContaining({ detail: '72.0 °C', raisedAtMs: 5_000 }));
     });
 
     it('records the raise on the poll, before any Dashboard render, and stamps a re-raise afresh', () => {
@@ -306,7 +318,12 @@ describe('AlarmService', () => {
       runSteps(1_000);
       updateHandler?.(16);
       antenna.getStatusAlarms.mockReturnValue([alarm('warning', 'ACQUIRING LOCK...')]);
-      expect(AlarmService.getAlarms('VT-01')[0].raisedAtMs).toBe(400_000);
+      // Between polls the read is the clear poll's snapshot (Phase 34 D8)
+      expect(AlarmService.getAlarms('VT-01')).toEqual([]);
+      (Date.now as Mock).mockReturnValue(401_000);
+      runSteps(1_000);
+      updateHandler?.(16);
+      expect(AlarmService.getAlarms('VT-01')[0].raisedAtMs).toBe(401_000);
     });
   });
 
@@ -340,6 +357,28 @@ describe('AlarmService', () => {
       expect(degraded?.detail).toBe('Modem 1: Es/N0 5.6 dB, need 5.0 dB');
     });
 
+    it('joins the per-modem lock rule into one alarm per label, lost before degraded (Phase 34 D5)', () => {
+      const rx = {
+        ...receiver({
+          1: { ...locked(0, false), hasCarrier: false, hasLock: false },
+          2: locked(5.6, true),
+          3: { ...locked(5.2, false), hasLock: false },
+          4: locked(5.4, true),
+        }),
+        getLockTransition: vi.fn((modem: { modemNumber: number }) =>
+          modem.modemNumber === 1 || modem.modemNumber === 3 ? { hadLock: true, lockLostAtMs: 1, lastSignalId: 'c' } : null
+        ),
+      };
+      const station = gs({ state: { id: 'VT-01', isOperational: true }, receivers: [rx as any] });
+      const rxAlarms = AlarmService.getAlarms(station as any).filter((a) => a.message !== 'Signal(s) Detected');
+      expect(AlarmService.LOCK_LOST_LABEL).toBe('Carrier lock lost');
+      expect(AlarmService.DEGRADED_MARGIN_LABEL).toBe('Degraded margin');
+      expect(rxAlarms.map((a) => [a.severity, a.message, a.detail])).toEqual([
+        ['error', 'Carrier lock lost', 'Modem 1: no carrier; Modem 3: Es/N0 5.2 dB, locks at 5.5 dB'],
+        ['warning', 'Degraded margin', 'Modem 2: Es/N0 5.6 dB, need 5.0 dB; Modem 4: Es/N0 5.4 dB, need 5.0 dB'],
+      ]);
+    });
+
     it('raises nothing for a healthy margin, an unlocked modem or a powered-off modem', () => {
       const healthy = gs({ receivers: [receiver({ 1: locked(12, false) }) as any] });
       const unlocked = gs({ receivers: [receiver({ 1: { ...locked(4, false), hasLock: false } }) as any] });
@@ -351,12 +390,18 @@ describe('AlarmService', () => {
 
     it('keeps one label while the live value moves, so the raise time holds', () => {
       AlarmService.destroy();
+      AlarmService.getInstance();
       const infos = { 1: locked(5.6, true) };
       const station = gs({ state: { id: 'VT-01', isOperational: true }, receivers: [receiver(infos) as any] });
+      mockSimulationManager.groundStations = [station];
       (Date.now as Mock).mockReturnValue(5_000);
+      settleService();
+      updateHandler?.(16);
       expect(AlarmService.getAlarms(station as any)[0].raisedAtMs).toBe(5_000);
       infos[1] = locked(5.3, true);
       (Date.now as Mock).mockReturnValue(9_000);
+      runSteps(1_000);
+      updateHandler?.(16);
       const [first] = AlarmService.getAlarms(station as any);
       expect(first.message).toBe('Degraded margin');
       expect(first.detail).toBe('Modem 1: Es/N0 5.3 dB, need 5.0 dB');
@@ -642,6 +687,123 @@ describe('AlarmService', () => {
       expect(mockEventBus.off).toHaveBeenCalledWith(Events.UPDATE, handler);
       expect(mockEventBus.on).toHaveBeenCalledWith(Events.UPDATE, handler);
       expect(mockEventBus.off.mock.invocationCallOrder[0]).toBeLessThan(mockEventBus.on.mock.invocationCallOrder[0]);
+    });
+  });
+
+  describe('one alarm snapshot per scenario second (Phase 34 D8, nats-r9-s04-F1, nats-r8-s20-F1)', () => {
+    const changes = () => mockEventBus.emit.mock.calls.filter(([event]) => event === Events.ALARM_STATE_CHANGED).map(([, data]) => data);
+    /** Step and dispatch UPDATE until the service polls; returns SimClock.nowMs() at that poll */
+    const stepToPoll = (): number => {
+      const polls = mockSimulationGetInstance.mock.calls.length;
+      for (let i = 0; i < 2 * 60; i++) {
+        SimClock.step();
+        updateHandler?.(16);
+        if (mockSimulationGetInstance.mock.calls.length > polls) return SimClock.nowMs();
+      }
+      throw new Error('no poll within two seconds');
+    };
+
+    beforeEach(() => {
+      SimClock.resume('scenario');
+    });
+
+    afterEach(() => {
+      OpsLogManager.destroy();
+      AlarmService.destroy();
+    });
+
+    it('stamps a mid-second raise on the boundary poll, and getAlarms quotes the stamp the Ops Log line got', () => {
+      clock.running = 'real';
+      OpsLogManager.initialize('12:00:00', '2026-03-15');
+      // The scenario unlocks: its clock runs
+      SimClock.resume('scenario');
+      let raised: AlarmLike[] = [alarm('warning', 'AUTO TRACK FAILED')];
+      const station = gs({ state: { id: 'ME-02', isOperational: true }, antennas: [{ getStatusAlarms: vi.fn(() => raised) }] });
+      mockSimulationManager.groundStations = [station];
+
+      // Before the first poll: a live collect, and no stamp
+      const [live] = AlarmService.getAlarms('ME-02');
+      expect(live.message).toBe('AUTO TRACK FAILED');
+      expect(live.raisedAtMs).toBeUndefined();
+
+      AlarmService.getInstance();
+      settleService();
+      const firstPollMs = stepToPoll();
+      expect(AlarmService.getAlarms('ME-02')[0].raisedAtMs).toBe(firstPollMs);
+
+      // Half a second on, the equipment raises a second alarm: the Dashboard's
+      // mid-second read still sees the last poll and stamps nothing
+      for (let i = 0; i < 30; i++) {
+        SimClock.step();
+        updateHandler?.(16);
+      }
+      raised = [...raised, alarm('error', 'ANT FAIL')];
+      expect(AlarmService.getAlarms('ME-02').map((a) => a.message)).toEqual(['AUTO TRACK FAILED']);
+
+      const pollMs = stepToPoll();
+      expect(Math.floor(pollMs / 1000)).toBe(Math.floor(firstPollMs / 1000) + 1);
+      const [fromRead] = AlarmService.getAlarms('ME-02');
+      expect(fromRead.message).toBe('ANT FAIL');
+      expect(fromRead.raisedAtMs).toBe(pollMs);
+      const payload: { alarms: { message: string; raisedAtMs?: number }[] } = changes().at(-1);
+      const emitted = payload.alarms.find((a) => a.message === 'ANT FAIL');
+      expect(emitted?.raisedAtMs).toBe(fromRead.raisedAtMs);
+      // The payload is the poll's set, as before
+      expect(payload.alarms.map((a) => a.message)).toEqual(['ANT FAIL', 'AUTO TRACK FAILED']);
+    });
+
+    it('serves the last emitted detail between polls while the live value ramps', () => {
+      const level = { dB: 1 };
+      const antenna = { getStatusAlarms: vi.fn(() => [alarm('warning', `SUN TRANSIT: ELEVATED SKY NOISE (${level.dB.toFixed(1)} dB)`)]) };
+      mockSimulationManager.groundStations = [gs({ state: { id: 'VT-01', isOperational: true }, antennas: [antenna] })];
+      AlarmService.getInstance();
+      settleService();
+      stepToPoll();
+
+      for (let second = 0; second < 2; second++) {
+        const emittedDetail = changes().at(-1).alarms[0].detail;
+        // Every step moves the sky noise 0.05 dB until the second turns
+        for (let i = 0; i < 59; i++) {
+          level.dB += 0.05;
+          SimClock.step();
+          updateHandler?.(16);
+          if (changes().at(-1).alarms[0].detail !== emittedDetail) {
+            break;
+          }
+          expect(AlarmService.getAlarms('VT-01')[0].detail).toBe(emittedDetail);
+        }
+        level.dB += 0.05;
+        stepToPoll();
+        expect(changes().at(-1).alarms[0].detail).not.toBe(emittedDetail);
+        expect(AlarmService.getAlarms('VT-01')[0].detail).toBe(changes().at(-1).alarms[0].detail);
+      }
+    });
+
+    it('hands out copies, so a caller cannot change the snapshot', () => {
+      mockSimulationManager.groundStations = [gs({ state: { id: 'VT-01', isOperational: true }, antennas: [{ getStatusAlarms: vi.fn(() => [alarm('warning', 'W')]) }] })];
+      AlarmService.getInstance();
+      settleService();
+      stepToPoll();
+      const read = AlarmService.getAlarms('VT-01');
+      read[0].message = 'changed';
+      read.push(read[0]);
+      expect(AlarmService.getAlarms('VT-01').map((a) => a.message)).toEqual(['W']);
+    });
+
+    it('drops the snapshot on destroy() and falls back to a live collect', () => {
+      let message = 'ICE ON FEED (0.5 dB)';
+      mockSimulationManager.groundStations = [gs({ state: { id: 'VT-01', isOperational: true }, antennas: [{ getStatusAlarms: vi.fn(() => [alarm('warning', message)]) }] })];
+      AlarmService.getInstance();
+      settleService();
+      stepToPoll();
+      message = 'ICE ON FEED (0.9 dB)';
+      expect(AlarmService.getAlarms('VT-01')[0].detail).toBe('0.5 dB');
+
+      AlarmService.destroy();
+      expect((AlarmService as any).lastPollAlarms_.size).toBe(0);
+      const [live] = AlarmService.getAlarms('VT-01');
+      expect(live.detail).toBe('0.9 dB');
+      expect(live.raisedAtMs).toBeUndefined();
     });
   });
 

@@ -1,6 +1,6 @@
 import { GroundStation } from '@app/assets/ground-station/ground-station';
 import { AlarmStatus } from '@app/equipment/base-equipment';
-import { describeEsN0, describeEsN0ForAcquisition } from '@app/equipment/receiver/rx-signal-quality';
+import { DEGRADED_MARGIN_LABEL, LOCK_LOST_LABEL, modemLiveDetail, modemLockAlarm } from '@app/equipment/receiver/rx-signal-quality';
 import { EventBus } from '@app/events/event-bus';
 import { AggregatedAlarm, AlarmStateChangedData, Events } from '@app/events/events';
 import { SimClock } from '@app/simulation/sim-clock';
@@ -60,6 +60,14 @@ export class AlarmService {
   private readonly boundOnUpdate_: (dt: Milliseconds) => void;
   /** Station-clock ms each live alarm was first seen, by raiseKey_ */
   private static readonly raisedAtMs_ = new Map<string, number>();
+  /**
+   * Each station's alarms as the last poll saw them, most severe first, by
+   * the station's state.id (Phase 34 D8, nats-r9-s04-F1, nats-r8-s20-F1).
+   * `getAlarms` serves this snapshot, so the Dashboard rows, the LED titles,
+   * the ticker tooltip and the Ops Log line share one stamp and one detail
+   * per scenario second
+   */
+  private static readonly lastPollAlarms_ = new Map<string, AlarmWithDetail[]>();
   /** The last poll's alarms and their stations, by raiseKey_, to re-read a cleared alarm's value */
   private previousAlarms_ = new Map<string, { alarm: AlarmWithDetail; gs: GroundStation }>();
 
@@ -108,6 +116,7 @@ export class AlarmService {
       this.lastPollTime_ = -Infinity;
       this.lastPollSecond_ = null;
       this.previousAlarms_.clear();
+      AlarmService.lastPollAlarms_.clear();
     }
     if (now - this.settleFromRunMs_ < AlarmService.STARTUP_SETTLE_MS) return;
     const second = Math.floor(SimClock.nowMs() / 1000);
@@ -122,9 +131,12 @@ export class AlarmService {
     const alarms: AlarmWithDetail[] = [];
     const sim = SimulationManager.getInstance();
     const present = new Map<string, { alarm: AlarmWithDetail; gs: GroundStation }>();
+    const byStation = new Map<string, AlarmWithDetail[]>();
 
     for (const gs of sim.groundStations) {
-      for (const alarm of AlarmService.collectGroundStationAlarms_(gs)) {
+      const stationAlarms = AlarmService.collectGroundStationAlarms_(gs);
+      byStation.set(gs.state.id, stationAlarms);
+      for (const alarm of stationAlarms) {
         alarms.push(alarm);
         present.set(AlarmService.raiseKey_(alarm), { alarm, gs });
       }
@@ -145,7 +157,15 @@ export class AlarmService {
 
     // The poll sees every station, so an alarm missing here has cleared:
     // forget its raise time, so a re-raise stamps afresh
-    AlarmService.stampRaisedAt_(alarms, true);
+    AlarmService.stampRaisedAt_(alarms);
+    // The snapshot getAlarms serves until the next poll, stamped above
+    AlarmService.lastPollAlarms_.clear();
+    for (const [stationId, stationAlarms] of byStation) {
+      AlarmService.lastPollAlarms_.set(
+        stationId,
+        AlarmService.sortBySeverity_(stationAlarms).map((alarm) => ({ ...alarm }))
+      );
+    }
     this.emitIfChanged_(AlarmService.sortBySeverity_(alarms), cleared);
   }
 
@@ -168,7 +188,7 @@ export class AlarmService {
         for (const modem of rx.state?.modems ?? []) {
           if (!named.has(modem.modemNumber) || !modem.isPowered) continue;
           const info = rx.getSignalsInBandwidth(modem);
-          parts.push(`Modem ${modem.modemNumber}: ${info.hasCarrier ? describeEsN0(info) : 'no carrier'}`);
+          parts.push(modemLiveDetail(modem.modemNumber, info));
         }
         return parts.length > 0 ? parts.join('; ') : undefined;
       }
@@ -233,9 +253,10 @@ export class AlarmService {
    * Ops Log seeds the clock, and a stamp taken then was the wall clock, kept
    * for the alarm's life. The first poll after the clock starts stamps the
    * scenario start; until then the alarm carries no raise time.
-   * @param prune true when `alarms` is every station's full set (the poll)
+   * Only the poll calls it (Phase 34 D8): `alarms` is every station's full
+   * set, so an alarm missing from it has cleared and its stamp goes.
    */
-  private static stampRaisedAt_(alarms: AggregatedAlarm[], prune: boolean): void {
+  private static stampRaisedAt_(alarms: AggregatedAlarm[]): void {
     if (!isScenarioClockRunning()) return;
     const nowMs = getSimulatedNowMs();
     const seen = new Set<string>();
@@ -246,7 +267,6 @@ export class AlarmService {
       AlarmService.raisedAtMs_.set(key, raisedAtMs);
       alarm.raisedAtMs = raisedAtMs;
     }
-    if (!prune) return;
     for (const key of [...AlarmService.raisedAtMs_.keys()]) {
       if (!seen.has(key)) AlarmService.raisedAtMs_.delete(key);
     }
@@ -259,13 +279,31 @@ export class AlarmService {
    * list and its Quick Stats count agree with the ticker for that station
    * (s08-F2, s16-F2, s17-F2, s23-F2). A non-operational station has none,
    * as on the ticker.
+   *
+   * Returns the LAST POLL's set for the station (Phase 34 D8,
+   * nats-r9-s04-F1, nats-r8-s20-F1): a read between polls sees the
+   * scenario-second snapshot the ticker and the Ops Log got, with the same
+   * raise stamp and the same detail, not a live mid-second value. Before the
+   * first poll for the station, or after destroy(), it collects live and
+   * quotes only stamps the poll already made; only the poll creates one.
+   * Each call returns fresh copies, so a caller cannot change the snapshot.
    * @param station the ground station, or its state.id
    */
   static getAlarms(station: GroundStation | string): AlarmWithDetail[] {
+    const stationId = typeof station === 'string' ? station : station.state.id;
+    const snapshot = AlarmService.lastPollAlarms_.get(stationId);
+    if (snapshot) {
+      return snapshot.map((alarm) => ({ ...alarm }));
+    }
     const gs = typeof station === 'string' ? SimulationManager.getInstance().groundStations.find((g) => g.state.id === station) : station;
     if (!gs) return [];
     const alarms = AlarmService.collectGroundStationAlarms_(gs);
-    AlarmService.stampRaisedAt_(alarms, false);
+    for (const alarm of alarms) {
+      const raisedAtMs = AlarmService.raisedAtMs_.get(AlarmService.raiseKey_(alarm));
+      if (raisedAtMs !== undefined) {
+        alarm.raisedAtMs = raisedAtMs;
+      }
+    }
     return AlarmService.sortBySeverity_(alarms);
   }
 
@@ -366,6 +404,8 @@ export class AlarmService {
    *   reads Degraded -> Lock lost -> (Degraded) -> clean as a fade comes and
    *   goes. A modem that never had lock raises nothing.
    * Labels are fixed for their life; the live Es/N0 rides in the detail.
+   * The per-modem rule is `modemLockAlarm` (Phase 34 D5), which the RX modem
+   * card reads too.
    */
   private static modemLockAlarms_(rx: GroundStation['receivers'][number]): Pick<AlarmWithDetail, 'severity' | 'message' | 'detail'>[] {
     const modems = rx.state?.modems ?? [];
@@ -376,12 +416,12 @@ export class AlarmService {
       if (!modem.isPowered) continue;
       // Advances the lazy lock tracker to now, as the Dashboard does
       const info = rx.getSignalsInBandwidth(modem);
-      if (info.hasCarrier && info.hasLock && info.isLowMargin) {
-        degraded.push(`Modem ${modem.modemNumber}: ${describeEsN0(info)}`);
-      }
       const transition = typeof rx.getLockTransition === 'function' ? rx.getLockTransition(modem) : null;
-      if (!info.hasLock && transition?.hadLock && transition.lockLostAtMs !== null) {
-        lost.push(`Modem ${modem.modemNumber}: ${info.hasCarrier ? describeEsN0ForAcquisition(info) : 'no carrier'}`);
+      const alarm = modemLockAlarm(modem.modemNumber, info, transition);
+      if (alarm?.label === LOCK_LOST_LABEL) {
+        lost.push(alarm.detail);
+      } else if (alarm?.label === DEGRADED_MARGIN_LABEL) {
+        degraded.push(alarm.detail);
       }
     }
     const alarms: Pick<AlarmWithDetail, 'severity' | 'message' | 'detail'>[] = [];
@@ -421,9 +461,9 @@ export class AlarmService {
   private static readonly VALUE_IN_PARENS_ = /^(.*?)\s*\(((?:[A-Za-z][A-Za-z0-9/]*\s+)?-?\d+(?:\.\d+)?\s*[^\s\d()][^()]*)\)(.*)$/u;
 
   /** Fixed label of the receiver low-margin warning */
-  static readonly DEGRADED_MARGIN_LABEL = 'Degraded margin';
+  static readonly DEGRADED_MARGIN_LABEL = DEGRADED_MARGIN_LABEL;
   /** Fixed label of the receiver lock-loss error (Phase 31 D1) */
-  static readonly LOCK_LOST_LABEL = 'Carrier lock lost';
+  static readonly LOCK_LOST_LABEL = LOCK_LOST_LABEL;
   /** Fixed label of the antenna rain-fade alarm */
   static readonly RAIN_FADE_LABEL = 'RAIN FADE';
   /** Fixed label of the LNB compression alarm, "(0.7 dB)" split into the detail (Phase 33 D6) */
@@ -466,5 +506,6 @@ export class AlarmService {
       AlarmService.instance_ = null;
     }
     AlarmService.raisedAtMs_.clear();
+    AlarmService.lastPollAlarms_.clear();
   }
 }

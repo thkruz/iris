@@ -9,7 +9,12 @@
  */
 
 import { LOCK_HYSTERESIS_DB } from './modcod';
-import type { IQSignalInfo } from './receiver';
+import type { IQSignalInfo, ModemLockTransition } from './receiver';
+
+/** Fixed label of the receiver low-margin warning (AlarmService re-exports it) */
+export const DEGRADED_MARGIN_LABEL = 'Degraded margin';
+/** Fixed label of the receiver lock-loss error (Phase 31 D1; AlarmService re-exports it) */
+export const LOCK_LOST_LABEL = 'Carrier lock lost';
 
 export type RxSignalQuality =
   /** Locked with at least 1 dB of margin */
@@ -70,6 +75,47 @@ export function describeEsN0ForAcquisition(info: IQSignalInfo): string {
     return describeEsN0(info);
   }
   return `Es/N0 ${esN0.toFixed(1)} dB, locks at ${(need + LOCK_HYSTERESIS_DB).toFixed(1)} dB`;
+}
+
+/** One modem's lock alarm: a fixed label, its severity and the modem's live line */
+export interface ModemLockAlarm {
+  severity: 'error' | 'warning';
+  label: string;
+  /** "Modem 1: no carrier", "Modem 2: Es/N0 5.6 dB, need 5.0 dB" */
+  detail: string;
+}
+
+/**
+ * The per-modem lock rule (Phase 34 D5, nats-r8-s24-F1), shared by the
+ * Dashboard (AlarmService) and the RX modem card so both read one verdict:
+ * - "Carrier lock lost" (error) for a modem that had lock on its current
+ *   tuning and has dropped it (`transition` from `Receiver.getLockTransition`,
+ *   read after `getSignalsInBandwidth` advanced the tracker).
+ * - "Degraded margin" (warning) for a modem locked with less than 1 dB of
+ *   Es/N0 over Required (the lock tracker's own low-margin flag).
+ * Null otherwise, including a modem that never had lock on this tuning.
+ * Callers skip modems that are powered off.
+ */
+export function modemLockAlarm(modemNumber: number, info: IQSignalInfo, transition: ModemLockTransition | null): ModemLockAlarm | null {
+  if (!info.hasLock && transition?.hadLock && transition.lockLostAtMs !== null) {
+    return {
+      severity: 'error',
+      label: LOCK_LOST_LABEL,
+      detail: `Modem ${modemNumber}: ${info.hasCarrier ? describeEsN0ForAcquisition(info) : 'no carrier'}`,
+    };
+  }
+  if (info.hasCarrier && info.hasLock && info.isLowMargin) {
+    return { severity: 'warning', label: DEGRADED_MARGIN_LABEL, detail: `Modem ${modemNumber}: ${describeEsN0(info)}` };
+  }
+  return null;
+}
+
+/**
+ * A modem's live line for a lock alarm that has gone (AlarmService clear
+ * line): "Modem 1: Es/N0 9.3 dB, need 5.0 dB" or "Modem 1: no carrier"
+ */
+export function modemLiveDetail(modemNumber: number, info: IQSignalInfo): string {
+  return `Modem ${modemNumber}: ${info.hasCarrier ? describeEsN0(info) : 'no carrier'}`;
 }
 
 /** Summary of the payload decoder that the modem status must not contradict. */
@@ -146,9 +192,11 @@ function describeInterferers(info: IQSignalInfo): string {
  * with the payload decoder's problem from `describePayloadProblem`. A payload
  * problem at a good margin turns the whole card amber. An interferer is named
  * only while it costs margin: an in-band carrier at a good margin (a notched
- * spike still clears the -10 dB presence gate) is no alarm.
+ * spike still clears the -10 dB presence gate) is no alarm. The degraded
+ * LED line is the Dashboard's "Degraded margin - Modem N: ..." plus the
+ * interferer suffix (Phase 34 D6, nats-r9-s21-F2).
  */
-export function rxModemVerdict(info: IQSignalInfo, payloadProblem: string | null): RxModemVerdict {
+export function rxModemVerdict(modemNumber: number, info: IQSignalInfo, payloadProblem: string | null): RxModemVerdict {
   const grade = classifyRxSignal(info);
   const [badgeClass, badgeText] = QUALITY_BADGES[grade];
   const esN0Text = describeEsN0(info);
@@ -171,8 +219,15 @@ export function rxModemVerdict(info: IQSignalInfo, payloadProblem: string | null
       }
       return { grade, badgeClass, badgeText, statusText: `Signal locked - Good margin (${esN0Text})`, severity: 'success', alarmMessage: null };
     case 'degraded': {
-      const message = `Degraded margin (${esN0Text})${describeInterferers(info)}`;
-      return { grade, badgeClass, badgeText, statusText: `Signal locked - ${message}`, severity: 'warning', alarmMessage: message };
+      const interferers = describeInterferers(info);
+      return {
+        grade,
+        badgeClass,
+        badgeText,
+        statusText: `Signal locked - ${DEGRADED_MARGIN_LABEL} (${esN0Text})${interferers}`,
+        severity: 'warning',
+        alarmMessage: `${DEGRADED_MARGIN_LABEL} - Modem ${modemNumber}: ${esN0Text}${interferers}`,
+      };
     }
     case 'acquiring':
       return {
