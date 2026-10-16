@@ -282,6 +282,10 @@ describe('TransmitterAdapter', () => {
       const statusBar = containerEl.querySelector('#tx-status-bar') as HTMLElement;
 
       expect(powerSwitch.checked).toBe(true);
+      // The Online LED is amber and says why (Phase 34 D4)
+      const onlineLed = containerEl.querySelector('#tx-online-led') as HTMLElement;
+      expect(onlineLed.classList.contains('warning')).toBe(true);
+      expect(onlineLed.title).toBe('Online: BOOTING');
       expect(statusBar.textContent).toContain('still initializing');
       expect(statusBar.textContent).toContain('ready in 3 s');
     });
@@ -341,6 +345,32 @@ describe('TransmitterAdapter', () => {
 
       const onlineLed = containerEl.querySelector('#tx-online-led') as HTMLElement;
       expect(onlineLed.classList.contains('success')).toBe(true);
+    });
+
+    it('titles every modem LED with its label and state, set with the class (Phase 34 D4, nats-r9-s01-F1)', () => {
+      const title = (id: string) => (containerEl.querySelector(`#${id}`) as HTMLElement).title;
+      const modem = mockTransmitter.state.modems[0];
+      modem.isTransmitting = false;
+      modem.isFaulted = false;
+      modem.isLoopback = false;
+      modem.isPowered = true;
+      (adapter as any).syncDomWithState_(mockTransmitter.state);
+      expect(title('tx-transmit-led')).toBe('TX: OFF');
+      expect(title('tx-fault-led')).toBe('Fault: NONE');
+      expect(title('tx-loopback-led')).toBe('Loop: OFF');
+      expect(title('tx-online-led')).toBe('Online: ON');
+
+      modem.isTransmitting = true;
+      modem.isFaulted = true;
+      modem.isLoopback = true;
+      modem.isPowered = false;
+      (adapter as any).syncDomWithState_(mockTransmitter.state);
+      expect(title('tx-transmit-led')).toBe('TX: ON');
+      expect(title('tx-fault-led')).toBe('Fault: FAULTED');
+      expect(title('tx-loopback-led')).toBe('Loop: ON');
+      expect((containerEl.querySelector('#tx-loopback-led') as HTMLElement).classList.contains('warning')).toBe(true);
+      expect(title('tx-online-led')).toBe('Online: OFF');
+      expect((containerEl.querySelector('#tx-online-led') as HTMLElement).classList.contains('off')).toBe(true);
     });
   });
 

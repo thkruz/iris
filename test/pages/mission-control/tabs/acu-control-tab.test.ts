@@ -998,6 +998,22 @@ describe('ACUControlTab', () => {
       expect(led().title).toBe('Heater OFF');
     });
 
+    it('titles the rain blower LED Rain blower ON / OFF with its class, as the heater (Phase 34 D4, nats-r9-s01-F1)', () => {
+      const antenna = mockGroundStation.antennas[0];
+      const led = () => document.querySelector(`#${PREFIX}blower-led`) as HTMLElement;
+      expect(led().title).toBe('Rain blower OFF');
+
+      antenna.state.isRainBlowerEnabled = true;
+      sync(3000);
+      expect(led().className).toBe('card-alarm-led success');
+      expect(led().title).toBe('Rain blower ON');
+
+      antenna.state.isRainBlowerEnabled = false;
+      sync(5000);
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('Rain blower OFF');
+    });
+
     it('turns the Environmental header amber with ice at the ICE ON FEED warning level, titled with the depth', () => {
       setWeather([]);
       const antenna = mockGroundStation.antennas[0];
@@ -1143,6 +1159,34 @@ describe('ACUControlTab', () => {
       const precipStatus = document.querySelector(`#${PREFIX}precip-status`);
       const led = precipStatus?.querySelector('.card-alarm-led');
       expect(led?.className).toContain('card-alarm-led warning');
+    });
+
+    it('titles the precipitation dot ACTIVE / CLEAR with its class, and keeps the text (Phase 34 D4, nats-r9-s01-F1)', () => {
+      const precipStatus = () => document.querySelector(`#${PREFIX}precip-status`) as HTMLElement;
+      const led = () => precipStatus().querySelector('.card-alarm-led') as HTMLElement;
+      // Every sync sets the title, from whatever weather the constructor's sync saw
+      expect(led().title).not.toBe('');
+
+      WeatherManager.getInstance.mockReturnValue({
+        isPrecipitationActive: vi.fn(() => true),
+        getActiveWeatherEvents: vi.fn(() => [{ type: 'rain', groundStationId: 'GS-001', isActive: true }]),
+      });
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
+      vi.spyOn(Date, 'now').mockReturnValue(2000);
+      updateHandler();
+      expect(led().className).toBe('card-alarm-led warning me-1');
+      expect(led().title).toBe('Precipitation ACTIVE');
+      expect(precipStatus().textContent?.trim()).toBe('ACTIVE');
+
+      WeatherManager.getInstance.mockReturnValue({
+        isPrecipitationActive: vi.fn(() => false),
+        getActiveWeatherEvents: vi.fn(() => []),
+      });
+      vi.spyOn(Date, 'now').mockReturnValue(4000);
+      updateHandler();
+      expect(led().className).toBe('card-alarm-led off me-1');
+      expect(led().title).toBe('Precipitation CLEAR');
+      expect(precipStatus().textContent?.trim()).toBe('CLEAR');
     });
   });
 

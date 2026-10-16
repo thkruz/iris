@@ -8,13 +8,15 @@ import './card-alarm-badge.css';
  * Shows current alarm status with tooltip on hover
  *
  * LED States:
- * - Green: No alarms (system normal)
+ * - Green: No alarms
  * - Amber: Warning condition(s)
  * - Red: Error condition(s)
  * - Blue: Info condition(s)
  * - Gray: Equipment off/inactive
  */
 export class CardAlarmBadge {
+  /** Green LED title with nothing to report, the Dashboard's wording (Phase 34 D6) */
+  static readonly QUIET_TITLE = 'No alarms';
   private readonly html_: string;
   private readonly uniqueId_: string;
   private dom_?: HTMLElement;
@@ -24,7 +26,7 @@ export class CardAlarmBadge {
     this.uniqueId_ = uniqueId;
     this.html_ = html`
       <div id="${uniqueId}" class="card-alarm-badge">
-        <div class="card-alarm-led success" title="System Normal"></div>
+        <div class="card-alarm-led success" title="${CardAlarmBadge.QUIET_TITLE}"></div>
       </div>
     `;
   }
@@ -51,10 +53,10 @@ export class CardAlarmBadge {
    * Update badge based on current alarms
    * @param alarms Array of current alarm statuses
    * @param isPowered False when the equipment is off: with no alarm to show the
-   *   LED is grey ("Powered off"), never the green "System Normal" (phase 29 D4)
+   *   LED is grey ("Powered off"), never the green "No alarms" (phase 29 D4)
    * @param idleStatus Set when the equipment is powered but deliberately not
    *   radiating (HPA output disabled, BUC muted): with no alarm to show the LED
-   *   is grey with this text as its tooltip instead of the green "System Normal"
+   *   is grey with this text as its tooltip instead of the green "No alarms"
    *   (phase 31 D6). Real alarms still take precedence.
    */
   update(alarms: AlarmStatus[], isPowered = true, idleStatus?: string): void {
@@ -75,7 +77,7 @@ export class CardAlarmBadge {
     }
 
     // Update tooltip
-    const newTitle = messages || 'System Normal';
+    const newTitle = messages || CardAlarmBadge.QUIET_TITLE;
     if (this.ledEl.title !== newTitle) {
       this.ledEl.title = newTitle;
     }

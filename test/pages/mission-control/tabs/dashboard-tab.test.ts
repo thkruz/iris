@@ -5,7 +5,8 @@ import { Events } from '../../../../src/events/events';
 import { OpsLogManager } from '../../../../src/ops-log/ops-log-manager';
 import { DashboardTab } from '../../../../src/pages/mission-control/tabs/dashboard-tab';
 import { AlarmService } from '../../../../src/services/alarm-service';
-import { SimClock } from '../../../../src/simulation/sim-clock';
+import { FIXED_STEP_MS, SimClock } from '../../../../src/simulation/sim-clock';
+import { SimulationManager } from '../../../../src/simulation/simulation-manager';
 
 // Mock dependencies
 vi.mock('../../../../src/events/event-bus');
@@ -341,6 +342,91 @@ describe('DashboardTab', () => {
       updateHandler();
       expect(led().className).toBe('card-alarm-led off');
       expect(led().title).toBe('Antenna off');
+    });
+
+    it('lights the GPSDO header LED from the GPSDO alarms, grey when off or warming up, titled (Phase 34 D4, nats-r9-s01-F1)', () => {
+      const led = () => document.querySelector('#gpsdo-fault-led') as HTMLElement;
+      const header = led().closest('.card-header') as HTMLElement;
+      expect(header.className).toBe('card-header d-flex justify-content-between align-items-center');
+      expect(header.querySelector('h3')?.classList.contains('mb-0')).toBe(true);
+      expect(led().className).toBe('card-alarm-led success');
+      expect(led().title).toBe('No alarms');
+
+      const updateHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
+      const rfFe = mockGroundStation.rfFrontEnds[0] as any;
+      const gpsdo = rfFe.gpsdoModule.state;
+
+      // The module's own labels (gpsdo-module-core.ts getAlarms), RF case 2
+      rfFe.getStatusAlarms.mockImplementation((rfCase: number) => (rfCase === 2 ? [{ severity: 'warning', message: 'GPSDO not locked' }] : []));
+      vi.spyOn(Date, 'now').mockReturnValue(12_000_000);
+      updateHandler();
+      expect(led().className).toBe('card-alarm-led warning');
+      expect(led().title).toBe('GPSDO not locked');
+
+      // The holdover error value lands in the title's detail
+      rfFe.getStatusAlarms.mockImplementation((rfCase: number) => (rfCase === 2 ? [{ severity: 'warning', message: 'GPSDO in holdover (12.3 μs error)' }] : []));
+      vi.spyOn(Date, 'now').mockReturnValue(12_200_000);
+      updateHandler();
+      expect(led().className).toBe('card-alarm-led warning');
+      expect(led().title).toBe('GPSDO in holdover - 12.3 μs error');
+
+      // An error outranks a warning; GNSS labels are the GPSDO's too
+      rfFe.getStatusAlarms.mockImplementation((rfCase: number) =>
+        rfCase === 2
+          ? [
+              { severity: 'warning', message: 'GNSS signal lost' },
+              { severity: 'error', message: 'GPSDO self-test failed' },
+            ]
+          : []
+      );
+      vi.spyOn(Date, 'now').mockReturnValue(12_500_000);
+      updateHandler();
+      expect(led().className).toBe('card-alarm-led error');
+      expect(led().title).toBe('GPSDO self-test failed');
+
+      // An LNB alarm is the RX chain's, not the GPSDO's
+      rfFe.getStatusAlarms.mockImplementation((rfCase: number) => (rfCase === 2 ? [{ severity: 'warning', message: 'LNB noise temperature high' }] : []));
+      vi.spyOn(Date, 'now').mockReturnValue(13_000_000);
+      updateHandler();
+      expect(led().className).toBe('card-alarm-led success');
+
+      gpsdo.warmupTimeRemaining = 120;
+      vi.spyOn(Date, 'now').mockReturnValue(13_500_000);
+      updateHandler();
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('Warming up');
+
+      gpsdo.isPowered = false;
+      vi.spyOn(Date, 'now').mockReturnValue(14_000_000);
+      updateHandler();
+      expect(led().className).toBe('card-alarm-led off');
+      expect(led().title).toBe('GPSDO off');
+    });
+
+    it('titles every card-alarm-led on the Dashboard after one sync, nested lock and power dots included (Phase 34 D4, nats-r9-s01-F1)', () => {
+      const leds = [...document.querySelectorAll<HTMLElement>('.dashboard-tab .card-alarm-led')];
+      expect(leds.length).toBeGreaterThanOrEqual(11);
+      for (const led of leds) {
+        expect(led.title, led.id || led.parentElement?.id).not.toBe('');
+      }
+      expect((document.querySelector('#antenna-lock .card-alarm-led') as HTMLElement).title).toBe('Antenna lock: UNLOCKED');
+      expect((document.querySelector('#gpsdo-lock .card-alarm-led') as HTMLElement).title).toBe('GPSDO lock: LOCKED');
+      expect((document.querySelector('#lnb-lock .card-alarm-led') as HTMLElement).title).toBe('LNB lock: LOCKED');
+      expect((document.querySelector('#lnb-power') as HTMLElement).title).toBe('LNB power: ON');
+      expect((document.querySelector('#buc-lock .card-alarm-led') as HTMLElement).title).toBe('BUC lock: LOCKED');
+
+      // The title follows the class on the same sync
+      const rfFe = mockGroundStation.rfFrontEnds[0] as any;
+      rfFe.lnbModule.state.isPowered = false;
+      rfFe.bucModule.state.isExtRefLocked = false;
+      rfFe.gpsdoModule.state.isLocked = false;
+      vi.spyOn(Date, 'now').mockReturnValue(15_000_000);
+      mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.UPDATE)?.[1]();
+      expect((document.querySelector('#lnb-lock .card-alarm-led') as HTMLElement).title).toBe('LNB lock: OFF');
+      expect((document.querySelector('#lnb-power') as HTMLElement).className).toBe('card-alarm-led off');
+      expect((document.querySelector('#lnb-power') as HTMLElement).title).toBe('LNB power: OFF');
+      expect((document.querySelector('#buc-lock .card-alarm-led') as HTMLElement).title).toBe('BUC lock: UNLOCKED');
+      expect((document.querySelector('#gpsdo-lock .card-alarm-led') as HTMLElement).title).toBe('GPSDO lock: UNLOCKED');
     });
 
     it('shows step-track on the antenna mode badge (s01-F3)', () => {
@@ -686,28 +772,81 @@ describe('DashboardTab', () => {
       expect(led().className).toBe('card-alarm-led success');
     });
 
+    it('re-collects on ALARM_STATE_CHANGED inside the wall throttle, so a row and the LED title change on the ticker tick (Phase 34 D8, nats-r9-s04-F1)', () => {
+      const alarmHandler = mockEventBus.on.mock.calls.find((call: unknown[]) => call[0] === Events.ALARM_STATE_CHANGED)?.[1];
+      expect(alarmHandler).toEqual(expect.any(Function));
+
+      sync(70_000_000);
+      expect(document.querySelector('#alarm-list .alarm-item')).toBeNull();
+
+      // The poll raises an alarm 200 ms later: the UPDATE throttle skips it...
+      (mockGroundStation.rfFrontEnds[0].getStatusAlarms as Mock).mockImplementation((rfCase: number) =>
+        rfCase === 2 ? [{ severity: 'warning', message: 'GPSDO not locked' }] : []
+      );
+      sync(70_000_200);
+      expect(document.querySelector('#alarm-list .alarm-item')).toBeNull();
+
+      // ...the poll's ALARM_STATE_CHANGED does not
+      alarmHandler({ alarms: [] });
+      expect(document.querySelector('#alarm-list .alarm-message')?.textContent).toBe('GPSDO not locked');
+      expect(document.querySelector('#alarm-count')?.textContent).toBe('1');
+      expect((document.querySelector('#gpsdo-fault-led') as HTMLElement).title).toBe('GPSDO not locked');
+
+      // The bound handler is the one removed on dispose
+      tab.dispose();
+      expect(mockEventBus.off).toHaveBeenCalledWith(Events.ALARM_STATE_CHANGED, alarmHandler);
+    });
+
     it('stamps each alarm on the station clock when first raised, not the wall clock (nats-r3-s08-F2)', () => {
       OpsLogManager.initialize('02:15:00', '2026-02-14');
       // AlarmService holds the raise times; forget the earlier tests' alarms
       AlarmService.destroy();
+      // Only the AlarmService poll creates raisedAtMs (Phase 34 D8): run the
+      // service on this station and poll on the scenario-second boundary after
+      // each raise, before the Dashboard reads the snapshot
+      const simSpy = vi.spyOn(SimulationManager, 'getInstance').mockReturnValue({ groundStations: [mockGroundStation] } as unknown as SimulationManager);
+      const updateCallsBefore = mockEventBus.on.mock.calls.length;
+      AlarmService.getInstance();
+      const serviceUpdate = mockEventBus.on.mock.calls.slice(updateCallsBefore).find((call: unknown[]) => call[0] === Events.UPDATE)?.[1];
+      expect(serviceUpdate).toEqual(expect.any(Function));
+      const poll = () => {
+        // Past the start-up settle and into the next scenario second
+        SimClock.advanceRun(AlarmService.STARTUP_SETTLE_MS);
+        serviceUpdate(FIXED_STEP_MS);
+      };
+      // The row reads the alarm's own raisedAtMs, stamped on AlarmService's
+      // poll second (Phase 34 D8), never a wall value
+      const stampOf = (message: string): string => {
+        const alarm = AlarmService.getAlarms(mockGroundStation).find((a) => a.message === message);
+        expect(alarm?.raisedAtMs).toBeDefined();
+        return new Date(alarm?.raisedAtMs ?? Number.NaN).toISOString().slice(11, 19);
+      };
       try {
         (mockGroundStation.receivers[0].getStatusAlarms as Mock).mockReturnValue([{ severity: 'warning', message: 'RX lost lock' }]);
+        poll();
         sync(50_000_000);
-        expect(document.querySelector('#alarm-list .alarm-time')?.textContent).toBe('02:15:00');
+        const firstStamp = document.querySelector('#alarm-list .alarm-time')?.textContent;
+        expect(firstStamp).toBe(stampOf('RX lost lock'));
+        // The station clock, which started at 02:15:00, not the mocked wall clock
+        expect(firstStamp?.startsWith('02:15:')).toBe(true);
 
         // A minute later the standing alarm keeps its raise time; a new one gets the new time
         SimClock.skip(60_000);
         (mockGroundStation.transmitters[0].getStatusAlarms as Mock).mockReturnValue([{ severity: 'error', message: 'Modem 1 Faulted' }]);
+        poll();
         sync(60_000_000);
         const times = [...document.querySelectorAll('#alarm-list .alarm-item')].map((el) => [
           el.querySelector('.alarm-message')?.textContent,
           el.querySelector('.alarm-time')?.textContent,
         ]);
         expect(times).toEqual([
-          ['Modem 1 Faulted', '02:16:00'],
-          ['RX lost lock', '02:15:00'],
+          ['Modem 1 Faulted', stampOf('Modem 1 Faulted')],
+          ['RX lost lock', firstStamp],
         ]);
+        expect(stampOf('Modem 1 Faulted').startsWith('02:16:')).toBe(true);
       } finally {
+        AlarmService.destroy();
+        simSpy.mockRestore();
         OpsLogManager.destroy();
         SimClock.reset();
       }

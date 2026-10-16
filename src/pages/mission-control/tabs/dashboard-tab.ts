@@ -11,7 +11,7 @@ import { EventBus } from '@app/events/event-bus';
 import { AggregatedAlarm, Events } from '@app/events/events';
 import { AlarmService, AlarmWithDetail } from '@app/services/alarm-service';
 import { getSimulatedNowMs } from '@app/simulation/sim-time';
-import { AlarmLedOptions, alarmLed, applyAlarmLed } from '../alarm-led';
+import { AlarmLedOptions, AlarmLedState, alarmLed, applyAlarmLed } from '../alarm-led';
 import { severityGlyph } from '../glyphs';
 import { STATION_STATUS_BADGE, stationStatusLabel } from '../station-status-label';
 import { formatBucOutputPower } from './buc-adapter';
@@ -61,6 +61,8 @@ export class DashboardTab extends BaseElement {
   private static readonly RX_CHAIN_PREFIXES_ = ['LNB', 'AGC', 'Notch', 'Filter'] as const;
   /** RF alarm label prefixes of the transmit chain (RF case 1) */
   private static readonly TX_CHAIN_PREFIXES_ = ['BUC', 'HPA'] as const;
+  /** RF alarm label prefixes of the GPSDO (gpsdo-module-core.ts getAlarms) */
+  private static readonly GPSDO_PREFIXES_ = ['GPSDO', 'GNSS'] as const;
 
   private readonly groundStation: GroundStation;
   private readonly domCache_: Map<string, HTMLElement> = new Map();
@@ -68,6 +70,8 @@ export class DashboardTab extends BaseElement {
   /** This station's AlarmService alarms from the last sync, most severe first */
   private stationAlarms_: AlarmWithDetail[] = [];
   private updateHandler_: (() => void) | null = null;
+  /** Re-syncs on AlarmService's poll (Phase 34 D8); removed in dispose() */
+  private alarmStateHandler_: (() => void) | null = null;
   private lastSyncTime_: number = 0;
 
   constructor(groundStation: GroundStation, containerId: string) {
@@ -236,8 +240,9 @@ export class DashboardTab extends BaseElement {
           <!-- GPSDO Summary Card -->
           <div class="col-lg-3">
             <div class="card h-100 summary-card clickable-card" data-target-tab="gps-timing">
-              <div class="card-header">
-                <h3 class="card-title">GPSDO</h3>
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0">GPSDO</h3>
+                <span id="gpsdo-fault-led" class="card-alarm-led off"></span>
               </div>
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -498,6 +503,7 @@ export class DashboardTab extends BaseElement {
       'antenna-lock',
       'antenna-cn',
       // GPSDO summary
+      'gpsdo-fault-led',
       'gpsdo-lock',
       'gpsdo-sats',
       'gpsdo-status',
@@ -634,7 +640,7 @@ export class DashboardTab extends BaseElement {
       const lock = antennaLockLabel(state);
       const led = lockEl.querySelector('.card-alarm-led');
       const text = lockEl.querySelector('.small');
-      if (led) led.className = `card-alarm-led ${lock === 'LOCKED' ? 'success' : lock === 'UNKNOWN' ? 'warning' : 'off'}`;
+      DashboardTab.setDot_(led, lock === 'LOCKED' ? 'success' : lock === 'UNKNOWN' ? 'warning' : 'off', `Antenna lock: ${lock}`);
       if (text) text.textContent = lock;
     }
 
@@ -665,8 +671,9 @@ export class DashboardTab extends BaseElement {
     if (lockEl) {
       const led = lockEl.querySelector('.card-alarm-led');
       const text = lockEl.querySelector('.small');
-      if (led) led.className = `card-alarm-led ${state.isLocked ? 'success' : 'off'}`;
-      if (text) text.textContent = state.isLocked ? 'LOCKED' : 'UNLOCKED';
+      const lock = state.isLocked ? 'LOCKED' : 'UNLOCKED';
+      DashboardTab.setDot_(led, state.isLocked ? 'success' : 'off', `GPSDO lock: ${lock}`);
+      if (text) text.textContent = lock;
     }
 
     // Satellites
@@ -698,6 +705,25 @@ export class DashboardTab extends BaseElement {
     if (warmupEl) {
       warmupEl.textContent = state.isPowered ? rfFe.gpsdoModule.formatWarmupTime_() : 'OFF';
     }
+
+    // Header fault LED: the GPSDO's RF alarms ("GPSDO not locked", "GNSS
+    // signal lost", holdover, oven, self-test), grey while off or warming up
+    // (Phase 34 D4, nats-r9-s01-F1)
+    this.syncAlarmLed_('gpsdo-fault-led', DashboardTab.rfAlarmMatcher_(DashboardTab.GPSDO_PREFIXES_), {
+      isPowered: state.isPowered,
+      offTitle: 'GPSDO off',
+      idleTitle: state.warmupTimeRemaining > 0 ? 'Warming up' : undefined,
+    });
+  }
+
+  /**
+   * A nested lock / power dot: its colour class and its title in one place,
+   * so no dot is ever left without a title (Phase 34 D4, nats-r9-s01-F1)
+   */
+  private static setDot_(led: Element | null | undefined, state: AlarmLedState, title: string): void {
+    if (!led) return;
+    led.className = `card-alarm-led ${state}`;
+    (led as HTMLElement).title = title;
   }
 
   private syncRxChainSummary_(): void {
@@ -714,8 +740,9 @@ export class DashboardTab extends BaseElement {
       const led = lnbLockEl.querySelector('.card-alarm-led');
       const text = lnbLockEl.querySelector('.small');
       const isLocked = lnbPowered && rfFe.lnbModule.state.isExtRefLocked;
-      if (led) led.className = `card-alarm-led ${isLocked ? 'success' : 'off'}`;
-      if (text) text.textContent = lnbPowered ? (isLocked ? 'LOCKED' : 'UNLOCKED') : 'OFF';
+      const lock = lnbPowered ? (isLocked ? 'LOCKED' : 'UNLOCKED') : 'OFF';
+      DashboardTab.setDot_(led, isLocked ? 'success' : 'off', `LNB lock: ${lock}`);
+      if (text) text.textContent = lock;
     }
 
     // LNB Noise Temp
@@ -734,7 +761,7 @@ export class DashboardTab extends BaseElement {
     // LNB Power LED
     const powerEl = this.domCache_.get('lnb-power');
     if (powerEl && rfFe.lnbModule) {
-      powerEl.className = `card-alarm-led ${rfFe.lnbModule.state.isPowered ? 'success' : 'off'}`;
+      DashboardTab.setDot_(powerEl, lnbPowered ? 'success' : 'off', `LNB power: ${lnbPowered ? 'ON' : 'OFF'}`);
     }
 
     // Header fault LED: the receive chain's RF alarms (LNB, AGC, notch,
@@ -776,8 +803,9 @@ export class DashboardTab extends BaseElement {
       const text = bucLockEl.querySelector('.small');
       const bucPowered = rfFe.bucModule.state.isPowered;
       const isLocked = bucPowered && rfFe.bucModule.state.isExtRefLocked;
-      if (led) led.className = `card-alarm-led ${isLocked ? 'success' : 'off'}`;
-      if (text) text.textContent = bucPowered ? (isLocked ? 'LOCKED' : 'UNLOCKED') : 'OFF';
+      const lock = bucPowered ? (isLocked ? 'LOCKED' : 'UNLOCKED') : 'OFF';
+      DashboardTab.setDot_(led, isLocked ? 'success' : 'off', `BUC lock: ${lock}`);
+      if (text) text.textContent = lock;
     }
 
     // BUC Output
@@ -974,10 +1002,22 @@ export class DashboardTab extends BaseElement {
     this.syncDomWithState_();
   }
 
+  /**
+   * AlarmService's poll changed the alarm set: re-sync now, outside the wall
+   * throttle, so a row, the Quick Stats count and the LED titles change on the
+   * same tick as the ticker and the Ops Log line (Phase 34 D8, nats-r9-s04-F1)
+   */
+  private onAlarmStateChanged_(): void {
+    this.lastSyncTime_ = Date.now();
+    this.syncDomWithState_();
+  }
+
   protected addEventListeners_(): void {
     // Subscribe to update events for live data with throttling
     this.updateHandler_ = () => this.throttledSync_();
     EventBus.getInstance().on(Events.UPDATE, this.updateHandler_);
+    this.alarmStateHandler_ = () => this.onAlarmStateChanged_();
+    EventBus.getInstance().on(Events.ALARM_STATE_CHANGED, this.alarmStateHandler_);
   }
 
   public activate(): void {
@@ -992,6 +1032,10 @@ export class DashboardTab extends BaseElement {
     if (this.updateHandler_) {
       EventBus.getInstance().off(Events.UPDATE, this.updateHandler_);
       this.updateHandler_ = null;
+    }
+    if (this.alarmStateHandler_) {
+      EventBus.getInstance().off(Events.ALARM_STATE_CHANGED, this.alarmStateHandler_);
+      this.alarmStateHandler_ = null;
     }
     this.domCache_.clear();
     this.dom_.remove();

@@ -1,6 +1,7 @@
 import { Mock, Mocked, vi } from 'vitest';
 import { calculateADCDegradation } from '../../../../src/equipment/receiver/adc-degradation';
 import { Receiver, ReceiverModemState } from '../../../../src/equipment/receiver/receiver';
+import { modemLockAlarm } from '../../../../src/equipment/receiver/rx-signal-quality';
 import { EventBus } from '../../../../src/events/event-bus';
 import { Events } from '../../../../src/events/events';
 import { ReceiverAdapter } from '../../../../src/pages/mission-control/tabs/receiver-adapter';
@@ -857,7 +858,7 @@ describe('ReceiverAdapter', () => {
 
       const statusBar = containerEl.querySelector('#status-bar') as HTMLElement;
       expect(statusBar.textContent).toContain('Good margin');
-      expect((adapter as any).getAlarmsFromReceiver_()).toEqual([]);
+      expect((adapter as any).getAlarmBadgeState_().alarms).toEqual([]);
     });
 
     it('should raise a warning (not an error) in the degraded-margin band', () => {
@@ -869,7 +870,7 @@ describe('ReceiverAdapter', () => {
         effectiveCnRatio_dB: 6,
       });
 
-      const alarms = (adapter as any).getAlarmsFromReceiver_();
+      const alarms = (adapter as any).getAlarmBadgeState_().alarms;
       expect(alarms).toHaveLength(1);
       expect(alarms[0].severity).toBe('warning');
     });
@@ -916,7 +917,7 @@ describe('ReceiverAdapter', () => {
       });
       sync();
 
-      expect(ledAlarms()).toEqual([{ severity: 'warning', message: 'Degraded margin (Es/N0 5.6 dB, need 5.0 dB) - 1 interferer(s) in band' }]);
+      expect(ledAlarms()).toEqual([{ severity: 'warning', message: 'Degraded margin - Modem 1: Es/N0 5.6 dB, need 5.0 dB - 1 interferer(s) in band' }]);
       expect(badge().textContent).toBe('Degraded');
       expect(statusBar().textContent).toContain('Degraded margin');
       expect(statusBar().textContent).toContain('1 interferer(s) in band');
@@ -953,6 +954,76 @@ describe('ReceiverAdapter', () => {
       expect(statusBar().textContent).toContain('Good margin');
       expect(statusBar().textContent).not.toContain('Payload');
       expect(ledAlarms()).toEqual([]);
+    });
+  });
+
+  describe('card LED reads lock history and the Dashboard wording (Phase 34 D5/D6)', () => {
+    /** Swap the mocked badge for the real one, mounted in the container */
+    const useRealBadge = async (): Promise<HTMLElement> => {
+      const actual = await vi.importActual<typeof import('../../../../src/components/card-alarm-badge/card-alarm-badge')>(
+        '../../../../src/components/card-alarm-badge/card-alarm-badge'
+      );
+      const real = actual.CardAlarmBadge.create('rx-real-badge');
+      const host = containerEl.querySelector('#rx-alarm-badge') as HTMLElement;
+      host.innerHTML = real.html;
+      (adapter as any).alarmBadge_ = real;
+      return host.querySelector('.card-alarm-led') as HTMLElement;
+    };
+    const sync = () => {
+      (adapter as any).lastStateString = '';
+      (adapter as any).syncDomWithState_();
+    };
+
+    it('is red "Carrier lock lost - Modem 1: no carrier" when the modem had lock and the carrier went (nats-r8-s24-F1)', async () => {
+      const led = await useRealBadge();
+      (mockReceiver as any).getLockTransition = vi.fn().mockReturnValue({ hadLock: true, lockLostAtMs: 1, lastSignalId: 'c1' });
+      sync();
+
+      expect(led.className).toBe('card-alarm-led error');
+      expect(led.title).toBe('Carrier lock lost - Modem 1: no carrier');
+    });
+
+    it('is grey "No carrier" with no carrier and no lock history', async () => {
+      const led = await useRealBadge();
+      (mockReceiver as any).getLockTransition = vi.fn().mockReturnValue(null);
+      sync();
+
+      expect(led.className).toBe('card-alarm-led off');
+      expect(led.title).toBe('No carrier');
+      expect((adapter as any).getAlarmBadgeState_().alarms).toEqual([]);
+    });
+
+    it('titles a degraded margin with the Dashboard text plus the interferer suffix (nats-r9-s21-F2)', async () => {
+      const led = await useRealBadge();
+      const info = {
+        hasCarrier: true,
+        hasLock: true,
+        isLowMargin: true,
+        cnRatio_dB: 6,
+        effectiveCnRatio_dB: 6,
+        effectiveEsN0_dB: 5.6,
+        requiredEsN0_dB: 5.03,
+        interferenceCount: 2,
+      };
+      mockReceiver.getSignalsInBandwidth.mockReturnValue(info);
+      (mockReceiver as any).getLockTransition = vi.fn().mockReturnValue({ hadLock: true, lockLostAtMs: null, lastSignalId: 'c1' });
+      sync();
+
+      const dashboard = modemLockAlarm(1, info as any, null);
+      expect(dashboard).not.toBeNull();
+      expect(led.className).toBe('card-alarm-led warning');
+      expect(led.title).toBe(`${dashboard?.label} - ${dashboard?.detail} - 2 interferer(s) in band`);
+      expect(led.title).toBe('Degraded margin - Modem 1: Es/N0 5.6 dB, need 5.0 dB - 2 interferer(s) in band');
+    });
+
+    it('never raises "No signal detected"', () => {
+      (mockReceiver as any).getLockTransition = vi.fn().mockReturnValue(null);
+      sync();
+      const calls = ((adapter as any).alarmBadge_.update as Mock).mock.calls;
+      for (const [alarms] of calls) {
+        expect(JSON.stringify(alarms)).not.toContain('No signal detected');
+      }
+      expect(calls[calls.length - 1]).toEqual([[], true, 'No carrier']);
     });
   });
 

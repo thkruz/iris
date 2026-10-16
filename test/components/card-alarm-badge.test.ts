@@ -18,23 +18,23 @@ describe('CardAlarmBadge', () => {
     return el as HTMLElement;
   }
 
-  it('renders default success LED with System Normal tooltip', () => {
+  it('renders default success LED with No alarms tooltip', () => {
     const badge = CardAlarmBadge.create('alarm-badge-1');
     mount(badge);
 
     expect(document.querySelector('#alarm-badge-1')).not.toBeNull();
     expect(ledEl().className).toBe('card-alarm-led success');
-    expect(ledEl().title).toBe('System Normal');
+    expect(ledEl().title).toBe('No alarms');
   });
 
-  it('update() keeps success + System Normal when no active alarms', () => {
+  it('update() keeps success + No alarms when no active alarms', () => {
     const badge = new CardAlarmBadge('alarm-badge-2');
     mount(badge);
 
     badge.update([]);
 
     expect(ledEl().className).toBe('card-alarm-led success');
-    expect(ledEl().title).toBe('System Normal');
+    expect(ledEl().title).toBe('No alarms');
   });
 
   it('update() shows warning and uses message as tooltip', () => {
@@ -66,7 +66,7 @@ describe('CardAlarmBadge', () => {
     expect(ledEl().title).toBe('FAIL\nWARN\nFYI');
   });
 
-  it('update() ignores empty messages and falls back to System Normal tooltip', () => {
+  it('update() ignores empty messages and falls back to No alarms tooltip', () => {
     const badge = new CardAlarmBadge('alarm-badge-5');
     mount(badge);
 
@@ -81,7 +81,7 @@ describe('CardAlarmBadge', () => {
     // Highest severity among active alarms is info (even though the message is empty)
     expect(ledEl().className).toBe('card-alarm-led info');
     // But tooltip should still display the default when no messages exist
-    expect(ledEl().title).toBe('System Normal');
+    expect(ledEl().title).toBe('No alarms');
   });
 
   it('dispose() clears cached DOM references and update() still works after dispose', () => {
@@ -171,6 +171,6 @@ describe('CardAlarmBadge', () => {
 
     badge.update([], true, undefined);
     expect(ledEl().className).toBe('card-alarm-led success');
-    expect(ledEl().title).toBe('System Normal');
+    expect(ledEl().title).toBe('No alarms');
   });
 });

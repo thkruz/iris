@@ -4,7 +4,16 @@ import { AlarmStatus } from '@app/equipment/base-equipment';
 import { ValidationError, validateModemBandwidth, validateModemFrequency } from '@app/equipment/modem/modem-constraints';
 import { ADCStatus } from '@app/equipment/receiver/adc-degradation';
 import { IQSignalInfo, Receiver, ReceiverModemState } from '@app/equipment/receiver/receiver';
-import { classifyRxSignal, describePayloadProblem, RxModemSeverity, RxModemVerdict, RxPayloadStatus, rxModemVerdict } from '@app/equipment/receiver/rx-signal-quality';
+import {
+  classifyRxSignal,
+  describePayloadProblem,
+  LOCK_LOST_LABEL,
+  modemLockAlarm,
+  RxModemSeverity,
+  RxModemVerdict,
+  RxPayloadStatus,
+  rxModemVerdict,
+} from '@app/equipment/receiver/rx-signal-quality';
 import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { parseLocalizedNumber } from '@app/utils/parse-number';
@@ -103,10 +112,10 @@ export class ReceiverAdapter {
   }
 
   /** The card's one verdict for a modem with a carrier: badge, status bar and LED */
-  private getVerdict_(signalInfo: IQSignalInfo): RxModemVerdict {
+  private getVerdict_(modemNumber: number, signalInfo: IQSignalInfo): RxModemVerdict {
     // The payload decoder only qualifies a good margin; skip the read otherwise
     const payloadProblem = classifyRxSignal(signalInfo) === 'good' ? this.getPayloadProblem_() : null;
-    return rxModemVerdict(signalInfo, payloadProblem);
+    return rxModemVerdict(modemNumber, signalInfo, payloadProblem);
   }
 
   /**
@@ -669,8 +678,7 @@ export class ReceiverAdapter {
       this.clearSignalDisplays_();
       this.signalSampleListener_?.(null);
       // Update alarm badge for powered-off state
-      const alarms = this.getAlarmsFromReceiver_();
-      this.alarmBadge_.update(alarms);
+      this.syncAlarmBadge_();
       return;
     }
 
@@ -684,7 +692,7 @@ export class ReceiverAdapter {
         signalStatus.className = 'status-badge status-badge-none';
         signalStatus.textContent = 'None';
       } else {
-        const verdict = this.getVerdict_(signalInfo);
+        const verdict = this.getVerdict_(activeModem.modemNumber, signalInfo);
         signalStatus.className = `status-badge ${verdict.badgeClass}`;
         signalStatus.textContent = verdict.badgeText;
       }
@@ -735,8 +743,7 @@ export class ReceiverAdapter {
     this.updateAdcStatus_(signalInfo, hasCarrier);
 
     // Update alarm badge
-    const alarms = this.getAlarmsFromReceiver_();
-    this.alarmBadge_.update(alarms);
+    this.syncAlarmBadge_();
   }
 
   /**
@@ -976,42 +983,64 @@ export class ReceiverAdapter {
     }
 
     // One verdict for the status bar, the alarm badge and the signal badge
-    const verdict = this.getVerdict_(signalInfo);
+    const verdict = this.getVerdict_(activeModem.modemNumber, signalInfo);
     statusBar.className = `alert ${ReceiverAdapter.STATUS_ALERTS[verdict.severity]} mt-3`;
     statusBar.textContent = verdict.statusText;
   }
 
+  /** Grey LED title for a powered modem with no carrier it ever locked to (the Dashboard dot's wording) */
+  private static readonly NO_CARRIER_IDLE_ = 'No carrier';
+
+  /** Paint the card LED from the active modem's alarms and idle state */
+  private syncAlarmBadge_(): void {
+    const { alarms, idleStatus } = this.getAlarmBadgeState_();
+    this.alarmBadge_.update(alarms, true, idleStatus);
+  }
+
   /**
-   * Get current alarms from receiver as AlarmStatus array
+   * The card LED's alarms, plus the grey idle title when there is nothing to
+   * report. Lock history first (Phase 34 D5, nats-r8-s24-F1): a modem that
+   * had lock on this tuning and lost it reads the Dashboard's red "Carrier
+   * lock lost - Modem N: ..." whether or not the carrier is still there; a
+   * modem with no carrier and no loss is idle grey "No carrier", not a fault.
    */
-  private getAlarmsFromReceiver_(): AlarmStatus[] {
+  private getAlarmBadgeState_(): { alarms: AlarmStatus[]; idleStatus?: string } {
     const alarms: AlarmStatus[] = [];
     const activeModem = this.getActiveModem_();
 
-    if (!activeModem) return alarms;
+    if (!activeModem) {
+      return { alarms };
+    }
 
     if (!activeModem.isPowered) {
       alarms.push({ severity: 'info', message: 'Modem powered off' });
-      return alarms;
+      return { alarms };
     }
 
     const signalInfo = this.receiver.getSignalsInBandwidth(activeModem);
+    // Read after getSignalsInBandwidth advanced the lock tracker
+    const transition = typeof this.receiver.getLockTransition === 'function' ? this.receiver.getLockTransition(activeModem) : null;
+    const lockAlarm = modemLockAlarm(activeModem.modemNumber, signalInfo, transition);
+
+    if (lockAlarm?.label === LOCK_LOST_LABEL) {
+      alarms.push({ severity: 'error', message: `${LOCK_LOST_LABEL} - ${lockAlarm.detail}` });
+      return { alarms };
+    }
 
     if (!signalInfo.hasCarrier) {
-      alarms.push({ severity: 'warning', message: 'No signal detected' });
-      return alarms;
+      return { alarms, idleStatus: ReceiverAdapter.NO_CARRIER_IDLE_ };
     }
 
     // Same verdict as the status bar and the signal badge. An interferer is
     // named inside the degraded-margin line, never as its own warning: a
     // notched spike at a good margin still clears the receiver's -10 dB
     // presence gate (Phase 33 D4, nats-r8-s05-F2)
-    const verdict = this.getVerdict_(signalInfo);
+    const verdict = this.getVerdict_(activeModem.modemNumber, signalInfo);
     if (verdict.alarmMessage) {
       alarms.push({ severity: verdict.severity, message: verdict.alarmMessage });
     }
 
-    return alarms;
+    return { alarms };
   }
 
   /**

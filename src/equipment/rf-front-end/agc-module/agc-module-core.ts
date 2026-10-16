@@ -20,6 +20,9 @@ export interface AGCState extends RFFrontEndModuleState {
   minGain: dB; // Minimum gain limit
 }
 
+/** The AGC card's Mode badge: 'no-input' while the LNB or IF filter is off (Phase 34 D7) */
+export type AGCStatus = 'active' | 'bypassed' | 'no-input' | 'at-max' | 'at-min';
+
 /**
  * AGC Module Core - Business Logic Layer
  * Automatic Gain Control - measures total power in IF passband and applies
@@ -88,6 +91,16 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
 
   /** Run time the current hang started (null: not hanging) */
   private hangStartMs_: number | null = null;
+
+  /**
+   * True while the AGC has an IF input: the LNB is powered and the IF filter
+   * is not switched off (Phase 34 D7). A front end with no LNB or filter
+   * wired (headless use) counts as powered.
+   */
+  get isInputPowered(): boolean {
+    const fe = this.rfFrontEnd_;
+    return fe?.lnbModule?.state.isPowered !== false && fe?.filterModule?.state.isPowered !== false;
+  }
 
   /** True when the AGC is levelling noise alone: no carrier above the noise in its passband */
   get isNoiseOnly(): boolean {
@@ -238,7 +251,7 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
     if (!fe?.lnbModule || !fe.filterModule || !fe.couplerModule) {
       return 0;
     }
-    if (!fe.lnbModule.state.isPowered || fe.filterModule.state.isPowered === false) {
+    if (!this.isInputPowered) {
       return 0;
     }
     const spm = fe.couplerModule.signalPathManager;
@@ -267,8 +280,8 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
       return alarms;
     }
 
-    // With the LNB unpowered there is no IF signal to level; max gain is expected, not a fault.
-    if (this.rfFrontEnd_?.lnbModule?.state.isPowered === false) {
+    // With the LNB (or IF filter) unpowered there is no IF signal to level; max gain is expected, not a fault.
+    if (!this.isInputPowered) {
       return alarms;
     }
 
@@ -320,8 +333,12 @@ export abstract class AGCModuleCore extends RFFrontEndModule<AGCState> {
   /**
    * Get current AGC status for display
    */
-  public getStatus(): 'active' | 'bypassed' | 'at-max' | 'at-min' {
+  public getStatus(): AGCStatus {
     if (this.state.isBypassed) return 'bypassed';
+    // No IF to level: the gain rail is expected, not "At Max" (Phase 34 D7, nats-r9-s03-F2)
+    if (!this.isInputPowered) {
+      return 'no-input';
+    }
     if (this.state.currentGain >= this.state.maxGain - 0.5) return 'at-max';
     if (this.state.currentGain <= this.state.minGain + 0.5) return 'at-min';
     return 'active';

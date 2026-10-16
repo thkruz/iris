@@ -446,6 +446,26 @@ describe('AGCModuleCore', () => {
       expect(agcModule.getStatus()).toBe('bypassed');
     });
 
+    it('should return no-input, not at-max, with the LNB or the IF filter off (Phase 34 D7, nats-r9-s03-F2)', () => {
+      agcModule.state.isBypassed = false;
+      agcModule.state.currentGain = 30 as dB;
+      agcModule.state.maxGain = 30 as dB;
+      expect(agcModule.isInputPowered).toBe(true);
+
+      rfFrontEnd.lnbModule.state.isPowered = false;
+      expect(agcModule.isInputPowered).toBe(false);
+      expect(agcModule.getStatus()).toBe('no-input');
+      expect(agcModule.getAlarms()).toEqual([]);
+
+      rfFrontEnd.lnbModule.state.isPowered = true;
+      rfFrontEnd.filterModule.state.isPowered = false;
+      expect(agcModule.isInputPowered).toBe(false);
+      expect(agcModule.getStatus()).toBe('no-input');
+
+      rfFrontEnd.filterModule.state.isPowered = true;
+      expect(agcModule.getStatus()).toBe('at-max');
+    });
+
     it('should return at-max when at max gain', () => {
       agcModule.state.isBypassed = false;
       agcModule.state.currentGain = 29.8 as dB;

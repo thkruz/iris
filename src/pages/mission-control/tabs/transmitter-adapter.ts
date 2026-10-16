@@ -6,6 +6,7 @@ import { EventBus } from '@app/events/event-bus';
 import { Events } from '@app/events/events';
 import { formatBandwidthMHz, formatFrequencyMHz } from '@app/utils/format-number';
 import { parseLocalizedNumber } from '@app/utils/parse-number';
+import type { AlarmLedState } from '../alarm-led';
 
 /**
  * TransmitterAdapter - Bridges Transmitter equipment class to modern Mission Control UI
@@ -633,36 +634,30 @@ export class TransmitterAdapter {
       powerSwitch.checked = activeModem.isPowered || isBooting;
     }
 
-    // LEDs (using card-alarm-led flat style)
-    const txLed = this.domCache_.get('tx-led');
-    if (txLed) {
-      txLed.classList.remove('off', 'success', 'error', 'warning');
-      txLed.classList.add(activeModem.isTransmitting ? 'error' : 'off');
-    }
+    // LEDs (using card-alarm-led flat style), each titled with its label and
+    // what the colour means (Phase 34 D4, nats-r9-s01-F1)
+    TransmitterAdapter.setModemLed_(this.domCache_.get('tx-led'), activeModem.isTransmitting ? 'error' : 'off', `TX: ${activeModem.isTransmitting ? 'ON' : 'OFF'}`);
+    TransmitterAdapter.setModemLed_(this.domCache_.get('fault-led'), activeModem.isFaulted ? 'error' : 'off', `Fault: ${activeModem.isFaulted ? 'FAULTED' : 'NONE'}`);
+    TransmitterAdapter.setModemLed_(this.domCache_.get('loopback-led'), activeModem.isLoopback ? 'warning' : 'off', `Loop: ${activeModem.isLoopback ? 'ON' : 'OFF'}`);
 
-    const faultLed = this.domCache_.get('fault-led');
-    if (faultLed) {
-      faultLed.classList.remove('off', 'success', 'error', 'warning');
-      faultLed.classList.add(activeModem.isFaulted ? 'error' : 'off');
+    let onlineClass: AlarmLedState = 'off';
+    let onlineText = 'OFF';
+    if (activeModem.isPowered) {
+      onlineClass = 'success';
+      onlineText = 'ON';
+    } else if (isBooting) {
+      onlineClass = 'warning';
+      onlineText = 'BOOTING';
     }
+    TransmitterAdapter.setModemLed_(this.domCache_.get('online-led'), onlineClass, `Online: ${onlineText}`);
+  }
 
-    const loopbackLed = this.domCache_.get('loopback-led');
-    if (loopbackLed) {
-      loopbackLed.classList.remove('off', 'success', 'error', 'warning');
-      loopbackLed.classList.add(activeModem.isLoopback ? 'warning' : 'off');
-    }
-
-    const onlineLed = this.domCache_.get('online-led');
-    if (onlineLed) {
-      onlineLed.classList.remove('off', 'success', 'error', 'warning');
-      let onlineClass = 'off';
-      if (activeModem.isPowered) {
-        onlineClass = 'success';
-      } else if (isBooting) {
-        onlineClass = 'warning';
-      }
-      onlineLed.classList.add(onlineClass);
-    }
+  /** One modem LED: swaps only the colour class (layout classes stay) and sets its title */
+  private static setModemLed_(led: HTMLElement | undefined, state: AlarmLedState, title: string): void {
+    if (!led) return;
+    led.classList.remove('off', 'success', 'error', 'warning');
+    led.classList.add(state);
+    led.title = title;
   }
 
   private updateStatusBar_(): void {

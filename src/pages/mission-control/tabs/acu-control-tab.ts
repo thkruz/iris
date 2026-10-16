@@ -384,7 +384,7 @@ export class ACUControlTab extends BaseElement {
                   <div class="text-muted small">Clears radome</div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                  <span id="${p}blower-led" class="card-alarm-led off"></span>
+                  <span id="${p}blower-led" class="card-alarm-led off" title="Rain blower OFF"></span>
                   <div class="form-check form-switch mb-0">
                     <input class="form-check-input" type="checkbox" id="${p}blower-switch">
                   </div>
@@ -393,7 +393,7 @@ export class ACUControlTab extends BaseElement {
               <div class="d-flex justify-content-between align-items-center pt-2 border-top">
                 <span class="text-muted small">Precipitation:</span>
                 <span id="${p}precip-status" class="fw-bold">
-                  <span class="card-alarm-led off me-1"></span>CLEAR
+                  <span class="card-alarm-led off me-1" title="Precipitation CLEAR"></span>CLEAR
                 </span>
               </div>
               <div class="d-flex justify-content-between align-items-center pt-2 mt-2 border-top">
@@ -942,6 +942,7 @@ export class ACUControlTab extends BaseElement {
     }
     if (blowerLed) {
       blowerLed.className = `card-alarm-led ${state.isRainBlowerEnabled ? 'success' : 'off'}`;
+      blowerLed.title = state.isRainBlowerEnabled ? 'Rain blower ON' : 'Rain blower OFF';
     }
     if (heaterSwitch) heaterSwitch.checked = state.isHeaterEnabled;
     if (blowerSwitch) blowerSwitch.checked = state.isRainBlowerEnabled;
@@ -1198,7 +1199,10 @@ export class ACUControlTab extends BaseElement {
       const gsId = this.groundStation.state.id;
       const isPrecip = WeatherManager.getInstance().isPrecipitationActive(gsId);
       const led = precipStatus.querySelector('.card-alarm-led');
-      if (led) led.className = `card-alarm-led ${isPrecip ? 'warning' : 'off'} me-1`;
+      if (led) {
+        led.className = `card-alarm-led ${isPrecip ? 'warning' : 'off'} me-1`;
+        (led as HTMLElement).title = isPrecip ? 'Precipitation ACTIVE' : 'Precipitation CLEAR';
+      }
       const textNode = precipStatus.childNodes[precipStatus.childNodes.length - 1];
       if (textNode) textNode.textContent = isPrecip ? 'ACTIVE' : 'CLEAR';
     }
